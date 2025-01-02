@@ -1,0 +1,18 @@
+{
+    "name": "AnimatedSkin.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:fa41d019ab0e86d46b6a0314bb16d718"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

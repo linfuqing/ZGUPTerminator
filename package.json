@@ -1,0 +1,17 @@
+{
+  "name": "cn.com.zerogame.unitypackages.terminator",
+  "displayName": "ZGUP Terminator",
+  "version": "0.16.2",
+  "unity": "2023.51",
+  "unityRelease": "0f1",
+  "dependencies": {
+	  "com.unity.charactercontroller": "1.2.4"
+    "cn.com.zerogame.unitypackages": "2.2.1"
+    "cn.com.zerogame.unitypackages.avator": "2.2.1"
+    "cn.com.zerogame.unitypackages.game.common": "2.2.1"
+  },
+  "description": "Zero Game Unity Package Terminator",
+  "keywords": [
+    "zg"
+  ]
+}
