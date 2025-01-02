@@ -377,8 +377,8 @@ public struct BulletDefinition
                             rotation = math.slerp(status.transform.rot, rotation, t);
                         }*/
 
-                        status.transform.rot =
-                            Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction); //rotation;
+                        status.transform.rot = math.mul(
+                            Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction), status.transform.rot); //rotation;
                         
                         status.cooldown = time + this.cooldown;
                     }
