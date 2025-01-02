@@ -199,7 +199,7 @@ public struct BulletDefinition
         public bool Update(
             int version,
             double time, 
-            //in float3 up,
+            in float3 up,
             in quaternion cameraRotation,
             in float4x4 transform,
             in Entity lookAt,
@@ -358,27 +358,9 @@ public struct BulletDefinition
                                 return false;
                         }
 
-                        float3 direction = math.normalizesafe(status.targetPosition - status.transform.pos);
-                        /*quaternion rotation;
-                        switch (this.direction)
-                        {
-                            case BulletTargetDirection.Horizontal:
-                                rotation = MathUtilities.CreateRotationWithUpPriority(up, direction);
-                                break;
-                            default:
-                                rotation = Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction);
-                                break;
-                        }*/
-
-                        /*if (dot < 1.0f)
-                        {
-                            float angle = math.angle(rotation, status.transform.rot),
-                                t = math.saturate(math.acos(dot) / math.abs(angle));
-                            rotation = math.slerp(status.transform.rot, rotation, t);
-                        }*/
-
-                        status.transform.rot = math.mul(
-                            Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction), status.transform.rot); //rotation;
+                        //float3 direction = math.normalizesafe(status.targetPosition - status.transform.pos);
+                        status.transform.rot = math.mul(quaternion.LookRotationSafe(status.targetPosition - status.transform.pos, up),
+                            /*Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction), */status.transform.rot); //rotation;
                         
                         status.cooldown = time + this.cooldown;
                     }
@@ -536,7 +518,7 @@ public struct BulletDefinition
                 //(location & BulletLocation.Ground) == BulletLocation.Ground,
                 version,
                 time, 
-                //up, 
+                up, 
                 cameraRotation,
                 transform,
                 lookAt,
