@@ -318,7 +318,7 @@ public partial struct EffectSystem : ISystem
 
                         if (delayDestroies.HasComponent(simulationEvent.entity))
                         {
-                            delayDestroyTime = damage.delayDestroyTime * damageScale;
+                            delayDestroyTime = damage.delayDestroyTime;// * damageScale;
                             if (math.abs(delayDestroyTime) > math.FLT_MIN_NORMAL)
                             {
                                 Math.InterlockedAdd(ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
