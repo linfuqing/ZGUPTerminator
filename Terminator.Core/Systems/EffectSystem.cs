@@ -204,6 +204,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectTargetDamage> targetDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<DelayDestroy> delayDestroies;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<DropToDamage> dropToDamages;
 
         [NativeDisableParallelForRestriction] 
@@ -261,7 +264,7 @@ public partial struct EffectSystem : ISystem
                     Entity messageReceiver;
                     LocalToWorld source = localToWorlds[entity], destination;
                     float3 forceResult, force;
-                    float mass, lengthSQ;
+                    float delayDestroyTime, mass, lengthSQ;
                     int damageScale = EffectDamage.Compute(entity, parents, damages),
                         damageValue,
                         layerMask,
@@ -312,6 +315,18 @@ public partial struct EffectSystem : ISystem
                         ++entityCount;
 
                         isResult = false;
+
+                        if (delayDestroies.HasComponent(simulationEvent.entity))
+                        {
+                            delayDestroyTime = damage.delayDestroyTime * damageScale;
+                            if (math.abs(delayDestroyTime) > math.FLT_MIN_NORMAL)
+                            {
+                                Math.InterlockedAdd(ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
+                                    delayDestroyTime);
+
+                                isResult = true;
+                            }
+                        }
 
                         if (!localToWorlds.TryGetComponent(simulationEvent.entity, out destination))
                             destination.Value = float4x4.identity;
@@ -552,6 +567,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectTargetDamage> targetDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<DelayDestroy> delayDestroies;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<DropToDamage> dropToDamages;
 
         [NativeDisableParallelForRestriction]
@@ -587,6 +605,7 @@ public partial struct EffectSystem : ISystem
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
             collect.states = chunk.GetNativeArray(ref statusType);
             collect.targetDamages = targetDamages;
+            collect.delayDestroies = delayDestroies;
             collect.dropToDamages = dropToDamages;
             collect.characterBodies = characterBodies;
             collect.localToWorlds = localToWorlds;
@@ -894,6 +913,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectTargetDamage> __targetDamages;
 
+    private ComponentLookup<DelayDestroy> __delayDestroies;
+    
     private ComponentLookup<DropToDamage> __dropToDamages;
 
     private ComponentLookup<LocalToWorld> __localToWorlds;
@@ -934,6 +955,7 @@ public partial struct EffectSystem : ISystem
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
+        __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
 
@@ -1004,6 +1026,7 @@ public partial struct EffectSystem : ISystem
         __inputMessageType.Update(ref state);
         __statusType.Update(ref state);
         __targetDamages.Update(ref state);
+        __delayDestroies.Update(ref state);
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
@@ -1031,6 +1054,7 @@ public partial struct EffectSystem : ISystem
         collect.statusTargetType = __statusTargetType;
         collect.statusType = __statusType;
         collect.targetDamages = __targetDamages;
+        collect.delayDestroies = __delayDestroies;
         collect.dropToDamages = __dropToDamages;
         collect.characterBodies = __characterBodies;
         collect.localToWorlds = __localToWorlds;

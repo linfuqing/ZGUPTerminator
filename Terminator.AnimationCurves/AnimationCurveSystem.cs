@@ -111,13 +111,13 @@ public partial struct AnimationCurveSystem : ISystem
         
         public bool Execute(int index)
         {
+            bool isSendMessage = false;
             float speed = speeds[index].value;
             var time = times[index];
             double oldTime = time.value;
             time.value += time.GetDelta(this.time) * speed;
             if (time.value > oldTime)
             {
-                bool isSendMessage = false;
                 Message message;
                 var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
                 var inputMessages = index < this.inputMessages.Length ? this.inputMessages[index] : default;
@@ -167,15 +167,12 @@ public partial struct AnimationCurveSystem : ISystem
                         }
                     }
                 }
-                
-                time.elapsed = this.time;
-
-                times[index] = time;
-
-                return isSendMessage;
             }
             
-            return false;
+            time.elapsed = this.time;
+            times[index] = time;
+
+            return isSendMessage;
         }
     }
 
