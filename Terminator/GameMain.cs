@@ -76,7 +76,7 @@ public class GameMain : MonoBehaviour
         
         ContentDeliveryGlobalState.RegisterForContentUpdateCompletion(__OnContentUpdateCompletion);
 #else
-        var assetManager = GameAssetManager.instance;
+        //var assetManager = GameAssetManager.instance;
         assetManager.onConfirmCancel += __OnConfirmCancel;
 
         assetManager.StartCoroutine(__Init());
