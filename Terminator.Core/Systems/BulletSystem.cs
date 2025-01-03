@@ -42,6 +42,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
+        [ReadOnly] 
+        public ComponentLookup<FollowTarget> followTargetMap;
+
         [ReadOnly]
         public ComponentLookup<AnimationCurveTime> animationCurveTimes;
 
@@ -88,24 +91,29 @@ public partial struct BulletSystem : ISystem
                 characterBody = characterBodies[index];
             else
             {
-                Entity temp = entity;
-                while (parents.TryGetComponent(temp, out var parent))
+                int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
+                bool isStatic = rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies;
+                isCharacter = isStatic && 
+                              index < followTargets.Length && 
+                              characterBodyMap.TryGetComponent(followTargets[index].entity, out characterBody);
+                if (!isCharacter)
                 {
-                    if (characterBodyMap.TryGetComponent(parent.Value, out characterBody))
+                    Entity temp = entity;
+                    FollowTarget followTarget;
+                    while (parents.TryGetComponent(temp, out var parent))
                     {
-                        isCharacter = true;
-                        
-                        break;
-                    }
+                        if (characterBodyMap.TryGetComponent(parent.Value, out characterBody) || 
+                            isStatic && 
+                            followTargetMap.TryGetComponent(parent.Value, out followTarget) && 
+                            characterBodyMap.TryGetComponent(followTarget.entity, out characterBody))
+                        {
+                            isCharacter = true;
 
-                    temp = parent.Value;
-                }
-                
-                if (!isCharacter && index < followTargets.Length)
-                {
-                    int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
-                    isCharacter = (rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies) &&
-                                  characterBodyMap.TryGetComponent(followTargets[index].entity, out characterBody);
+                            break;
+                        }
+
+                        temp = parent.Value;
+                    }
                 }
             }
 
@@ -202,6 +210,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
+        [ReadOnly] 
+        public ComponentLookup<FollowTarget> followTargets;
+
         [ReadOnly]
         public ComponentLookup<AnimationCurveTime> animationCurveTimes;
 
@@ -254,6 +265,7 @@ public partial struct BulletSystem : ISystem
             collect.physicsColliders = physicsColliders;
             collect.characterBodyMap = characterBodies;
             collect.characterControls = characterControls;
+            collect.followTargetMap = followTargets;
             collect.animationCurveTimes = animationCurveTimes;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
@@ -289,6 +301,8 @@ public partial struct BulletSystem : ISystem
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
+
+    private ComponentLookup<FollowTarget> __followTargets;
 
     private ComponentLookup<AnimationCurveTime> __animationCurveTimes;
 
@@ -327,6 +341,7 @@ public partial struct BulletSystem : ISystem
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
+        __followTargets = state.GetComponentLookup<FollowTarget>(true);
         __animationCurveTimes = state.GetComponentLookup<AnimationCurveTime>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
@@ -369,6 +384,7 @@ public partial struct BulletSystem : ISystem
         __physicsColliders.Update(ref state);
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
+        __followTargets.Update(ref state);
         __animationCurveTimes.Update(ref state);
         __entityType.Update(ref state);
         __characterBodyType.Update(ref state);
@@ -393,6 +409,7 @@ public partial struct BulletSystem : ISystem
         collect.physicsColliders = __physicsColliders;
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
+        collect.followTargets = __followTargets;
         collect.animationCurveTimes = __animationCurveTimes;
         collect.entityType = __entityType;
         collect.characterBodyType = __characterBodyType;
