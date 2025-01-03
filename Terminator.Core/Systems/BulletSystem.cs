@@ -54,6 +54,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public NativeArray<LookAtTarget> lookAtTargets;
 
+        [ReadOnly] 
+        public NativeArray<FollowTarget> followTargets;
+
         [ReadOnly]
         public NativeArray<BulletDefinitionData> instances;
 
@@ -78,14 +81,25 @@ public partial struct BulletSystem : ISystem
 
         public bool Execute(int index)
         {
-            float3 up = math.up();
-            BulletLocation location = 0;
-            ref var definition = ref instances[index].definition.Value;
-            if (index < characterBodies.Length)
+            bool isCharacter = index < characterBodies.Length;
+            Entity entity = entityArray[index];
+            KinematicCharacterBody characterBody = default;
+            if (isCharacter)
+                characterBody = characterBodies[index];
+            else if (index < followTargets.Length)
             {
-                var characterBody = characterBodies[index];
+                int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
+                isCharacter = (rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies) &&
+                              characterBodyMap.TryGetComponent(followTargets[index].entity, out characterBody);
+            }
+
+            BulletLocation location = 0;
+            float3 up = math.up();
+            ref var definition = ref instances[index].definition.Value;
+            if (isCharacter)
+            {
                 up = characterBody.GroundingUp;
-                
+
                 if (characterBody.IsGrounded)
                     location = BulletLocation.Ground;
                 else
@@ -96,7 +110,6 @@ public partial struct BulletSystem : ISystem
                 }
             }
 
-            Entity entity = entityArray[index];
             var localToWorld = GetLocalToWorld(entity);
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var targetStates = this.targetStates[index];
@@ -185,6 +198,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
 
+        [ReadOnly] 
+        public ComponentTypeHandle<FollowTarget> followTargetType;
+
         [ReadOnly]
         public ComponentTypeHandle<BulletDefinitionData> instanceType;
 
@@ -225,6 +241,7 @@ public partial struct BulletSystem : ISystem
             collect.animationCurveTimes = animationCurveTimes;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
+            collect.followTargets = chunk.GetNativeArray(ref followTargetType);
             collect.characterBodies = chunk.GetNativeArray(ref characterBodyType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
@@ -265,6 +282,8 @@ public partial struct BulletSystem : ISystem
 
     private ComponentTypeHandle<LookAtTarget> __lookAtType;
 
+    private ComponentTypeHandle<FollowTarget> __followTargetType;
+
     private ComponentTypeHandle<BulletDefinitionData> __instanceType;
 
     private BufferTypeHandle<BulletPrefab> __prefabType;
@@ -295,6 +314,7 @@ public partial struct BulletSystem : ISystem
         __animationCurveTimes = state.GetComponentLookup<AnimationCurveTime>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
+        __followTargetType = state.GetComponentTypeHandle<FollowTarget>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __instanceType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
         __prefabType = state.GetBufferTypeHandle<BulletPrefab>(true);
@@ -337,6 +357,7 @@ public partial struct BulletSystem : ISystem
         __entityType.Update(ref state);
         __characterBodyType.Update(ref state);
         __lookAtType.Update(ref state);
+        __followTargetType.Update(ref state);
         __instanceType.Update(ref state);
         __prefabType.Update(ref state);
         __activeIndexType.Update(ref state);
@@ -360,6 +381,7 @@ public partial struct BulletSystem : ISystem
         collect.entityType = __entityType;
         collect.characterBodyType = __characterBodyType;
         collect.lookAtTargetType = __lookAtType;
+        collect.followTargetType = __followTargetType;
         collect.instanceType = __instanceType;
         collect.prefabType = __prefabType;
         collect.activeIndexType = __activeIndexType;
