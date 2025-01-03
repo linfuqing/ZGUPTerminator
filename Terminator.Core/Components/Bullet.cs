@@ -864,12 +864,21 @@ public struct BulletDefinition
     {
         if (location != 0)
         {
-            if (characterBodies.TryGetComponent(entity, out var characterBody) &&
-                characterBodies.IsComponentEnabled(entity) && 
-                characterBody.IsGrounded &&
-                (groundBelongsTo == 0 ||
-                 (groundBelongsTo & collisionWorld.Bodies[characterBody.GroundHit.RigidBodyIndex].Collider.Value
-                     .GetCollisionFilter(characterBody.GroundHit.ColliderKey).BelongsTo) != 0))
+            bool isGrounded = characterBodies.TryGetComponent(entity, out var characterBody) &&
+                              characterBodies.IsComponentEnabled(entity) &&
+                              characterBody.IsGrounded &&
+                              (groundBelongsTo == 0 ||
+                               (groundBelongsTo & collisionWorld.Bodies[characterBody.GroundHit.RigidBodyIndex].Collider
+                                   .Value
+                                   .GetCollisionFilter(characterBody.GroundHit.ColliderKey).BelongsTo) != 0);
+
+            if (!isGrounded)
+            {
+                int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
+                isGrounded = rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies;
+            }
+            
+            if (isGrounded)
             {
                 if ((location & BulletLocation.Ground) != BulletLocation.Ground)
                     return false;
