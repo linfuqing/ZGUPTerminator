@@ -86,11 +86,27 @@ public partial struct BulletSystem : ISystem
             KinematicCharacterBody characterBody = default;
             if (isCharacter)
                 characterBody = characterBodies[index];
-            else if (index < followTargets.Length)
+            else
             {
-                int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
-                isCharacter = (rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies) &&
-                              characterBodyMap.TryGetComponent(followTargets[index].entity, out characterBody);
+                Entity temp = entity;
+                while (parents.TryGetComponent(temp, out var parent))
+                {
+                    if (characterBodyMap.TryGetComponent(parent.Value, out characterBody))
+                    {
+                        isCharacter = true;
+                        
+                        break;
+                    }
+
+                    temp = parent.Value;
+                }
+                
+                if (!isCharacter && index < followTargets.Length)
+                {
+                    int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
+                    isCharacter = (rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies) &&
+                                  characterBodyMap.TryGetComponent(followTargets[index].entity, out characterBody);
+                }
             }
 
             BulletLocation location = 0;

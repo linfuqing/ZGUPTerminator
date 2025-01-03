@@ -435,6 +435,7 @@ namespace ZG
 
         protected void Update()
         {
+            float2 indexFloat;
             if (__node != null)
             {
                 __data = data;
@@ -457,29 +458,38 @@ namespace ZG
                 scrollRect.normalizedPosition = node.normalizedPosition;
 
                 __node = node;
-                
-                if (__submitHandlers != null)
+
+                indexFloat = node.index;
+            }
+            else
+                indexFloat = __data.GetIndex(offsetScale, scrollRect.normalizedPosition, count);
+            
+            if (__submitHandlers != null)
+            {
+                //var temp = __data.GetIndex(offsetScale, node.normalizedPosition, count);
+                float originIndex = __ToSubmitIndex(indexFloat);
+                int sourceIndex = (int)math.floor(originIndex), 
+                    destinationIndex = (int)math.ceil(originIndex), 
+                    numSubmitHandles = __submitHandlers.Count;
+                var submitHandler = sourceIndex >= 0 && sourceIndex < numSubmitHandles
+                    ? __submitHandlers[sourceIndex] as IScrollRectSubmitHandler
+                    : null;
+                if (sourceIndex == destinationIndex)
                 {
-                    //var temp = __data.GetIndex(offsetScale, node.normalizedPosition, count);
-                    float originIndex = __ToSubmitIndex(node.index);
-                    int sourceIndex = (int)math.floor(originIndex), 
-                        destinationIndex = (int)math.ceil(originIndex), 
-                        numSubmitHandles = __submitHandlers.Count;
-                    var submitHandler = sourceIndex >= 0 && sourceIndex < numSubmitHandles
-                        ? __submitHandlers[sourceIndex] as IScrollRectSubmitHandler
-                        : null;
+                    if(submitHandler != null)
+                        submitHandler.OnScrollRectDrag(1.0f);
+                }
+                else
+                {
                     if(submitHandler != null)
                         submitHandler.OnScrollRectDrag(destinationIndex - originIndex);
-                    
-                    if (sourceIndex != destinationIndex)
-                    {
-                        submitHandler = destinationIndex >= 0 && destinationIndex < numSubmitHandles
-                            ? __submitHandlers[destinationIndex] as IScrollRectSubmitHandler
-                            : null;
+
+                    submitHandler = destinationIndex >= 0 && destinationIndex < numSubmitHandles
+                        ? __submitHandlers[destinationIndex] as IScrollRectSubmitHandler
+                        : null;
                         
-                        if(submitHandler != null)
-                            submitHandler.OnScrollRectDrag(originIndex - sourceIndex);
-                    }
+                    if(submitHandler != null)
+                        submitHandler.OnScrollRectDrag(originIndex - sourceIndex);
                 }
             }
         }
