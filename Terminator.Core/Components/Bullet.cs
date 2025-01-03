@@ -499,45 +499,44 @@ public struct BulletDefinition
         if (status.cooldown > time)
             return false;
 
-        bool result;
         ref var data = ref bullets[index];
-        if (data.location == 0)
-            result = true;
-        else
-            result = (data.location & location) != 0;
+        if (data.location != 0 && (data.location & location) == 0)
+        {
+            status.times = 0;
+            
+            return false;
+        }
 
         if (targetStates.Length <= data.targetIndex)
             targetStates.Resize(targets.Length, NativeArrayOptions.ClearMemory);
 
         ref var targetStatus = ref targetStates.ElementAt(data.targetIndex);
-        if (result)
-        {
-            ref var target = ref targets[data.targetIndex];
+
+        ref var target = ref targets[data.targetIndex];
+    
+        bool result = target.Update(
+            //(location & BulletLocation.Ground) == BulletLocation.Ground,
+            version,
+            time, 
+            up, 
+            cameraRotation,
+            transform,
+            lookAt,
+            collisionWorld,
+            physicsColliders,
+            characterBodies,
+            prefabs,
+            prefabLoadResults,
+            targetStates.AsNativeArray(),
+            ref targetStatus,
+            ref random);
         
-            result = target.Update(
-                //(location & BulletLocation.Ground) == BulletLocation.Ground,
-                version,
-                time, 
-                up, 
-                cameraRotation,
-                transform,
-                lookAt,
-                collisionWorld,
-                physicsColliders,
-                characterBodies,
-                prefabs,
-                prefabLoadResults,
-                targetStates.AsNativeArray(),
-                ref targetStatus,
-                ref random);
-            
-            if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
-            {
-                if (characterBodies.TryGetComponent(targetStatus.target, out var characterBody) && characterBody.IsGrounded)
-                    result = (data.targetLocation & BulletLocation.Ground) == BulletLocation.Ground;
-                else
-                    result = (data.targetLocation & BulletLocation.Air) == BulletLocation.Air;
-            }
+        if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
+        {
+            if (characterBodies.TryGetComponent(targetStatus.target, out var characterBody) && characterBody.IsGrounded)
+                result = (data.targetLocation & BulletLocation.Ground) == BulletLocation.Ground;
+            else
+                result = (data.targetLocation & BulletLocation.Air) == BulletLocation.Air;
         }
 
         if (!result)
@@ -668,6 +667,7 @@ public struct BulletDefinition
         if (data.space == BulletSpace.Local)
             transformResult = math.mul(math.inverse(math.RigidTransform(transform)), transformResult);
 
+        entityCount = 1;
         if(entityCount == 1)
         {
             var entity = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
