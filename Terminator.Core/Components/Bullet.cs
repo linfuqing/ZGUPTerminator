@@ -530,14 +530,14 @@ public struct BulletDefinition
             targetStates.AsNativeArray(),
             ref targetStatus,
             ref random);
-        
+
         if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
-        {
-            if (characterBodies.TryGetComponent(targetStatus.target, out var characterBody) && characterBody.IsGrounded)
-                result = (data.targetLocation & BulletLocation.Ground) == BulletLocation.Ground;
-            else
-                result = (data.targetLocation & BulletLocation.Air) == BulletLocation.Air;
-        }
+            result = __Check(
+                data.targetLocation, 
+                uint.MaxValue, 
+                targetStatus.target, 
+                collisionWorld, 
+                characterBodies);
 
         if (!result)
         {
