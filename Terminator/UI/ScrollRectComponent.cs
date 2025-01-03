@@ -11,6 +11,11 @@ using CellLengths = Unity.Collections.FixedList512Bytes<Unity.Mathematics.float2
 
 namespace ZG
 {
+    public interface IScrollRectSubmitHandler : ISubmitHandler
+    {
+        void OnScrollRectDrag(float value);
+    }
+    
     public struct ScrollRectData
     {
         public float decelerationRate;
@@ -388,7 +393,7 @@ namespace ZG
             return rectTransform.rect.size;
         }
 
-        public virtual int __ToSubmitIndex(in int2 index)
+        public virtual float __ToSubmitIndex(in float2 index)
         {
             RectTransform.Axis axis = scrollRect.horizontal ? RectTransform.Axis.Horizontal : RectTransform.Axis.Vertical;
 
@@ -466,7 +471,7 @@ namespace ZG
             {
                 var index = (int2)math.round(result.index);
 
-                __OnChanged(result.index, index);
+                __OnChanged(result.index);
 
                 this.index = index;
             }
@@ -494,7 +499,7 @@ namespace ZG
             int2 index = (int2)math.round(node.index);
             if (isChanged || math.any(index != this.index))
             {
-                __OnChanged(node.index, index);
+                __OnChanged(node.index);
 
                 this.index = index;
             }
@@ -550,25 +555,56 @@ namespace ZG
             int2 destination = (int2)math.round(source);
             if (math.any(destination != this.index))
             {
-                __OnChanged(source, destination);
+                __OnChanged(source);
 
                 this.index = destination;
             }
+            else
+            {
+                if (__submitHandlers != null)
+                {
+                    float index = __ToSubmitIndex(source);
+                    int sourceIndex = (int)math.floor(index), 
+                        destinationIndex = (int)math.ceil(index), 
+                        numSubmitHandles = __submitHandlers.Count;
+                    var submitHandler = sourceIndex >= 0 && sourceIndex < numSubmitHandles
+                        ? __submitHandlers[sourceIndex] as IScrollRectSubmitHandler
+                        : null;
+                    if(submitHandler != null)
+                        submitHandler.OnScrollRectDrag(destinationIndex - index);
+                    
+                    if (sourceIndex != destinationIndex)
+                    {
+                        submitHandler = destinationIndex >= 0 && destinationIndex < numSubmitHandles
+                        ? __submitHandlers[destinationIndex] as IScrollRectSubmitHandler
+                        : null;
+                        
+                        if(submitHandler != null)
+                            submitHandler.OnScrollRectDrag(index - sourceIndex);
+                    }
+                }
+            }
         }
 
-        private void __OnChanged(in float2 indexFloat, in int2 indexInt)
+        private void __OnChanged(in float2 index)
         {
             if (onChanged != null)
-                onChanged.Invoke(indexFloat);
+                onChanged.Invoke(index);
 
             if (__submitHandlers != null)
             {
-                int index = __ToSubmitIndex(indexInt);
-                var submitHandler = index >= 0 && index < __submitHandlers.Count ? __submitHandlers[index] : null;
+                int submitHandlerIndex = (int)math.round(__ToSubmitIndex(index));
+                var submitHandler = submitHandlerIndex >= 0 && submitHandlerIndex < __submitHandlers.Count ? __submitHandlers[submitHandlerIndex] : null;
                 if (submitHandler != __submitHandler)
                 {
                     if (submitHandler != null)
                         submitHandler.OnSubmit(new BaseEventData(EventSystem.current));
+
+                    if (submitHandler is IScrollRectSubmitHandler destination)
+                        destination.OnScrollRectDrag(1.0f);
+
+                    if (__submitHandler is IScrollRectSubmitHandler source)
+                        source.OnScrollRectDrag(0.0f);
 
                     __submitHandler = submitHandler;
                 }
