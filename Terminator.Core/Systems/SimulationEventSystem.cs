@@ -30,57 +30,6 @@ public partial struct SimulationEventSystem : ISystem
         }
     }
 
-    /*private struct CollectCharacters
-    {
-        [ReadOnly]
-        public BufferAccessor<KinematicCharacterHit> characterHits;
-        
-        public BufferAccessor<SimulationEvent> simulationEvents;
-
-        public bool Execute(int index)
-        {
-            bool isEnabled = false;
-            SimulationEvent simulationEvent;
-            var simulationEvents = this.simulationEvents[index];
-            var characterHits = this.characterHits[index];
-            foreach (var characterHit in characterHits)
-            {
-                simulationEvent.entity = characterHit.Entity;
-                simulationEvent.bodyIndex = characterHit.RigidBodyIndex;
-                simulationEvent.colliderKey = characterHit.ColliderKey;
-
-                simulationEvents.Add(simulationEvent);
-
-                isEnabled = true;
-            }
-
-            return isEnabled;
-        }
-    }
-
-    [BurstCompile]
-    private struct CollectCharactersEx : IJobChunk
-    {
-        [ReadOnly]
-        public BufferTypeHandle<KinematicCharacterHit> characterHitType;
-        
-        public BufferTypeHandle<SimulationEvent> simulationEventType;
-
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
-        {
-            CollectCharacters collectCharacters;
-            collectCharacters.characterHits = chunk.GetBufferAccessor(ref characterHitType);
-            collectCharacters.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
-
-            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
-            while (iterator.NextEntityIndex(out int i))
-            {
-                if(collectCharacters.Execute(i))
-                    chunk.SetComponentEnabled(ref simulationEventType, i, true);
-            }
-        }
-    }*/
-
     [BurstCompile]
     private struct CollectStatic
     {
@@ -181,7 +130,7 @@ public partial struct SimulationEventSystem : ISystem
                     new ColliderCastInput(body.Collider, collision.position, transform.pos, transform.rot),
                     ref collector);
 
-                if (collision.closestHit.Entity == Entity.Null && collector.closestHit.Entity != Entity.Null)
+                if (collector.closestHit.Entity != collision.closestHit.Entity)
                     collision.closestHit = collector.closestHit;
                 
                 collision.position = transform.pos;
@@ -206,18 +155,6 @@ public partial struct SimulationEventSystem : ISystem
 
             return result;
         }
-
-        /*private static bool _CalculateDistance(in CollisionWorld collisionWorld, ref Collider collider, ref Collector<DistanceHit> collector);
-        {
-            switch (collider.Type)
-            {
-                case ColliderType.Compound:
-                    int num
-                    break;
-                default:
-                    break;
-            }
-        }*/
 
         public float4x4 GetLocalToWorld(in Entity entity)
         {
@@ -268,8 +205,8 @@ public partial struct SimulationEventSystem : ISystem
                 {
                     chunk.SetComponentEnabled(ref instanceType, i, true);
 
-                    if(collectStatic.isCollision)
-                        chunk.SetComponentEnabled(ref collisionType, i, false);
+                    //if(collectStatic.isCollision)
+                    //    chunk.SetComponentEnabled(ref collisionType, i, false);
                 }
                 else if (!collectStatic.isCollision && i < numCollisions)
                     chunk.SetComponentEnabled(ref collisionType, i, true);
@@ -340,7 +277,6 @@ public partial struct SimulationEventSystem : ISystem
         }
     }
 
-    //private BufferTypeHandle<KinematicCharacterHit> __characterHitType;
     private EntityTypeHandle __entityType;
     private ComponentLookup<LocalTransform> __localTransforms;
     private ComponentLookup<Parent> __parents;
@@ -349,12 +285,10 @@ public partial struct SimulationEventSystem : ISystem
     private BufferLookup<SimulationEvent> __instances;
     private EntityQuery __eventGroup;
     private EntityQuery __staticGroup;
-    //private EntityQuery __characterGroup;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        //__characterHitType = state.GetBufferTypeHandle<KinematicCharacterHit>(true);
         __entityType = state.GetEntityTypeHandle();
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __parents = state.GetComponentLookup<Parent>(true);
@@ -376,14 +310,6 @@ public partial struct SimulationEventSystem : ISystem
                 .WithPresentRW<SimulationEvent, SimulationCollision>()
                 .WithAll<PhysicsCollider>()
                 .Build(ref state);
-        
-        /*using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __characterGroup = builder
-                .WithAll<KinematicCharacterHit>()
-                .WithPresent<SimulationEvent>()
-                .Build(ref state);
-        
-        __characterGroup.SetChangedVersionFilter(ComponentType.ReadOnly<KinematicCharacterHit>());*/
         
         state.RequireForUpdate<SimulationSingleton>();
         state.RequireForUpdate<PhysicsWorldSingleton>();
