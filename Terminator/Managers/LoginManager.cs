@@ -11,6 +11,7 @@ public sealed class LoginManager : MonoBehaviour
     internal struct Level
     {
         public string name;
+        public Sprite sprite;
     }
 
     [SerializeField]
@@ -48,6 +49,9 @@ public sealed class LoginManager : MonoBehaviour
         for (int i = 0; i < numLevels; ++i)
         {
             style = Instantiate(_style, parent);
+            
+            if(style.onImage != null)
+                style.onImage.Invoke(_levels[i].sprite);
 
             int index = i;
             style.toggle.onValueChanged.AddListener(x =>

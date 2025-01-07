@@ -6,6 +6,8 @@ using ZG.UI;
 
 public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 {
+    public SpriteEvent onImage;
+    
     public Toggle toggle;
 
     public Button button;
