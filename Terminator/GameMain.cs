@@ -25,38 +25,13 @@ public class GameMain : MonoBehaviour
         }
 
         yield return null;
-
-        string language = GameLanguage.overrideLanguage, 
-            persistentDataPath = Path.Combine(Application.persistentDataPath, language), 
-            languagePackageResourcePath = GameConstantManager.Get(LanguagePackageResourcePath), 
-            languagePackageResourceFolder = Path.GetDirectoryName(languagePackageResourcePath), 
-            languagePackageResourceFilename = Path.GetFileName(languagePackageResourceFolder), 
-            languagePackageResourceFilepath = Path.Combine(languagePackageResourceFolder, languagePackageResourceFilename);
-        var assetManager = new AssetManager(Path.Combine(
-            persistentDataPath, 
-            languagePackageResourceFilepath), null);
         
-        var assetPath = new AssetPath(GameAssetManager.GetStreamingAssetsURL(Path.Combine(language, languagePackageResourceFilepath)), string.Empty, null);
-        yield return assetManager.GetOrDownload(null, null, assetPath);
-
-        string url = GameConstantManager.Get(GameConstantManager.KEY_CDN_URL);
-        if (!string.IsNullOrEmpty(url))
-        {
-            assetPath = new AssetPath(
-                $"{url}/{language}/{languagePackageResourceFolder}/{languagePackageResourceFilename}", 
-                string.Empty, 
-                null);
-            yield return assetManager.GetOrDownload(null, null, assetPath);
-        }
-
-        string languagePackageResourceName = Path.GetFileName(languagePackageResourcePath);
-        var loader = new AssetBundleLoader<GameObject>(languagePackageResourceName.ToLower(), languagePackageResourceName, assetManager);
-
-        yield return loader;
-
-        var languagePackage = Instantiate(loader.value);
-
-        DontDestroyOnLoad(languagePackage);
+        
+        var assetManager = GameAssetManager.instance;
+        yield return assetManager.InitLanguage(
+            GameConstantManager.Get(LanguagePackageResourcePath),
+            GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
+            DontDestroyOnLoad);
         
         var onStarts = this.onStart?.GetInvocationList();
         if (onStarts != null)
@@ -76,10 +51,9 @@ public class GameMain : MonoBehaviour
         
         ContentDeliveryGlobalState.RegisterForContentUpdateCompletion(__OnContentUpdateCompletion);
 #else
-        var gameAssetManager = GameAssetManager.instance;
-        gameAssetManager.onConfirmCancel += __OnConfirmCancel;
+        assetManager.onConfirmCancel += __OnConfirmCancel;
 
-        gameAssetManager.StartCoroutine(__Init());
+        assetManager.StartCoroutine(__Init());
 #endif
     }
 
