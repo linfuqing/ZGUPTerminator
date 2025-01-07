@@ -1,5 +1,9 @@
 using System;
+using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.Playables;
+using UnityEngine.Scripting;
 
 public sealed class LoginManager : MonoBehaviour
 {
@@ -8,7 +12,10 @@ public sealed class LoginManager : MonoBehaviour
     {
         public string name;
     }
-    
+
+    [SerializeField]
+    internal UnityEvent _onStart;
+
     [SerializeField]
     internal LevelStyle _style;
 
@@ -19,9 +26,16 @@ public sealed class LoginManager : MonoBehaviour
 
     private int __selectedIndex;
 
-    private void __LoadScene()
+    [Preserve]
+    public void LoadScene()
     {
         GameAssetManager.instance.LoadScene(_levels[__selectedIndex].name, null);
+    }
+
+    private void __LoadScene()
+    {
+        _onStart.Invoke();
+        //GameAssetManager.instance.LoadScene(_levels[__selectedIndex].name, null);
     }
 
     void OnEnable()

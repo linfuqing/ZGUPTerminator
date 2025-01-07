@@ -358,8 +358,15 @@ public struct BulletDefinition
                                 return false;
                         }
 
-                        //float3 direction = math.normalizesafe(status.targetPosition - status.transform.pos);
-                        status.transform.rot = math.mul(quaternion.LookRotationSafe(status.targetPosition - status.transform.pos, up),
+                        float3 distance = status.targetPosition - status.transform.pos;
+                        /*if (space == BulletTargetSpace.Camera)
+                        {
+                            distance = math.project(distance, math.forward(cameraRotation));
+
+                            status.targetPosition = status.transform.pos + distance;
+                        }*/
+
+                        status.transform.rot = math.mul(quaternion.LookRotationSafe(distance, up),
                             /*Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction), */status.transform.rot); //rotation;
                         
                         status.cooldown = time + this.cooldown;
