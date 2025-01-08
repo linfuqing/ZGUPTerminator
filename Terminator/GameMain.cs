@@ -5,6 +5,21 @@ using Unity.Entities.Content;
 using UnityEngine;
 using ZG;
 
+public class GameSceneActivation : IEnumerator
+{
+    public bool MoveNext()
+    {
+        return ContentDeliveryGlobalState.CurrentContentUpdateState < ContentDeliveryGlobalState.ContentUpdateState.ContentReady;
+    }
+
+    void IEnumerator.Reset()
+    {
+            
+    }
+        
+    object IEnumerator.Current => null;
+}
+
 public class GameMain : MonoBehaviour
 {
     public event Func<IEnumerator> onStart;
@@ -17,6 +32,13 @@ public class GameMain : MonoBehaviour
     public static readonly string LocalCachePath = "LocalCachePath";
     public static readonly string RemoteUrlRoot = "RemoteUrlRoot";
 
+    public IAssetBundleFactory factory
+    {
+        get;
+
+        set;
+    }
+
     IEnumerator Start()
     {
         while(!GameConstantManager.isInit)
@@ -24,13 +46,20 @@ public class GameMain : MonoBehaviour
             yield return null;
         }
 
+#if ENABLE_CONTENT_DELIVERY
+        string localCachePath = GameConstantManager.Get(LocalCachePath);
+        RuntimeContentSystem.LoadContentCatalog(
+            GameConstantManager.Get(RemoteUrlRoot), 
+            string.IsNullOrEmpty(localCachePath) ? null : Path.Combine(Application.persistentDataPath, localCachePath), 
+            GameConstantManager.Get(InitialContentSet));
+#endif
+        
         yield return null;
         
-        
-        var assetManager = GameAssetManager.instance;
-        yield return assetManager.InitLanguage(
+        yield return GameAssetManager.InitLanguage(
             GameConstantManager.Get(LanguagePackageResourcePath),
             GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
+            factory, 
             DontDestroyOnLoad);
         
         var onStarts = this.onStart?.GetInvocationList();
@@ -39,22 +68,11 @@ public class GameMain : MonoBehaviour
             foreach (var onStart in onStarts)
                 yield return ((Func<IEnumerator>)onStart)();
         }
-
-#if ENABLE_CONTENT_DELIVERY
-        GameProgressbar.instance.ShowProgressBar();
         
-        string localCachePath = GameConstantManager.Get(LocalCachePath);
-        RuntimeContentSystem.LoadContentCatalog(
-            GameConstantManager.Get(RemoteUrlRoot), 
-            string.IsNullOrEmpty(localCachePath) ? null : Path.Combine(Application.persistentDataPath, localCachePath), 
-            GameConstantManager.Get(InitialContentSet));
-        
-        ContentDeliveryGlobalState.RegisterForContentUpdateCompletion(__OnContentUpdateCompletion);
-#else
+        var assetManager = GameAssetManager.instance;
         assetManager.onConfirmCancel += __OnConfirmCancel;
 
         assetManager.StartCoroutine(__Init());
-#endif
     }
 
     private IEnumerator __Init()
@@ -63,20 +81,9 @@ public class GameMain : MonoBehaviour
             GameConstantManager.Get(DefaultSceneName), 
             GameConstantManager.Get(AssetScenePath), 
                 GameConstantManager.Get(AssetPath), 
-                    GameConstantManager.Get(GameConstantManager.KEY_CDN_URL));
-    }
-
-    private void __OnContentUpdateCompletion(ContentDeliveryGlobalState.ContentUpdateState contentUpdateState)
-    {
-        if (contentUpdateState < ContentDeliveryGlobalState.ContentUpdateState.ContentReady)
-            return;
-        
-        GameProgressbar.instance.ClearProgressBar();
-        
-        var assetManager = GameAssetManager.instance;
-        assetManager.onConfirmCancel += __OnConfirmCancel;
-
-        assetManager.StartCoroutine(__Init());
+                    GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
+            factory, 
+            null/*new GameSceneActivation()*/);
     }
 
     private void __OnConfirmCancel()

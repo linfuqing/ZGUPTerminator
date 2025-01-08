@@ -2,22 +2,6 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-public struct MainCameraTransform : IComponentData
-{
-    public RigidTransform value;
-
-    public quaternion rotation
-    {
-        get
-        {
-            var forward = math.forward(value.rot);
-            forward.y = 0.0f;
-            forward = math.normalizesafe(forward);
-            return quaternion.LookRotationSafe(forward, math.up());
-        }
-    }
-}
-
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 //[UpdateAfter(typeof(TransformSystemGroup))]
 public partial class MainCameraSystem : SystemBase

@@ -10,15 +10,49 @@ using Unity.Mathematics;
 using Unity.Scenes;
 using Unity.Transforms;
 using Random = Unity.Mathematics.Random;
+using UnityEngine;
 
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true)]
 public partial class LevelSystemManaged : SystemBase
 {
+    private interface ICollectLinkedEntitiesWrapper
+    {
+        void Run(
+            in EntityQuery group, 
+            in EntityTypeHandle entityType,
+            in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
+            ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
+            ref NativeList<Entity> entities);
+    }
+    
+    private struct CollectLinkedEntitiesWrapper : ICollectLinkedEntitiesWrapper
+    {
+        public void Run(
+            in EntityQuery group,
+            in EntityTypeHandle entityType,
+            in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
+            ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
+            ref NativeList<Entity> entities)
+        {
+            CollectLinkedEntities collectLinkedEntities;
+            collectLinkedEntities.entityType = entityType;
+            collectLinkedEntities.linkedEntityGroupType = linkedEntityGroupType;
+            collectLinkedEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
+            collectLinkedEntities.entities = entities;
+            collectLinkedEntities.RunByRef(group);
+        }
+    }
+    
     [BurstCompile]
     private struct CollectLinkedEntities : IJobChunk
     {
+        [ReadOnly] 
+        public EntityTypeHandle entityType;
+        
         [ReadOnly]
         public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
+
+        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
 
         public NativeList<Entity> entities;
 
@@ -27,15 +61,38 @@ public partial class LevelSystemManaged : SystemBase
         {
             if (!chunk.Has(ref linkedEntityGroupType))
                 return;
-            
+
+            NativeArray<Entity> entityArray = chunk.GetNativeArray(entityType), entities;
             var linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
-                entities.AddRange(linkedEntityGroups[i].AsNativeArray().Reinterpret<Entity>());
+            {
+                Disable(entityArray[i]);
+                
+                entities = linkedEntityGroups[i].AsNativeArray().Reinterpret<Entity>();
+                foreach (var entity in entities)
+                    Disable(entity);
+                
+                this.entities.AddRange(entities);
+            }
+        }
+        
+        public void Disable(in Entity entity)
+        {
+            if (copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID))
+            {
+                copyMatrixToTransformInstanceID.isSendMessageOnDestroy = false;
+                
+                copyMatrixToTransformInstanceIDs[entity] = copyMatrixToTransformInstanceID;
+            }
         }
     }
 
+    private EntityTypeHandle __entityType;
+
     private BufferTypeHandle<LinkedEntityGroup> __linkedEntityGroupType;
+
+    private ComponentLookup<CopyMatrixToTransformInstanceID> __copyMatrixToTransformInstanceIDs;
 
     private EntityQuery __group;
     
@@ -45,7 +102,9 @@ public partial class LevelSystemManaged : SystemBase
 
         World.GetOrCreateSystemManaged<FixedStepSimulationSystemGroup>().Timestep = UnityEngine.Time.fixedDeltaTime;
 
+        __entityType = GetEntityTypeHandle();
         __linkedEntityGroupType = GetBufferTypeHandle<LinkedEntityGroup>(true);
+        __copyMatrixToTransformInstanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
                 .WithAll<SpawnerEntity>()
@@ -128,20 +187,36 @@ public partial class LevelSystemManaged : SystemBase
         manager.isRestart = false;
     }
 
-    private void __DestroyEntities(in EntityQuery group)
+    private void __DestroyLinkedEntities<T>(in EntityQuery group, ref T collectLinkedEntitiesWrapper) where T : ICollectLinkedEntitiesWrapper
     {
+        __entityType.Update(this);
         __linkedEntityGroupType.Update(this);
-            
+        __copyMatrixToTransformInstanceIDs.Update(this);
+        
         var entities = new NativeList<Entity>(Allocator.TempJob);
-        CollectLinkedEntities collectLinkedEntities;
-        collectLinkedEntities.linkedEntityGroupType = __linkedEntityGroupType;
-        collectLinkedEntities.entities = entities;
-        collectLinkedEntities.RunByRef(group);
+        collectLinkedEntitiesWrapper.Run(
+            group, 
+            __entityType, 
+            __linkedEntityGroupType, 
+            ref __copyMatrixToTransformInstanceIDs,
+            ref entities);
+        
         var entityManager = EntityManager;
         entityManager.DestroyEntity(entities.AsArray());
         entities.Dispose();
+    }
+
+    private void __DestroyEntities<T>(in EntityQuery group, ref T collectLinkedEntitiesWrapper) where T : ICollectLinkedEntitiesWrapper
+    {
+        __DestroyLinkedEntities(group, ref collectLinkedEntitiesWrapper);
         
-        entityManager.DestroyEntity(group);
+        EntityManager.DestroyEntity(group);
+    }
+
+    private void __DestroyEntities(in EntityQuery group)
+    {
+        CollectLinkedEntitiesWrapper collectLinkedEntitiesWrapper;
+        __DestroyEntities(group, ref collectLinkedEntitiesWrapper);
     }
     
     private void __GetSkill(

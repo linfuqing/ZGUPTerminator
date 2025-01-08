@@ -46,6 +46,9 @@ public partial class LevelSystemManaged
 
         public BlobAssetReference<SkillDefinition> skillDefinition;
         
+        [ReadOnly] 
+        public BufferAccessor<LinkedEntityGroup> linkedEntityGroups;
+
         [ReadOnly]
         public NativeArray<int> skillIndices;
 
@@ -56,6 +59,8 @@ public partial class LevelSystemManaged
         public NativeArray<BulletEntity> bulletEntities;
 
         public NativeList<Entity> entities;
+
+        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
 
         public void Execute(int index)
         {
@@ -73,11 +78,31 @@ public partial class LevelSystemManaged
                 {
                     if (skillDefinition.bullets[skill.bulletIndices[i]].index == bulletEntity.index)
                     {
-                        entities.Add(entityArray[index]);
+                        var entity = entityArray[index];
+                        entities.Add(entity);
+
+                        Disable(entity);
+
+                        if (index <　linkedEntityGroups.Length)
+                        {
+                            var linkedEntityGroups = this.linkedEntityGroups[index];
+                            foreach (var linkedEntityGroup in linkedEntityGroups)
+                                Disable(linkedEntityGroup.Value);
+                        }
 
                         return;
                     }
                 }
+            }
+        }
+
+        public void Disable(in Entity entity)
+        {
+            if (copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID))
+            {
+                copyMatrixToTransformInstanceID.isSendMessageOnDestroy = false;
+                
+                copyMatrixToTransformInstanceIDs[entity] = copyMatrixToTransformInstanceID;
             }
         }
     }
@@ -93,11 +118,16 @@ public partial class LevelSystemManaged
         [ReadOnly]
         public EntityTypeHandle entityType;
 
+        [ReadOnly] 
+        public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
+
         [ReadOnly]
         public ComponentTypeHandle<BulletEntity> bulletEntityType;
 
         [ReadOnly]
         public ComponentLookup<SkillDefinitionData> skills;
+
+        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
 
         public NativeList<Entity> entities;
 
@@ -107,13 +137,56 @@ public partial class LevelSystemManaged
             collectBulletEntities.parent = parent;
             collectBulletEntities.skillDefinition = skills[parent].definition;
             collectBulletEntities.skillIndices = skillIndices;
+            collectBulletEntities.linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
             collectBulletEntities.entityArray = chunk.GetNativeArray(entityType);
             collectBulletEntities.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
+            collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
             collectBulletEntities.entities = entities;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
                 collectBulletEntities.Execute(i);
+        }
+    }
+
+    
+    private readonly struct CollectBulletEntitiesWrapper : ICollectLinkedEntitiesWrapper
+    {
+        public readonly Entity Parent;
+        public readonly NativeArray<int> SkillIndices;
+        public readonly ComponentTypeHandle<BulletEntity> BulletEntityType;
+        public readonly ComponentLookup<SkillDefinitionData> Skills;
+
+        public CollectBulletEntitiesWrapper(
+            in Entity parent, 
+            in NativeArray<int> skillIndices, 
+            in ComponentTypeHandle<BulletEntity> bulletEntityType, 
+            in ComponentLookup<SkillDefinitionData> skills)
+        {
+            Parent = parent;
+            SkillIndices = skillIndices;
+            BulletEntityType = bulletEntityType;
+            Skills = skills;
+        }
+
+        public void Run(
+            in EntityQuery group,
+            in EntityTypeHandle entityType,
+            in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
+            ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
+            ref NativeList<Entity> entities)
+        {
+            CollectBulletEntitiesEx collectBulletEntities;
+            collectBulletEntities.skillIndices = SkillIndices;
+            collectBulletEntities.parent = Parent;
+            collectBulletEntities.linkedEntityGroupType = linkedEntityGroupType;
+            collectBulletEntities.entityType = entityType;
+            collectBulletEntities.bulletEntityType = BulletEntityType;
+            collectBulletEntities.skills = Skills;
+            collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
+            collectBulletEntities.entities = entities;
+            
+            collectBulletEntities.RunByRef(group);
         }
     }
 
@@ -123,26 +196,23 @@ public partial class LevelSystemManaged
         
         public SkillVersion version;
     
-        public EntityTypeHandle entityType;
+        private ComponentTypeHandle<BulletEntity> __bulletEntityType;
 
-        public ComponentTypeHandle<BulletEntity> bulletEntityType;
+        private ComponentLookup<SkillDefinitionData> __skills;
 
-        public ComponentLookup<SkillDefinitionData> skills;
+        private EntityQuery __bulletGroup;
 
-        public EntityQuery bulletGroup;
+        private NativeHashMap<WeakObjectReference<Sprite>, int> __spriteRefCounts; 
 
-        public NativeHashMap<WeakObjectReference<Sprite>, int> spriteRefCounts; 
-        
         public SkillSelection(SystemBase system)
         {
             status = SkillSelectionStatus.None;
             version = default;
-            entityType = system.GetEntityTypeHandle();
-            bulletEntityType = system.GetComponentTypeHandle<BulletEntity>(true);
-            skills = system.GetComponentLookup<SkillDefinitionData>(true);
+            __bulletEntityType = system.GetComponentTypeHandle<BulletEntity>(true);
+            __skills = system.GetComponentLookup<SkillDefinitionData>(true);
 
             using (var builder = new EntityQueryBuilder(Allocator.Temp))
-                bulletGroup = builder
+                __bulletGroup = builder
                     .WithAll<BulletEntity>()
                     .Build(system);
 
@@ -150,34 +220,54 @@ public partial class LevelSystemManaged
             //system.RequireForUpdate<LevelSkillDesc>();
             system.RequireForUpdate<ThirdPersonPlayer>();
 
-            spriteRefCounts = new NativeHashMap<WeakObjectReference<Sprite>, int>(1, Allocator.Persistent);
+            __spriteRefCounts = new NativeHashMap<WeakObjectReference<Sprite>, int>(1, Allocator.Persistent);
         }
 
         public void Dispose()
         {
-            spriteRefCounts.Dispose();
+            __spriteRefCounts.Dispose();
         }
 
-        public void UpdateBullets(in Entity parent, in NativeArray<int> skillIndices, SystemBase system)
+        public void Reset(LevelSystemManaged system)
         {
-            entityType.Update(system);
-            bulletEntityType.Update(system);
-            skills.Update(system);
+            version = default;
+            
+            system.__DestroyEntities(__bulletGroup);
+        }
 
-            using (var entities = new NativeList<Entity>(Allocator.TempJob))
+        public void Release()
+        {
+            status = SkillSelectionStatus.None;
+            
+            foreach (var spriteRefCount in __spriteRefCounts)
+                spriteRefCount.Key.Release();
+            
+            __spriteRefCounts.Clear();
+        }
+
+        public void Retain(WeakObjectReference<Sprite> sprite)
+        {
+            if (__spriteRefCounts.TryGetValue(sprite, out int refCount))
+                ++refCount;
+            else
             {
-                CollectBulletEntitiesEx collectBulletEntities;
-                collectBulletEntities.skillIndices = skillIndices;
-                collectBulletEntities.parent = parent;
-                collectBulletEntities.entityType = entityType;
-                collectBulletEntities.bulletEntityType = bulletEntityType;
-                collectBulletEntities.skills = skills;
-                collectBulletEntities.entities = entities;
-                
-                collectBulletEntities.RunByRef(bulletGroup);
-                
-                system.EntityManager.DestroyEntity(entities.AsArray());
+                refCount = 1;
+
+                sprite.LoadAsync();
             }
+
+            __spriteRefCounts[sprite] = refCount;
+        }
+
+        public void UpdateBullets(in Entity parent, in NativeArray<int> skillIndices, LevelSystemManaged system)
+        {
+            __bulletEntityType.Update(system);
+            __skills.Update(system);
+
+            var collectBulletEntitiesWrapper =
+                new CollectBulletEntitiesWrapper(parent, skillIndices, __bulletEntityType, __skills);
+
+            system.__DestroyLinkedEntities(__bulletGroup, ref collectBulletEntitiesWrapper);
         }
     }
 
@@ -194,8 +284,7 @@ public partial class LevelSystemManaged
         
         if (manager.isRestart)
         {
-            __skillSelection.version = default;
-            __DestroyEntities(__skillSelection.bulletGroup);
+            __skillSelection.Reset(this);
 
             if (SystemAPI.Exists(player))
             {
@@ -281,17 +370,8 @@ public partial class LevelSystemManaged
                         switch (activeDesc.sprite.LoadingStatus)
                         {
                             case ObjectLoadingStatus.None:
-                                if (__skillSelection.spriteRefCounts.TryGetValue(activeDesc.sprite, out int refCount))
-                                    ++refCount;
-                                else
-                                {
-                                    refCount = 1;
-
-                                    activeDesc.sprite.LoadAsync();
-                                }
-
-                                __skillSelection.spriteRefCounts[activeDesc.sprite] = refCount;
-
+                                __skillSelection.Retain(activeDesc.sprite);
+                                
                                 isAllDone = false;
                                 break;
                             case ObjectLoadingStatus.Error:
@@ -309,21 +389,12 @@ public partial class LevelSystemManaged
                     switch (desc.sprite.LoadingStatus)
                     {
                         case ObjectLoadingStatus.None:
-                            if (__skillSelection.spriteRefCounts.TryGetValue(desc.sprite, out int refCount))
-                                ++refCount;
-                            else
-                            {
-                                refCount = 1;
-
-                                desc.sprite.LoadAsync();
-                            }
-
-                            __skillSelection.spriteRefCounts[desc.sprite] = refCount;
-
+                            __skillSelection.Retain(desc.sprite);
+                            
                             isAllDone = false;
                             break;
                         case ObjectLoadingStatus.Error:
-                            UnityEngine.Debug.LogError($"Sprite {desc.name} loaded failed!");
+                            Debug.LogError($"Sprite {desc.name} loaded failed!");
                             break;
                         case ObjectLoadingStatus.Completed:
                             break;
@@ -394,13 +465,6 @@ public partial class LevelSystemManaged
         if (manager.isClear && 
             manager.selectedSkillSelectionIndex == -1 && 
             SkillSelectionStatus.Finish == __skillSelection.status)
-        {
-            __skillSelection.status = SkillSelectionStatus.None;
-            
-            foreach (var spriteRefCount in __skillSelection.spriteRefCounts)
-                spriteRefCount.Key.Release();
-            
-            __skillSelection.spriteRefCounts.Clear();
-        }
+            __skillSelection.Release();
     }
 }

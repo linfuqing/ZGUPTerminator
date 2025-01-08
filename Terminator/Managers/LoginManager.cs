@@ -1,8 +1,6 @@
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Playables;
 using UnityEngine.Scripting;
 
 public sealed class LoginManager : MonoBehaviour
@@ -30,7 +28,7 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void LoadScene()
     {
-        GameAssetManager.instance.LoadScene(_levels[__selectedIndex].name, null);
+        GameAssetManager.instance.LoadScene(_levels[__selectedIndex].name, null, new GameSceneActivation());
     }
 
     private void __LoadScene()
