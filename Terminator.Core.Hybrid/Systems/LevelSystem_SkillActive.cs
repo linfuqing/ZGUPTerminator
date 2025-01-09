@@ -122,12 +122,17 @@ public partial class LevelSystemManaged
                 }
             }
 
-            foreach (var keyToRemove in keysToRemove)
+            if (keysToRemove.IsCreated)
             {
-                value = __indices[keyToRemove];
-                
-                __indices.Remove(keyToRemove);
-                __Unset(value, keyToRemove, descs, manager);
+                foreach (var keyToRemove in keysToRemove)
+                {
+                    value = __indices[keyToRemove];
+
+                    __indices.Remove(keyToRemove);
+                    __Unset(value, keyToRemove, descs, manager);
+                }
+
+                keysToRemove.Dispose();
             }
         }
 
@@ -190,7 +195,7 @@ public partial class LevelSystemManaged
 
                     __indices[key] = index;
                     
-                    manager.SetActiveSkill(index, level, desc.ToAsset(true));
+                    manager.SetActiveSkill(index, level, desc.ToAsset(false));
                 }
 
                 return result;

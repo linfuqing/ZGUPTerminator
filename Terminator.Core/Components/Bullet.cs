@@ -511,7 +511,7 @@ public struct BulletDefinition
 
         ref var data = ref bullets[index];
 
-        bool result = data.layerMask != 0 && (data.layerMask & layerMask) == 0, 
+        bool result = data.layerMask == 0 || (data.layerMask & layerMask) != 0, 
             isLocation = data.location == 0 || (data.location & location) != 0;
         
         if (targetStates.Length <= data.targetIndex)
