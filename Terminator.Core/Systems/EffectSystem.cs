@@ -90,13 +90,28 @@ public partial struct EffectSystem : ISystem
 
     private struct Clear
     {
+        public double time;
+        
         [ReadOnly] 
         public BufferAccessor<SimulationEvent> simulationEvents;
 
         public BufferAccessor<EffectStatusTarget> statusTargets;
 
+        public NativeArray<EffectStatus> states;
+
         public bool Execute(int index)
         {
+            if (index < states.Length)
+            {
+                var status = states[index];
+                if (status.time < math.DBL_MIN_NORMAL)
+                {
+                    status.time = time;
+
+                    states[index] = status;
+                }
+            }
+
             EffectStatusTarget statusTarget;
             var statusTargets = this.statusTargets[index];
             var simulationEvents = this.simulationEvents[index];
@@ -132,17 +147,23 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct ClearEx : IJobChunk
     {
+        public double time;
+        
         [ReadOnly] 
         public BufferTypeHandle<SimulationEvent> simulationEventType;
 
         public BufferTypeHandle<EffectStatusTarget> statusTargetType;
 
+        public ComponentTypeHandle<EffectStatus> statusType;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {
             Clear clear;
+            clear.time = time;
             clear.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
             clear.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
+            clear.states = chunk.GetNativeArray(ref statusType);
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -1009,10 +1030,15 @@ public partial struct EffectSystem : ISystem
 
         __simulationEventType.Update(ref state);
         __statusTargetType.Update(ref state);
+        __statusType.Update(ref state);
         
+        double time = SystemAPI.Time.ElapsedTime;
+
         ClearEx clear;
+        clear.time = time;
         clear.simulationEventType = __simulationEventType;
         clear.statusTargetType = __statusTargetType;
+        clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
         __parents.Update(ref state);
@@ -1024,15 +1050,12 @@ public partial struct EffectSystem : ISystem
         __simulationCollisionType.Update(ref state);
         __outputMessageType.Update(ref state);
         __inputMessageType.Update(ref state);
-        __statusType.Update(ref state);
         __targetDamages.Update(ref state);
         __delayDestroies.Update(ref state);
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
 
-        double time = SystemAPI.Time.ElapsedTime;
-        
         quaternion inverseCameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
             ? math.inverse(mainCameraTransform.value.rot)
             : quaternion.identity;

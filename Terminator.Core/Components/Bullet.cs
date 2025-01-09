@@ -768,8 +768,9 @@ public struct BulletDefinition
     }
 
     public void Update(
-        int layerMask, 
         BulletLocation location, 
+        int layerMask, 
+        float damageScale, 
         double time,
         in float3 up, 
         in quaternion cameraRotation, 
@@ -829,7 +830,7 @@ public struct BulletDefinition
             Update(
                 location, 
                 layerMask, 
-                activeIndex.damage, 
+                (int)math.round(activeIndex.damage * damageScale), 
                 activeIndex.value, 
                 version.value,
                 time,
@@ -1064,6 +1065,11 @@ public struct BulletDefinitionData : IComponentData
 public struct BulletLayerMask : IComponentData
 {
     public int value;
+}
+
+public struct BulletDamageScale : IComponentData
+{
+    public float value;
 }
 
 public struct BulletStatus : IBufferElementData
