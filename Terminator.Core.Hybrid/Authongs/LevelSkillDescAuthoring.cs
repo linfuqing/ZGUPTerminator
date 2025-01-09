@@ -148,7 +148,7 @@ public class LevelSkillDescAuthoring : MonoBehaviour
                 destination.icon = new WeakObjectReference<Sprite>(source.icon);
                 destination.level = source.level;
                 destination.rarity = source.rarity;
-                destination.preSkillIndex = skillNameIndices.TryGetValue(source.name, out skillNameIndex) ? skillNameIndex : -1;
+                destination.preSkillIndex = skillNameIndices.TryGetValue(source.preSkillName, out skillNameIndex) ? skillNameIndex : -1;
             }
         }
     }

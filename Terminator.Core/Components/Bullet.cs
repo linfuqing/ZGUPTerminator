@@ -522,7 +522,7 @@ public struct BulletDefinition
         if (result)
         {
             ref var target = ref targets[data.targetIndex];
-            result = (!isLocation || target.minDistance >= target.maxDistance) &&
+            result = (isLocation || target.minDistance >= target.maxDistance) &&
                      target.Update(
                          //(location & BulletLocation.Ground) == BulletLocation.Ground,
                          version,

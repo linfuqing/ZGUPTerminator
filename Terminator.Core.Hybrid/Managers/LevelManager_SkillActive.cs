@@ -9,13 +9,16 @@ public partial class LevelManager
 {
     private struct ActiveSkill
     {
-        public ActiveSkillStyle[] styles;
+        //private ActiveSkillStyle[] __styles;
+        private List<ActiveSkillStyle[]> __styles;
 
-        public ActiveSkill(int siblingIndex, in SkillAsset asset, ActiveSkillStyle[] styles)
+        public ActiveSkill(
+            int siblingIndex, 
+            ActiveSkillStyle[] styles)
         {
             int numStyles = styles == null ? 0 : styles.Length;
             ActiveSkillStyle style;
-            this.styles = numStyles > 0 ? new ActiveSkillStyle[numStyles] : null;
+            var results = new ActiveSkillStyle[numStyles];
             for (int i = 0; i < numStyles; ++i)
             {
                 style = styles[i];
@@ -25,48 +28,101 @@ public partial class LevelManager
                 style = Instantiate(style, style.transform.parent);
                 
                 style.transform.SetSiblingIndex(siblingIndex);
-                style.SetAsset(asset);
                 
-                this.styles[i] = style;
+                results[i] = style;
             }
+
+            __styles = new List<ActiveSkillStyle[]>();
+            __styles.Add(results);
         }
 
-        public void Dispose()
+        public bool Dispose(int level)
         {
-            if (styles == null)
-                return;
+            var styles = __styles[level];
             
             foreach (var style in styles)
+            {
+                if (style == null)
+                    continue;
+                
                 Destroy(style.gameObject);
+            }
 
-            styles = null;
+            __styles[level] = null;
+
+            foreach (var temp in __styles)
+            {
+                if (temp != null)
+                    return false;
+            }
+
+            return true;
         }
 
-        public void Reset(in SkillAsset asset)
+        public void Reset(int level, in SkillAsset asset)
         {
-            ActiveSkillStyle style;
-            int numStyles = styles == null ? 0 : styles.Length;
-            for (int i = 0; i < numStyles; ++i)
+            while(__styles.Count < level)
+                __styles.Add(null);
+
+            int numStyles;
+            ActiveSkillStyle[] styles;
+            if (__styles.Count == level)
             {
-                style = styles[i];
+                ActiveSkillStyle style;
+                styles = (ActiveSkillStyle[])__styles[0].Clone();
+                numStyles = styles.Length;
+                for(int i = 0; i < numStyles; ++i)
+                {
+                    style = styles[i];
+                    style = style.GetChild(level);
+                    if(style == null)
+                        continue;
+                    
+                    style = Instantiate(style, style.transform.parent);
+                    styles[i] = style;
+                }
+                
+                __styles.Add(styles);
+            }
+
+            styles = __styles[level];
+            foreach (var style in styles)
+            {
                 if(style == null)
                     continue;
                 
                 style.SetAsset(asset);
             }
+
+            /*ActiveSkillStyle style;
+            int numStyles = __styles == null ? 0 : __styles.Length;
+            for (int i = 0; i < numStyles; ++i)
+            {
+                style = __styles[i];
+                if(style == null)
+                    continue;
+
+                style.SetAsset(asset);
+            }*/
         }
         
         public void Set(float cooldown, float elapsedTime)
         {
-            if (styles != null)
+            if (__styles != null)
             {
                 float value = cooldown > Mathf.Epsilon ? elapsedTime / cooldown : 1.0f;
-                foreach (var style in styles)
+                foreach (var styles in __styles)
                 {
-                    if(style.cooldown == null)
+                    if (styles == null)
                         continue;
+
+                    foreach (var style in styles)
+                    {
+                        if(style.cooldown == null)
+                            continue;
                     
-                    style.cooldown.value = value;
+                        style.cooldown.value = value;
+                    }
                 }
             }
         }
@@ -81,21 +137,22 @@ public partial class LevelManager
     {
         if (value == null)
         {
-            if (__activeSkills != null)
-            {
-                if(level == 0 && __activeSkills.RemoveAt(index, out var origin))
-                    origin.Dispose();
-            }
+            if (__activeSkills != null && __activeSkills.TryGetValue(index, out var origin) && origin.Dispose(level))
+                __activeSkills.RemoveAt(index);
         }
         else
         {
             if (__activeSkills == null)
                 __activeSkills = new Pool<ActiveSkill>();
             
-            if(__activeSkills.TryGetValue(index, out var origin))
-                origin.Reset(value.Value);
-            else
-                __activeSkills.Insert(index, new ActiveSkill(index, value.Value, _activeSkillStyles));
+            if(!__activeSkills.TryGetValue(index, out var origin))
+            {
+                origin = new ActiveSkill(index, _activeSkillStyles);
+                
+                __activeSkills.Insert(index, origin);
+            }
+            
+            origin.Reset(level, value.Value);
         }
     }
     
