@@ -28,7 +28,7 @@ public class LevelSkillDescAuthoring : MonoBehaviour
         
         public int rarity;
 
-        public string[] preSkillNames;
+        //public string[] preSkillNames;
 
         #region CSV
         [CSVField]
@@ -40,14 +40,14 @@ public class LevelSkillDescAuthoring : MonoBehaviour
             }
         }
         
-        [CSVField]
+        /*[CSVField]
         public string 关卡技能描述前置技能
         {
             set
             {
                 preSkillNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
-        }
+        }*/
 
         [CSVField]
         public string 关卡技能描述标题
@@ -148,7 +148,7 @@ public class LevelSkillDescAuthoring : MonoBehaviour
                 destination.icon = new WeakObjectReference<Sprite>(source.icon);
                 destination.level = source.level;
                 destination.rarity = source.rarity;
-                destination.preIndices = new FixedList32Bytes<int>();
+                /*destination.preIndices = new FixedList32Bytes<int>();
                 if (source.preSkillNames != null)
                 {
                     foreach (var preSkillName in source.preSkillNames)
@@ -162,7 +162,7 @@ public class LevelSkillDescAuthoring : MonoBehaviour
                         
                         destination.preIndices.Add(skillNameIndex);
                     }
-                }
+                }*/
             }
         }
     }
@@ -206,7 +206,7 @@ public struct LevelSkillDesc : IBufferElementData
 
     public int rarity;
 
-    public FixedList32Bytes<int> preIndices;
+    //public FixedList32Bytes<int> preIndices;
 
     public SkillAsset ToAsset(bool isSpriteOrIcon)
     {

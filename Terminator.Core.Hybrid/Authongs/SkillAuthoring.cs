@@ -49,7 +49,7 @@ public class SkillAuthoring : MonoBehaviour
         public float cooldown;
         public BulletData[] bullets;
         public string[] messageNames;
-        public string[] preSkillNames;
+        public string[] preNames;
         
         #region CSV
         [CSVField]
@@ -152,6 +152,15 @@ public class SkillAuthoring : MonoBehaviour
                 messageNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
         }
+        
+        [CSVField]
+        public string 技能前置
+        {
+            set
+            {
+                preNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
+            }
+        }
         #endregion
     }
 
@@ -185,11 +194,16 @@ public class SkillAuthoring : MonoBehaviour
                 var bulletDataIndices = new Dictionary<BulletData, int>();
                 
                 ref var root = ref builder.ConstructRoot<SkillDefinition>();
-                
-                int k, bulletDataIndex, numMessageIndices, numBulletIndices, numBullets = bulletAuthoring._bullets.Length;
-                string messageName;
+
+                int k,
+                    bulletDataIndex,
+                    numMessageIndices,
+                    numPreIndices,
+                    numBulletIndices,
+                    numBullets = bulletAuthoring._bullets.Length;
+                string messageName, preName;
                 SkillDefinition.Bullet destinationBullet;
-                BlobBuilderArray<int> bulletIndices, messageIndices;
+                BlobBuilderArray<int> bulletIndices, messageIndices, preIndices;
                 var skills = builder.Allocate(ref root.skills, numSkills);
                 for (i = 0; i < numSkills; ++i)
                 {
@@ -260,6 +274,27 @@ public class SkillAuthoring : MonoBehaviour
 
                         if (messageIndices[j] == -1)
                             Debug.LogError($"Message {messageName} of skill {source.name} can not been found!");
+                    }
+
+                    numPreIndices = source.preNames == null ? 0 : source.preNames.Length;
+                    preIndices = builder.Allocate(ref destination.preIndices, numPreIndices);
+                    for (j = 0; j < numPreIndices; ++j)
+                    {
+                        preIndices[j] = -1;
+                        
+                        preName = source.preNames[j];
+                        for (k = 0; k < numMessages; ++k)
+                        {
+                            if (authoring._skills[k].name == preName)
+                            {
+                                preIndices[j] = k;
+                                
+                                break;
+                            }
+                        }
+
+                        if (preIndices[j] == -1)
+                            Debug.LogError($"Pre {preName} of skill {source.name} can not been found!");
                     }
                 }
 

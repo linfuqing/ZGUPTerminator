@@ -22,6 +22,7 @@ public struct SkillDefinition
         public float cooldown;
         public BlobArray<int> bulletIndices;
         public BlobArray<int> messageIndices;
+        public BlobArray<int> preIndices;
     }
 
     public BlobArray<Bullet> bullets;
@@ -51,13 +52,14 @@ public struct SkillDefinition
         float chance, value;
         long hash;
         int numActiveIndices = skillActiveIndices.Length,
+            numPreIndices, 
             numBulletIndices,
             numMessageIndices,
             messageOffset = outputMessages.IsCreated ? outputMessages.Length : -1,
             layerMaskInclude = 0, 
             layerMaskExclude = 0, 
-            i,
-            j;
+            preIndex,
+            i, j, k;
         bool isCooldown, isSelected, result = false;
         for (i = 0; i < numActiveIndices; ++i)
         {
@@ -131,6 +133,26 @@ public struct SkillDefinition
                     }
                     else
                         isCooldown = true;
+                }
+            }
+
+            if (isCooldown)
+            {
+                numPreIndices = skill.preIndices.Length;
+                for (j = 0; j < numPreIndices; ++j)
+                {
+                    preIndex = skill.preIndices[j];
+                    for (k = 0; k < numActiveIndices; ++k)
+                    {
+                        if (skillActiveIndices[k].value == preIndex)
+                            break;
+                    }
+
+                    if (k == numActiveIndices)
+                    {
+                        isCooldown = false;
+                        break;
+                    }
                 }
             }
 

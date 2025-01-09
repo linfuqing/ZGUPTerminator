@@ -47,7 +47,7 @@ public partial class LevelSystemManaged
 
                     if (!isComplete)
                     {
-                        isComplete = __Set(i, index, descs, manager);
+                        isComplete = __Set(i, index, descs, ref definition, manager);
                         //__indices[index] = i;
 
                         //manager.SetActiveSkill(i, descs[index].ToAsset(false));
@@ -59,7 +59,7 @@ public partial class LevelSystemManaged
                     
                     //icon = descs[index].icon;
                     descs[index].icon.LoadAsync();
-                    isComplete = __Set(i, index, descs, manager);
+                    isComplete = __Set(i, index, descs, ref definition, manager);
 
                     /*switch (icon.LoadingStatus)
                     {
@@ -128,7 +128,7 @@ public partial class LevelSystemManaged
                     value = __indices[keyToRemove];
 
                     __indices.Remove(keyToRemove);
-                    __Unset(value, keyToRemove, descs, manager);
+                    __Unset(value, keyToRemove, descs, ref definition, manager);
                 }
 
                 keysToRemove.Dispose();
@@ -139,6 +139,7 @@ public partial class LevelSystemManaged
             int index, 
             int value, 
             in DynamicBuffer<LevelSkillDesc> descs, 
+            ref SkillDefinition definition, 
             LevelManager manager)
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
@@ -151,7 +152,7 @@ public partial class LevelSystemManaged
                         continue;
 
                     level = -1;
-                    __GetLevel(value, key, descs, default, ref level);
+                    __GetLevel(value, key, default, ref definition, ref level);
                     if(level == -1)
                         continue;
 
@@ -168,6 +169,7 @@ public partial class LevelSystemManaged
             int index, 
             int value, 
             in DynamicBuffer<LevelSkillDesc> descs, 
+            ref SkillDefinition definition, 
             LevelManager manager)
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
@@ -182,7 +184,7 @@ public partial class LevelSystemManaged
                         continue;
 
                     level = -1;
-                    __GetLevel(value, key, descs, __indices, ref level);
+                    __GetLevel(value, key, __indices, ref definition, ref level);
                     if(level == -1)
                         continue;
 
@@ -209,11 +211,11 @@ public partial class LevelSystemManaged
         private static void __GetLevel(
             int targetIndex, 
             int index, 
-            in DynamicBuffer<LevelSkillDesc> descs, 
             in NativeHashMap<int, int> indices, 
+            ref SkillDefinition definition, 
             ref int level)
         {
-            if (index < 0 || index >= descs.Length)
+            if (index < 0 || index >= definition.skills.Length)
             {
                 level = -1;
 
@@ -237,15 +239,16 @@ public partial class LevelSystemManaged
             if (level > 0)
                 --level;
 
-            int temp, result = -1;
-            var preIndices = descs[index].preIndices;
-            foreach (var preIndex in preIndices)
+            ref var preIndices = ref definition.skills[index].preIndices;
+            int preIndex, temp, result = -1, numPreIndices = preIndices[index];
+            for(int i = 0; i < numPreIndices; ++i)
             {
+                preIndex = preIndices[i];
                 if (indices.IsCreated && !indices.ContainsKey(preIndex))
                     continue;
 
                 temp = level;
-                __GetLevel(targetIndex, preIndex, descs, indices, ref temp);
+                __GetLevel(targetIndex, preIndex, indices, ref definition, ref temp);
                 if (result == -1)
                     result = temp;
                 else if (temp != -1 && temp < result)
