@@ -33,7 +33,7 @@ public partial class LevelSystemManaged
         {
             //__activeSkillIndexMap.Clear();
 
-            WeakObjectReference<Sprite> icon;
+            //WeakObjectReference<Sprite> icon;
             SkillStatus status;
             int i, originIndex, index, numActiveIndices = activeIndices.Length;
             bool isComplete;
@@ -43,22 +43,25 @@ public partial class LevelSystemManaged
 
                 if (__indices.TryGetValue(index, out originIndex))
                 {
-                    isComplete = true;
+                    isComplete = originIndex == i;
 
-                    if (originIndex != i)
+                    if (!isComplete)
                     {
-                        __indices[index] = i;
+                        isComplete = __Set(i, index, descs, manager);
+                        //__indices[index] = i;
 
-                        manager.SetActiveSkill(i, descs[index].ToAsset(false));
+                        //manager.SetActiveSkill(i, descs[index].ToAsset(false));
                     }
                 }
                 else
                 {
-                    isComplete = false;
+                    __indices[index] = -1;
+                    
+                    //icon = descs[index].icon;
+                    descs[index].icon.LoadAsync();
+                    isComplete = __Set(i, index, descs, manager);
 
-                    icon = descs[index].icon;
-                    icon.LoadAsync();
-                    switch (icon.LoadingStatus)
+                    /*switch (icon.LoadingStatus)
                     {
                         case ObjectLoadingStatus.None:
                             break;
@@ -76,7 +79,7 @@ public partial class LevelSystemManaged
 
                             manager.SetActiveSkill(i, descs[index].ToAsset(false));
                             break;
-                    }
+                    }*/
                 }
 
                 if (isComplete)
@@ -89,39 +92,124 @@ public partial class LevelSystemManaged
                 }
             }
 
-            using (var activeSkillIndices = __indices.GetKeyValueArrays(Allocator.Temp))
+            bool isRemove;
+            int j, value;
+            NativeList<int> keysToRemove = default;
+            foreach (var pair in __indices)
             {
-                bool isRemove;
-                int j, value, numActiveSkillIndices = activeSkillIndices.Length;
-                for (i = 0; i < numActiveSkillIndices; ++i)
+                isRemove = false;
+                value = pair.Value;
+                index = pair.Key;
+                isRemove = value >= numActiveIndices;
+
+                if (!isRemove)
                 {
-                    isRemove = false;
-                    value = activeSkillIndices.Values[i];
-                    if (value >= numActiveIndices)
-                    {
-                        manager.SetActiveSkill(value, null);
-
-                        isRemove = true;
-                    }
-
-                    index = activeSkillIndices.Keys[i];
                     for (j = 0; j < numActiveIndices; ++j)
                     {
                         if (activeIndices[j].value == index)
                             break;
                     }
 
-                    if (j == numActiveIndices)
-                    {
-                        isRemove = true;
+                    isRemove = j == numActiveIndices;
+                }
 
-                        descs[index].icon.Release();
-                    }
-
-                    if (isRemove)
-                        __indices.Remove(index);
+                if (isRemove)
+                {
+                    if (!keysToRemove.IsCreated)
+                        keysToRemove = new NativeList<int>(Allocator.Temp);
+                    
+                    keysToRemove.Add(index);
                 }
             }
+
+            foreach (var keyToRemove in keysToRemove)
+            {
+                value = __indices[keyToRemove];
+                
+                __indices.Remove(keyToRemove);
+                __Unset(value, keyToRemove, descs, manager);
+            }
+        }
+
+        private void __Unset(
+            int index, 
+            int value, 
+            in DynamicBuffer<LevelSkillDesc> descs, 
+            LevelManager manager)
+        {
+            using (var keys = __indices.GetKeyArray(Allocator.Temp))
+            {
+                int temp, level;
+                foreach (var key in keys)
+                {
+                    temp = __indices[key];
+                    if(temp == index)
+                        continue;
+
+                    level = __GetLevel(value, key, descs);
+                    if(level == -1)
+                        continue;
+
+                    descs[key].icon.Release();
+                    
+                    __indices[key] = -1;
+                    
+                    manager.SetActiveSkill(index, level, null);
+                }
+            }
+        }
+        
+        private bool __Set(
+            int index, 
+            int value, 
+            in DynamicBuffer<LevelSkillDesc> descs, 
+            LevelManager manager)
+        {
+            using (var keys = __indices.GetKeyArray(Allocator.Temp))
+            {
+                bool result = true;
+                int temp, level;
+                LevelSkillDesc desc;
+                foreach (var key in keys)
+                {
+                    temp = __indices[key];
+                    if(temp == index)
+                        continue;
+
+                    level = __GetLevel(value, key, descs);
+                    if(level == -1)
+                        continue;
+
+                    desc = descs[key];
+                    if (ObjectLoadingStatus.Completed != desc.icon.LoadingStatus)
+                    {
+                        result = false;
+                        
+                        continue;
+                    }
+
+                    __indices[key] = index;
+                    
+                    manager.SetActiveSkill(index, level, desc.ToAsset(true));
+                }
+
+                return result;
+            }
+        }
+        
+        private static int __GetLevel(int targetIndex, int index, in DynamicBuffer<LevelSkillDesc> descs)
+        {
+            if (index < 0 || index >= descs.Length)
+                return -1;
+            
+            if (targetIndex == index)
+                return 0;
+
+            int result = __GetLevel(targetIndex, descs[index].preSkillIndex, descs);
+            if (result == -1)
+                return -1;
+
+            return result + 1;
         }
     }
 

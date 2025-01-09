@@ -263,6 +263,9 @@ public class BulletAuthoring : MonoBehaviour
         [Tooltip("释放次数，每次打空弹夹算一次，填零为无限次释放。注意：每次条件不满足时，则释放次数将被清空，满足条件后重新计数")]
         public int times;
 
+        [Tooltip("子弹标签，用技能开关")]
+        public LayerMask layerMask;
+
         public BulletSpace space;
         public BulletSpace targetSpace;
         public BulletLocation location;
@@ -416,6 +419,15 @@ public class BulletAuthoring : MonoBehaviour
             set
             {
                 times = value;
+            }
+        }
+        
+        [CSVField]
+        public int 子弹标签
+        {
+            set
+            {
+                layerMask = value;
             }
         }
 
@@ -651,7 +663,8 @@ public class BulletAuthoring : MonoBehaviour
                     if (destination.targetIndex == -1)
                         Debug.LogError(
                             $"Bullet target {source.targetName} of bullet {source.name} can not been found!");
-
+                    
+                    destination.layerMask = source.layerMask.value;
                     destination.space = source.space;
                     destination.targetSpace = source.targetSpace;
                     destination.location = source.location;
@@ -667,6 +680,8 @@ public class BulletAuthoring : MonoBehaviour
             
             AddComponent(entity, instance);
 
+            AddComponent<BulletLayerMask>(entity);
+            
             AddComponent<BulletStatus>(entity);
             AddComponent<BulletTargetStatus>(entity);
 

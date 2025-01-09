@@ -77,12 +77,15 @@ public partial class LevelManager
 
     private Pool<ActiveSkill> __activeSkills;
     
-    public void SetActiveSkill(int index, in SkillAsset? value)
+    public void SetActiveSkill(int index, int level, in SkillAsset? value)
     {
         if (value == null)
         {
-            if (__activeSkills != null && __activeSkills.RemoveAt(index, out var origin))
-                origin.Dispose();
+            if (__activeSkills != null)
+            {
+                if(level == 0 && __activeSkills.RemoveAt(index, out var origin))
+                    origin.Dispose();
+            }
         }
         else
         {

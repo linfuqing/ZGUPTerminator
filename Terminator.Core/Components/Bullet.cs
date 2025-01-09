@@ -464,6 +464,8 @@ public struct BulletDefinition
 
         public int prefabLoaderIndex;
 
+        public int layerMask;
+
         public BulletLocation location;
         public BulletLocation targetLocation;
         public BulletSpace space;
@@ -480,6 +482,7 @@ public struct BulletDefinition
 
     public bool Update(
         BulletLocation location, 
+        int layerMask, 
         int damage, 
         int index,
         int version,
@@ -507,44 +510,44 @@ public struct BulletDefinition
             return false;
 
         ref var data = ref bullets[index];
-        if (data.location != 0 && (data.location & location) == 0)
-        {
-            status.times = 0;
-            
-            return false;
-        }
 
+        bool result = data.layerMask != 0 && (data.layerMask & layerMask) == 0, 
+            isLocation = data.location == 0 || (data.location & location) != 0;
+        
         if (targetStates.Length <= data.targetIndex)
             targetStates.Resize(targets.Length, NativeArrayOptions.ClearMemory);
 
         ref var targetStatus = ref targetStates.ElementAt(data.targetIndex);
 
-        ref var target = ref targets[data.targetIndex];
-    
-        bool result = target.Update(
-            //(location & BulletLocation.Ground) == BulletLocation.Ground,
-            version,
-            time, 
-            up, 
-            cameraRotation,
-            transform,
-            lookAt,
-            collisionWorld,
-            physicsColliders,
-            characterBodies,
-            prefabs,
-            prefabLoadResults,
-            targetStates.AsNativeArray(),
-            ref targetStatus,
-            ref random);
+        if (result)
+        {
+            ref var target = ref targets[data.targetIndex];
+            result = (!isLocation || target.minDistance >= target.maxDistance) &&
+                     target.Update(
+                         //(location & BulletLocation.Ground) == BulletLocation.Ground,
+                         version,
+                         time,
+                         up,
+                         cameraRotation,
+                         transform,
+                         lookAt,
+                         collisionWorld,
+                         physicsColliders,
+                         characterBodies,
+                         prefabs,
+                         prefabLoadResults,
+                         targetStates.AsNativeArray(),
+                         ref targetStatus,
+                         ref random);
 
-        if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
-            result = __Check(
-                data.targetLocation, 
-                uint.MaxValue, 
-                targetStatus.target, 
-                collisionWorld, 
-                characterBodies);
+            if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
+                result = __Check(
+                    data.targetLocation,
+                    uint.MaxValue,
+                    targetStatus.target,
+                    collisionWorld,
+                    characterBodies);
+        }
 
         if (!result)
         {
@@ -642,6 +645,13 @@ public struct BulletDefinition
             entityCount = 1;
         }
 
+        if (!isLocation)
+        {
+            status.times = 0;
+            
+            return false;
+        }
+        
         RigidTransform transformResult;
         transformResult.pos = targetStatus.transform.pos;
 
@@ -674,7 +684,6 @@ public struct BulletDefinition
         if (data.space == BulletSpace.Local)
             transformResult = math.mul(math.inverse(math.RigidTransform(transform)), transformResult);
 
-        entityCount = 1;
         if(entityCount == 1)
         {
             var entity = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
@@ -759,6 +768,7 @@ public struct BulletDefinition
     }
 
     public void Update(
+        int layerMask, 
         BulletLocation location, 
         double time,
         in float3 up, 
@@ -818,6 +828,7 @@ public struct BulletDefinition
             activeIndex = activeIndices[i];
             Update(
                 location, 
+                layerMask, 
                 activeIndex.damage, 
                 activeIndex.value, 
                 version.value,
@@ -1048,6 +1059,11 @@ public struct BulletDefinition
 public struct BulletDefinitionData : IComponentData
 {
     public BlobAssetReference<BulletDefinition> definition;
+}
+
+public struct BulletLayerMask : IComponentData
+{
+    public int value;
 }
 
 public struct BulletStatus : IBufferElementData
