@@ -50,7 +50,7 @@ public struct SkillDefinition
         double cooldown;
         float chance, value;
         long hash;
-        int numSkillActiveIndices = skillActiveIndices.Length,
+        int numActiveIndices = skillActiveIndices.Length,
             numBulletIndices,
             numMessageIndices,
             messageOffset = outputMessages.IsCreated ? outputMessages.Length : -1,
@@ -59,7 +59,7 @@ public struct SkillDefinition
             i,
             j;
         bool isCooldown, isSelected, result = false;
-        for (i = 0; i < numSkillActiveIndices; ++i)
+        for (i = 0; i < numActiveIndices; ++i)
         {
             skillActiveIndex = skillActiveIndices[i];
             ref var skill = ref skills[skillActiveIndex.value];

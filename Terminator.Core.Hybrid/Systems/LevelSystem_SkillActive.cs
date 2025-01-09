@@ -97,11 +97,10 @@ public partial class LevelSystemManaged
             NativeList<int> keysToRemove = default;
             foreach (var pair in __indices)
             {
-                isRemove = false;
                 value = pair.Value;
                 index = pair.Key;
+                
                 isRemove = value >= numActiveIndices;
-
                 if (!isRemove)
                 {
                     for (j = 0; j < numActiveIndices; ++j)
@@ -148,10 +147,11 @@ public partial class LevelSystemManaged
                 foreach (var key in keys)
                 {
                     temp = __indices[key];
-                    if(temp == index)
+                    if(temp != index)
                         continue;
 
-                    level = __GetLevel(value, key, descs);
+                    level = -1;
+                    __GetLevel(value, key, descs, default, ref level);
                     if(level == -1)
                         continue;
 
@@ -178,10 +178,11 @@ public partial class LevelSystemManaged
                 foreach (var key in keys)
                 {
                     temp = __indices[key];
-                    if(temp == index)
+                    if(temp != -1)
                         continue;
 
-                    level = __GetLevel(value, key, descs);
+                    level = -1;
+                    __GetLevel(value, key, descs, __indices, ref level);
                     if(level == -1)
                         continue;
 
@@ -193,28 +194,65 @@ public partial class LevelSystemManaged
                         continue;
                     }
 
-                    __indices[key] = index;
-                    
-                    manager.SetActiveSkill(index, level, desc.ToAsset(false));
+                    if (level == 0 || manager.HasActiveSkill(index, level - 1))
+                    {
+                        __indices[key] = index;
+
+                        manager.SetActiveSkill(index, level, desc.ToAsset(false));
+                    }
                 }
 
                 return result;
             }
         }
         
-        private static int __GetLevel(int targetIndex, int index, in DynamicBuffer<LevelSkillDesc> descs)
+        private static void __GetLevel(
+            int targetIndex, 
+            int index, 
+            in DynamicBuffer<LevelSkillDesc> descs, 
+            in NativeHashMap<int, int> indices, 
+            ref int level)
         {
             if (index < 0 || index >= descs.Length)
-                return -1;
-            
+            {
+                level = -1;
+
+                return;
+            }
+
             if (targetIndex == index)
-                return 0;
+            {
+                level = 0;
+                
+                return;
+            }
 
-            int result = __GetLevel(targetIndex, descs[index].preSkillIndex, descs);
-            if (result == -1)
-                return -1;
+            if (level == 0)
+            {
+                level = -1;
 
-            return result + 1;
+                return;
+            }
+
+            if (level > 0)
+                --level;
+
+            int temp, result = -1;
+            var preIndices = descs[index].preIndices;
+            foreach (var preIndex in preIndices)
+            {
+                if (indices.IsCreated && !indices.ContainsKey(preIndex))
+                    continue;
+
+                temp = level;
+                __GetLevel(targetIndex, preIndex, descs, indices, ref temp);
+                if (result == -1)
+                    result = temp;
+                else if (temp != -1 && temp < result)
+                    result = temp;
+            }
+            
+            level = result == -1 ? -1 : result + 1;
         }
     }
 

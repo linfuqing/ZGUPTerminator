@@ -16,8 +16,6 @@ public class LevelSkillDescAuthoring : MonoBehaviour
     {
         public string name;
 
-        public string preSkillName;
-
         public string title;
 
         public string detail;
@@ -29,6 +27,8 @@ public class LevelSkillDescAuthoring : MonoBehaviour
         public int level;
         
         public int rarity;
+
+        public string[] preSkillNames;
 
         #region CSV
         [CSVField]
@@ -45,7 +45,7 @@ public class LevelSkillDescAuthoring : MonoBehaviour
         {
             set
             {
-                preSkillName = value;
+                preSkillNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
         }
 
@@ -148,7 +148,21 @@ public class LevelSkillDescAuthoring : MonoBehaviour
                 destination.icon = new WeakObjectReference<Sprite>(source.icon);
                 destination.level = source.level;
                 destination.rarity = source.rarity;
-                destination.preSkillIndex = skillNameIndices.TryGetValue(source.preSkillName, out skillNameIndex) ? skillNameIndex : -1;
+                destination.preIndices = new FixedList32Bytes<int>();
+                if (source.preSkillNames != null)
+                {
+                    foreach (var preSkillName in source.preSkillNames)
+                    {
+                        if (!skillNameIndices.TryGetValue(preSkillName, out skillNameIndex))
+                        {
+                            Debug.LogError($"Pre skill name {preSkillName} of skill desc {source.name} can not been found!");
+                            
+                            continue;
+                        }
+                        
+                        destination.preIndices.Add(skillNameIndex);
+                    }
+                }
             }
         }
     }
@@ -192,7 +206,7 @@ public struct LevelSkillDesc : IBufferElementData
 
     public int rarity;
 
-    public int preSkillIndex;
+    public FixedList32Bytes<int> preIndices;
 
     public SkillAsset ToAsset(bool isSpriteOrIcon)
     {

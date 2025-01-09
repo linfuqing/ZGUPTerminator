@@ -36,6 +36,11 @@ public partial class LevelManager
             __styles.Add(results);
         }
 
+        public bool Contains(int level)
+        {
+            return __styles.Count > level;
+        }
+
         public bool Dispose(int level)
         {
             var styles = __styles[level];
@@ -132,6 +137,13 @@ public partial class LevelManager
     internal ActiveSkillStyle[] _activeSkillStyles;
 
     private Pool<ActiveSkill> __activeSkills;
+
+    public bool HasActiveSkill(int index, int level)
+    {
+        return __activeSkills != null && 
+               __activeSkills.TryGetValue(index, out var activeSkill) &&
+               activeSkill.Contains(level);
+    }
     
     public void SetActiveSkill(int index, int level, in SkillAsset? value)
     {

@@ -49,6 +49,7 @@ public class SkillAuthoring : MonoBehaviour
         public float cooldown;
         public BulletData[] bullets;
         public string[] messageNames;
+        public string[] preSkillNames;
         
         #region CSV
         [CSVField]
