@@ -20,6 +20,8 @@ public partial struct SkillSystem : ISystem
         public NativeArray<BulletDefinitionData> bulletDefinitions;
         [ReadOnly]
         public NativeArray<SkillDefinitionData> instances;
+        [ReadOnly]
+        public NativeArray<SkillCooldownScale> cooldownScales;
         [ReadOnly] 
         public BufferAccessor<SkillMessage> inputMessages;
         [ReadOnly]
@@ -33,13 +35,16 @@ public partial struct SkillSystem : ISystem
 
         public BufferAccessor<Message> outputMessages;
         
+        public NativeArray<BulletLayerMask> bulletLayerMasks;
+
         public bool Execute(int index)
         {
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var states = this.states[index];
             var bulletStates = this.bulletStates[index];
             var bulletActiveIndices = this.bulletActiveIndices[index];
-            return instances[index].definition.Value.Update(
+            bool result = instances[index].definition.Value.Update(
+                index < cooldownScales.Length ? cooldownScales[index].value : 1.0f, 
                 time,
                 inputMessages[index],
                 activeIndices[index], 
@@ -47,7 +52,17 @@ public partial struct SkillSystem : ISystem
                 ref bulletStates, 
                 ref states, 
                 ref outputMessages, 
-                ref bulletDefinitions[index].definition.Value);
+                ref bulletDefinitions[index].definition.Value, 
+                out int layerMask);
+
+            if (index < bulletLayerMasks.Length)
+            {
+                BulletLayerMask bulletLayerMask;
+                bulletLayerMask.value = layerMask;
+                bulletLayerMasks[index] = bulletLayerMask;
+            }
+
+            return result;
         }
     }
 
@@ -58,9 +73,10 @@ public partial struct SkillSystem : ISystem
 
         [ReadOnly]
         public ComponentTypeHandle<BulletDefinitionData> bulletDefinitionType;
-
         [ReadOnly]
         public ComponentTypeHandle<SkillDefinitionData> instanceType;
+        [ReadOnly]
+        public ComponentTypeHandle<SkillCooldownScale> cooldownScaleType;
         [ReadOnly] 
         public BufferTypeHandle<SkillMessage> inputMessageType;
         [ReadOnly]
@@ -74,6 +90,8 @@ public partial struct SkillSystem : ISystem
 
         public BufferTypeHandle<Message> outputMessageType;
         
+        public ComponentTypeHandle<BulletLayerMask> bulletLayerMaskType;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             //long hash = math.aslong(time);
@@ -83,12 +101,14 @@ public partial struct SkillSystem : ISystem
             //collect.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)(hash >> 32) ^ (int)hash));
             collect.bulletDefinitions = chunk.GetNativeArray(ref bulletDefinitionType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
+            collect.cooldownScales = chunk.GetNativeArray(ref cooldownScaleType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
             collect.bulletActiveIndices = chunk.GetBufferAccessor(ref bulletActiveIndexType);
             collect.bulletStates = chunk.GetBufferAccessor(ref bulletStatusType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
+            collect.bulletLayerMasks = chunk.GetNativeArray(ref bulletLayerMaskType);
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -103,6 +123,8 @@ public partial struct SkillSystem : ISystem
 
     private ComponentTypeHandle<SkillDefinitionData> __instanceType;
 
+    private ComponentTypeHandle<SkillCooldownScale> __cooldownScaleType;
+    
     private BufferTypeHandle<SkillMessage> __inputMessageType;
     
     private BufferTypeHandle<SkillActiveIndex> __activeIndexType;
@@ -115,6 +137,8 @@ public partial struct SkillSystem : ISystem
     
     private BufferTypeHandle<Message> __outputMessageType;
 
+    private ComponentTypeHandle<BulletLayerMask> __bulletLayerMaskType;
+
     private EntityQuery __group;
 
     [BurstCompile]
@@ -122,12 +146,14 @@ public partial struct SkillSystem : ISystem
     {
         __bulletDefinitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
         __instanceType = state.GetComponentTypeHandle<SkillDefinitionData>(true);
+        __cooldownScaleType = state.GetComponentTypeHandle<SkillCooldownScale>(true);
         __inputMessageType = state.GetBufferTypeHandle<SkillMessage>(true);
         __activeIndexType = state.GetBufferTypeHandle<SkillActiveIndex>(true);
         __bulletActiveIndexType = state.GetBufferTypeHandle<BulletActiveIndex>();
         __bulletStatusType = state.GetBufferTypeHandle<BulletStatus>();
         __statusType = state.GetBufferTypeHandle<SkillStatus>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
+        __bulletLayerMaskType = state.GetComponentTypeHandle<BulletLayerMask>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -146,23 +172,27 @@ public partial struct SkillSystem : ISystem
     {
         __bulletDefinitionType.Update(ref state);
         __instanceType.Update(ref state);
+        __cooldownScaleType.Update(ref state);
         __inputMessageType.Update(ref state);
         __activeIndexType.Update(ref state);
         __bulletActiveIndexType.Update(ref state);
         __bulletStatusType.Update(ref state);
         __statusType.Update(ref state);
         __outputMessageType.Update(ref state);
+        __bulletLayerMaskType.Update(ref state);
         
         CollectEx collect;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.bulletDefinitionType = __bulletDefinitionType;
         collect.instanceType = __instanceType;
+        collect.cooldownScaleType = __cooldownScaleType;
         collect.inputMessageType = __inputMessageType;
         collect.activeIndexType = __activeIndexType;
         collect.bulletActiveIndexType = __bulletActiveIndexType;
         collect.bulletStatusType = __bulletStatusType;
         collect.statusType = __statusType;
         collect.outputMessageType = __outputMessageType;
+        collect.bulletLayerMaskType = __bulletLayerMaskType;
         
         state.Dependency = collect.ScheduleParallelByRef(__group, state.Dependency);
     }

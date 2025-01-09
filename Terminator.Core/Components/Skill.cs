@@ -16,6 +16,8 @@ public struct SkillDefinition
     
     public struct Skill
     {
+        public int layerMaskInclude;
+        public int layerMaskExclude;
         public float duration;
         public float cooldown;
         public BlobArray<int> bulletIndices;
@@ -26,6 +28,7 @@ public struct SkillDefinition
     public BlobArray<Skill> skills;
     
     public bool Update(
+        float cooldownScale, 
         double time, 
         in DynamicBuffer<SkillMessage> inputMessages, 
         in DynamicBuffer<SkillActiveIndex> skillActiveIndices, 
@@ -33,7 +36,8 @@ public struct SkillDefinition
         ref DynamicBuffer<BulletStatus> bulletStates, 
         ref DynamicBuffer<SkillStatus> states, 
         ref DynamicBuffer<Message> outputMessages, 
-        ref BulletDefinition bulletDefinition)
+        ref BulletDefinition bulletDefinition, 
+        out int layerMask)
     {
         bulletActiveIndices.Clear();
         
@@ -42,12 +46,16 @@ public struct SkillDefinition
         SkillMessage inputMessage;
         SkillActiveIndex skillActiveIndex;
         BulletActiveIndex bulletActiveIndex;
-        double cooldown, oldCooldown;
+        Random random;
+        double cooldown;
         float chance, value;
+        long hash;
         int numSkillActiveIndices = skillActiveIndices.Length,
             numBulletIndices,
             numMessageIndices,
             messageOffset = outputMessages.IsCreated ? outputMessages.Length : -1,
+            layerMaskInclude = 0, 
+            layerMaskExclude = 0, 
             i,
             j;
         bool isCooldown, isSelected, result = false;
@@ -66,14 +74,13 @@ public struct SkillDefinition
                 isCooldown = status.cooldown > math.DBL_MIN_NORMAL;
                 if (isCooldown)
                 {
-                    oldCooldown = status.cooldown - (skill.duration + skill.cooldown);
                     for (j = 0; j < numBulletIndices; ++j)
                     {
                         ref var bullet = ref this.bullets[skill.bulletIndices[j]];
                         if (bullet.index < bulletStates.Length)
                         {
                             ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                            if (bulletStatus.cooldown > oldCooldown + bulletDefinition.bullets[bullet.index].startTime)
+                            if (bulletStatus.cooldown > status.time + bulletDefinition.bullets[bullet.index].startTime)
                             {
                                 isCooldown = false;
 
@@ -85,7 +92,8 @@ public struct SkillDefinition
 
                 if (!isCooldown)
                 {
-                    status.cooldown = time + (skill.duration + skill.cooldown);
+                    status.time = time;
+                    status.cooldown = time + (skill.duration + skill.cooldown * cooldownScale);
 
                     if (skill.cooldown > math.FLT_MIN_NORMAL)
                     {
@@ -128,8 +136,11 @@ public struct SkillDefinition
 
             if (isCooldown)
             {
-                long hash = math.aslong(status.cooldown);
-                var random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash);
+                layerMaskInclude |= skill.layerMaskInclude;
+                layerMaskExclude |= skill.layerMaskExclude;
+                
+                hash = math.aslong(status.cooldown);
+                random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash);
                 value = random.NextFloat();
                 chance = 0;
                 isSelected = false;
@@ -159,6 +170,8 @@ public struct SkillDefinition
             }
         }
 
+        layerMask = layerMaskInclude & ~layerMaskExclude;
+
         return result;
     }
 }
@@ -166,6 +179,11 @@ public struct SkillDefinition
 public struct SkillDefinitionData : IComponentData
 {
     public BlobAssetReference<SkillDefinition> definition;
+}
+
+public struct SkillCooldownScale : IComponentData
+{
+    public float value;
 }
 
 public struct SkillMessage : IBufferElementData
@@ -181,5 +199,6 @@ public struct SkillActiveIndex : IBufferElementData
 
 public struct SkillStatus : IBufferElementData
 {
+    public double time;
     public double cooldown;
 }

@@ -41,6 +41,9 @@ public class SkillAuthoring : MonoBehaviour
     internal struct SkillData
     {
         public string name;
+
+        public LayerMask layerMaskInclude;
+        public LayerMask layerMaskExclude;
         
         public float duration;
         public float cooldown;
@@ -54,6 +57,24 @@ public class SkillAuthoring : MonoBehaviour
             set
             {
                 name = value;
+            }
+        }
+        
+        [CSVField]
+        public int 技能包含标签
+        {
+            set
+            {
+                layerMaskInclude = value;
+            }
+        }
+        
+        [CSVField]
+        public int 技能排除标签
+        {
+            set
+            {
+                layerMaskExclude = value;
             }
         }
         
@@ -174,6 +195,8 @@ public class SkillAuthoring : MonoBehaviour
                     ref var source = ref authoring._skills[i];
                     ref var destination = ref skills[i];
 
+                    destination.layerMaskInclude = source.layerMaskInclude;
+                    destination.layerMaskExclude = source.layerMaskExclude;
                     destination.duration = source.duration;
                     destination.cooldown = source.cooldown;
 
@@ -252,6 +275,10 @@ public class SkillAuthoring : MonoBehaviour
             Entity entity = GetEntity(authoring, TransformUsageFlags.None);
             AddComponent(entity, instance);
 
+            SkillCooldownScale cooldownScale;
+            cooldownScale.value = authoring._cooldownScale;
+            AddComponent(entity, cooldownScale);
+
             var activeIndices = AddBuffer<SkillActiveIndex>(entity);
             int numActives = authoring._actives.Length;
             activeIndices.ResizeUninitialized(numActives);
@@ -294,6 +321,9 @@ public class SkillAuthoring : MonoBehaviour
             }
         }
     }
+
+    [SerializeField] 
+    internal float _cooldownScale = 1.0f;
 
     [SerializeField] 
     internal MessageData[] _messages;
