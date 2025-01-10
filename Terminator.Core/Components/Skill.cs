@@ -95,6 +95,7 @@ public struct SkillDefinition
                 if (!isCooldown)
                 {
                     numPreIndices = skill.preIndices.Length;
+                    isSelected = numPreIndices < 1;
                     for (j = 0; j < numPreIndices; ++j)
                     {
                         preIndex = skill.preIndices[j];
@@ -104,11 +105,14 @@ public struct SkillDefinition
                                 break;
                         }
 
-                        if (k == numActiveIndices)
+                        if (k < numActiveIndices)
+                        {
+                            isSelected = true;
                             break;
+                        }
                     }
 
-                    if (j == numPreIndices)
+                    if (isSelected)
                     {
                         status.time = time;
                         status.cooldown = time + (skill.duration + skill.cooldown * cooldownScale);
