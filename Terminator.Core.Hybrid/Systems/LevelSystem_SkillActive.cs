@@ -240,7 +240,7 @@ public partial class LevelSystemManaged
                 --level;
 
             ref var preIndices = ref definition.skills[index].preIndices;
-            int preIndex, temp, result = -1, numPreIndices = preIndices[index];
+            int preIndex, temp, result = -1, numPreIndices = preIndices.Length;
             for(int i = 0; i < numPreIndices; ++i)
             {
                 preIndex = preIndices[i];

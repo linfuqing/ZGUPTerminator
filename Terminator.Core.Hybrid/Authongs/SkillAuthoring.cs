@@ -283,7 +283,7 @@ public class SkillAuthoring : MonoBehaviour
                         preIndices[j] = -1;
                         
                         preName = source.preNames[j];
-                        for (k = 0; k < numMessages; ++k)
+                        for (k = 0; k < numSkills; ++k)
                         {
                             if (authoring._skills[k].name == preName)
                             {
