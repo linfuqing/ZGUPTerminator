@@ -201,7 +201,7 @@ public partial class LevelSystemManaged
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
             {
-                bool result = false;
+                bool result = false, isCompleted = true;
                 int temp, level;
                 LevelSkillDesc desc;
                 foreach (var key in keys)
@@ -217,7 +217,7 @@ public partial class LevelSystemManaged
                     desc = descs[key];
                     if (ObjectLoadingStatus.Completed != desc.icon.LoadingStatus)
                     {
-                        result = false;
+                        isCompleted = false;
                         
                         continue;
                     }
@@ -232,7 +232,7 @@ public partial class LevelSystemManaged
                     result = true;
                 }
 
-                return result;
+                return result && isCompleted;
             }
         }
         
