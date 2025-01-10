@@ -60,13 +60,12 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         public KinematicCharacterUpdateContext BaseContext;
 
         private ArchetypeChunk __chunk;
-        private BufferAccessor<SimulationEvent> __simulationEvents;
 
-        void Execute([EntityIndexInQuery] int entityIndexInQuery, ThirdPersonCharacterAspect characterAspect)
+        void Execute(
+            [EntityIndexInQuery] int entityIndexInQuery, 
+            ThirdPersonCharacterAspect characterAspect, 
+            ref DynamicBuffer<SimulationEvent> simulationEvents)
         {
-            var simulationEvents = entityIndexInQuery < __simulationEvents.Length
-                ? __simulationEvents[entityIndexInQuery]
-                : default;
             int numSimulationEvents = simulationEvents.IsCreated ? simulationEvents.Length : 0;
             characterAspect.PhysicsUpdate(ref Context, ref BaseContext, ref simulationEvents);
             if (numSimulationEvents == 0 && simulationEvents.IsCreated && simulationEvents.Length > 0)
@@ -76,7 +75,6 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             __chunk = chunk;
-            __simulationEvents = chunk.GetBufferAccessor(ref Context.SimulationEventType);
             
             BaseContext.EnsureCreationOfTmpCollections();
             return true;
