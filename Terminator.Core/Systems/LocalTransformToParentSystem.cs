@@ -121,13 +121,18 @@ public partial struct LocalTransformToParentSystem : ISystem
             states[index] = status;
         }
 
-        public Entity GetCharacterBody(int index)
+        public Entity GetCharacterBody(int index, out bool isInParent)
         {
+            isInParent = false;
             Entity entity = index < bulletEntities.Length ? bulletEntities[index].parent : entityArray[index];
             while (!characterBodies.HasComponent(entity))
             {
                 if (parents.TryGetComponent(entity, out var parent))
+                {
+                    isInParent = true;
+                    
                     entity = parent.Value;
+                }
                 else
                 {
                     entity = Entity.Null;
@@ -144,7 +149,7 @@ public partial struct LocalTransformToParentSystem : ISystem
             float horizontal, 
             ref LocalTransform motion)
         {
-            Entity characterBodyEntity = GetCharacterBody(index);
+            Entity characterBodyEntity = GetCharacterBody(index, out bool isInParent);
             if (characterBodyEntity == Entity.Null)
                 return;
 
@@ -171,7 +176,8 @@ public partial struct LocalTransformToParentSystem : ISystem
             
             motion = localTransform;
 
-            localTransforms[index] = LocalTransform.Identity;
+            if(isInParent)
+                localTransforms[index] = LocalTransform.Identity;
         }
     }
 
