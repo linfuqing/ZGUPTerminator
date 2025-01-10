@@ -6,7 +6,7 @@ public struct LocalTransformToParent : IComponentData
     public float horizontal;
 }
 
-public struct LocalTransformToParentStatus : IComponentData
+public struct LocalTransformToParentStatus : IComponentData, IEnableableComponent
 {
     public LocalTransform motion;
 }

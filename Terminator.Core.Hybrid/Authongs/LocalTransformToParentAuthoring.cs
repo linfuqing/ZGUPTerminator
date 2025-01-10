@@ -18,6 +18,8 @@ public class LocalTransformToParentAuthoring : MonoBehaviour
             LocalTransformToParentStatus status;
             status.motion = LocalTransform.Identity;
             AddComponent(entity, status);
+            
+            SetComponentEnabled<LocalTransformToParentStatus>(entity, false);
         }
     }
 

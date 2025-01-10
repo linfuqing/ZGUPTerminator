@@ -6,6 +6,82 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.CharacterController;
 
+[BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
+public partial struct LocalTransformToParentInitSystem : ISystem
+{
+    private struct Init
+    {
+        [ReadOnly]
+        public NativeArray<LocalTransform> localTransforms;
+
+        public NativeArray<LocalTransformToParentStatus> localTransformsToParentStates;
+
+        public void Execute(int index)
+        {
+            LocalTransformToParentStatus localTransformToParentStatus;
+            localTransformToParentStatus.motion = localTransforms[index];
+            localTransformsToParentStates[index] = localTransformToParentStatus;
+        }
+    }
+
+    [BurstCompile]
+    private struct InitEx : IJobChunk
+    {
+        [ReadOnly]
+        public ComponentTypeHandle<LocalTransform> localTransformType;
+
+        public ComponentTypeHandle<LocalTransformToParentStatus> localTransformsToParentStatusType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            if (!chunk.Has(ref localTransformsToParentStatusType))
+                return;
+
+            Init init;
+            init.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            init.localTransformsToParentStates = chunk.GetNativeArray(ref localTransformsToParentStatusType);
+            
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+            {
+                init.Execute(i);
+                chunk.SetComponentEnabled(ref localTransformsToParentStatusType, i, true);
+            }
+        }
+    }
+    
+    private ComponentTypeHandle<LocalTransform> __localTransformType;
+
+    private ComponentTypeHandle<LocalTransformToParentStatus> __localTransformsToParentStatusType;
+
+    private EntityQuery __group;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __localTransformType = state.GetComponentTypeHandle<LocalTransform>(true);
+        __localTransformsToParentStatusType = state.GetComponentTypeHandle<LocalTransformToParentStatus>();
+        
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __group = builder
+                .WithAll<LocalTransform, LocalTransformToParent>()
+                .WithNone<LocalTransformToParentStatus>()
+                .Build(ref state);
+    }
+
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        __localTransformType.Update(ref state);
+        __localTransformsToParentStatusType.Update(ref state);
+        
+        InitEx init;
+        init.localTransformType = __localTransformType;
+        init.localTransformsToParentStatusType = __localTransformsToParentStatusType;
+        state.Dependency = init.ScheduleParallelByRef(__group, state.Dependency);
+    }
+}
+
 [BurstCompile, UpdateInGroup(typeof(SimulationSystemGroup), OrderFirst = true), UpdateAfter(typeof(AnimationCurveSystem))]
 public partial struct LocalTransformToParentSystem : ISystem
 {
