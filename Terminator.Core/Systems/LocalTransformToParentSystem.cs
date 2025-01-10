@@ -126,7 +126,7 @@ public partial struct LocalTransformToParentSystem : ISystem
         public Entity GetCharacterBody(int index, out bool isInParent)
         {
             isInParent = false;
-            Entity entity = index < bulletEntities.Length ? bulletEntities[index].parent : entityArray[index];
+            Entity entity = entityArray[index];
             while (!characterBodies.HasComponent(entity))
             {
                 if (parents.TryGetComponent(entity, out var parent))
@@ -141,6 +141,13 @@ public partial struct LocalTransformToParentSystem : ISystem
 
                     break;
                 }
+            }
+
+            if (entity == Entity.Null && index < bulletEntities.Length)
+            {
+                entity = bulletEntities[index].parent;
+                if (!characterBodies.HasComponent(entity))
+                    entity = Entity.Null;
             }
 
             return entity;
