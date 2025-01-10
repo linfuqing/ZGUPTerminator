@@ -49,6 +49,7 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
     public readonly RefRW<ThirdPersonCharacterComponent> CharacterComponent;
     public readonly RefRW<ThirdPersonCharacterControl> CharacterControl;
     public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
+    public readonly DynamicBuffer<SimulationEvent> SimulationEvents;
 
     public void PhysicsUpdate(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
@@ -71,6 +72,14 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         CharacterAspect.Update_MovingPlatformDetection(ref baseContext, ref characterBody); 
         CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
         CharacterAspect.Update_ProcessStatefulCharacterHits();
+
+        SimulationEvent simulationEvent;
+        foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
+        {
+            simulationEvent.entity = characterHit.Entity;
+            simulationEvent.colliderKey = characterHit.ColliderKey;
+            SimulationEvent.Append(SimulationEvents, simulationEvent);
+        }
     }
 
     private void HandleVelocityControl(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
@@ -158,7 +167,7 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         KinematicCharacterUtilities.AddVariableRateRotationFromFixedRateRotation(ref characterTransform.Rotation, characterBody.RotationFromParent, baseContext.Time.DeltaTime, characterBody.LastPhysicsUpdateDeltaTime);
 
         float3 direction = characterControl.MoveVector;
-        if (math.lengthsq(CharacterLookAt.ValueRO.direction) > math.FLT_MIN_NORMAL)
+        if (CharacterLookAt.IsValid && math.lengthsq(CharacterLookAt.ValueRO.direction) > math.FLT_MIN_NORMAL)
             direction = math.forward(CharacterLookAt.ValueRO.direction);
         else if (math.lengthsq(direction) > math.FLT_MIN_NORMAL)
             direction = math.normalize(direction);

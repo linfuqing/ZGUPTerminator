@@ -8,7 +8,7 @@ public struct SimulationEvent : IBufferElementData, IEnableableComponent, IEquat
     public Entity entity;
     public ColliderKey colliderKey;
 
-    public static bool Append(ref DynamicBuffer<SimulationEvent> values, in SimulationEvent value)
+    public static bool Append(DynamicBuffer<SimulationEvent> values, in SimulationEvent value)
     {
         foreach (var temp in values)
         {

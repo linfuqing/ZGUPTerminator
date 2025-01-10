@@ -228,7 +228,7 @@ public partial struct SimulationEventSystem : ISystem
                 //simulationEvent.bodyIndex = triggerEvent.BodyIndexB;
                 simulationEvent.colliderKey = triggerEvent.ColliderKeyB;
 
-                SimulationEvent.Append(ref instances, simulationEvent);
+                SimulationEvent.Append(instances, simulationEvent);
                 this.instances.SetBufferEnabled(triggerEvent.EntityA, true);
             }
             
@@ -239,7 +239,7 @@ public partial struct SimulationEventSystem : ISystem
                 //simulationEvent.bodyIndex = triggerEvent.BodyIndexA;
                 simulationEvent.colliderKey = triggerEvent.ColliderKeyA;
                 
-                SimulationEvent.Append(ref instances, simulationEvent);
+                SimulationEvent.Append(instances, simulationEvent);
                 this.instances.SetBufferEnabled(triggerEvent.EntityB, true);
             }
         }
@@ -260,7 +260,7 @@ public partial struct SimulationEventSystem : ISystem
                 //simulationEvent.bodyIndex = collisionEvent.BodyIndexB;
                 simulationEvent.colliderKey = collisionEvent.ColliderKeyB;
                 
-                SimulationEvent.Append(ref simulationEvents, simulationEvent);
+                SimulationEvent.Append(simulationEvents, simulationEvent);
                 this.instances.SetBufferEnabled(collisionEvent.EntityA, true);
             }
             
@@ -271,7 +271,7 @@ public partial struct SimulationEventSystem : ISystem
                 //simulationEvent.bodyIndex = collisionEvent.BodyIndexA;
                 simulationEvent.colliderKey = collisionEvent.ColliderKeyA;
                 
-                SimulationEvent.Append(ref simulationEvents, simulationEvent);
+                SimulationEvent.Append(simulationEvents, simulationEvent);
                 this.instances.SetBufferEnabled(collisionEvent.EntityB, true);
             }
         }

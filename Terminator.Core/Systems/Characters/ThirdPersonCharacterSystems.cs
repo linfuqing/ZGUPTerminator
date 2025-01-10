@@ -49,7 +49,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
             Context = _context,
             BaseContext = _baseContext,
         };
-        job.ScheduleParallel();
+        job.ScheduleParallelByRef(_characterQuery);
     }
 
     [BurstCompile]
