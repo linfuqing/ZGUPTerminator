@@ -104,10 +104,12 @@ public partial struct LocalTransformToParentSystem : ISystem
 
         public NativeArray<LocalTransformToParentStatus> states;
 
-        public NativeArray<LocalTransform> localTransforms;
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<LocalTransform> localTransforms;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<KinematicCharacterBody> characterBodies;
+        
         [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersionCharacterGravityFactor> characterGravityFactors;
 
@@ -152,32 +154,38 @@ public partial struct LocalTransformToParentSystem : ISystem
             Entity characterBodyEntity = GetCharacterBody(index, out bool isInParent);
             if (characterBodyEntity == Entity.Null)
                 return;
-
-            ref var characterBody = ref characterBodies.GetRefRW(characterBodyEntity).ValueRW;
-
-            var localTransform = localTransforms[index];
-            bool result = math.dot(localTransform.Position, characterBody.GroundingUp) > horizontal;
-            if(result)
-                characterBody.IsGrounded = false;
             
-            if (characterGravityFactors.HasComponent(characterBodyEntity))
+            Entity entity = entityArray[index];
+            var localTransform = localTransforms[entity];
+            if (isInParent)
             {
-                ThirdPersionCharacterGravityFactor characterGravityFactor;
-                characterGravityFactor.value = result
-                    ? 0.0f
-                    : 1.0f;
-                characterGravityFactors[characterBodyEntity] = characterGravityFactor;
-            }
+                ref var characterBody = ref characterBodies.GetRefRW(characterBodyEntity).ValueRW;
 
-            var delta = localTransform.Position - motion.Position;//motion.InverseTransformTransform(localTransform);
-            ZG.Mathematics.Math.InterlockedAdd(ref characterBody.RelativeVelocity,
-                delta * deltaTimeR -
-                math.projectsafe(characterBody.RelativeVelocity, characterBody.GroundingUp));
+                bool result = math.dot(localTransform.Position, characterBody.GroundingUp) > horizontal;
+                if (result)
+                    characterBody.IsGrounded = false;
+
+                if (characterGravityFactors.HasComponent(characterBodyEntity))
+                {
+                    ThirdPersionCharacterGravityFactor characterGravityFactor;
+                    characterGravityFactor.value = result
+                        ? 0.0f
+                        : 1.0f;
+                    characterGravityFactors[characterBodyEntity] = characterGravityFactor;
+                }
+
+                var delta = localTransform.Position -
+                            motion.Position; //motion.InverseTransformTransform(localTransform);
+                ZG.Mathematics.Math.InterlockedAdd(ref characterBody.RelativeVelocity,
+                    delta * deltaTimeR -
+                    math.projectsafe(characterBody.RelativeVelocity, characterBody.GroundingUp));
+
+                localTransforms[entity] = LocalTransform.Identity;
+            }
+            else
+                localTransforms[characterBodyEntity] = localTransform;
             
             motion = localTransform;
-
-            if(isInParent)
-                localTransforms[index] = LocalTransform.Identity;
         }
     }
 
@@ -200,7 +208,8 @@ public partial struct LocalTransformToParentSystem : ISystem
 
         public ComponentTypeHandle<LocalTransformToParentStatus> statusType;
 
-        public ComponentTypeHandle<LocalTransform> localTransformType;
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<LocalTransform> localTransforms;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<KinematicCharacterBody> characterBodies;
@@ -216,7 +225,7 @@ public partial struct LocalTransformToParentSystem : ISystem
             update.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
             update.instances = chunk.GetNativeArray(ref instanceType);
             update.states = chunk.GetNativeArray(ref statusType);
-            update.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            update.localTransforms = localTransforms;
             update.characterBodies = characterBodies;
             update.characterGravityFactors = characterGravityFactors;
 
@@ -235,7 +244,8 @@ public partial struct LocalTransformToParentSystem : ISystem
     private ComponentTypeHandle<LocalTransformToParent> __instanceType;
 
     private ComponentTypeHandle<LocalTransformToParentStatus> __statusType;
-    private ComponentTypeHandle<LocalTransform> __localTransformType;
+    
+    private ComponentLookup<LocalTransform> __localTransforms;
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
     private ComponentLookup<ThirdPersionCharacterGravityFactor> __characterGravityFactors;
@@ -250,7 +260,7 @@ public partial struct LocalTransformToParentSystem : ISystem
         __bulletEntityType = state.GetComponentTypeHandle<BulletEntity>(true);
         __instanceType = state.GetComponentTypeHandle<LocalTransformToParent>(true);
         __statusType = state.GetComponentTypeHandle<LocalTransformToParentStatus>();
-        __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
+        __localTransforms = state.GetComponentLookup<LocalTransform>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __characterGravityFactors = state.GetComponentLookup<ThirdPersionCharacterGravityFactor>();
 
@@ -270,7 +280,7 @@ public partial struct LocalTransformToParentSystem : ISystem
         __bulletEntityType.Update(ref state);
         __instanceType.Update(ref state);
         __statusType.Update(ref state);
-        __localTransformType.Update(ref state);
+        __localTransforms.Update(ref state);
         __characterBodies.Update(ref state);
         __characterGravityFactors.Update(ref state);
 
@@ -281,7 +291,7 @@ public partial struct LocalTransformToParentSystem : ISystem
         update.bulletEntityType = __bulletEntityType;
         update.instanceType = __instanceType;
         update.statusType = __statusType;
-        update.localTransformType = __localTransformType;
+        update.localTransforms = __localTransforms;
         update.characterBodies = __characterBodies;
         update.characterGravityFactors = __characterGravityFactors;
 
