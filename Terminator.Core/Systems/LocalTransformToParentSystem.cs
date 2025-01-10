@@ -170,9 +170,12 @@ public partial struct LocalTransformToParentSystem : ISystem
             }
 
             var delta = localTransform.Position - motion.Position;//motion.InverseTransformTransform(localTransform);
-            ZG.Mathematics.Math.InterlockedAdd(ref characterBody.RelativeVelocity,
+            characterBody.RelativeVelocity = delta * deltaTimeR -
+                                             math.projectsafe(characterBody.RelativeVelocity,
+                                                 characterBody.GroundingUp);
+            /*ZG.Mathematics.Math.InterlockedAdd(ref characterBody.RelativeVelocity,
                 delta * deltaTimeR -
-                math.projectsafe(characterBody.RelativeVelocity, characterBody.GroundingUp));
+                math.projectsafe(characterBody.RelativeVelocity, characterBody.GroundingUp));*/
             
             motion = localTransform;
 
