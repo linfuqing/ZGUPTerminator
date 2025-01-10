@@ -201,7 +201,7 @@ public partial class LevelSystemManaged
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
             {
-                bool result = true;
+                bool result = false;
                 int temp, level;
                 LevelSkillDesc desc;
                 foreach (var key in keys)
@@ -228,6 +228,8 @@ public partial class LevelSystemManaged
 
                         manager.SetActiveSkill(index, level, desc.ToAsset(false));
                     }
+
+                    result = true;
                 }
 
                 return result;
@@ -248,40 +250,43 @@ public partial class LevelSystemManaged
                 return;
             }
 
-            if (targetIndex == index)
-            {
-                level = 0;
-                
-                return;
-            }
-
             if (level == 0)
             {
-                level = -1;
+                if(targetIndex != index)
+                    level = -1;
 
                 return;
             }
 
-            if (level > 0)
-                --level;
-
             ref var preIndices = ref definition.skills[index].preIndices;
-            int preIndex, temp, result = -1, numPreIndices = preIndices.Length;
-            for(int i = 0; i < numPreIndices; ++i)
+            int numPreIndices = preIndices.Length;
+            if (numPreIndices > 0)
             {
-                preIndex = preIndices[i];
-                if (indices.IsCreated && !indices.ContainsKey(preIndex))
-                    continue;
+                if (level > 0)
+                    --level;
 
-                temp = level;
-                __GetLevel(targetIndex, preIndex, indices, ref definition, ref temp);
-                if (result == -1)
-                    result = temp;
-                else if (temp != -1 && temp < result)
-                    result = temp;
+                int preIndex, temp, result = -1;
+                for (int i = 0; i < numPreIndices; ++i)
+                {
+                    preIndex = preIndices[i];
+                    if (indices.IsCreated && !indices.ContainsKey(preIndex))
+                        continue;
+
+                    temp = level;
+                    __GetLevel(targetIndex, preIndex, indices, ref definition, ref temp);
+                    if (result == -1)
+                        result = temp;
+                    else if (temp != -1 && temp < result)
+                        result = temp;
+                }
+
+                level = result == -1 ? -1 : result + 1;
+
+                return;
             }
             
-            level = result == -1 ? -1 : result + 1;
+            if (targetIndex == index)
+                level = 0;
         }
 
         private static int __GetLevel(
