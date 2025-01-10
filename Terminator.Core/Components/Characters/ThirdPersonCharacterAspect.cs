@@ -27,11 +27,14 @@ public struct ThirdPersonCharacterUpdateContext
     [ReadOnly]
     public ComponentLookup<CharacterFrictionSurface> CharacterFrictionSurfaceLookup;
 
+    public BufferTypeHandle<SimulationEvent> SimulationEventType;
+
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
     // Here, you can get the component lookups.
     public void OnSystemCreate(ref SystemState state)
     {
         CharacterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
+        SimulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
     }
 
     // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
@@ -39,22 +42,24 @@ public struct ThirdPersonCharacterUpdateContext
     public void OnSystemUpdate(ref SystemState state)
     {
         CharacterFrictionSurfaceLookup.Update(ref state);
+        SimulationEventType.Update(ref state);
     }
 }
 
 public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicCharacterProcessor<ThirdPersonCharacterUpdateContext>
 {
     public readonly KinematicCharacterAspect CharacterAspect;
-    [Optional]
-    public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
     public readonly RefRW<ThirdPersonCharacterComponent> CharacterComponent;
     public readonly RefRW<ThirdPersonCharacterControl> CharacterControl;
     [Optional]
-    public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
+    public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
     [Optional]
-    public readonly DynamicBuffer<SimulationEvent> SimulationEvents;
+    public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
 
-    public void PhysicsUpdate(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
+    public void PhysicsUpdate(
+        ref ThirdPersonCharacterUpdateContext context, 
+        ref KinematicCharacterUpdateContext baseContext, 
+        ref DynamicBuffer<SimulationEvent> simulationEvents)
     {
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
@@ -76,15 +81,15 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         CharacterAspect.Update_MovingPlatformDetection(ref baseContext, ref characterBody); 
         CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
         CharacterAspect.Update_ProcessStatefulCharacterHits();
-
-        if (SimulationEvents.IsCreated)
+        
+        if (simulationEvents.IsCreated)
         {
             SimulationEvent simulationEvent;
             foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
             {
                 simulationEvent.entity = characterHit.Entity;
                 simulationEvent.colliderKey = characterHit.ColliderKey;
-                SimulationEvent.Append(SimulationEvents, simulationEvent);
+                SimulationEvent.Append(simulationEvents, simulationEvent);
             }
         }
     }

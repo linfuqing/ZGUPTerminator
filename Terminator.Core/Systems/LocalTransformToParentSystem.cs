@@ -21,6 +21,9 @@ public partial struct LocalTransformToParentSystem : ISystem
         public NativeArray<Entity> entityArray;
 
         [ReadOnly]
+        public NativeArray<BulletEntity> bulletEntities;
+
+        [ReadOnly]
         public NativeArray<LocalTransformToParent> instances;
 
         public NativeArray<LocalTransformToParentStatus> states;
@@ -44,7 +47,7 @@ public partial struct LocalTransformToParentSystem : ISystem
 
         public Entity GetCharacterBody(int index)
         {
-            Entity entity = entityArray[index];
+            Entity entity = index < bulletEntities.Length ? bulletEntities[index].parent : entityArray[index];
             while (!characterBodies.HasComponent(entity))
             {
                 if (parents.TryGetComponent(entity, out var parent))
@@ -108,6 +111,9 @@ public partial struct LocalTransformToParentSystem : ISystem
         public EntityTypeHandle entityType;
 
         [ReadOnly]
+        public ComponentTypeHandle<BulletEntity> bulletEntityType;
+
+        [ReadOnly]
         public ComponentTypeHandle<LocalTransformToParent> instanceType;
 
         public ComponentTypeHandle<LocalTransformToParentStatus> statusType;
@@ -125,6 +131,7 @@ public partial struct LocalTransformToParentSystem : ISystem
             update.deltaTimeR = deltaTimeR;
             update.parents = parents;
             update.entityArray = chunk.GetNativeArray(entityType);
+            update.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
             update.instances = chunk.GetNativeArray(ref instanceType);
             update.states = chunk.GetNativeArray(ref statusType);
             update.localTransforms = chunk.GetNativeArray(ref localTransformType);
@@ -141,6 +148,8 @@ public partial struct LocalTransformToParentSystem : ISystem
 
     private EntityTypeHandle __entityType;
 
+    private ComponentTypeHandle<BulletEntity> __bulletEntityType;
+    
     private ComponentTypeHandle<LocalTransformToParent> __instanceType;
 
     private ComponentTypeHandle<LocalTransformToParentStatus> __statusType;
@@ -156,6 +165,7 @@ public partial struct LocalTransformToParentSystem : ISystem
     {
         __parents = state.GetComponentLookup<Parent>(true);
         __entityType = state.GetEntityTypeHandle();
+        __bulletEntityType = state.GetComponentTypeHandle<BulletEntity>(true);
         __instanceType = state.GetComponentTypeHandle<LocalTransformToParent>(true);
         __statusType = state.GetComponentTypeHandle<LocalTransformToParentStatus>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
@@ -164,8 +174,9 @@ public partial struct LocalTransformToParentSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
-                .WithAll<Parent, LocalTransformToParent>()
+                .WithAll<LocalTransformToParent>()
                 .WithAllRW<LocalTransformToParentStatus, LocalTransform>()
+                .WithAny<Parent, BulletEntity>()
                 .Build(ref state);
     }
 
@@ -174,6 +185,7 @@ public partial struct LocalTransformToParentSystem : ISystem
     {
         __parents.Update(ref state);
         __entityType.Update(ref state);
+        __bulletEntityType.Update(ref state);
         __instanceType.Update(ref state);
         __statusType.Update(ref state);
         __localTransformType.Update(ref state);
@@ -184,6 +196,7 @@ public partial struct LocalTransformToParentSystem : ISystem
         update.deltaTimeR = math.rcp(SystemAPI.Time.DeltaTime);
         update.parents = __parents;
         update.entityType = __entityType;
+        update.bulletEntityType = __bulletEntityType;
         update.instanceType = __instanceType;
         update.statusType = __statusType;
         update.localTransformType = __localTransformType;

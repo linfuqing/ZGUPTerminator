@@ -58,20 +58,33 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
     {
         public ThirdPersonCharacterUpdateContext Context;
         public KinematicCharacterUpdateContext BaseContext;
-    
-        void Execute(ThirdPersonCharacterAspect characterAspect)
+
+        private ArchetypeChunk __chunk;
+        private BufferAccessor<SimulationEvent> __simulationEvents;
+
+        void Execute([EntityIndexInQuery] int entityIndexInQuery, ThirdPersonCharacterAspect characterAspect)
         {
-            characterAspect.PhysicsUpdate(ref Context, ref BaseContext);
+            var simulationEvents = entityIndexInQuery < __simulationEvents.Length
+                ? __simulationEvents[entityIndexInQuery]
+                : default;
+            int numSimulationEvents = simulationEvents.IsCreated ? simulationEvents.Length : 0;
+            characterAspect.PhysicsUpdate(ref Context, ref BaseContext, ref simulationEvents);
+            if (numSimulationEvents == 0 && simulationEvents.IsCreated && simulationEvents.Length > 0)
+                __chunk.SetComponentEnabled(ref Context.SimulationEventType, entityIndexInQuery, true);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            __chunk = chunk;
+            __simulationEvents = chunk.GetBufferAccessor(ref Context.SimulationEventType);
+            
             BaseContext.EnsureCreationOfTmpCollections();
             return true;
         }
 
         public void OnChunkEnd(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask, bool chunkWasExecuted)
-        { }
+        {
+        }
     }
 }
 
