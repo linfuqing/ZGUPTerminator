@@ -45,10 +45,13 @@ public struct ThirdPersonCharacterUpdateContext
 public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicCharacterProcessor<ThirdPersonCharacterUpdateContext>
 {
     public readonly KinematicCharacterAspect CharacterAspect;
+    [Optional]
     public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
     public readonly RefRW<ThirdPersonCharacterComponent> CharacterComponent;
     public readonly RefRW<ThirdPersonCharacterControl> CharacterControl;
+    [Optional]
     public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
+    [Optional]
     public readonly DynamicBuffer<SimulationEvent> SimulationEvents;
 
     public void PhysicsUpdate(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
@@ -67,18 +70,22 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
 
         // Second phase of default character update
         CharacterAspect.Update_PreventGroundingFromFutureSlopeChange(in this, ref context, ref baseContext, ref characterBody, in characterComponent.StepAndSlopeHandling);
-        CharacterAspect.Update_GroundPushing(in this, ref context, ref baseContext, characterComponent.Gravity * GravityFactor.ValueRO.value);
+        float gravityFactor = GravityFactor.IsValid ? GravityFactor.ValueRO.value : 1.0f;
+        CharacterAspect.Update_GroundPushing(in this, ref context, ref baseContext, characterComponent.Gravity * gravityFactor);
         CharacterAspect.Update_MovementAndDecollisions(in this, ref context, ref baseContext, ref characterBody, ref characterPosition);
         CharacterAspect.Update_MovingPlatformDetection(ref baseContext, ref characterBody); 
         CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
         CharacterAspect.Update_ProcessStatefulCharacterHits();
 
-        SimulationEvent simulationEvent;
-        foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
+        if (SimulationEvents.IsCreated)
         {
-            simulationEvent.entity = characterHit.Entity;
-            simulationEvent.colliderKey = characterHit.ColliderKey;
-            SimulationEvent.Append(SimulationEvents, simulationEvent);
+            SimulationEvent simulationEvent;
+            foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
+            {
+                simulationEvent.entity = characterHit.Entity;
+                simulationEvent.colliderKey = characterHit.ColliderKey;
+                SimulationEvent.Append(SimulationEvents, simulationEvent);
+            }
         }
     }
 
@@ -148,7 +155,8 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
             }
             
             // Gravity
-            CharacterControlUtilities.AccelerateVelocity(ref characterBody.RelativeVelocity, characterComponent.Gravity * GravityFactor.ValueRO.value, deltaTime);
+            float gravityFactor = GravityFactor.IsValid ? GravityFactor.ValueRO.value : 1.0f;
+            CharacterControlUtilities.AccelerateVelocity(ref characterBody.RelativeVelocity, characterComponent.Gravity * gravityFactor, deltaTime);
 
             // Drag
             CharacterControlUtilities.ApplyDragToVelocity(ref characterBody.RelativeVelocity, deltaTime, characterComponent.AirDrag);

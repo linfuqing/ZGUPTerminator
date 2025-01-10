@@ -118,7 +118,7 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
             Context = _context,
             BaseContext = _baseContext
         };
-        job.ScheduleParallel();
+        job.ScheduleParallel(_characterQuery);
     }
 
     [BurstCompile]
