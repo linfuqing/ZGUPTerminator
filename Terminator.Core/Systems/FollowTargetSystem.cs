@@ -519,6 +519,8 @@ public partial struct FollowTargetTransformSystem : ISystem
 
     private struct ApplyTransforms
     {
+        public float deltaTime;
+        
         [ReadOnly] 
         public NativeArray<FollowTargetVelocity> velocities;
 
@@ -534,8 +536,12 @@ public partial struct FollowTargetTransformSystem : ISystem
 
             if (isRotation)
                 localTransform.Rotation = velocity.lookAt;//math.mul(velocity.direction, localTransform.Rotation);
+
+            if (math.abs(velocity.value) > math.FLT_MIN_NORMAL)
+                localTransform.Position += deltaTime * velocity.value * velocity.direction;
+            else
+                localTransform.Position = velocity.target;
             
-            localTransform.Position = velocity.target;
             localTransforms[index] = localTransform;
         }
     }
@@ -543,6 +549,8 @@ public partial struct FollowTargetTransformSystem : ISystem
     [BurstCompile]
     private struct ApplyTransformsEx : IJobChunk
     {
+        public float deltaTime;
+        
         [ReadOnly]
         public ComponentTypeHandle<FollowTargetVelocity> velocityType;
         
@@ -552,6 +560,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             ApplyTransforms applyTransforms;
+            applyTransforms.deltaTime = deltaTime;
             applyTransforms.velocities = chunk.GetNativeArray(ref velocityType);
             applyTransforms.localTransforms = chunk.GetNativeArray(ref localTransformType);
 
@@ -642,7 +651,7 @@ public partial struct FollowTargetTransformSystem : ISystem
                 velocity.target = transform.Position + distance;
             }
 
-            float lengthSQ = math.lengthsq(distance), speed = 1.0f;
+            float lengthSQ = math.lengthsq(distance), speed = 0.0f;
             if (index < distances.Length)
             {
                 var distances = this.distances[index];
@@ -790,6 +799,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         __localTransformType.Update(ref state);
         
         ApplyTransformsEx applyTransforms;
+        applyTransforms.deltaTime = SystemAPI.Time.DeltaTime;
         applyTransforms.velocityType = __velocityType;
         applyTransforms.localTransformType = __localTransformType;
 
