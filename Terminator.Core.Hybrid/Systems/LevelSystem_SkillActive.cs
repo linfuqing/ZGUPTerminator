@@ -41,6 +41,7 @@ public partial class LevelSystemManaged
             {
                 index = activeIndices[i].value;
 
+                level = -1;
                 if (__indices.TryGetValue(index, out originIndex))
                 {
                     isComplete = originIndex == i;
@@ -58,8 +59,12 @@ public partial class LevelSystemManaged
                             isComplete = level != -1;
                         }
 
-                        if(!isComplete)
+                        if (!isComplete)
+                        {
                             isComplete = __Set(i, index, descs, ref definition, manager);
+                            if (isComplete)
+                                originIndex = __indices[index];
+                        }
                         //__indices[index] = i;
 
                         //manager.SetActiveSkill(i, descs[index].ToAsset(false));
@@ -72,7 +77,8 @@ public partial class LevelSystemManaged
                     //icon = descs[index].icon;
                     descs[index].icon.LoadAsync();
                     isComplete = __Set(i, index, descs, ref definition, manager);
-
+                    if (isComplete)
+                        originIndex = __indices[index];
                     /*switch (icon.LoadingStatus)
                     {
                         case ObjectLoadingStatus.None:
@@ -96,17 +102,18 @@ public partial class LevelSystemManaged
 
                 if (isComplete)
                 {
-                    level = __GetLevel(
-                        activeIndices[__indices[index]].value, 
-                        index, 
-                        __indices, 
-                        ref definition);
+                    if(level == -1)
+                        level = __GetLevel(
+                            activeIndices[__indices[index]].value, 
+                            index, 
+                            __indices, 
+                            ref definition);
                     
                     ref var skill = ref definition.skills[index];
                     status = states[index];
                     float cooldown = (float)(Math.Max(status.cooldown, time) - time);
                     manager.SetActiveSkill(
-                        i, 
+                        originIndex, 
                         level, 
                         skill.cooldown,
                         skill.cooldown > cooldown ? skill.cooldown - cooldown : skill.cooldown);
