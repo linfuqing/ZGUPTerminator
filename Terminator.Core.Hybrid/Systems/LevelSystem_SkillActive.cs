@@ -35,7 +35,7 @@ public partial class LevelSystemManaged
 
             //WeakObjectReference<Sprite> icon;
             SkillStatus status;
-            int i, originIndex, index, numActiveIndices = activeIndices.Length;
+            int i, level, originIndex, index, numActiveIndices = activeIndices.Length;
             bool isComplete;
             for (i = 0; i < numActiveIndices; ++i)
             {
@@ -47,7 +47,19 @@ public partial class LevelSystemManaged
 
                     if (!isComplete)
                     {
-                        isComplete = __Set(i, index, descs, ref definition, manager);
+                        if (originIndex >= 0 && originIndex < numActiveIndices)
+                        {
+                            level = __GetLevel(
+                                activeIndices[originIndex].value, 
+                                index, 
+                                __indices, 
+                                ref definition);
+
+                            isComplete = level != -1;
+                        }
+
+                        if(!isComplete)
+                            isComplete = __Set(i, index, descs, ref definition, manager);
                         //__indices[index] = i;
 
                         //manager.SetActiveSkill(i, descs[index].ToAsset(false));
@@ -84,10 +96,19 @@ public partial class LevelSystemManaged
 
                 if (isComplete)
                 {
+                    level = __GetLevel(
+                        activeIndices[__indices[index]].value, 
+                        index, 
+                        __indices, 
+                        ref definition);
+                    
                     ref var skill = ref definition.skills[index];
                     status = states[index];
                     float cooldown = (float)(Math.Max(status.cooldown, time) - time);
-                    manager.SetActiveSkill(i, skill.cooldown,
+                    manager.SetActiveSkill(
+                        i, 
+                        level, 
+                        skill.cooldown,
                         skill.cooldown > cooldown ? skill.cooldown - cooldown : skill.cooldown);
                 }
             }
@@ -151,8 +172,7 @@ public partial class LevelSystemManaged
                     if(temp != index)
                         continue;
 
-                    level = -1;
-                    __GetLevel(value, key, default, ref definition, ref level);
+                    level = __GetLevel(value, key, default, ref definition);
                     if(level == -1)
                         continue;
 
@@ -183,8 +203,7 @@ public partial class LevelSystemManaged
                     if(temp != -1)
                         continue;
 
-                    level = -1;
-                    __GetLevel(value, key, __indices, ref definition, ref level);
+                    level = __GetLevel(value, key, __indices, ref definition);
                     if(level == -1)
                         continue;
 
@@ -256,6 +275,19 @@ public partial class LevelSystemManaged
             }
             
             level = result == -1 ? -1 : result + 1;
+        }
+
+        private static int __GetLevel(
+            int targetIndex,
+            int index,
+            in NativeHashMap<int, int> indices,
+            ref SkillDefinition definition)
+        {
+            int level = -1;
+            
+            __GetLevel(targetIndex, index, indices, ref definition, ref level);
+
+            return level;
         }
     }
 

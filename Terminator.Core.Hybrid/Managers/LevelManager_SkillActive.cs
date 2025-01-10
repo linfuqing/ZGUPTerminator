@@ -111,23 +111,21 @@ public partial class LevelManager
             }*/
         }
         
-        public void Set(float cooldown, float elapsedTime)
+        public void Set(int level, float cooldown, float elapsedTime)
         {
-            if (__styles != null)
+            if (__styles != null && __styles.Count > level)
             {
+                var styles = __styles[level];
+                if (styles == null || styles.Length < 1)
+                    return;
+                
                 float value = cooldown > Mathf.Epsilon ? elapsedTime / cooldown : 1.0f;
-                foreach (var styles in __styles)
+                foreach (var style in styles)
                 {
-                    if (styles == null)
+                    if(style.cooldown == null)
                         continue;
-
-                    foreach (var style in styles)
-                    {
-                        if(style.cooldown == null)
-                            continue;
-                    
-                        style.cooldown.value = value;
-                    }
+                
+                    style.cooldown.value = value;
                 }
             }
         }
@@ -168,11 +166,11 @@ public partial class LevelManager
         }
     }
     
-    public void SetActiveSkill(int index, float cooldown, float elapsedTime)
+    public void SetActiveSkill(int index, int level, float cooldown, float elapsedTime)
     {
         if (!__activeSkills.TryGetValue(index, out var value))
             return;
         
-        value.Set(cooldown, elapsedTime);
+        value.Set(level, cooldown, elapsedTime);
     }
 }
