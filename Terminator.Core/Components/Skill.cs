@@ -94,64 +94,61 @@ public struct SkillDefinition
 
                 if (!isCooldown)
                 {
-                    status.time = time;
-                    status.cooldown = time + (skill.duration + skill.cooldown * cooldownScale);
-
-                    if (skill.cooldown > math.FLT_MIN_NORMAL)
+                    numPreIndices = skill.preIndices.Length;
+                    for (j = 0; j < numPreIndices; ++j)
                     {
-                        for (j = 0; j < numBulletIndices; ++j)
+                        preIndex = skill.preIndices[j];
+                        for (k = 0; k < numActiveIndices; ++k)
                         {
-                            ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                            if (bullet.index < bulletStates.Length)
-                            {
-                                ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                                bulletStatus.cooldown = time + bulletDefinition.bullets[bullet.index].startTime;
-                                bulletStatus.count = 0;
-                            }
+                            if (skillActiveIndices[k].value == preIndex)
+                                break;
                         }
-                        
-                        if (messageOffset >= 0)
-                        {
-                            numMessageIndices = skill.messageIndices.Length;
-                            if (numMessageIndices > 0)
-                            {
-                                result = true;
 
-                                outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
-                                for (j = 0; j < numMessageIndices; ++j)
-                                {
-                                    ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
-                                    inputMessage = inputMessages[skill.messageIndices[j]];
-                                    outputMessage.key = 0;
-                                    outputMessage.name = inputMessage.name;
-                                    outputMessage.value = inputMessage.value;
-                                }
-
-                                messageOffset += numMessageIndices;
-                            }
-                        }
-                    }
-                    else
-                        isCooldown = true;
-                }
-            }
-
-            if (isCooldown)
-            {
-                numPreIndices = skill.preIndices.Length;
-                for (j = 0; j < numPreIndices; ++j)
-                {
-                    preIndex = skill.preIndices[j];
-                    for (k = 0; k < numActiveIndices; ++k)
-                    {
-                        if (skillActiveIndices[k].value == preIndex)
+                        if (k == numActiveIndices)
                             break;
                     }
 
-                    if (k == numActiveIndices)
+                    if (j == numPreIndices)
                     {
-                        isCooldown = false;
-                        break;
+                        status.time = time;
+                        status.cooldown = time + (skill.duration + skill.cooldown * cooldownScale);
+
+                        if (skill.cooldown > math.FLT_MIN_NORMAL)
+                        {
+                            for (j = 0; j < numBulletIndices; ++j)
+                            {
+                                ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                                if (bullet.index < bulletStates.Length)
+                                {
+                                    ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                                    bulletStatus.cooldown = time + bulletDefinition.bullets[bullet.index].startTime;
+                                    bulletStatus.count = 0;
+                                }
+                            }
+
+                            if (messageOffset >= 0)
+                            {
+                                numMessageIndices = skill.messageIndices.Length;
+                                if (numMessageIndices > 0)
+                                {
+                                    result = true;
+
+                                    outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
+                                    for (j = 0; j < numMessageIndices; ++j)
+                                    {
+                                        ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
+                                        inputMessage = inputMessages[skill.messageIndices[j]];
+                                        outputMessage.key = 0;
+                                        outputMessage.name = inputMessage.name;
+                                        outputMessage.value = inputMessage.value;
+                                    }
+
+                                    messageOffset += numMessageIndices;
+                                }
+                            }
+                        }
+                        else
+                            isCooldown = true;
                     }
                 }
             }
