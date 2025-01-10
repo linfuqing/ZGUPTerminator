@@ -183,8 +183,12 @@ public partial struct LocalTransformToParentSystem : ISystem
                 localTransforms[entity] = LocalTransform.Identity;
             }
             else
-                localTransforms[characterBodyEntity] = localTransform;
-            
+            {
+                var targetLocalTransform = localTransforms[characterBodyEntity];
+                targetLocalTransform.Position = localTransform.Position;
+                localTransforms[characterBodyEntity] = targetLocalTransform;
+            }
+
             motion = localTransform;
         }
     }
