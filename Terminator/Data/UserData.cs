@@ -1,3 +1,4 @@
+using Mono.Cecil;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ public struct User
 {
     public uint id;
     public int gold;
+    public int level;
 }
 
 public struct UserEnergy
@@ -42,15 +44,8 @@ public struct UserStage
 
 public struct UserLevel
 {
-    [Flags]
-    public enum Flag
-    {
-        Unlock = 0x01
-    }
-
     public string name;
     public uint id;
-    public Flag flag;
     public int energy;
     public int userStage;
 
@@ -133,7 +128,11 @@ public interface IUserData
         int stage, 
         int gold, 
         Action<bool> onComplete);
-    
+
+    IEnumerator CollectLevel(
+        uint userID,
+        Action<string[]> onComplete);
+
     IEnumerator CollectStage(
         uint userID,
         uint levelID, 
@@ -161,6 +160,7 @@ public class UserData : MonoBehaviour//, IUserData
     }
 
     private const string NAME_SPACE_USER_GOLD = "User";
+    private const string NAME_SPACE_USER_LEVEL = "UserLevel";
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
 
     [SerializeField]
@@ -176,6 +176,7 @@ public class UserData : MonoBehaviour//, IUserData
         User user;
         user.id = 0;
         user.gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
+        user.level = PlayerPrefs.GetInt(NAME_SPACE_USER_LEVEL);
 
         UserEnergy userEnergy;
         userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY);
@@ -188,7 +189,7 @@ public class UserData : MonoBehaviour//, IUserData
 
     [SerializeField]
     internal string[] _defaultSkills;
-    private const string NAME_SPACE_USER_SKILL = "UserSkill";
+    private const string NAME_SPACE_USER_SKILLS = "UserSkills";
 
     public IEnumerator QuerySkills(
         uint id,
@@ -196,13 +197,19 @@ public class UserData : MonoBehaviour//, IUserData
     {
         yield return null;
         
-        var skills = string.Join('/', PlayerPrefs.GetString(NAME_SPACE_USER_SKILL, string.Empty));
+        var skills = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS).Split(',');
+
         int numSkills = skills == null ? 0 : skills.Length;
+        UserSkill userSkill;
         var userSkills = new UserSkill[numSkills];
         for (int i = 0; i < numSkills; ++i)
         {
-            
+            userSkill.name = skills[i];
+
+            userSkills[i] = userSkill;
         }
+
+        onComplete(userSkills);
     }
 
     [Serializable]
@@ -224,7 +231,6 @@ public class UserData : MonoBehaviour//, IUserData
         public string[] rewardSkills;
     }
 
-    private const string NAME_SPACE_USER_LEVEL_FLAG = "UserLevelFlag";
     private const string NAME_SPACE_USER_LEVEL_STAGE = "UserLevelStage";
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
 
@@ -248,7 +254,6 @@ public class UserData : MonoBehaviour//, IUserData
             level = _levels[i];
             userLevel.name = level.name;
             userLevel.id = (uint)i + 1;
-            userLevel.flag = (UserLevel.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{i}");
             userLevel.energy = level.energy;
             userLevel.userStage = PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE}{i}");
             userLevel.rewardSkills = level.rewardSkills;
@@ -296,6 +301,8 @@ public class UserData : MonoBehaviour//, IUserData
             onComplete(true);
     }
 
+    private const string NAME_SPACE_USER_LEVEL_REWARD_SKILLS = "UserLevelStageRewardSkills";
+
     public IEnumerator SubmitLevel(
         uint userID,
         uint levelID,
@@ -312,11 +319,47 @@ public class UserData : MonoBehaviour//, IUserData
         gold += PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
         PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold);
 
-        var level = _levels[levelID];
-        //level.rewardSkills
-        
+        int userLevel = PlayerPrefs.GetInt(NAME_SPACE_USER_LEVEL);
+        if (userLevel == levelID)
+        {
+            PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, ++userLevel);
+
+            var level = _levels[levelID];
+
+            string source = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS), destination = string.Join(',', level.rewardSkills);
+            if (string.IsNullOrEmpty(source))
+                source = destination;
+            else
+                source = $"{source},{destination}";
+
+            PlayerPrefs.SetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS, source);
+        }
+
         if (onComplete != null)
             onComplete(true);
+    }
+
+    IEnumerator CollectLevel(
+        uint userID,
+        Action<string[]> onComplete)
+    {
+        yield return null;
+
+        var destination = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS);
+        var skills = destination.Split(',');
+        if(skills.Length > 0)
+        {
+            string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
+            if (string.IsNullOrEmpty(source))
+                source = destination;
+            else
+                source = $"{source},{destination}";
+
+            PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
+            PlayerPrefs.DeleteKey(NAME_SPACE_USER_LEVEL_REWARD_SKILLS);
+        }
+
+        onComplete(skills);
     }
 
     public IEnumerator CollectStage(
