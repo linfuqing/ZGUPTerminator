@@ -20,7 +20,7 @@ public class GameSceneActivation : IEnumerator
     object IEnumerator.Current => null;
 }
 
-public class GameMain : MonoBehaviour
+public class GameMain : GameUser
 {
     public event Func<IEnumerator> onStart;
 
@@ -28,9 +28,12 @@ public class GameMain : MonoBehaviour
     public static readonly string AssetPath = "AssetPath";
     public static readonly string AssetScenePath = "AssetScenePath";
     public static readonly string DefaultSceneName = "DefaultSceneName";
+    public static readonly string DefaultLevelSceneName = "DefaultLevelSceneName";
     public static readonly string InitialContentSet = "InitialContentSet";
     public static readonly string LocalCachePath = "LocalCachePath";
     public static readonly string RemoteUrlRoot = "RemoteUrlRoot";
+
+    private string __defaultSceneName;
 
     public IAssetBundleFactory factory
     {
@@ -38,6 +41,8 @@ public class GameMain : MonoBehaviour
 
         set;
     }
+
+    public override IGameUserData userData => IUserData.instance;
 
     IEnumerator Start()
     {
@@ -68,7 +73,21 @@ public class GameMain : MonoBehaviour
             foreach (var onStart in onStarts)
                 yield return ((Func<IEnumerator>)onStart)();
         }
+
+        Shared.onActivated += __OnActivated;
+        onLogin.AddListener(__OnLogin);
+        Login();
+    }
+
+    private void __OnActivated()
+    {
+        Shared.onActivated -= __OnActivated;
         
+        __defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
+    }
+
+    private void __OnLogin()
+    {
         var assetManager = GameAssetManager.instance;
         assetManager.onConfirmCancel += __OnConfirmCancel;
 
@@ -77,13 +96,22 @@ public class GameMain : MonoBehaviour
 
     private IEnumerator __Init()
     {
+        GameSceneActivation activation;
+        if (string.IsNullOrEmpty(__defaultSceneName))
+        {
+            __defaultSceneName = GameConstantManager.Get(DefaultSceneName);
+            activation = new GameSceneActivation();
+        }
+        else
+            activation = null;
+        
         return GameAssetManager.instance.Init(
-            GameConstantManager.Get(DefaultSceneName), 
+            __defaultSceneName, 
             GameConstantManager.Get(AssetScenePath), 
                 GameConstantManager.Get(AssetPath), 
                     GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
             factory, 
-            null/*new GameSceneActivation()*/);
+            activation);
     }
 
     private void __OnConfirmCancel()

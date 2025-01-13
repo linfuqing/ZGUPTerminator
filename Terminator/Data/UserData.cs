@@ -34,7 +34,7 @@ public struct UserStage
     }
         
     public string name;
-    //public int id;
+    public int id;
     //public int levelID;
     public Flag flag;
     public RewardType rewardType;
@@ -48,7 +48,6 @@ public struct UserLevel
     public int energy;
     public int userStage;
 
-    public UserStage[] stages;
     public string[] rewardSkills;
 }
 
@@ -91,30 +90,34 @@ public struct UserSkill
     public string name;
 }
 
-public interface IUserData
+public interface IUserData : IGameUserData
 {
     public static IUserData instance;
 
     IEnumerator QueryUser(
-        string channel, 
+        string channelName, 
         string channelUser, 
         Action<User, UserEnergy> onComplete);
     
     IEnumerator QuerySkills(
-        uint id, 
+        uint userID, 
         Action<Memory<UserSkill>> onComplete);
 
-    IEnumerator QueryLevels(
-        uint id, 
-        Action<Memory<UserLevel>> onComplete);
-    
     IEnumerator QueryWeapons(
-        uint id, 
+        uint userID, 
         Action<Memory<UserWeapon>> onComplete);
     
     IEnumerator QueryTalents(
-        uint id, 
+        uint userID, 
         Action<int, Memory<UserTalent>> onComplete);
+
+    IEnumerator QueryStages(
+        uint userID,
+        Action<Memory<UserStage>> onComplete);
+    
+    IEnumerator QueryLevels(
+        uint userID, 
+        Action<Memory<UserLevel>> onComplete);
     
     IEnumerator ApplyLevel(
         uint userID,
@@ -134,8 +137,7 @@ public interface IUserData
 
     IEnumerator CollectStage(
         uint userID,
-        uint levelID, 
-        int stage, 
+        uint stageID, 
         Action<bool> onComplete);
     
     IEnumerator CollectTalent(
@@ -149,225 +151,61 @@ public interface IUserData
         Action<bool> onComplete);
 }
 
-public class UserData : MonoBehaviour//, IUserData
+public partial class UserData : MonoBehaviour, IUserData
 {
-    [Serializable]
-    internal struct Energy
-    {
-        public int max;
-        public float uintTime;
-    }
-
-    private const string NAME_SPACE_USER_GOLD = "User";
     private const string NAME_SPACE_USER_LEVEL = "UserLevel";
-    private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
 
-    [SerializeField]
-    internal Energy _energy;
-
-    public IEnumerator QueryUser(
-        string channel,
-        string channelUser,
-        Action<User, UserEnergy> onComplete)
+    public static int level
     {
-        yield return null;
-
-        User user;
-        user.id = 0;
-        user.gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
-        user.level = PlayerPrefs.GetInt(NAME_SPACE_USER_LEVEL);
-
-        UserEnergy userEnergy;
-        userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY);
-        userEnergy.max = _energy.max;
-        userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
-        userEnergy.tick = DateTime.UtcNow.Ticks;
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_LEVEL);
         
-        onComplete(user, userEnergy);
-    }
-
-    [SerializeField]
-    internal string[] _defaultSkills;
-    private const string NAME_SPACE_USER_SKILLS = "UserSkills";
-
-    public IEnumerator QuerySkills(
-        uint id,
-        Action<Memory<UserSkill>> onComplete)
-    {
-        yield return null;
-        
-        var skills = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS).Split(',');
-
-        int numSkills = skills == null ? 0 : skills.Length;
-        UserSkill userSkill;
-        var userSkills = new UserSkill[numSkills];
-        for (int i = 0; i < numSkills; ++i)
-        {
-            userSkill.name = skills[i];
-
-            userSkills[i] = userSkill;
-        }
-
-        onComplete(userSkills);
-    }
-
-    [Serializable]
-    internal struct Stage
-    {
-        public string name;
-        public UserStage.RewardType rewardType;
-        public int rewardCount;
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, value);
     }
     
-    [Serializable]
-    internal struct Level
-    {
-        public string name;
-        public uint id;
-        public int energy;
-
-        public Stage[] stages;
-        public string[] rewardSkills;
-    }
-
-    private const string NAME_SPACE_USER_LEVEL_STAGE = "UserLevelStage";
-    private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
-
-    [SerializeField]
-    internal Level[] _levels;
-
-    public IEnumerator QueryLevels(
-        uint id,
-        Action<Memory<UserLevel>> onComplete)
+    public IEnumerator Activate(
+        string code,
+        string channel,
+        string channelUser,
+        Action<IGameUserData.UserStatus> onComplete)
     {
         yield return null;
 
-        int i, j, numStages, numLevels = _levels.Length;
-        Level level;
-        UserLevel userLevel;
-        UserStage userStage;
-        Stage stage;
-        var userLevels = new UserLevel[numLevels];
-        for (i = 0; i < numLevels; ++i)
-        {
-            level = _levels[i];
-            userLevel.name = level.name;
-            userLevel.id = (uint)i + 1;
-            userLevel.energy = level.energy;
-            userLevel.userStage = PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE}{i}");
-            userLevel.rewardSkills = level.rewardSkills;
-
-            numStages = level.stages == null ? 0 : level.stages.Length;
-            userLevel.stages = new UserStage[numStages];
-            for (j = 0; j < numStages; ++j)
-            {
-                stage = level.stages[j];
-
-                userStage.name = stage.name;
-                userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{i}-{j}");
-                userStage.rewardType = stage.rewardType;
-                userStage.rewardCount = stage.rewardCount;
-
-                userLevel.stages[j] = userStage;
-            }
-
-            userLevels[i] = userLevel;
-        }
-        
-        if(onComplete != null)
-            onComplete(userLevels);
+        onComplete(level > 0
+            ? IGameUserData.UserStatus.Ok
+            : IGameUserData.UserStatus.New);
     }
 
-    public IEnumerator ApplyLevel(
-        uint userID,
-        uint levelID,
-        Action<bool> onComplete)
+    public IEnumerator Check(
+        string channel,
+        string channelUser,
+        Action<IGameUserData.UserStatus> onComplete)
     {
         yield return null;
 
-        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY) - _levels[levelID].energy;
-        if (energy < 0)
-        {
-            if (onComplete != null)
-                onComplete(false);
-
-            yield break;
-        }
-        
-        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
-        
-        if (onComplete != null)
-            onComplete(true);
+        onComplete(level > 0
+            ? IGameUserData.UserStatus.Ok
+            : IGameUserData.UserStatus.New);
     }
 
-    private const string NAME_SPACE_USER_LEVEL_REWARD_SKILLS = "UserLevelStageRewardSkills";
-
-    public IEnumerator SubmitLevel(
-        uint userID,
-        uint levelID,
-        int stage,
-        int gold,
-        Action<bool> onComplete)
-    {
-        yield return null;
-        
-        string key = $"{NAME_SPACE_USER_LEVEL_STAGE}{levelID}-{stage}";
-        stage = Mathf.Max(stage, PlayerPrefs.GetInt(key));
-        PlayerPrefs.SetInt(key, stage);
-        
-        gold += PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold);
-
-        int userLevel = PlayerPrefs.GetInt(NAME_SPACE_USER_LEVEL);
-        if (userLevel == levelID)
-        {
-            PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, ++userLevel);
-
-            var level = _levels[levelID];
-
-            string source = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS), destination = string.Join(',', level.rewardSkills);
-            if (string.IsNullOrEmpty(source))
-                source = destination;
-            else
-                source = $"{source},{destination}";
-
-            PlayerPrefs.SetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS, source);
-        }
-
-        if (onComplete != null)
-            onComplete(true);
-    }
-
-    IEnumerator CollectLevel(
-        uint userID,
-        Action<string[]> onComplete)
-    {
-        yield return null;
-
-        var destination = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS);
-        var skills = destination.Split(',');
-        if(skills.Length > 0)
-        {
-            string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
-            if (string.IsNullOrEmpty(source))
-                source = destination;
-            else
-                source = $"{source},{destination}";
-
-            PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
-            PlayerPrefs.DeleteKey(NAME_SPACE_USER_LEVEL_REWARD_SKILLS);
-        }
-
-        onComplete(skills);
-    }
-
-    public IEnumerator CollectStage(
-        uint userID,
-        uint levelID,
-        int stage,
-        Action<bool> onComplete)
+    public IEnumerator Bind(
+        int userID,
+        string channelUser,
+        string channel,
+        Action<bool?> onComplete)
     {
         yield return null;
     }
 
+    public IEnumerator Unbind(
+        string channel,
+        string channelUser,
+        Action<bool?> onComplete)
+    {
+        yield return null;
+    }
+    
+    void Awake()
+    {
+        IUserData.instance = this;
+    }
 }

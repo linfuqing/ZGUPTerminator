@@ -541,10 +541,10 @@ namespace ZG
             return index;
         }
 
-        private int2 __EnableNode(in float2 normalizedPosition)
+        /*private int2 __EnableNode(in float2 normalizedPosition)
         {
             return __EnableNode(scrollRect.velocity, normalizedPosition);
-        }
+        }*/
 
         private int2 __EnableNode()
         {
@@ -572,11 +572,15 @@ namespace ZG
 
         void IEndDragHandler.OnEndDrag(PointerEventData eventData)
         {
-            ScrollRectInfo info;
+            __EnableNode();
+            
+            __info.isVail = false;
+            
+            /*ScrollRectInfo info;
             info.isVail = true;
             info.index = __EnableNode(scrollRect.normalizedPosition);
-            
-            __info = info;
+
+            __info = info;*/
         }
 
         void IDragHandler.OnDrag(PointerEventData eventData)
@@ -654,30 +658,17 @@ namespace ZG
 
             public void Execute(float deltaTime, float offsetScale, in int2 count)
             {
-                int2 source = (int2)math.round(node.index),
-                    destination = info.index;// math.clamp(info.index, 0, instance.count - 1);
+                int2 source = (int2)math.round(node.index), destination = info.index;// math.clamp(info.index, 0, instance.count - 1);
                 float2 length = instance.length,
-                         cellLength = instance.GetCellLength(count),
-                         offset = instance.GetOffset(cellLength, offsetScale),
-                         distance = node.normalizedPosition * length - destination * cellLength + offset;
+                    cellLength = instance.GetCellLength(count),
+                    offset = instance.GetOffset(cellLength, offsetScale), 
+                    distance = node.normalizedPosition * length - (info.isVail ? destination : source) * cellLength + offset;
+                float t = math.pow(instance.decelerationRate, deltaTime);
+                
+                node.velocity = math.lerp(node.velocity, distance / instance.elasticity, t);
 
-                if (info.isVail)
-                {
-                    float t = math.pow(instance.decelerationRate, deltaTime);
-                    //t = t * t* (3.0f - (2.0f * t));
-                    node.velocity = math.lerp(node.velocity, distance / instance.elasticity, t);
-
-                    //velocity *= math.pow(instance.decelerationRate, deltaTime);
-
-                    //node.velocity = velocity;
-
-                    //velocity += distance / instance.elasticity;
-
-                    node.normalizedPosition -= math.select(float2.zero, node.velocity / length, length > math.FLT_MIN_NORMAL) * deltaTime;
-                }
-                else
-                    node.normalizedPosition -= math.select(float2.zero, distance / length, length > math.FLT_MIN_NORMAL);
-
+                node.normalizedPosition -= math.select(float2.zero, node.velocity / length, length > math.FLT_MIN_NORMAL) * deltaTime;
+                
                 node.index = instance.GetIndex(count, node.normalizedPosition, length, cellLength, offset);
                 
                 int2 target = (int2)math.round(node.index);
