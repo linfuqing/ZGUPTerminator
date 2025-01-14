@@ -33,6 +33,7 @@ public struct LevelSkillDefinition
     public struct Group
     {
         public float weight;
+        public FixedString32Bytes name;
         public BlobArray<int> firstSkillIndices;
     }
 
@@ -84,14 +85,14 @@ public struct LevelSkillDefinition
                 continue;
 
             ref var skill = ref skills[j];
-            if(__GetSkillIndices(skill.groupIndex, j).Length < 1)
+            if(skill.groupIndex == -1/* || __GetSkillIndices(skill.groupIndex, j).Length < 1*/)
                 continue;
                 
             weight.activeIndex = i;
             weights.TryAdd(skill.groupIndex, weight);
         }
 
-        bool isFree = numActiveIndices < maxActiveCount;
+        bool isFree = weights.Count < maxActiveCount;
         int k, index;
         for (i = 0; i < numActiveIndices; ++i)
         {

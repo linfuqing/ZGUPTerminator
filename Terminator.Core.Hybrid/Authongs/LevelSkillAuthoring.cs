@@ -187,6 +187,7 @@ public class LevelSkillAuthoring : MonoBehaviour
                     ref var destination = ref groups[i];
 
                     destination.weight = source.weight;
+                    destination.name = source.name;
 
                     numFirstSkillIndices = source.firstSkillNames == null ? 0 : source.firstSkillNames.Length;
                     firstSkillIndices = builder.Allocate(ref destination.firstSkillIndices, numFirstSkillIndices);
@@ -209,6 +210,9 @@ public class LevelSkillAuthoring : MonoBehaviour
                 BlobBuilderArray<int> skillGroupIndices, nextSkillIndices;
                 int skillIndex, numSkillGroups, numNextSkillIndices;
                 var skills = builder.Allocate(ref root.skills, numSkills);
+                for (i = 0; i < numSkills; ++i)
+                    skills[i].groupIndex = -1;
+                
                 foreach (var source in authoring._skills)
                 {
                     if (!skillNameIndices.TryGetValue(source.name, out skillIndex))
