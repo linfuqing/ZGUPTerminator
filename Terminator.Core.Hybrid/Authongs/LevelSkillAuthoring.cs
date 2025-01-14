@@ -187,7 +187,7 @@ public class LevelSkillAuthoring : MonoBehaviour
                     ref var destination = ref groups[i];
 
                     destination.weight = source.weight;
-                    destination.name = source.name;
+                    //destination.name = source.name;
 
                     numFirstSkillIndices = source.firstSkillNames == null ? 0 : source.firstSkillNames.Length;
                     firstSkillIndices = builder.Allocate(ref destination.firstSkillIndices, numFirstSkillIndices);

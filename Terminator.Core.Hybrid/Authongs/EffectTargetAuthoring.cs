@@ -81,7 +81,11 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             
             AddComponent<EffectTargetDamage>(entity);
             SetComponentEnabled<EffectTargetDamage>(entity, false);
-            
+
+            EffectTargetDamageScale damageScale;
+            damageScale.value = authoring._damageScale;
+            AddComponent(entity, damageScale);
+
             /*else
             {
                 AddComponent<Message>(entity);
@@ -105,15 +109,12 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [SerializeField] 
     internal int _gold = 1;
 
+    [SerializeField] 
+    internal float _damageScale = 1.0f;
+
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("attributeParameter")] 
     internal Object _attributeParameter;
 
-    [SerializeField] 
-    internal Object _resetMessageValue;
-    
-    [SerializeField] 
-    internal string _resetMessageName;
-    
     [SerializeField]
     internal MessageData[] _messages;
 

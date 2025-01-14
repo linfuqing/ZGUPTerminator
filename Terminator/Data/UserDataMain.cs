@@ -246,9 +246,11 @@ public sealed partial class UserDataMain : MonoBehaviour
                 }
                 
                 onComplete(userStages);
+                
+                break;
             }
-            else
-                stageIndex += numStages;
+            
+            stageIndex += numStages;
         }
     }
 

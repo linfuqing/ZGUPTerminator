@@ -134,6 +134,11 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
     }
 }
 
+public struct EffectTargetDamageScale : IComponentData
+{
+    public float value;
+}
+
 public struct EffectTargetLevel : IComponentData
 {
     public int value;

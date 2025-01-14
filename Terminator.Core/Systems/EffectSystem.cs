@@ -680,6 +680,9 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public NativeArray<EffectTargetLevel> targetLevels;
         
+        [ReadOnly] 
+        public NativeArray<EffectTargetDamageScale> targetDamageScales;
+
         public NativeArray<EffectTargetDamage> targetDamages;
 
         public NativeArray<EffectTarget> targets;
@@ -696,7 +699,7 @@ public partial struct EffectSystem : ISystem
         {
             var targetDamage = targetDamages[index];
             var target = targets[index];
-            target.hp += -targetDamage.value;
+            target.hp += -(int)math.ceil(targetDamage.value * (index < targetDamageScales.Length ? targetDamageScales[index].value : 1.0f));
             if (target.hp <= 0)
             {
                 if (index < targetLevels.Length && this.levelStatus.IsValid)
@@ -839,6 +842,9 @@ public partial struct EffectSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<EffectTargetLevel> targetLevelType;
 
+        [ReadOnly] 
+        public ComponentTypeHandle<EffectTargetDamageScale> targetDamageScaleType;
+
         public ComponentTypeHandle<EffectTargetDamage> targetDamageType;
 
         public ComponentTypeHandle<EffectTarget> targetType;
@@ -866,6 +872,7 @@ public partial struct EffectSystem : ISystem
             apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.characterBodies = chunk.GetNativeArray(ref characterBodyType);
             apply.targetLevels = chunk.GetNativeArray(ref targetLevelType);
+            apply.targetDamageScales = chunk.GetNativeArray(ref targetDamageScaleType);
             apply.targetDamages = chunk.GetNativeArray(ref targetDamageType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.characterGravityFactors = chunk.GetNativeArray(ref characterGravityFactorType);
@@ -924,6 +931,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<EffectTargetLevel> __targetLevelType;
 
+    private ComponentTypeHandle<EffectTargetDamageScale> __targetDamageScaleType;
+    
     private ComponentTypeHandle<EffectTargetDamage> __targetDamageType;
 
     private ComponentTypeHandle<EffectTarget> __targetType;
@@ -971,6 +980,7 @@ public partial struct EffectSystem : ISystem
         __statusTargetType = state.GetBufferTypeHandle<EffectStatusTarget>();
         __statusType = state.GetComponentTypeHandle<EffectStatus>();
         __targetLevelType = state.GetComponentTypeHandle<EffectTargetLevel>(true);
+        __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
@@ -1092,6 +1102,7 @@ public partial struct EffectSystem : ISystem
         __targetType.Update(ref state);
         __targetLevelType.Update(ref state);
         __targetMessageType.Update(ref state);
+        __targetDamageScaleType.Update(ref state);
         __targetDamageType.Update(ref state);
         __messageParameterType.Update(ref state);
 
@@ -1105,6 +1116,7 @@ public partial struct EffectSystem : ISystem
         apply.localToWorldType = __localToWorldType;
         apply.characterBodyType = __characterBodyType;
         apply.targetLevelType = __targetLevelType;
+        apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;
         apply.targetType = __targetType;
         apply.characterGravityFactorType = __characterGravityFactorType;

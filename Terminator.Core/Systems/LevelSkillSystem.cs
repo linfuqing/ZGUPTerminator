@@ -99,6 +99,9 @@ public partial struct LevelSkillPickableSystem : ISystem
         [ReadOnly]
         public BufferLookup<SkillActiveIndex> skillActiveIndices;
         
+        [ReadOnly]
+        public BufferLookup<LevelSkillGroup> skillGroups;
+
         public BufferLookup<LevelSkill> skills;
 
         public ComponentLookup<LevelSkillVersion> versions;
@@ -118,7 +121,8 @@ public partial struct LevelSkillPickableSystem : ISystem
             var hash = math.aslong(time);
             var random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32));
             LevelSkill skill;
-            //NativeList<SkillActiveIndex> results = default;
+            NativeArray<int> skillGroupIndices;
+            DynamicBuffer<LevelSkillGroup> skillGroups;
             DynamicBuffer<SkillActiveIndex> skillActiveIndices;
             while (this.results.TryDequeue(out Result result))
             {
@@ -163,8 +167,17 @@ public partial struct LevelSkillPickableSystem : ISystem
                         skillCount += numSkills;
                     }
                 }*/
+
+                skillGroupIndices = this.skillGroups.TryGetBuffer(result.entity, out skillGroups)
+                    ? skillGroups.AsNativeArray().Reinterpret<int>()
+                    : default;
                 
-                definition.Value.Select(skillActiveIndices.AsNativeArray(), ref skills, ref random, out version.priority);
+                definition.Value.Select(
+                    skillActiveIndices.AsNativeArray(), 
+                    skillGroupIndices, 
+                    ref skills, 
+                    ref random, 
+                    out version.priority);
 
                 if (result.priorityToStyleIndex != 0)
                 {
@@ -202,6 +215,8 @@ public partial struct LevelSkillPickableSystem : ISystem
 
     private BufferLookup<LevelSkill> __skills;
 
+    private BufferLookup<LevelSkillGroup> __skillGroups;
+
     private BufferLookup<SkillActiveIndex> __skillActiveIndices;
     
     private EntityQuery __group;
@@ -216,6 +231,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         
         __versions = state.GetComponentLookup<LevelSkillVersion>();
         __skills = state.GetBufferLookup<LevelSkill>();
+        __skillGroups = state.GetBufferLookup<LevelSkillGroup>(true);
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -256,6 +272,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         
         __versions.Update(ref state);
         __skills.Update(ref state);
+        __skillGroups.Update(ref state);
         __skillActiveIndices.Update(ref state);
         
         Select select;
@@ -263,6 +280,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         select.definition = definition;
         select.entity = entity;
         select.skillActiveIndices = __skillActiveIndices;
+        select.skillGroups = __skillGroups;
         select.skills = __skills;
         select.versions = __versions;
         select.results = __results;

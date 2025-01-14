@@ -33,7 +33,7 @@ public struct LevelSkillDefinition
     public struct Group
     {
         public float weight;
-        public FixedString32Bytes name;
+        //public FixedString32Bytes name;
         public BlobArray<int> firstSkillIndices;
     }
 
@@ -62,6 +62,7 @@ public struct LevelSkillDefinition
 
     public void Select(
         in NativeArray<SkillActiveIndex> activeIndices, 
+        in NativeArray<int> groupsToFilter, 
         ref DynamicBuffer<LevelSkill> results, 
         ref Random random, 
         out int priority)
@@ -85,7 +86,8 @@ public struct LevelSkillDefinition
                 continue;
 
             ref var skill = ref skills[j];
-            if(skill.groupIndex == -1/* || __GetSkillIndices(skill.groupIndex, j).Length < 1*/)
+            if(skill.groupIndex == -1 || 
+               groupsToFilter.IsCreated && groupsToFilter.IndexOf(skill.groupIndex) == -1/* || __GetSkillIndices(skill.groupIndex, j).Length < 1*/)
                 continue;
                 
             weight.activeIndex = i;
@@ -297,9 +299,20 @@ public struct LevelSkillDefinition
     }
 }
 
+public struct LevelSkillNameDefinition
+{
+    public BlobArray<FixedString32Bytes> groups;
+    public BlobArray<FixedString32Bytes> skills;
+}
+
 public struct LevelSkillDefinitionData : IComponentData
 {
     public BlobAssetReference<LevelSkillDefinition> definition;
+}
+
+public struct LevelSkillNameDefinitionData : IComponentData
+{
+    public BlobAssetReference<LevelSkillNameDefinition> definition;
 }
 
 public struct LevelSkillVersion : IComponentData
@@ -391,4 +404,9 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         }
 
     }
+}
+
+public struct LevelSkillGroup : IBufferElementData
+{
+    public int value;
 }
