@@ -13,7 +13,6 @@ public sealed partial class UserDataMain : MonoBehaviour
         private set;
     }
    
-    
     [Serializable]
     internal struct Energy
     {
@@ -89,7 +88,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
     
     [Serializable]
-    internal struct Level
+    internal partial struct Level
     {
         public string name;
         public int energy;
@@ -103,6 +102,9 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     [SerializeField]
     internal Level[] _levels;
+
+    [SerializeField, CSV("_levels", guidIndex = -1, nameIndex = 0)] 
+    internal string _levelsPath;
 
     public IEnumerator QueryLevels(
         uint userID,
