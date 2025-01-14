@@ -8,6 +8,13 @@ using Unity.Scenes;
 [BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial struct LevelPlayerSystem : ISystem
 {
+    private struct Apply
+    {
+        public float effectDamageScale;
+        public float effectTargetDamageScale;
+        public float effectTargetHPScale;
+    }
+    
     private ComponentLookup<ThirdPersonPlayer> __instances;
     private EntityQuery __group;
 

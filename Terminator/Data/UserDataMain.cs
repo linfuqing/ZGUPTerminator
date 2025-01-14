@@ -236,7 +236,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
                     userStage.name = stage.name;
                     userStage.id = __ToID(stageIndex + 1);
-                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stageIndex}");
+                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex)}");
                     userStage.rewardType = stage.rewardType;
                     userStage.rewardCount = stage.rewardCount;
 
@@ -366,6 +366,16 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
+        
+        string key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stageID}";
+        var flag = (UserStage.Flag)PlayerPrefs.GetInt(key);
+        if ((flag & UserStage.Flag.Unlock) != UserStage.Flag.Unlock ||
+            (flag & UserStage.Flag.Collected) == UserStage.Flag.Collected)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
 
         int stageIndex = __ToIndex(stageID), numStages, numLevels = Mathf.Min(_levels.Length, UserData.level);
         Level level;
@@ -383,9 +393,20 @@ public sealed partial class UserDataMain : MonoBehaviour
                         gold += stage.rewardCount;
                         break;
                     case UserStage.RewardType.Weapon:
+                        string source = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS), destination = stage.name;
+                        if (string.IsNullOrEmpty(source))
+                            source = destination;
+                        else
+                            source = $"{source},{destination}";
+
+                        PlayerPrefs.SetString(NAME_SPACE_USER_WEAPONS, source);
                         break;
                 }
-                
+
+                flag |= UserStage.Flag.Collected;
+
+                PlayerPrefs.SetInt(key, (int)flag);
+
                 onComplete(true);
                 
                 yield break;
@@ -429,7 +450,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             talent = _talents[i];
             userTalent.name = talent.name;
             userTalent.id = __ToID(i);
-            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{i}");
+            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
             userTalent.rewardType = talent.rewardType;
             userTalent.rewardCount = talent.rewardCount;
             userTalent.gold = talent.gold;
@@ -445,6 +466,18 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
+
+        string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talentID}";
+        var flag = (UserTalent.Flag)PlayerPrefs.GetInt(key);
+        if ((flag & UserTalent.Flag.Collected) == UserTalent.Flag.Collected)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        flag |= UserTalent.Flag.Collected;
+        PlayerPrefs.SetInt(key, (int)flag);
 
         int gold = UserDataMain.gold;
         
