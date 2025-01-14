@@ -320,7 +320,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     private const string NAME_SPACE_USER_WEAPON_FLAG = "UserWeaponFlag";
 
     [SerializeField] 
-    internal Weapon[] __weapons;
+    internal Weapon[] _weapons;
 
     public IEnumerator QueryWeapons(
         uint userID,
@@ -328,13 +328,13 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
         
-        int numWeapons = __weapons.Length;
+        int numWeapons = _weapons.Length;
         Weapon weapon;
         UserWeapon userWeapon;
         var userWeapons = new UserWeapon[numWeapons];
         for (int i = 0; i < numWeapons; ++i)
         {
-            weapon = __weapons[i];
+            weapon = _weapons[i];
             userWeapon = userWeapons[i];
             userWeapon.name = weapon.name;
             userWeapon.id = (uint)i;
