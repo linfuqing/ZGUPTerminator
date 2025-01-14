@@ -21,7 +21,8 @@ public struct LevelStageOption
         Value = 0, 
         Max = 6, 
         ExpMax = 8, 
-        Exp = 9
+        Exp = 9, 
+        Stage = 10
     }
 
     [Tooltip("SpawnerLayerMaskOverride:激活对应标签的刷怪圈。SpawnerEntityRemaining：对应刷怪圈标签的怪都被消灭。PrefabRemaining：对应预制体索引的怪都被消灭。Value：关卡进度")]
@@ -52,6 +53,8 @@ public struct LevelStageOption
                 return value < status.expMax;
             case Type.Exp:
                 return value <= status.exp;
+            case Type.Stage:
+                return value <= status.stage;
             case Type.SpawnerLayerMaskInclude:
                 return (value & spawnerLayerMaskOverride.value) == value;
             case Type.SpawnerLayerMaskExclude:
@@ -163,6 +166,9 @@ public struct LevelStageOption
                 break;
             case Type.Exp:
                 status.exp = value;
+                break;
+            case Type.Stage:
+                status.stage = value;
                 break;
             case Type.SpawnerLayerMaskInclude:
                 spawnerLayerMaskInclude.value = value;
@@ -289,8 +295,9 @@ public struct LevelStatus : IComponentData
     public int max;
     public int expMax;
     public int exp;
-    public int gold;
     public int count;
+    public int gold;
+    public int stage;
 }
 
 public struct LevelPrefab : IBufferElementData

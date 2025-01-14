@@ -128,7 +128,6 @@ public interface IUserData : IGameUserData
 
     IEnumerator SubmitLevel(
         uint userID,
-        uint levelID, 
         int stage, 
         int gold, 
         Action<bool> onComplete);
@@ -155,6 +154,27 @@ public interface IUserData : IGameUserData
 
 public partial class UserData : MonoBehaviour, IUserData
 {
+    public struct LevelCache
+    {
+        public uint id;
+        public int stage;
+        public int gold;
+
+        public LevelCache(string value)
+        {
+            var values = value.Split(',');
+            id = uint.Parse(values[0]);
+            stage = int.Parse(values[1]);
+            gold = int.Parse(values[2]);
+        }
+
+        public override string ToString()
+        {
+            return $"{id},{stage},{gold}";
+        }
+    }
+    
+    private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
     private const string NAME_SPACE_USER_LEVEL = "UserLevel";
 
     public static int level
@@ -164,6 +184,47 @@ public partial class UserData : MonoBehaviour, IUserData
         set => PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, value);
     }
     
+    public static LevelCache? levelCache
+    {
+        get
+        {
+            var value = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_CACHE);
+            if (string.IsNullOrEmpty(value))
+                return null;
+
+            return new LevelCache(value);
+        }
+
+        set
+        {
+            if(value == null)
+                PlayerPrefs.DeleteKey(NAME_SPACE_USER_LEVEL_CACHE);
+            else
+                PlayerPrefs.SetString(NAME_SPACE_USER_LEVEL_CACHE, value.Value.ToString());
+        }
+    }
+
+    public IEnumerator SubmitLevel(
+        uint userID,
+        int stage,
+        int gold,
+        Action<bool> onComplete)
+    {
+        var levelCache = UserData.levelCache;
+        if (levelCache == null)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        var temp = levelCache.Value;
+        temp.stage = stage;
+        temp.gold = gold;
+        UserData.levelCache = temp;
+        onComplete(true);
+    }
+
     public IEnumerator Activate(
         string code,
         string channel,

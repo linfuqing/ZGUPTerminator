@@ -305,8 +305,9 @@ public class LevelAuthoring : MonoBehaviour
             status.max = authoring._max;
             status.expMax = authoring._expMax;
             status.exp = 0;
-            status.gold = 0;
             status.count = 0;
+            status.gold = 0;
+            status.stage = 0;
             AddComponent(entity, status);
 
             var defaultStages = AddBuffer<LevelStage>(entity);

@@ -145,7 +145,7 @@ public partial class LevelSystemManaged : SystemBase
             status.count = 0;
             if (!SystemAPI.Exists(player))
                 status.gold = 0;
-            
+
             SystemAPI.SetSingleton(status);
         }
 
@@ -154,8 +154,9 @@ public partial class LevelSystemManaged : SystemBase
             status.max, 
             status.expMax, 
             status.exp, 
+            status.count, 
             status.gold, 
-            status.count);
+            status.stage);
         
         __UpdateStage(manager);
         

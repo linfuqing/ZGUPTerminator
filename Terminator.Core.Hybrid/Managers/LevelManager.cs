@@ -28,6 +28,8 @@ public partial class LevelManager : MonoBehaviour
     //internal string _gameTimeFormat = "mm:ss";
 
     [SerializeField] 
+    internal UnityEvent _onQuit;
+    [SerializeField] 
     internal StringEvent _onGameTime;
     [SerializeField] 
     internal StringEvent _onKillCount;
@@ -44,6 +46,7 @@ public partial class LevelManager : MonoBehaviour
 
     private int __count;
     private int __gold;
+    private int __stage;
 
     private float __startTime;
 
@@ -72,16 +75,17 @@ public partial class LevelManager : MonoBehaviour
         int max, 
         int maxExp, 
         int exp, 
+        int count, 
         int gold, 
-        int count)
+        int stage)
     {
         if (__stages != null)
         {
             foreach (var stageIndex in __stages)
             {
-                ref var stage = ref _stages[stageIndex];
-                if(stage.max > 0 && stage.onCount != null)
-                    stage.onCount.Invoke(Mathf.Max(0, stage.max - value).ToString());
+                ref var temp = ref _stages[stageIndex];
+                if(temp.max > 0 && temp.onCount != null)
+                    temp.onCount.Invoke(Mathf.Max(0, temp.max - value).ToString());
             }
         }
         
@@ -91,8 +95,23 @@ public partial class LevelManager : MonoBehaviour
         if (_expProgressbar != null)
             _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp);
 
-        __gold = gold;
-        __count = count;
+        if (count != __count)
+        {
+            if (_onKillCount != null)
+                _onKillCount.Invoke(__count.ToString());
+
+            __count = count;
+        }
+
+        if (gold != __gold)
+        {
+            if (_onGoldCount != null)
+                _onGoldCount.Invoke(__gold.ToString());
+            
+            __gold = gold;
+        }
+
+        __stage = stage;
     }
 
     public bool EnableStage(string name)
@@ -154,12 +173,6 @@ public partial class LevelManager : MonoBehaviour
             var timeSpan = new TimeSpan((long)((Time.time - __startTime) * TimeSpan.TicksPerSecond));
             _onGameTime.Invoke($"{timeSpan.Minutes} : {timeSpan.Seconds}");
         }
-
-        if (_onKillCount != null)
-            _onKillCount.Invoke(__count.ToString());
-        
-        if (_onGoldCount != null)
-            _onGoldCount.Invoke(__gold.ToString());
     }
     
     [UnityEngine.Scripting.Preserve]
@@ -168,6 +181,18 @@ public partial class LevelManager : MonoBehaviour
         isRestart = true;
 
         __startTime = Time.time;
+    }
+
+    [UnityEngine.Scripting.Preserve]
+    public void Quit()
+    {
+        StartCoroutine(ILevelData.instance.SubmitLevel(__stage, __gold, __OnQuit));
+    }
+
+    private void __OnQuit(bool result)
+    {
+        if (_onQuit != null)
+            _onQuit.Invoke();
     }
     
     protected void OnEnable()

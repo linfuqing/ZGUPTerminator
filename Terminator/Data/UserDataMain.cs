@@ -215,7 +215,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int i, j, numStages, stageIndex = 0, numLevels = Mathf.Min(_levels.Length, UserData.level);
+        int i, j, numStages, stageIndex = 0, numLevels = Mathf.Min(_levels.Length, UserData.level), levelEnd = numLevels - 1;
         Level level;
         UserStage userStage;
         Stage stage;
@@ -231,7 +231,7 @@ public sealed partial class UserDataMain : MonoBehaviour
                     break;
             }
 
-            if (j < numStages)
+            if (j < numStages || i == levelEnd)
             {
                 var userStages = new UserStage[numStages];
                 for (j = 0; j < numStages; ++j)
@@ -264,7 +264,15 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
-
+        
+        int userLevel = UserData.level, levelIndex = __ToIndex(levelID);
+        if (userLevel < levelIndex)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+        
         var timeUnix = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         uint now = (uint)timeUnix.TotalSeconds, time = now;
         int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
@@ -284,61 +292,76 @@ public sealed partial class UserDataMain : MonoBehaviour
             time = now;
         }
 
-        energy -= _levels[__ToIndex(levelID)].energy;
+        var level = _levels[levelIndex];
+        energy -= level.energy;
         if (energy < 0)
         {
-            if (onComplete != null)
-                onComplete(false);
+            onComplete(false);
 
             yield break;
         }
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time);
+
+        UserData.LevelCache levelCache;
+        levelCache.id = levelID;
+        levelCache.stage = 0;
+        levelCache.gold = 0;
+        UserData.levelCache = levelCache;
         
-        if (onComplete != null)
-            onComplete(true);
+        onComplete(true);
     }
 
-    private const string NAME_SPACE_USER_LEVEL_REWARD_SKILLS = "UserLevelStageRewardSkills";
-
-    public IEnumerator SubmitLevel(
+    public IEnumerator CollectLevel(
         uint userID,
-        uint levelID,
-        int stage,
-        int gold,
-        Action<bool> onComplete)
+        Action<string[]> onComplete)
     {
         yield return null;
 
-        /*string key = $"{NAME_SPACE_USER_LEVEL_STAGE}{__ToID(stageIndex + stage)}";
-        stage = Mathf.Max(stage, PlayerPrefs.GetInt(key));
-        PlayerPrefs.SetInt(key, stage);*/
-        
-        int userLevel = UserData.level, levelIndex = __ToIndex(levelID);
-        if (userLevel < levelIndex)
+        var temp = UserData.levelCache;
+        if (temp == null)
         {
-            onComplete(false);
+            onComplete(null);
             
             yield break;
         }
 
+        UserData.levelCache = null;
+
+        var levelCache = temp.Value;
+        
+        int userLevel = UserData.level, levelIndex = __ToIndex(levelCache.id);
+        if (userLevel < levelIndex)
+        {
+            onComplete(null);
+            
+            yield break;
+        }
+
+        string[] rewardSkills = Array.Empty<string>();
         if (userLevel == levelIndex)
         {
             UserData.level = ++userLevel;
 
             var level = _levels[levelIndex];
 
-            string source = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS), destination = string.Join(',', level.rewardSkills);
-            if (string.IsNullOrEmpty(source))
-                source = destination;
-            else
-                source = $"{source},{destination}";
+            if ((level.stages == null ? 0 : level.stages.Length) == levelCache.stage)
+            {
+                rewardSkills = level.rewardSkills;
 
-            PlayerPrefs.SetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS, source);
+                string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS),
+                    destination = string.Join(',', rewardSkills);
+                if (string.IsNullOrEmpty(source))
+                    source = destination;
+                else
+                    source = $"{source},{destination}";
+
+                PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
+            }
         }
         
-        UserDataMain.gold += gold;
+        gold += levelCache.gold;
 
         int stageIndex = 0;
         for (int i = 0; i < levelIndex; ++i)
@@ -346,7 +369,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         string key;
         UserStage.Flag flag;
-        for (int i = 0; i < stage; ++i)
+        for (int i = 0; i < levelCache.stage; ++i)
         {
             key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + i)}";
             flag = (UserStage.Flag)PlayerPrefs.GetInt(key);
@@ -357,31 +380,8 @@ public sealed partial class UserDataMain : MonoBehaviour
                 PlayerPrefs.SetInt(key, (int)flag);
             }
         }
-
-        onComplete(true);
-    }
-
-    public IEnumerator CollectLevel(
-        uint userID,
-        Action<string[]> onComplete)
-    {
-        yield return null;
-
-        var destination = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS, null);
-        var skills = destination?.Split(SEPARATOR);
-        if(skills != null && skills.Length > 0)
-        {
-            string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
-            if (string.IsNullOrEmpty(source))
-                source = destination;
-            else
-                source = $"{source},{destination}";
-
-            PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
-            PlayerPrefs.DeleteKey(NAME_SPACE_USER_LEVEL_REWARD_SKILLS);
-        }
-
-        onComplete(skills);
+        
+        onComplete(rewardSkills);
     }
 
     public IEnumerator CollectStage(
@@ -586,16 +586,6 @@ public partial class UserData
         Action<bool> onComplete)
     {
         return UserDataMain.instance.ApplyLevel(userID, levelID, onComplete);
-    }
-
-    public IEnumerator SubmitLevel(
-        uint userID,
-        uint levelID,
-        int stage,
-        int gold,
-        Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SubmitLevel(userID, levelID, stage, gold, onComplete);
     }
 
     public IEnumerator CollectLevel(

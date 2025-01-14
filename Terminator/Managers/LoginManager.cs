@@ -8,6 +8,17 @@ using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
 {
+    private class LevelData : ILevelData
+    {
+        public IEnumerator SubmitLevel(
+            int stage,
+            int gold,
+            Action<bool> onComplete)
+        {
+            return IUserData.instance.SubmitLevel(userID.Value, stage, gold, onComplete);
+        }
+    }
+    
     [Serializable]
     internal struct Level
     {
@@ -25,6 +36,9 @@ public sealed class LoginManager : MonoBehaviour
 
     [SerializeField]
     internal float _rewardStyleDestroyTime;
+
+    [SerializeField] 
+    internal string _energyTimeFormat = @"mm\'ss\'\'";
 
     [SerializeField]
     internal UnityEvent _onStart;
@@ -349,6 +363,8 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
+        ILevelData.instance = new LevelData();
+
         _onStart.Invoke();
     }
 
@@ -375,7 +391,7 @@ public sealed class LoginManager : MonoBehaviour
                 __energyNextTime += __energyUnitTime;
             
             if (_onEnergyTime != null)
-                _onEnergyTime.Invoke(timeSpan.ToString());
+                _onEnergyTime.Invoke(timeSpan.ToString(_energyTimeFormat));
         }
         else
         {

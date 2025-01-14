@@ -2,8 +2,10 @@ using UnityEngine;
 
 public class GameSceneManager : MonoBehaviour
 {
-    public void Load(string sceneName)
+    internal string _defaultSceneName = "Scenes/Login.scene";
+    
+    public void LoadToDefault()
     {
-        GameAssetManager.instance.LoadScene(sceneName, null);
+        GameAssetManager.instance.LoadScene(_defaultSceneName, null);
     }
 }
