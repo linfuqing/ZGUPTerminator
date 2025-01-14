@@ -34,7 +34,7 @@ public struct UserStage
     }
         
     public string name;
-    public int id;
+    public uint id;
     //public int levelID;
     public Flag flag;
     public RewardType rewardType;
@@ -46,7 +46,7 @@ public struct UserLevel
     public string name;
     public uint id;
     public int energy;
-    public int userStage;
+    //public int userStage;
 
     public string[] rewardSkills;
 }

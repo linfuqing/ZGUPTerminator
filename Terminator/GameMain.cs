@@ -9,7 +9,11 @@ public class GameSceneActivation : IEnumerator
 {
     public bool MoveNext()
     {
+#if ENABLE_CONTENT_DELIVERY
         return ContentDeliveryGlobalState.CurrentContentUpdateState < ContentDeliveryGlobalState.ContentUpdateState.ContentReady;
+#else
+        return false;
+#endif
     }
 
     void IEnumerator.Reset()

@@ -20,7 +20,15 @@ public sealed partial class UserDataMain : MonoBehaviour
         public float uintTime;
     }
 
-    public const string NAME_SPACE_USER_GOLD = "UserGold";
+    private const string NAME_SPACE_USER_GOLD = "UserGold";
+
+    public static int gold
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
+
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
+    }
+    
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
 
     [SerializeField]
@@ -35,7 +43,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         
         User user;
         user.id = 0;
-        user.gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
+        user.gold = gold;
         user.level = UserData.level;
 
         UserEnergy userEnergy;
@@ -47,17 +55,19 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(user, userEnergy);
     }
 
-    [SerializeField]
-    internal string[] _defaultSkills;
+    private const char SEPARATOR = ',';
     private const string NAME_SPACE_USER_SKILLS = "UserSkills";
 
+    [SerializeField]
+    internal string[] _defaultSkills;
+    
     public IEnumerator QuerySkills(
         uint userID,
         Action<Memory<UserSkill>> onComplete)
     {
         yield return null;
         
-        var skills = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS).Split(',');
+        var skills = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS, null)?.Split(SEPARATOR);
 
         int numSkills = skills == null ? 0 : skills.Length;
         UserSkill userSkill;
@@ -73,6 +83,76 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
 
     [Serializable]
+    internal struct Weapon
+    {
+        public string name;
+        public string skillName;
+    }
+
+    private const string NAME_SPACE_USER_WEAPON_SELECTED = "UserWeaponSelected";
+    private const string NAME_SPACE_USER_WEAPONS = "UserWeapons";
+
+    [SerializeField] 
+    internal Weapon[] _weapons;
+
+    private Dictionary<string, int> __weaponIndices;
+
+    public IEnumerator QueryWeapons(
+        uint userID,
+        Action<Memory<UserWeapon>> onComplete)
+    {
+        yield return null;
+
+        if (__weaponIndices == null)
+        {
+            __weaponIndices = new Dictionary<string, int>();
+            int numWeapons = _weapons.Length;
+            for (int i = 0; i < numWeapons; ++i)
+                __weaponIndices.Add(_weapons[i].name, i);
+        }
+
+        string[] weaponNames = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS, null)?.Split(SEPARATOR);
+        int numWeaponNames = weaponNames == null ? 0 : weaponNames.Length,
+            weaponSelectedID = PlayerPrefs.GetInt(NAME_SPACE_USER_WEAPON_SELECTED, -1),
+            weaponIndex;
+        Weapon weapon;
+        UserWeapon userWeapon;
+        var userWeapons = new UserWeapon[numWeaponNames];
+        for(int i = 0; i < numWeaponNames; ++i)
+        {
+            weaponIndex = __weaponIndices[weaponNames[i]];
+            weapon = _weapons[weaponIndex];
+            userWeapon = userWeapons[i];
+            userWeapon.name = weapon.name;
+            userWeapon.id = __ToID(weaponIndex);
+            userWeapon.flag = userWeapon.id == weaponSelectedID ? UserWeapon.Flag.Selected : 0;
+            userWeapons[i] = userWeapon;
+        }
+
+        onComplete(userWeapons);
+    }
+
+    public IEnumerator SelectWeapon(
+        uint userID,
+        uint weaponID,
+        Action<bool> onComplete)
+    {
+        yield return null;
+        
+        var weaponNames = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS, null)?.Split(SEPARATOR);
+        if (weaponNames == null || weaponNames.IndexOf(_weapons[__ToIndex(weaponID)].name) == -1)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        PlayerPrefs.SetInt(NAME_SPACE_USER_WEAPON_SELECTED, (int)weaponID);
+        
+        onComplete(true);
+    }
+
+    [Serializable]
     internal struct Stage
     {
         public string name;
@@ -81,7 +161,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
     
     [Serializable]
-    internal partial struct Level
+    internal struct Level
     {
         public string name;
         public int energy;
@@ -90,7 +170,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         public string[] rewardSkills;
     }
 
-    private const string NAME_SPACE_USER_LEVEL_STAGE = "UserLevelStage";
+    //private const string NAME_SPACE_USER_LEVEL_STAGE = "UserLevelStage";
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
 
     [SerializeField]
@@ -113,9 +193,9 @@ public sealed partial class UserDataMain : MonoBehaviour
         {
             level = _levels[i];
             userLevel.name = level.name;
-            userLevel.id = (uint)i + 1;
+            userLevel.id = __ToID(i);
             userLevel.energy = level.energy;
-            userLevel.userStage = PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE}{i}");
+            //userLevel.userStage = PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE}{i}");
             userLevel.rewardSkills = level.rewardSkills;
 
             userLevels[i] = userLevel;
@@ -131,7 +211,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int i, j, numStages, stageIndex = 0, numLevels = _levels.Length;
+        int i, j, numStages, stageIndex = 0, numLevels = Mathf.Min(_levels.Length, UserData.level);
         Level level;
         UserStage userStage;
         Stage stage;
@@ -142,7 +222,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             numStages = level.stages == null ? 0 : level.stages.Length;
             for (j = 0; j < numStages; ++j)
             {
-                if (((UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{i}-{j}") &
+                if (((UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + j)}") &
                     UserStage.Flag.Collected) != UserStage.Flag.Collected)
                     break;
             }
@@ -155,12 +235,14 @@ public sealed partial class UserDataMain : MonoBehaviour
                     stage = level.stages[j];
 
                     userStage.name = stage.name;
-                    userStage.id = stageIndex++;
-                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{i}-{j}");
+                    userStage.id = __ToID(stageIndex + 1);
+                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stageIndex}");
                     userStage.rewardType = stage.rewardType;
                     userStage.rewardCount = stage.rewardCount;
 
                     userStages[j] = userStage;
+
+                    ++stageIndex;
                 }
                 
                 onComplete(userStages);
@@ -177,7 +259,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY) - _levels[levelID].energy;
+        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY) - _levels[__ToIndex(levelID)].energy;
         if (energy < 0)
         {
             if (onComplete != null)
@@ -202,20 +284,24 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
-        
-        string key = $"{NAME_SPACE_USER_LEVEL_STAGE}{levelID}-{stage}";
-        stage = Mathf.Max(stage, PlayerPrefs.GetInt(key));
-        PlayerPrefs.SetInt(key, stage);
-        
-        gold += PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold);
 
-        int userLevel = UserData.level;
-        if (userLevel == levelID)
+        /*string key = $"{NAME_SPACE_USER_LEVEL_STAGE}{__ToID(stageIndex + stage)}";
+        stage = Mathf.Max(stage, PlayerPrefs.GetInt(key));
+        PlayerPrefs.SetInt(key, stage);*/
+        
+        int userLevel = UserData.level, levelIndex = __ToIndex(levelID);
+        if (userLevel < levelIndex)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        if (userLevel == levelIndex)
         {
             UserData.level = ++userLevel;
 
-            var level = _levels[levelID];
+            var level = _levels[levelIndex];
 
             string source = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS), destination = string.Join(',', level.rewardSkills);
             if (string.IsNullOrEmpty(source))
@@ -225,9 +311,28 @@ public sealed partial class UserDataMain : MonoBehaviour
 
             PlayerPrefs.SetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS, source);
         }
+        
+        UserDataMain.gold += gold;
 
-        if (onComplete != null)
-            onComplete(true);
+        int stageIndex = 0;
+        for (int i = 0; i < levelIndex; ++i)
+            stageIndex += _levels[i].stages.Length;
+
+        string key;
+        UserStage.Flag flag;
+        for (int i = 0; i < stage; ++i)
+        {
+            key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + i)}";
+            flag = (UserStage.Flag)PlayerPrefs.GetInt(key);
+            if ((flag & UserStage.Flag.Unlock) != UserStage.Flag.Unlock)
+            {
+                flag |= UserStage.Flag.Unlock;
+                
+                PlayerPrefs.SetInt(key, (int)flag);
+            }
+        }
+
+        onComplete(true);
     }
 
     public IEnumerator CollectLevel(
@@ -236,9 +341,9 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        var destination = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS);
-        var skills = destination.Split(',');
-        if(skills.Length > 0)
+        var destination = PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_REWARD_SKILLS, null);
+        var skills = destination?.Split(SEPARATOR);
+        if(skills != null && skills.Length > 0)
         {
             string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
             if (string.IsNullOrEmpty(source))
@@ -259,10 +364,39 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
+
+        int stageIndex = __ToIndex(stageID), numStages, numLevels = Mathf.Min(_levels.Length, UserData.level);
+        Level level;
+        Stage stage;
+        for (int i = 0; i < numLevels; ++i)
+        {
+            level = _levels[i];
+            numStages = level.stages == null ? 0 : level.stages.Length;
+            if (stageIndex < numStages)
+            {
+                stage = level.stages[stageIndex];
+                switch (stage.rewardType)
+                {
+                    case UserStage.RewardType.Gold:
+                        gold += stage.rewardCount;
+                        break;
+                    case UserStage.RewardType.Weapon:
+                        break;
+                }
+                
+                onComplete(true);
+                
+                yield break;
+            }
+
+            stageIndex -= numStages;
+        }
+        
+        onComplete(false);
     }
 
     [Serializable]
-    internal partial struct Talent
+    internal struct Talent
     {
         public string name;
         public UserTalent.RewardType rewardType;
@@ -292,7 +426,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         {
             talent = _talents[i];
             userTalent.name = talent.name;
-            userTalent.id = (uint)i;
+            userTalent.id = __ToID(i);
             userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{i}");
             userTalent.rewardType = talent.rewardType;
             userTalent.rewardCount = talent.rewardCount;
@@ -309,52 +443,35 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
-    }
 
-    [Serializable]
-    internal struct Weapon
-    {
-        public string name;
-    }
-
-    private const string NAME_SPACE_USER_WEAPON_FLAG = "UserWeaponFlag";
-
-    [SerializeField] 
-    internal Weapon[] _weapons;
-
-    public IEnumerator QueryWeapons(
-        uint userID,
-        Action<Memory<UserWeapon>> onComplete)
-    {
-        yield return null;
+        int gold = UserDataMain.gold;
         
-        int numWeapons = _weapons.Length;
-        Weapon weapon;
-        UserWeapon userWeapon;
-        var userWeapons = new UserWeapon[numWeapons];
-        for (int i = 0; i < numWeapons; ++i)
+        var talent = _talents[__ToIndex(talentID)];
+        if (talent.gold > gold)
         {
-            weapon = _weapons[i];
-            userWeapon = userWeapons[i];
-            userWeapon.name = weapon.name;
-            userWeapon.id = (uint)i;
-            userWeapon.flag = (UserWeapon.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_WEAPON_FLAG}{i}");
-            userWeapons[i] = userWeapon;
+            onComplete(false);
+            
+            yield break;
         }
 
-        onComplete(userWeapons);
+        UserDataMain.gold = gold - talent.gold;
+
+        onComplete(true);
     }
 
-    public IEnumerator SelectWeapon(
-        uint userID,
-        uint weaponID,
-        Action<bool> onComplete)
-    {
-        yield return null;
-    }
+    private uint __ToID(int index) => (uint)(index + 1);
+    
+    private int __ToIndex(uint id) => (int)(id - 1);
     
     void Awake()
     {
+        if (IUserData.instance == null)
+        {
+            gameObject.AddComponent<UserData>();
+
+            UserData.level = int.MaxValue;
+        }
+
         instance = this;
     }
 }
