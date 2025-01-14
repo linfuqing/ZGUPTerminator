@@ -69,7 +69,8 @@ public struct UserTalent
     public enum RewardType
     {
         Hp, 
-        Damage
+        Attack, 
+        Defence
     }
     
     [Flags]

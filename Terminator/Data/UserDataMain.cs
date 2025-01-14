@@ -72,13 +72,6 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(userSkills);
     }
 
-    public IEnumerator QueryWeapons(
-        uint userID,
-        Action<Memory<UserWeapon>> onComplete)
-    {
-        yield return null;
-    }
-
     [Serializable]
     internal struct Stage
     {
@@ -298,7 +291,6 @@ public sealed partial class UserDataMain : MonoBehaviour
         for (int i = 0; i < numTalents; ++i)
         {
             talent = _talents[i];
-            userTalent = userTalents[i];
             userTalent.name = talent.name;
             userTalent.id = (uint)i;
             userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{i}");
@@ -317,6 +309,40 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
+    }
+
+    [Serializable]
+    internal struct Weapon
+    {
+        public string name;
+    }
+
+    private const string NAME_SPACE_USER_WEAPON_FLAG = "UserWeaponFlag";
+
+    [SerializeField] 
+    internal Weapon[] __weapons;
+
+    public IEnumerator QueryWeapons(
+        uint userID,
+        Action<Memory<UserWeapon>> onComplete)
+    {
+        yield return null;
+        
+        int numWeapons = __weapons.Length;
+        Weapon weapon;
+        UserWeapon userWeapon;
+        var userWeapons = new UserWeapon[numWeapons];
+        for (int i = 0; i < numWeapons; ++i)
+        {
+            weapon = __weapons[i];
+            userWeapon = userWeapons[i];
+            userWeapon.name = weapon.name;
+            userWeapon.id = (uint)i;
+            userWeapon.flag = (UserWeapon.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_WEAPON_FLAG}{i}");
+            userWeapons[i] = userWeapon;
+        }
+
+        onComplete(userWeapons);
     }
 
     public IEnumerator SelectWeapon(
