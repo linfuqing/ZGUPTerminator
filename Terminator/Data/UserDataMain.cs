@@ -2,8 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
-public class UserDataMain : MonoBehaviour
+public sealed partial class UserDataMain : MonoBehaviour
 {
     public static UserDataMain instance
     {
@@ -79,13 +80,6 @@ public class UserDataMain : MonoBehaviour
         yield return null;
     }
 
-    public IEnumerator QueryTalents(
-        uint userID,
-        Action<int, Memory<UserTalent>> onComplete)
-    {
-        yield return null;
-    }
-
     [Serializable]
     internal struct Stage
     {
@@ -98,7 +92,6 @@ public class UserDataMain : MonoBehaviour
     internal struct Level
     {
         public string name;
-        public uint id;
         public int energy;
 
         public Stage[] stages;
@@ -117,11 +110,9 @@ public class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int i, j, numStages, numLevels = _levels.Length;
+        int i, numLevels = _levels.Length;
         Level level;
         UserLevel userLevel;
-        UserStage userStage;
-        Stage stage;
         var userLevels = new UserLevel[numLevels];
         for (i = 0; i < numLevels; ++i)
         {
@@ -139,7 +130,6 @@ public class UserDataMain : MonoBehaviour
             onComplete(userLevels);
     }
 
-    
     public IEnumerator QueryStages(
         uint userID,
         Action<Memory<UserStage>> onComplete)
@@ -276,6 +266,49 @@ public class UserDataMain : MonoBehaviour
         yield return null;
     }
 
+    [Serializable]
+    internal partial struct Talent
+    {
+        public string name;
+        public UserTalent.RewardType rewardType;
+        public int rewardCount;
+        public int gold;
+    }
+
+    private const string NAME_SPACE_USER_TALENT_FLAG = "UserTalentFlag";
+
+    [SerializeField]
+    internal Talent[] _talents;
+
+    [SerializeField, CSV("_talents", guidIndex = -1, nameIndex = 0)] 
+    internal string _talentsPath;
+    
+    public IEnumerator QueryTalents(
+        uint userID,
+        Action<Memory<UserTalent>> onComplete)
+    {
+        yield return null;
+
+        int numTalents = _talents.Length;
+        Talent talent;
+        UserTalent userTalent;
+        var userTalents = new UserTalent[numTalents];
+        for (int i = 0; i < numTalents; ++i)
+        {
+            talent = _talents[i];
+            userTalent = userTalents[i];
+            userTalent.name = talent.name;
+            userTalent.id = (uint)i;
+            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{i}");
+            userTalent.rewardType = talent.rewardType;
+            userTalent.rewardCount = talent.rewardCount;
+            userTalent.gold = talent.gold;
+            userTalents[i] = userTalent;
+        }
+
+        onComplete(userTalents);
+    }
+
     public IEnumerator CollectTalent(
         uint userID,
         uint talentID,
@@ -324,7 +357,7 @@ public partial class UserData
 
     public IEnumerator QueryTalents(
         uint userID,
-        Action<int, Memory<UserTalent>> onComplete)
+        Action<Memory<UserTalent>> onComplete)
     {
         return UserDataMain.instance.QueryTalents(userID, onComplete);
     }

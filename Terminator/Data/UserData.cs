@@ -79,6 +79,7 @@ public struct UserTalent
     }
 
     public string name;
+    public uint id;
     public Flag flag;
     public RewardType rewardType;
     public int rewardCount;
@@ -109,7 +110,7 @@ public interface IUserData : IGameUserData
     
     IEnumerator QueryTalents(
         uint userID, 
-        Action<int, Memory<UserTalent>> onComplete);
+        Action<Memory<UserTalent>> onComplete);
 
     IEnumerator QueryStages(
         uint userID,
