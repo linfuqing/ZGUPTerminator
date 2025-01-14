@@ -38,6 +38,9 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField]
     internal StringEvent _onEnergy;
 
+    [SerializeField]
+    internal StringEvent _onEnergyTime;
+
     [SerializeField] 
     internal Progressbar _energy;
 
@@ -53,6 +56,9 @@ public sealed class LoginManager : MonoBehaviour
     private List<RewardStyle> __rewardStyles;
     private Dictionary<int, LevelStyle> __styles;
     private Dictionary<string, int> __skillIndices;
+
+    private float __energyNextTime;
+    private float __energyUnitTime;
 
     private int __gold;
 
@@ -298,16 +304,20 @@ public sealed class LoginManager : MonoBehaviour
 
         energyMax = userEnergy.max;
 
-        float energyUnitTime = userEnergy.unitTime * 0.001f,
-            energyNextValue = (float)((double)(DateTime.UtcNow.Ticks - userEnergy.tick) /
+        __energyUnitTime = userEnergy.unitTime * 0.001f;
+        float energyValueFloat = (float)((double)(DateTime.UtcNow.Ticks - userEnergy.tick) /
                                       (TimeSpan.TicksPerMillisecond * userEnergy.unitTime));
-        int energyNextValueInt = Mathf.FloorToInt(energyNextValue);
+        int energyValueInt = Mathf.FloorToInt(energyValueFloat);
 
         this.energy =
-            Mathf.Clamp(userEnergy.value + energyNextValueInt, 0, userEnergy.max);
+            Mathf.Clamp(userEnergy.value + energyValueInt, 0, userEnergy.max);
 
-        InvokeRepeating(nameof(__IncreaseEnergy), (1.0f - (energyNextValue - energyNextValueInt)) * energyUnitTime,
-            energyUnitTime);
+        __energyNextTime = (1.0f - (energyValueFloat - energyValueInt)) * __energyUnitTime;
+
+        InvokeRepeating(
+            nameof(__IncreaseEnergy), 
+            __energyNextTime,
+            __energyUnitTime);
     }
 
     private void __IncreaseEnergy()
@@ -352,5 +362,27 @@ public sealed class LoginManager : MonoBehaviour
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
         yield return userData.QueryLevels(userID.Value, __ApplyLevels);
+    }
+
+    void Update()
+    {
+        if (energy < energyMax)
+        {
+            var timeSpan = TimeSpan.FromSeconds(__energyNextTime);
+
+            __energyNextTime -= Time.deltaTime;
+            if (__energyNextTime < 0.0f)
+                __energyNextTime += __energyUnitTime;
+            
+            if (_onEnergyTime != null)
+                _onEnergyTime.Invoke(timeSpan.ToString());
+        }
+        else
+        {
+            __energyNextTime = __energyUnitTime;
+            
+            if(_onEnergyTime != null)
+                _onEnergyTime.Invoke(string.Empty);
+        }
     }
 }

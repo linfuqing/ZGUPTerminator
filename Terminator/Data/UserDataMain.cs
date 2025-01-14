@@ -30,6 +30,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
     
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
+    private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
 
     [SerializeField]
     internal Energy _energy;
@@ -50,7 +51,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         userEnergy.max = _energy.max;
         userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
-        userEnergy.tick = DateTime.UtcNow.Ticks;
+        userEnergy.tick = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond)) * TimeSpan.TicksPerSecond;
         
         onComplete(user, userEnergy);
     }
@@ -261,7 +262,25 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max) - _levels[__ToIndex(levelID)].energy;
+        int now = (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond), time = now;
+        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
+        if (_energy.uintTime > Mathf.Epsilon)
+        {
+            float energyFloat = (time - PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, time)) / _energy.uintTime;
+            int energyInt =  Mathf.FloorToInt(energyFloat);
+            energy += energyInt;
+
+            time -= Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+        }
+
+        if (energy >= _energy.max)
+        {
+            energy = _energy.max;
+
+            time = now;
+        }
+
+        energy -= _levels[__ToIndex(levelID)].energy;
         if (energy < 0)
         {
             if (onComplete != null)
@@ -271,6 +290,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, time);
         
         if (onComplete != null)
             onComplete(true);
