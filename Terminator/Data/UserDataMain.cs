@@ -47,11 +47,14 @@ public sealed partial class UserDataMain : MonoBehaviour
         user.gold = gold;
         //user.level = UserData.level;
 
+        var dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        var timeUnix = DateTime.UtcNow - dateTime;
+        
         UserEnergy userEnergy;
         userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         userEnergy.max = _energy.max;
         userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
-        userEnergy.tick = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond)) * TimeSpan.TicksPerSecond;
+        userEnergy.tick = (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)timeUnix.TotalSeconds) * TimeSpan.TicksPerSecond + dateTime.Ticks;
         
         onComplete(user, userEnergy);
     }
@@ -262,15 +265,16 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int now = (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond), time = now;
+        var timeUnix = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        uint now = (uint)timeUnix.TotalSeconds, time = now;
         int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         if (_energy.uintTime > Mathf.Epsilon)
         {
-            float energyFloat = (time - PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, time)) / _energy.uintTime;
+            float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) / _energy.uintTime;
             int energyInt =  Mathf.FloorToInt(energyFloat);
             energy += energyInt;
 
-            time -= Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+            time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
         }
 
         if (energy >= _energy.max)
@@ -290,7 +294,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, time);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time);
         
         if (onComplete != null)
             onComplete(true);
