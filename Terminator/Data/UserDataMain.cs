@@ -261,7 +261,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY) - _levels[__ToIndex(levelID)].energy;
+        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max) - _levels[__ToIndex(levelID)].energy;
         if (energy < 0)
         {
             if (onComplete != null)
