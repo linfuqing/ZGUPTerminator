@@ -30,6 +30,9 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onStart;
 
     [SerializeField]
+    internal StringEvent _onGold;
+
+    [SerializeField]
     internal StringEvent _onEnergyMax;
     
     [SerializeField]
@@ -50,6 +53,8 @@ public sealed class LoginManager : MonoBehaviour
     private List<RewardStyle> __rewardStyles;
     private Dictionary<int, LevelStyle> __styles;
     private Dictionary<string, int> __skillIndices;
+
+    private int __gold;
 
     private int __energy;
 
@@ -76,9 +81,15 @@ public sealed class LoginManager : MonoBehaviour
 
     public int gold
     {
-        get;
+        get => __gold;
 
-        set;
+        set
+        {
+            __gold = value;
+            
+            if(_onGold != null)
+                _onGold.Invoke(value.ToString());
+        }
     }
 
     public int energy
