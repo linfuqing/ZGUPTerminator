@@ -243,6 +243,9 @@ public sealed class LoginManager : MonoBehaviour
                                 __skillIndices[_skills[i].name] = i;
                         }
 
+                        if (__rewardStyles == null)
+                            __rewardStyles = new List<RewardStyle>();
+
                         RewardStyle rewardStyle;
                         foreach (var rewardSkill in selectedLevel.rewardSkills)
                         {
