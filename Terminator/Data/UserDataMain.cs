@@ -235,8 +235,8 @@ public sealed partial class UserDataMain : MonoBehaviour
                     stage = level.stages[j];
 
                     userStage.name = stage.name;
-                    userStage.id = __ToID(stageIndex + 1);
-                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex)}");
+                    userStage.id = __ToID(stageIndex);
+                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{userStage.id}");
                     userStage.rewardType = stage.rewardType;
                     userStage.rewardCount = stage.rewardCount;
 

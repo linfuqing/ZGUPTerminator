@@ -36,6 +36,7 @@ public sealed class LoginManager : MonoBehaviour
     private LevelStyle[] __styles;
 
     private int __selectedIndex;
+    private float _energyUnitTime;
 
     public static uint? userID
     {
@@ -71,7 +72,47 @@ public sealed class LoginManager : MonoBehaviour
 
         private set;
     }
+
+    /// <summary>
+    /// 总攻击倍率
+    /// </summary>
+    public float effectTargetDamage
+    {
+        get;
+
+        set;
+    }
     
+    /// <summary>
+    /// 总防御倍率
+    /// </summary>
+    public float effectTargetDamageScale
+    {
+        get;
+
+        set;
+    }
+    
+    /// <summary>
+    /// 总HP倍率
+    /// </summary>
+    public float effectTargetHPScale
+    {
+        get;
+
+        set;
+    }
+
+    /// <summary>
+    /// 选择的超能武器的名字
+    /// </summary>
+    public string activeSkillName
+    {
+        get;
+
+        set;
+    }
+
     [Preserve]
     public void LoadScene()
     {
@@ -84,8 +125,32 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __LoadScene()
     {
+        StartCoroutine(__Start());
+    }
+
+    private void __ApplyLevel(Memory<UserSkill> skills)
+    {
+        ref var levelSkillNames = ref LevelPlayerShared.levelSkillNames;
+        levelSkillNames.Clear();
+
+        foreach (var skill in skills.Span)
+            levelSkillNames.Add(skill.name);
+        
+        ref var activeSkillNames = ref LevelPlayerShared.activeSkillNames;
+        activeSkillNames.Clear();
+        if(!string.IsNullOrEmpty(activeSkillName))
+            activeSkillNames.Add(activeSkillName);
+        
+        LevelPlayerShared.effectDamageScale = effectTargetDamage;
+        LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
+        LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
+    }
+
+    private IEnumerator __Start()
+    {
+        yield return IUserData.instance.QuerySkills(userID.Value, __ApplyLevel);
+
         _onStart.Invoke();
-        //GameAssetManager.instance.LoadScene(_levels[__selectedIndex].name, null);
     }
 
     IEnumerator Start()
@@ -104,7 +169,12 @@ public sealed class LoginManager : MonoBehaviour
                 gold = user.gold;
                 level = user.level;
 
-                this.energy = energy.value;
+                _energyUnitTime = energy.unitTime * 0.001f;
+
+                this.energy =
+                    Mathf.Clamp(
+                        energy.value + (int)((DateTime.UtcNow.Ticks - energy.tick) /
+                        (TimeSpan.TicksPerMillisecond * energy.unitTime)), 0, energy.max);
 
                 energyMax = energy.max;
 
