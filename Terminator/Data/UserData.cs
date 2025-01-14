@@ -7,7 +7,7 @@ public struct User
 {
     public uint id;
     public int gold;
-    public int level;
+    //public int level;
 }
 
 public struct UserEnergy

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Scripting;
@@ -33,17 +34,23 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal Level[] _levels;
 
-    private LevelStyle[] __styles;
+    private Dictionary<int, LevelStyle> __styles;
 
-    private int __selectedIndex;
-    private float _energyUnitTime;
+    private int __energy;
+
+    private int __energyMax;
+
+    private int __selectedLevelIndex;
+    private uint __selectedUserLevelID;
+
+    private bool __isStart;
 
     public static uint? userID
     {
         get;
 
         private set;
-    } = null;
+    }
 
     public static LoginManager instance
     {
@@ -61,16 +68,31 @@ public sealed class LoginManager : MonoBehaviour
 
     public int energy
     {
-        get;
+        get => __energy;
 
-        set;
+        private set
+        {
+            __energy = value;
+
+            if (_energy != null && __energyMax > Mathf.Epsilon)
+                _energy.value = value * 1.0f / __energyMax;
+            
+            if(_onEnergy != null)
+                _onEnergy.Invoke(value.ToString());
+        }
     }
 
     public int energyMax
     {
-        get;
+        get => __energyMax;
 
-        private set;
+        private set
+        {
+            __energyMax = value;
+            
+            if(_onEnergyMax != null)
+                _onEnergyMax.Invoke(value.ToString());
+        }
     }
 
     /// <summary>
@@ -120,15 +142,15 @@ public sealed class LoginManager : MonoBehaviour
         if (assetManager == null)
             assetManager = gameObject.AddComponent<GameAssetManager>();
         
-        assetManager.LoadScene(_levels[__selectedIndex].name, null, new GameSceneActivation());
+        assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
     }
 
-    private void __LoadScene()
+    private void __ApplyStart()
     {
         StartCoroutine(__Start());
     }
 
-    private void __ApplyLevel(Memory<UserSkill> skills)
+    private void __ApplySkills(Memory<UserSkill> skills)
     {
         ref var levelSkillNames = ref LevelPlayerShared.levelSkillNames;
         levelSkillNames.Clear();
@@ -146,9 +168,102 @@ public sealed class LoginManager : MonoBehaviour
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
     }
 
+    private void __ApplyLevels(Memory<UserLevel> userLevels)
+    {
+        var levelIndices = new Dictionary<string, int>();
+        int numLevels = _levels.Length;
+        for (int i = 0; i < numLevels; ++i)
+            levelIndices[_levels[i].name] = i;
+
+        Level level;
+        Transform parent = _style.transform.parent;
+        __styles = new Dictionary<int, LevelStyle>(userLevels.Length);
+        foreach (var userLevel in userLevels.Span)
+        {
+            var style = Instantiate(_style, parent);
+            
+            var selectedLevel = userLevel;
+            
+            int index = levelIndices[selectedLevel.name];
+            level = _levels[index];
+            
+            if(style.onTitle != null)
+                style.onTitle.Invoke(level.title);
+
+            if(style.onImage != null)
+                style.onImage.Invoke(level.sprite);
+
+            style.toggle.onValueChanged.AddListener(x =>
+            {
+                if (x)
+                {
+                    if (style.button != null)
+                        style.button.interactable = selectedLevel.energy <= energy && !__isStart;
+                    
+                    __selectedLevelIndex = index;
+                    __selectedUserLevelID = selectedLevel.id;
+                }
+            });
+
+            if (style.button != null)
+            {
+                style.button.onClick.RemoveAllListeners();
+                style.button.onClick.AddListener(__ApplyStart);
+            }
+
+            style.gameObject.SetActive(true);
+
+            __styles[index] = style;
+        }
+    }
+
+    private void __ApplyEnergy(User user, UserEnergy userEnergy)
+    {
+        userID = user.id;
+        gold = user.gold;
+
+        energyMax = userEnergy.max;
+
+        float energyUnitTime = userEnergy.unitTime * 0.001f,
+            energyNextValue = (float)((double)(DateTime.UtcNow.Ticks - userEnergy.tick) /
+                                      (TimeSpan.TicksPerMillisecond * userEnergy.unitTime));
+        int energyNextValueInt = Mathf.FloorToInt(energyNextValue);
+
+        this.energy =
+            Mathf.Clamp(userEnergy.value + energyNextValueInt, 0, userEnergy.max);
+
+        InvokeRepeating(nameof(__IncreaseEnergy), (1.0f - (energyNextValue - energyNextValueInt)) * energyUnitTime,
+            energyUnitTime);
+    }
+
+    private void __IncreaseEnergy()
+    {
+        energy = Mathf.Min(energy + 1, energyMax);
+    }
+
     private IEnumerator __Start()
     {
-        yield return IUserData.instance.QuerySkills(userID.Value, __ApplyLevel);
+        __isStart = true;
+        
+        foreach (var style in __styles.Values)
+        {
+            if (style.button != null)
+                style.button.interactable = false;
+        }
+
+        var userData = IUserData.instance;
+
+        uint userID = LoginManager.userID.Value;
+        yield return userData.QuerySkills(userID, __ApplySkills);
+
+        bool result = false;
+        yield return userData.ApplyLevel(userID, __selectedUserLevelID, x => result = x);
+        if (!result)
+        {
+            __isStart = false;
+            
+            yield break;
+        }
 
         _onStart.Invoke();
     }
@@ -157,57 +272,11 @@ public sealed class LoginManager : MonoBehaviour
     {
         instance = this;
 
-        int level = -1;
-        var userData = IUserData.instance;
-        if (userData == null)
-            userID = 0;
-        else
-        {
-            yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, (user, energy) =>
-            {
-                userID = user.id;
-                gold = user.gold;
-                level = user.level;
-
-                _energyUnitTime = energy.unitTime * 0.001f;
-
-                this.energy =
-                    Mathf.Clamp(
-                        energy.value + (int)((DateTime.UtcNow.Ticks - energy.tick) /
-                        (TimeSpan.TicksPerMillisecond * energy.unitTime)), 0, energy.max);
-
-                energyMax = energy.max;
-
-            });
-        }
+        while (IUserData.instance == null)
+            yield return null;
         
-        int numLevels = _levels == null ? 0 : _levels.Length;
-        if (level > 0)
-            numLevels = Mathf.Min(numLevels, level);
-
-        Transform parent = _style.transform.parent;
-        LevelStyle style;
-        __styles = new LevelStyle[numLevels];
-        for (int i = 0; i < numLevels; ++i)
-        {
-            style = Instantiate(_style, parent);
-            
-            if(style.onImage != null)
-                style.onImage.Invoke(_levels[i].sprite);
-
-            int index = i;
-            style.toggle.onValueChanged.AddListener(x =>
-            {
-                if(x)
-                    __selectedIndex = index;
-            });
-            
-            style.button.onClick.RemoveAllListeners();
-            style.button.onClick.AddListener(__LoadScene);
-            
-            style.gameObject.SetActive(true);
-
-            __styles[i] = style;
-        }
+        var userData = IUserData.instance;
+        yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
+        yield return userData.QueryLevels(userID.Value, __ApplyLevels);
     }
 }

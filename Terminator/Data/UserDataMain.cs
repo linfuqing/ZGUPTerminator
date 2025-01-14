@@ -44,10 +44,10 @@ public sealed partial class UserDataMain : MonoBehaviour
         User user;
         user.id = 0;
         user.gold = gold;
-        user.level = UserData.level;
+        //user.level = UserData.level;
 
         UserEnergy userEnergy;
-        userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY);
+        userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         userEnergy.max = _energy.max;
         userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
         userEnergy.tick = DateTime.UtcNow.Ticks;
