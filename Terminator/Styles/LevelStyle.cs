@@ -6,6 +6,7 @@ using ZG.UI;
 
 public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 {
+    public StringEvent onEnergy;
     public StringEvent onTitle;
     public SpriteEvent onImage;
     
@@ -14,6 +15,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     public Button button;
 
     public Progressbar progressbar;
+
+    public RewardStyle rewardStyle;
 
     void ISubmitHandler.OnSubmit(BaseEventData eventData)
     {

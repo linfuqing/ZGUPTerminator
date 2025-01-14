@@ -16,6 +16,16 @@ public sealed class LoginManager : MonoBehaviour
         public Sprite sprite;
     }
 
+    [Serializable]
+    internal struct Skill
+    {
+        public string name;
+        public Sprite sprite;
+    }
+
+    [SerializeField]
+    internal float _rewardStyleDestroyTime;
+
     [SerializeField]
     internal UnityEvent _onStart;
 
@@ -34,7 +44,12 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal Level[] _levels;
 
+    [SerializeField] 
+    internal Skill[] _skills;
+
+    private List<RewardStyle> __rewardStyles;
     private Dictionary<int, LevelStyle> __styles;
+    private Dictionary<string, int> __skillIndices;
 
     private int __energy;
 
@@ -184,6 +199,9 @@ public sealed class LoginManager : MonoBehaviour
             
             var selectedLevel = userLevel;
             
+            if(style.onEnergy != null)
+                style.onEnergy.Invoke(selectedLevel.energy.ToString());
+
             int index = levelIndices[selectedLevel.name];
             level = _levels[index];
             
@@ -202,6 +220,48 @@ public sealed class LoginManager : MonoBehaviour
                     
                     __selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
+
+                    if (style.rewardStyle != null && selectedLevel.rewardSkills != null &&
+                        selectedLevel.rewardSkills.Length > 0)
+                    {
+                        if (__skillIndices == null)
+                        {
+                            __skillIndices = new Dictionary<string, int>();
+                            int numSkills = _skills == null ? 0 : _skills.Length;
+                            for (int i = 0; i < numSkills; ++i)
+                                __skillIndices[_skills[i].name] = i;
+                        }
+
+                        RewardStyle rewardStyle;
+                        foreach (var rewardSkill in selectedLevel.rewardSkills)
+                        {
+                            ref var skill = ref _skills[__skillIndices[rewardSkill]];
+                            rewardStyle = style.rewardStyle;
+                            rewardStyle = Instantiate(rewardStyle, rewardStyle.transform.parent);
+                            
+                            if(rewardStyle.onSprite != null)
+                                rewardStyle.onSprite.Invoke(skill.sprite);
+                            
+                            rewardStyle.gameObject.SetActive(true);
+                            
+                            __rewardStyles.Add(rewardStyle);
+                        }
+                    }
+                }
+                else
+                {
+                    if (__rewardStyles != null)
+                    {
+                        foreach (var rewardStyle in __rewardStyles)
+                        {
+                            if (rewardStyle.onDestroy != null)
+                                rewardStyle.onDestroy.Invoke();
+                            
+                            Destroy(rewardStyle.gameObject, _rewardStyleDestroyTime);
+                        }
+                        
+                        __rewardStyles.Clear();
+                    }
                 }
             });
 
