@@ -107,7 +107,7 @@ public partial class LevelSystemManaged : SystemBase
         __copyMatrixToTransformInstanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
-                .WithAll<SpawnerEntity>()
+                .WithAny<SpawnerEntity, Pickable>()
                 .Build(this);
 
         RequireForUpdate<LevelStatus>();
@@ -128,12 +128,16 @@ public partial class LevelSystemManaged : SystemBase
 
     protected override void OnUpdate()
     {
-        var manager = LevelManager.instance;
-        if (manager == null)
-            return;
-        
         CompleteDependency();
         
+        var manager = LevelManager.instance;
+        if (manager == null)
+        {
+            __DestroyEntities(__group);
+            
+            return;
+        }
+
         var status = SystemAPI.GetSingleton<LevelStatus>();
 
         Entity player = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;

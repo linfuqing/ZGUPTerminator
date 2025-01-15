@@ -90,7 +90,6 @@ public struct EffectStatusTarget : IBufferElementData, IEnableableComponent
     public Entity entity;
 }
 
-
 public struct EffectTargetData : IComponentData
 {
     public int hpMax;
