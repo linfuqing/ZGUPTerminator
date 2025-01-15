@@ -321,3 +321,8 @@ public struct LevelStageResultStatus : IBufferElementData
     public int layerMaskInclude;
     public int layerMaskExclude;
 }
+
+public struct LevelObject : IComponentData
+{
+    
+}
