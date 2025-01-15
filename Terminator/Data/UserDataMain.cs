@@ -59,6 +59,71 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(user, userEnergy);
     }
 
+
+    [Serializable]
+    internal struct Tip
+    {
+        public int max;
+        public float uintTime;
+    }
+
+    private const string NAME_SPACE_USER_TIP = "UserTip";
+    private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
+
+    [SerializeField]
+    internal Tip _tip;
+
+    public IEnumerator QueryTip(
+        uint userID,
+        Action<UserTip> onComplete)
+    {
+        yield return null;
+
+        var dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        var timeUnix = DateTime.UtcNow - dateTime;
+        
+        UserTip userTip;
+        userTip.value = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
+        userTip.max = _tip.max;
+        userTip.unitTime = (uint)Mathf.RoundToInt(_tip.uintTime * 1000);
+        userTip.tick = (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds) * TimeSpan.TicksPerSecond + dateTime.Ticks;
+        
+        onComplete(userTip);
+    }
+
+    public IEnumerator CollectTip(
+        uint userID,
+        Action<int> onComplete)
+    {
+        yield return null;
+        
+        var timeUnix = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        uint now = (uint)timeUnix.TotalSeconds, time = now;
+        int tip = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
+        if (_tip.uintTime > Mathf.Epsilon)
+        {
+            float tipFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME, (int)time)) / _tip.uintTime;
+            int tipInt =  Mathf.FloorToInt(tipFloat);
+            tip += tipInt;
+
+            time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * _energy.uintTime);
+        }
+        
+        if (tip >= _tip.max)
+        {
+            tip = _tip.max;
+
+            time = now;
+        }
+
+        gold += tip;
+
+        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP, 0);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)time);
+
+        onComplete(tip);
+    }
+
     private const char SEPARATOR = ',';
     private const string NAME_SPACE_USER_SKILLS = "UserSkills";
 
@@ -548,6 +613,13 @@ public partial class UserData
         return UserDataMain.instance.QueryUser(channelName, channelUser, onComplete);
     }
 
+    public IEnumerator QueryTip(
+        uint userID,
+        Action<UserTip> onComplete)
+    {
+        return UserDataMain.instance.QueryTip(userID, onComplete);
+    }
+
     public IEnumerator QuerySkills(
         uint userID,
         Action<Memory<UserSkill>> onComplete)
@@ -612,6 +684,13 @@ public partial class UserData
         Action<bool> onComplete)
     {
         return UserDataMain.instance.CollectTalent(userID, talentID, onComplete);
+    }
+
+    public IEnumerator CollectTip(
+        uint userID,
+        Action<int> onComplete)
+    {
+        return UserDataMain.instance.CollectTip(userID, onComplete);
     }
 
     public IEnumerator SelectWeapon(

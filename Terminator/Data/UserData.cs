@@ -10,6 +10,14 @@ public struct User
     //public int level;
 }
 
+public struct UserTip
+{
+    public int value;
+    public int max;
+    public uint unitTime;
+    public long tick;
+}
+
 public struct UserEnergy
 {
     public int value;
@@ -101,6 +109,10 @@ public interface IUserData : IGameUserData
         string channelUser, 
         Action<User, UserEnergy> onComplete);
     
+    IEnumerator QueryTip(
+        uint userID, 
+        Action<UserTip> onComplete);
+
     IEnumerator QuerySkills(
         uint userID, 
         Action<Memory<UserSkill>> onComplete);
@@ -146,6 +158,10 @@ public interface IUserData : IGameUserData
         uint talentID, 
         Action<bool> onComplete);
     
+    IEnumerator CollectTip(
+        uint userID,
+        Action<int> onComplete);
+
     IEnumerator SelectWeapon(
         uint userID,
         uint weaponID, 
