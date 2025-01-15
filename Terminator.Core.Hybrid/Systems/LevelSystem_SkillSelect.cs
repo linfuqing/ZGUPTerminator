@@ -218,7 +218,7 @@ public partial class LevelSystemManaged
 
             //system.RequireForUpdate<LevelSkillVersion>();
             //system.RequireForUpdate<LevelSkillDesc>();
-            system.RequireForUpdate<ThirdPersonPlayer>();
+            //system.RequireForUpdate<ThirdPersonPlayer>();
 
             __spriteRefCounts = new NativeHashMap<WeakObjectReference<Sprite>, int>(1, Allocator.Persistent);
         }
@@ -297,8 +297,6 @@ public partial class LevelSystemManaged
                 
                 EntityManager.DestroyEntity(player);
             }
-
-            EntityManager.RemoveComponent<ThirdPersonPlayer>(SystemAPI.GetSingletonEntity<ThirdPersonPlayer>());
 
             return;
         }

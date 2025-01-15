@@ -128,22 +128,18 @@ public partial class LevelSystemManaged : SystemBase
 
     protected override void OnUpdate()
     {
-        var manager = LevelManager.instance;
-        if (manager == null)
-            return;
-
         CompleteDependency();
 
-        if (!SystemAPI.TryGetSingleton(out LevelStatus status))
+        var manager = LevelManager.instance;
+        if (manager == null || !SystemAPI.TryGetSingleton(out LevelStatus status))
         {
             __DestroyEntities(__group);
 
             return;
         }
 
-        Entity player = SystemAPI.TryGetSingleton(out ThirdPersonPlayer thirdPersonPlayer)
-            ? thirdPersonPlayer.ControlledCharacter
-            : Entity.Null;
+        Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 
+            SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
         {
             //manager.Pause();
@@ -154,6 +150,8 @@ public partial class LevelSystemManaged : SystemBase
                 status.gold = 0;
 
             SystemAPI.SetSingleton(status);
+            
+            EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
         }
 
         manager.Set(

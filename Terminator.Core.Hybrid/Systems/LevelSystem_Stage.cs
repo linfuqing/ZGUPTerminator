@@ -9,8 +9,8 @@ public partial class LevelSystemManaged
 
         public Stage(SystemBase system)
         {
-            system.RequireForUpdate<LevelDefinitionData>();
-            system.RequireForUpdate<LevelStage>();
+            //system.RequireForUpdate<LevelDefinitionData>();
+            //system.RequireForUpdate<LevelStage>();
             
             __values = new NativeList<int>(Allocator.Persistent);
         }
@@ -49,6 +49,9 @@ public partial class LevelSystemManaged
 
     private void __UpdateStage(LevelManager manager)
     {
+        if (!SystemAPI.HasSingleton<LevelStage>() || !SystemAPI.HasSingleton<LevelDefinitionData>())
+            return;
+        
         bool isRestart = manager.isRestart;
         var stages = SystemAPI.GetSingletonBuffer<LevelStage>(!isRestart);
         
