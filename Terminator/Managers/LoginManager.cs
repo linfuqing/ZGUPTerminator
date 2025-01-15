@@ -186,8 +186,12 @@ public sealed class LoginManager : MonoBehaviour
     {
         var assetManager = GameAssetManager.instance;
         if (assetManager == null)
+        {
+            var gameObject = new GameObject("GameAssetManager");
+            DontDestroyOnLoad(gameObject);
             assetManager = gameObject.AddComponent<GameAssetManager>();
-        
+        }
+
         assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
     }
 
