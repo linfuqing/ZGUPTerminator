@@ -47,7 +47,7 @@ public partial struct CopyMatrixToTransformSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        uint version = (uint)__group.GetCombinedComponentOrderVersion(false);//(uint)entityManager.GetComponentOrderVersion<CopyMatrixToTransformInstanceID>();
+        uint version = (uint)__group.GetCombinedComponentOrderVersion(true);//(uint)entityManager.GetComponentOrderVersion<CopyMatrixToTransformInstanceID>();
 
         if (ChangeVersionUtility.DidChange(version, __version))
         {

@@ -133,6 +133,24 @@ public class SpawnerAuthoring : MonoBehaviour
         }
 
         [CSVField]
+        public int 刷怪获得金币
+        {
+            set
+            {
+                gold = value;
+            }
+        }
+        
+        [CSVField]
+        public int 刷怪获得金币最大值
+        {
+            set
+            {
+                goldMax = value;
+            }
+        }
+
+        [CSVField]
         public float 刷怪速度缩放
         {
             set
@@ -183,6 +201,15 @@ public class SpawnerAuthoring : MonoBehaviour
             set
             {
                 expBuff = value;
+            }
+        }
+        
+        [CSVField]
+        public float 刷怪获得金币每秒增益
+        {
+            set
+            {
+                goldBuff = value;
             }
         }
         
