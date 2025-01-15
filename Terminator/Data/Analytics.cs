@@ -9,4 +9,8 @@ public interface IAnalyticsEx : IAnalytics
     void Login(uint userID);
 
     void StartLevel(string name);
+
+    void PlayerEnable();
+    
+    void PlayerDisable();
 }

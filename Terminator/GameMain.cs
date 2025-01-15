@@ -88,6 +88,10 @@ public class GameMain : GameUser
         Shared.onActivated -= __OnActivated;
         
         __defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
+
+        var analytics = IAnalytics.instance as IAnalyticsEx;
+        if(analytics != null)
+            analytics.Activate(GameUser.Shared.channelName, GameUser.Shared.channelUser);
     }
 
     private void __OnLogin()

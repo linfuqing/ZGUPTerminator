@@ -11,6 +11,8 @@ public interface IAnalytics
     void DisableStage(string name);
     
     void SetActiveSkill(string name);
+
+    void Quit();
 }
 
 public class Analytics : MonoBehaviour

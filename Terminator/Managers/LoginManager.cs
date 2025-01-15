@@ -359,6 +359,10 @@ public sealed class LoginManager : MonoBehaviour
             nameof(__IncreaseEnergy), 
             __energyNextTime,
             __energyUnitTime);
+        
+        var analytics = IAnalytics.instance as IAnalyticsEx;
+        if(analytics != null)
+            analytics.Login(user.id);
     }
 
     private void __IncreaseEnergy()

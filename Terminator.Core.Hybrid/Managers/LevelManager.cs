@@ -204,6 +204,8 @@ public partial class LevelManager : MonoBehaviour
         
         if (_onQuit != null)
             _onQuit.Invoke();
+        
+        IAnalytics.instance?.Quit();
     }
     
     protected void Start()
