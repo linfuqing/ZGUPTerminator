@@ -34,6 +34,10 @@ public sealed class LoginManager : MonoBehaviour
         public Sprite sprite;
     }
 
+    public delegate void Awake(string[] rewardSkills);
+
+    public event Awake onAwake;
+
     [SerializeField]
     internal float _rewardStyleDestroyTime;
 
@@ -323,6 +327,17 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
+    private void __ApplyLevel(int gold, string[] rewardSkills)
+    {
+        if (rewardSkills == null)
+            return;
+
+        this.gold = gold;
+
+        if(onAwake != null)
+            onAwake(rewardSkills);
+    }
+
     private void __ApplyEnergy(User user, UserEnergy userEnergy)
     {
         userID = user.id;
@@ -389,7 +404,7 @@ public sealed class LoginManager : MonoBehaviour
         
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
-        yield return userData.CollectLevel(userID.Value, (x, y) => gold = x);
+        yield return userData.CollectLevel(userID.Value, __ApplyLevel);
         yield return userData.QueryLevels(userID.Value, __ApplyLevels);
     }
 

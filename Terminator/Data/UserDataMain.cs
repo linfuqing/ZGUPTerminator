@@ -341,12 +341,11 @@ public sealed partial class UserDataMain : MonoBehaviour
         string[] rewardSkills = Array.Empty<string>();
         if (userLevel == levelIndex)
         {
-            UserData.level = ++userLevel;
-
             var level = _levels[levelIndex];
-
             if ((level.stages == null ? 0 : level.stages.Length) == levelCache.stage)
             {
+                UserData.level = ++userLevel;
+
                 rewardSkills = level.rewardSkills;
 
                 string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS),
