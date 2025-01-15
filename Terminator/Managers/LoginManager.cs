@@ -144,7 +144,7 @@ public sealed class LoginManager : MonoBehaviour
     /// <summary>
     /// 总攻击倍率
     /// </summary>
-    public float effectTargetDamage
+    public float bulletDamageScale
     {
         get;
 
@@ -202,18 +202,26 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplySkills(Memory<UserSkill> skills)
     {
-        ref var levelSkillNames = ref LevelPlayerShared.levelSkillNames;
-        levelSkillNames.Clear();
+        ref var skillGroups = ref LevelPlayerShared.skillGroups;
+        skillGroups.Clear();
 
+        LevelPlayerSkillGroup skillGroup;
         foreach (var skill in skills.Span)
-            levelSkillNames.Add(skill.name);
-        
-        ref var activeSkillNames = ref LevelPlayerShared.activeSkillNames;
-        activeSkillNames.Clear();
-        if(!string.IsNullOrEmpty(activeSkillName))
-            activeSkillNames.Add(activeSkillName);
-        
-        LevelPlayerShared.effectDamageScale = effectTargetDamage;
+        {
+            skillGroup.name = skill.name;
+            skillGroups.Add(skillGroup);
+        }
+
+        ref var activeSkills = ref LevelPlayerShared.activeSkills;
+        activeSkills.Clear();
+        if (!string.IsNullOrEmpty(activeSkillName))
+        {
+            LevelPlayerActiveSkill activeSkill;
+            activeSkill.name = activeSkillName;
+            activeSkills.Add(activeSkill);
+        }
+
+        LevelPlayerShared.bulletDamageScale = bulletDamageScale;
         LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
     }

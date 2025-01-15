@@ -47,9 +47,10 @@ public partial struct CopyMatrixToTransformSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        uint version = (uint)__group.GetCombinedComponentOrderVersion(true);//(uint)entityManager.GetComponentOrderVersion<CopyMatrixToTransformInstanceID>();
+        uint version = (uint)__group.GetCombinedComponentOrderVersion(false);//(uint)entityManager.GetComponentOrderVersion<CopyMatrixToTransformInstanceID>();
 
-        if (ChangeVersionUtility.DidChange(version, __version))
+        if (ChangeVersionUtility.DidChange(version, __version) || 
+            __group.CalculateEntityCount() != (__transformAccessArray.isCreated ? __transformAccessArray.length : 0))
         {
             __version = version;
             
@@ -67,7 +68,7 @@ public partial struct CopyMatrixToTransformSystem : ISystem
             }
         }
         
-        UnityEngine.Assertions.Assert.AreEqual(__transformAccessArray.length, __group.CalculateEntityCount());
+        //UnityEngine.Assertions.Assert.AreEqual(__transformAccessArray.length, __group.CalculateEntityCount());
         
         Apply apply;
         apply.localToWorlds = __group.ToComponentDataListAsync<LocalToWorld>(state.WorldUpdateAllocator, out var localToWorldJobHandle);

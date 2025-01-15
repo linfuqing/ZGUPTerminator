@@ -6,6 +6,16 @@ public struct LevelPlayer : IComponentData
 {
 }
 
+public struct LevelPlayerActiveSkill
+{
+    public FixedString32Bytes name;
+}
+
+public struct LevelPlayerSkillGroup
+{
+    public FixedString32Bytes name;
+}
+
 public static class LevelPlayerShared
 {
     private class Value<T>
@@ -20,7 +30,7 @@ public static class LevelPlayerShared
         }
     }
     
-    private class EffectDamageScale : Value<EffectDamageScale>
+    private class BulletDamageScale : Value<BulletDamageScale>
     {
     }
     
@@ -34,25 +44,25 @@ public static class LevelPlayerShared
 
     private struct ActiveSkills
     {
-        private static readonly SharedStatic<FixedList512Bytes<FixedString32Bytes>> __values =
-            SharedStatic<FixedList512Bytes<FixedString32Bytes>>.GetOrCreate<LevelSkills>();
+        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>> __values =
+            SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>>.GetOrCreate<ActiveSkills>();
 
-        public static ref FixedList512Bytes<FixedString32Bytes> names => ref __values.Data;
+        public static ref FixedList512Bytes<LevelPlayerActiveSkill> values => ref __values.Data;
     }
     
-    private struct LevelSkills
+    private struct SkillGroup
     {
-        private static readonly SharedStatic<FixedList512Bytes<FixedString32Bytes>> __values =
-            SharedStatic<FixedList512Bytes<FixedString32Bytes>>.GetOrCreate<LevelSkills>();
+        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>> __values =
+            SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
 
-        public static ref FixedList512Bytes<FixedString32Bytes> names => ref __values.Data;
+        public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref __values.Data;
     }
 
-    public static float effectDamageScale
+    public static float bulletDamageScale
     {
-        get => EffectDamageScale.value;
+        get => BulletDamageScale.value;
 
-        set => EffectDamageScale.value = value;
+        set => BulletDamageScale.value = value;
     }
     
     public static float effectTargetDamageScale
@@ -69,7 +79,7 @@ public static class LevelPlayerShared
         set => EffectTargetHPScale.value = value;
     }
 
-    public static ref FixedList512Bytes<FixedString32Bytes> activeSkillNames => ref ActiveSkills.names;
+    public static ref FixedList512Bytes<LevelPlayerActiveSkill> activeSkills => ref ActiveSkills.values;
     
-    public static ref FixedList512Bytes<FixedString32Bytes> levelSkillNames => ref LevelSkills.names;
+    public static ref FixedList512Bytes<LevelPlayerSkillGroup> skillGroups => ref SkillGroup.names;
 }

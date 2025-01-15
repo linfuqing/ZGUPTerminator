@@ -87,7 +87,9 @@ public struct LevelSkillDefinition
 
             ref var skill = ref skills[j];
             if(skill.groupIndex == -1 || 
-               groupsToFilter.IsCreated && groupsToFilter.IndexOf(skill.groupIndex) == -1/* || __GetSkillIndices(skill.groupIndex, j).Length < 1*/)
+               groupsToFilter.IsCreated && 
+               groupsToFilter.Length > 0 && 
+               groupsToFilter.IndexOf(skill.groupIndex) == -1/* || __GetSkillIndices(skill.groupIndex, j).Length < 1*/)
                 continue;
                 
             weight.activeIndex = i;

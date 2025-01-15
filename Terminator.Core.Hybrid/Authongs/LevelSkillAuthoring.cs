@@ -156,6 +156,9 @@ public class LevelSkillAuthoring : MonoBehaviour
                 return;
             }
             
+            Entity entity = GetEntity(authoring, TransformUsageFlags.None);
+            
+            int numSkills = authoring._skillAuthoring._skills.Length, numGroups = authoring._groups.Length;
             LevelSkillDefinitionData instance;
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
@@ -173,12 +176,11 @@ public class LevelSkillAuthoring : MonoBehaviour
                     destination.maxResultCount = source.maxResultCount;
                 }
                 
-                int numSkills = authoring._skillAuthoring._skills.Length;
                 var skillNameIndices = new Dictionary<string, int>(numSkills);
                 for(i = 0; i < numSkills; ++i)
                     skillNameIndices.Add(authoring._skillAuthoring._skills[i].name, i);
                 
-                int j, k, numFirstSkillIndices, numGroups = authoring._groups.Length;
+                int j, k, numFirstSkillIndices;
                 BlobBuilderArray<int> firstSkillIndices;
                 var groups = builder.Allocate(ref root.groups, numGroups);
                 for (i = 0; i < numGroups; ++i)
@@ -296,15 +298,33 @@ public class LevelSkillAuthoring : MonoBehaviour
 
                 instance.definition = builder.CreateBlobAssetReference<LevelSkillDefinition>(Allocator.Persistent);
             }
-            
-            AddBlobAsset(ref instance.definition, out _);
 
-            Entity entity = GetEntity(authoring, TransformUsageFlags.None);
+            AddBlobAsset(ref instance.definition, out _);
             AddComponent(entity, instance);
+
+            LevelSkillNameDefinitionData name;
+            using (var builder = new BlobBuilder(Allocator.Temp))
+            {
+                ref var root = ref builder.ConstructRoot<LevelSkillNameDefinition>();
+                var skills = builder.Allocate(ref root.skills, numSkills);
+                for (int i = 0; i < numSkills; ++i)
+                    skills[i] = authoring._skillAuthoring._skills[i].name;
+                
+                var groups = builder.Allocate(ref root.groups, numGroups);
+                for (int i = 0; i < numGroups; ++i)
+                    groups[i] = authoring._groups[i].name;
+
+                name.definition = builder.CreateBlobAssetReference<LevelSkillNameDefinition>(Allocator.Persistent);
+            }
+            
+            AddBlobAsset(ref name.definition, out _);
+            AddComponent(entity, name);
             
             AddComponent<LevelSkillVersion>(entity);
             AddComponent<LevelSkill>(entity);
             SetComponentEnabled<LevelSkill>(entity, false);
+            
+            AddComponent<LevelSkillGroup>(entity);
         }
     }
 
