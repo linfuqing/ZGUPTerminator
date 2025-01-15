@@ -9,10 +9,12 @@ public partial class LevelSystemManaged
     private struct SkillActive
     {
         //private NativeHashMap<WeakObjectReference<Sprite>, int> __loadedIndices;
+        private int __instanceID;
         private NativeHashMap<int, int> __indices;
 
         public SkillActive(in AllocatorManager.AllocatorHandle allocator)
         {
+            __instanceID = 0;
             //__loadedIndices = new NativeHashMap<WeakObjectReference<Sprite>, int>(1, allocator);
             __indices = new NativeHashMap<int, int>(1, allocator);
         }
@@ -31,6 +33,20 @@ public partial class LevelSystemManaged
             in DynamicBuffer<LevelSkillDesc> descs,
             LevelManager manager)
         {
+            int instanceID = manager.GetInstanceID();
+            if (__instanceID == 0)
+                __instanceID = instanceID;
+
+            if (__instanceID != instanceID)
+            {
+                __instanceID = instanceID;
+                using(var keys = __indices.GetKeyArray(Allocator.Temp))
+                {
+                    foreach (int key in keys)
+                        __indices[key] = -1;
+                }
+            }
+            
             //__activeSkillIndexMap.Clear();
 
             //WeakObjectReference<Sprite> icon;

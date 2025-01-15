@@ -19,7 +19,12 @@ public partial class LevelManager : MonoBehaviour
         public UnityEvent onDisable;
     }
 
-    public static LevelManager instance;
+    public static LevelManager instance
+    {
+        get;
+
+        private set;
+    }
 
     //[SerializeField] 
     //internal int _max = 100;
@@ -195,18 +200,10 @@ public partial class LevelManager : MonoBehaviour
             _onQuit.Invoke();
     }
     
-    protected void OnEnable()
+    protected void Start()
     {
         __startTime = Time.time;
         
-        if (instance == null)
-            instance = this;
+        instance = this;
     }
-
-    protected void OnDisable()
-    {
-        if (instance == this)
-            instance = null;
-    }
-
 }
