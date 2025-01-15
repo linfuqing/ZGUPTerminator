@@ -27,16 +27,22 @@ public partial struct LevelPlayerSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<LevelSkillNameDefinitionData> levelSkillNameDefinitions;
 
+        [NativeDisableParallelForRestriction]
         public BufferLookup<LevelSkillGroup> levelSkillGroups;
 
+        [NativeDisableParallelForRestriction]
         public BufferLookup<SkillActiveIndex> skillActiveIndices;
 
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTarget> effectTargets;
 
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTargetDamageScale> effectTargetDamageScales;
 
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<BulletDamageScale> bulletDamageScales;
 
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersonPlayer> instances;
         
         public void Execute(int index)
