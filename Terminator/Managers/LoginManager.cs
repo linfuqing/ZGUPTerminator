@@ -36,7 +36,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public delegate void Awake(string[] rewardSkills);
 
-    public event Awake onAwake;
+    public static event Awake onAwake;
 
     [SerializeField]
     internal float _rewardStyleDestroyTime;
@@ -393,6 +393,9 @@ public sealed class LoginManager : MonoBehaviour
         ILevelData.instance = new LevelData();
 
         _onStart.Invoke();
+        
+        var analytics = IAnalytics.instance as IAnalyticsEx;
+        analytics?.StartLevel();
     }
 
     IEnumerator Start()

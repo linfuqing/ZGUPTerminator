@@ -152,6 +152,8 @@ public partial class LevelManager
         }
         else
         {
+            IAnalytics.instance?.SetActiveSkill(value.Value.name);
+            
             if (__activeSkills == null)
                 __activeSkills = new Pool<ActiveSkill>();
             

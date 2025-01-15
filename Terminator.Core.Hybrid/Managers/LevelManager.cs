@@ -121,6 +121,8 @@ public partial class LevelManager : MonoBehaviour
 
     public bool EnableStage(string name)
     {
+        IAnalytics.instance?.EnableStage(name);
+        
         if (__stageIndices == null)
         {
             __stageIndices = new Dictionary<string, int>();
@@ -149,6 +151,8 @@ public partial class LevelManager : MonoBehaviour
 
     public bool DisableStage(string name)
     {
+        IAnalytics.instance?.DisableStage(name);
+
         if (__stageIndices != null && 
             __stageIndices.TryGetValue(name, out int stageIndex) && 
             __stages != null && 
