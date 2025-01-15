@@ -16,7 +16,7 @@ public sealed class InstanceManager : MonoBehaviour
         public string destroyMessageName;
         public UnityEngine.Object destroyMessageValue;
         public GameObject prefab;
-        public InstanceManager manager;
+        //public InstanceManager manager;
     }
     
     [Serializable]
@@ -45,9 +45,11 @@ public sealed class InstanceManager : MonoBehaviour
 
     private static Dictionary<string, (InstanceManager, int)> __prefabIndices;
 
-    private static Dictionary<int, Instance> __instances;
-    
     private static Dictionary<GameObject, List<GameObject>> __gameObjects;
+
+    private static Dictionary<int, InstanceManager> __instanceManagers;
+
+    private Dictionary<int, Instance> __instances;
 
     private HashSet<AsyncInstantiateOperation<GameObject>> __results;
 
@@ -60,10 +62,13 @@ public sealed class InstanceManager : MonoBehaviour
 
     public static void Destroy(int instanceID, bool isSendMessage)
     {
-        if (__instances == null || !__instances.TryGetValue(instanceID, out var instance))
+        if (__instanceManagers == null || 
+            __instanceManagers.TryGetValue(instanceID, out var instanceManager) || 
+            instanceManager.__instances == null || 
+            !instanceManager.__instances.TryGetValue(instanceID, out var instance))
             return;
 
-        instance.manager.StartCoroutine(instance.manager.__Destroy(instanceID, instance, isSendMessage));
+        instanceManager.StartCoroutine(instanceManager.__Destroy(instanceID, instance, isSendMessage));
     }
     
     public static void Instantiate(
@@ -133,7 +138,7 @@ public sealed class InstanceManager : MonoBehaviour
 
         if (numGameObjects > 0)
         {
-            if (false && numGameObjects > 1)
+            if (numGameObjects > 1)
             {
                 var result = InstantiateAsync(prefab.gameObject, numGameObjects, this.transform);
 
@@ -171,17 +176,24 @@ public sealed class InstanceManager : MonoBehaviour
                 instance.destroyMessageName = prefab.destroyMessageName;
                 instance.destroyMessageValue = prefab.destroyMessageValue;
                 instance.prefab = prefab.gameObject;
-                instance.manager = this;
 
+                int transformInstanceID;
                 GameObject result;
                 for (int i = 0; i < numGameObjects; ++i)
                 {
                     result = Instantiate(prefab.gameObject, this.transform);
 
+                    transformInstanceID = result.transform.GetInstanceID();
+
+                    if (__instanceManagers == null)
+                        __instanceManagers = new Dictionary<int, InstanceManager>();
+                    
+                    __instanceManagers.Add(transformInstanceID, this);
+                    
                     if (__instances == null)
                         __instances = new Dictionary<int, Instance>();
 
-                    __instances.Add(result.transform.GetInstanceID(), instance);
+                    __instances.Add(transformInstanceID, instance);
 
                     if (results == null)
                         results = new List<GameObject>();
@@ -306,6 +318,45 @@ public sealed class InstanceManager : MonoBehaviour
                 result.Cancel();
             
             __results.Clear();
+        }
+
+        if (__instances != null)
+        {
+            int i, numGameObjects, instanceID;
+            Transform transform;
+            GameObject gameObject;
+            List<GameObject> gameObjects;
+            foreach (var pair in __instances)
+            {
+                instanceID = pair.Key;
+
+                __instanceManagers.Remove(instanceID);
+
+                gameObject = pair.Value.prefab;
+                if (__gameObjects.TryGetValue(gameObject, out gameObjects))
+                {
+                    numGameObjects = gameObjects.Count;
+                    for (i = 0; i < numGameObjects; ++i)
+                    {
+                        gameObject = gameObjects[i];
+                        if (gameObject == null || gameObject.transform.GetInstanceID() == instanceID)
+                        {
+                            gameObjects.RemoveAt(i);
+
+                            if (numGameObjects == 1)
+                                __gameObjects.Remove(gameObject);
+
+                            break;
+                        }
+                    }
+                }
+                
+                transform = Resources.InstanceIDToObject(instanceID) as Transform;
+                if(transform != null)
+                    Destroy(transform.gameObject);
+            }
+            
+            __instances.Clear();
         }
     }
 }
