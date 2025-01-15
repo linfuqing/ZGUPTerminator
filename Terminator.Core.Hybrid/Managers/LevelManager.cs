@@ -196,6 +196,8 @@ public partial class LevelManager : MonoBehaviour
 
     private void __OnQuit(bool result)
     {
+        Time.timeScale = 1.0f;
+        
         if (_onQuit != null)
             _onQuit.Invoke();
     }

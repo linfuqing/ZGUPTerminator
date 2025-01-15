@@ -62,11 +62,15 @@ public sealed class InstanceManager : MonoBehaviour
 
     public static void Destroy(int instanceID, bool isSendMessage)
     {
-        if (__instanceManagers == null || 
-            __instanceManagers.TryGetValue(instanceID, out var instanceManager) || 
-            instanceManager.__instances == null || 
+        if (__instanceManagers == null ||
+            !__instanceManagers.TryGetValue(instanceID, out var instanceManager) ||
+            instanceManager.__instances == null ||
             !instanceManager.__instances.TryGetValue(instanceID, out var instance))
+        {
+            Debug.LogError($"Destroy {instanceID} has been failed!", Resources.InstanceIDToObject(instanceID));
+            
             return;
+        }
 
         instanceManager.StartCoroutine(instanceManager.__Destroy(instanceID, instance, isSendMessage));
     }
@@ -151,6 +155,9 @@ public sealed class InstanceManager : MonoBehaviour
 
                 __results.Remove(result);
 
+                if (__instanceManagers == null)
+                    __instanceManagers = new Dictionary<int, InstanceManager>();
+                    
                 if (__instances == null)
                     __instances = new Dictionary<int, Instance>();
 
@@ -162,9 +169,15 @@ public sealed class InstanceManager : MonoBehaviour
                 instance.destroyMessageName = prefab.destroyMessageName;
                 instance.destroyMessageValue = prefab.destroyMessageValue;
                 instance.prefab = prefab.gameObject;
+                
+                int transformInstanceID;
                 foreach (var temp in result.Result)
                 {
-                    __instances.Add(temp.transform.GetInstanceID(), instance);
+                    transformInstanceID = temp.transform.GetInstanceID();
+                    
+                    __instanceManagers.Add(transformInstanceID, this);
+
+                    __instances.Add(transformInstanceID, instance);
 
                     results.Add(temp);
                 }
@@ -333,7 +346,7 @@ public sealed class InstanceManager : MonoBehaviour
                 __instanceManagers.Remove(instanceID);
 
                 gameObject = pair.Value.prefab;
-                if (__gameObjects.TryGetValue(gameObject, out gameObjects))
+                if (__gameObjects != null && __gameObjects.TryGetValue(gameObject, out gameObjects))
                 {
                     numGameObjects = gameObjects.Count;
                     for (i = 0; i < numGameObjects; ++i)

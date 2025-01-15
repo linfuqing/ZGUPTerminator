@@ -90,7 +90,6 @@ public sealed partial class UserDataMain : MonoBehaviour
     internal struct Weapon
     {
         public string name;
-        public string skillName;
     }
 
     private const string NAME_SPACE_USER_WEAPON_SELECTED = "UserWeaponSelected";
