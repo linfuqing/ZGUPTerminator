@@ -8,5 +8,5 @@ public interface IAnalyticsEx : IAnalytics
     
     void Login(uint userID);
 
-    void StartLevel();
+    void StartLevel(string name);
 }

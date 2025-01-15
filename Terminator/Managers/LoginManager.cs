@@ -395,7 +395,7 @@ public sealed class LoginManager : MonoBehaviour
         _onStart.Invoke();
         
         var analytics = IAnalytics.instance as IAnalyticsEx;
-        analytics?.StartLevel();
+        analytics?.StartLevel(_levels[__selectedLevelIndex].name);
     }
 
     IEnumerator Start()

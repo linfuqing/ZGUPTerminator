@@ -321,7 +321,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         var temp = UserData.levelCache;
         if (temp == null)
         {
-            onComplete(0, null);
+            onComplete(0, Array.Empty<string>());
             
             yield break;
         }
