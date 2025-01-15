@@ -71,7 +71,8 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
         
-        var skills = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS, null)?.Split(SEPARATOR);
+        var skillString = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
+        var skills = string.IsNullOrEmpty(skillString) ? null : skillString.Split(SEPARATOR);
 
         int numSkills = skills == null ? 0 : skills.Length;
         UserSkill userSkill;
@@ -114,7 +115,8 @@ public sealed partial class UserDataMain : MonoBehaviour
                 __weaponIndices.Add(_weapons[i].name, i);
         }
 
-        string[] weaponNames = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS, null)?.Split(SEPARATOR);
+        var weaponString = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS);
+        var weaponNames = string.IsNullOrEmpty(weaponString) ? null : weaponString.Split(SEPARATOR);
         int numWeaponNames = weaponNames == null ? 0 : weaponNames.Length,
             weaponSelectedID = PlayerPrefs.GetInt(NAME_SPACE_USER_WEAPON_SELECTED, -1),
             weaponIndex;
@@ -141,8 +143,9 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<bool> onComplete)
     {
         yield return null;
-        
-        var weaponNames = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS, null)?.Split(SEPARATOR);
+
+        var weaponString = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS);
+        var weaponNames = string.IsNullOrEmpty(weaponString) ? null : weaponString.Split(SEPARATOR);
         if (weaponNames == null || weaponNames.IndexOf(_weapons[__ToIndex(weaponID)].name) == -1)
         {
             onComplete(false);
