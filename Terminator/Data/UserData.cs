@@ -134,7 +134,7 @@ public interface IUserData : IGameUserData
 
     IEnumerator CollectLevel(
         uint userID,
-        Action<string[]> onComplete);
+        Action<int, string[]> onComplete);
 
     IEnumerator CollectStage(
         uint userID,

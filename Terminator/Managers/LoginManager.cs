@@ -389,9 +389,8 @@ public sealed class LoginManager : MonoBehaviour
         
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
-        uint userID = LoginManager.userID.Value;
-        yield return userData.CollectLevel(userID, null);
-        yield return userData.QueryLevels(userID, __ApplyLevels);
+        yield return userData.CollectLevel(userID.Value, (x, y) => gold = x);
+        yield return userData.QueryLevels(userID.Value, __ApplyLevels);
     }
 
     void Update()

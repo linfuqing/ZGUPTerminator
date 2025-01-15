@@ -315,15 +315,14 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     public IEnumerator CollectLevel(
         uint userID,
-        Action<string[]> onComplete)
+        Action<int, string[]> onComplete)
     {
         yield return null;
 
         var temp = UserData.levelCache;
         if (temp == null)
         {
-            if(onComplete != null)
-                onComplete(null);
+            onComplete(0, null);
             
             yield break;
         }
@@ -335,8 +334,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         int userLevel = UserData.level, levelIndex = __ToIndex(levelCache.id);
         if (userLevel < levelIndex)
         {
-            if(onComplete != null)
-                onComplete(null);
+            onComplete(0, null);
             
             yield break;
         }
@@ -362,8 +360,10 @@ public sealed partial class UserDataMain : MonoBehaviour
                 PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
             }
         }
-        
+
+        int gold = UserDataMain.gold;
         gold += levelCache.gold;
+        UserDataMain.gold = gold;
 
         int stageIndex = 0;
         for (int i = 0; i < levelIndex; ++i)
@@ -383,8 +383,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
         }
         
-        if(onComplete != null)
-            onComplete(rewardSkills);
+        onComplete(gold, rewardSkills);
     }
 
     public IEnumerator CollectStage(
@@ -593,7 +592,7 @@ public partial class UserData
 
     public IEnumerator CollectLevel(
         uint userID,
-        Action<string[]> onComplete)
+        Action<int, string[]> onComplete)
     {
         return UserDataMain.instance.CollectLevel(userID, onComplete);
     }
