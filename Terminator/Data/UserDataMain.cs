@@ -322,7 +322,8 @@ public sealed partial class UserDataMain : MonoBehaviour
         var temp = UserData.levelCache;
         if (temp == null)
         {
-            onComplete(null);
+            if(onComplete != null)
+                onComplete(null);
             
             yield break;
         }
@@ -334,7 +335,8 @@ public sealed partial class UserDataMain : MonoBehaviour
         int userLevel = UserData.level, levelIndex = __ToIndex(levelCache.id);
         if (userLevel < levelIndex)
         {
-            onComplete(null);
+            if(onComplete != null)
+                onComplete(null);
             
             yield break;
         }
@@ -381,7 +383,8 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
         }
         
-        onComplete(rewardSkills);
+        if(onComplete != null)
+            onComplete(rewardSkills);
     }
 
     public IEnumerator CollectStage(
