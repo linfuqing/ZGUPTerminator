@@ -73,7 +73,7 @@ public partial class LevelManager : MonoBehaviour
         get;
 
         set;
-    }
+    } = true;
 
     public void Set(
         int value, 
