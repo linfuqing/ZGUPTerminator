@@ -110,8 +110,7 @@ namespace ZG
 
     public struct ScrollRectInfo
     {
-        public bool isVail;
-        public int2 index;
+        public int2? index;
     }
 
     public struct ScrollRectNode
@@ -415,7 +414,7 @@ namespace ZG
         public virtual void MoveTo(in int2 index)
         {
             ScrollRectInfo info;
-            info.isVail = true;
+            //info.isVail = true;
             info.index = index;
             __info = info;
             //this.AddComponentData(info);
@@ -442,16 +441,28 @@ namespace ZG
 
                 __count = count;
 
-                var index = math.clamp(__info.index, 0, math.max(1, __count) - 1);
-                if (!index.Equals(__info.index))
+                if (__info.index != null)
                 {
-                    __info.index = index;
+                    int2 source = __info.index.Value, 
+                        destination = math.clamp(source, 0, math.max(1, __count) - 1);
+                    if (!destination.Equals(source))
+                    {
+                        __info.index = destination;
 
-                    --version;
+                        --version;
+                    }
                 }
 
                 var node = __node.Value;
-                if (ScrollRectUtility.Execute(version, Time.deltaTime, offsetScale, __count, __data, __info, ref node, ref __event))
+                if (ScrollRectUtility.Execute(
+                        version, 
+                        Time.deltaTime, 
+                        offsetScale, 
+                        __count, 
+                        __data, 
+                        __info, 
+                        ref node, 
+                        ref __event))
                     _Set(__event);
 
                 //if(!node.normalizedPosition.Equals(__node.Value.normalizedPosition) || !((float2)scrollRect.normalizedPosition).Equals(node.normalizedPosition))
@@ -511,7 +522,7 @@ namespace ZG
             }
 
             if ((result.flag & ScrollRectEvent.Flag.SameAsInfo) == ScrollRectEvent.Flag.SameAsInfo)
-                __info.isVail = false;//this.RemoveComponent<ScrollRectInfo>();
+                __info.index = null;//this.RemoveComponent<ScrollRectInfo>();
         }
 
         private int2 __EnableNode(in float2 velocity, in float2 normalizedPosition)
@@ -574,7 +585,7 @@ namespace ZG
         {
             __EnableNode();
             
-            __info.isVail = false;
+            __info.index = null;
             
             /*ScrollRectInfo info;
             info.isVail = true;
@@ -658,11 +669,11 @@ namespace ZG
 
             public void Execute(float deltaTime, float offsetScale, in int2 count)
             {
-                int2 source = (int2)math.round(node.index), destination = info.index;// math.clamp(info.index, 0, instance.count - 1);
+                int2 origin = (int2)math.round(node.index);// math.clamp(info.index, 0, instance.count - 1);
                 float2 length = instance.length,
                     cellLength = instance.GetCellLength(count),
                     offset = instance.GetOffset(cellLength, offsetScale), 
-                    distance = node.normalizedPosition * length - (info.isVail ? destination : source) * cellLength + offset;
+                    distance = node.normalizedPosition * length - (info.index == null ? origin : info.index.Value) * cellLength + offset;
                 float t = math.pow(instance.decelerationRate, deltaTime);
                 
                 node.velocity = math.lerp(node.velocity, distance / instance.elasticity, t);
@@ -674,10 +685,10 @@ namespace ZG
                 int2 target = (int2)math.round(node.index);
 
                 ScrollRectEvent.Flag flag = 0;
-                if (!math.all(source == target))
+                if (!math.all(origin == target))
                     flag |= ScrollRectEvent.Flag.Changed;
 
-                if (info.isVail && math.all(destination == target))
+                if (info.index != null && math.all(info.index.Value == target))
                 {
                     flag |= ScrollRectEvent.Flag.SameAsInfo;
 
@@ -700,9 +711,8 @@ namespace ZG
                 float deltaTime, 
                 in CellLengths cellLengths)
             {
-                int index = math.min(width * info.index.y + info.index.x + 1, cellLengths.Length);
-                int2 source = (int2)math.round(node.index),
-                    destination = info.index;// math.clamp(info.index, 0, instance.count - 1);
+                int2 origin = (int2)math.round(node.index);// math.clamp(info.index, 0, instance.count - 1);
+                int index = math.min(width * origin.y + origin.x + 1, cellLengths.Length);
                 float2 length = instance.length,
                     offset = instance.GetOffset(cellLengths[index - 1], offsetScale), 
                          distance = node.normalizedPosition * length + offset;// - destination * cellLength + offset;
@@ -710,7 +720,7 @@ namespace ZG
                 for(int i = 0; i < index; ++i)
                     distance -= cellLengths[i];
 
-                if (info.isVail)
+                if (info.index != null)
                 {
                     float t = math.pow(instance.decelerationRate, deltaTime);
                     //t = t * t* (3.0f - (2.0f * t));
@@ -732,10 +742,10 @@ namespace ZG
                 int2 target = (int2)math.round(node.index);
 
                 ScrollRectEvent.Flag flag = 0;
-                if (!math.all(source == target))
+                if (!math.all(origin == target))
                     flag |= ScrollRectEvent.Flag.Changed;
 
-                if (info.isVail && math.all(destination == target))
+                if (info.index != null && math.all(info.index.Value == target))
                 {
                     flag |= ScrollRectEvent.Flag.SameAsInfo;
 
