@@ -721,7 +721,9 @@ namespace ZG
                 for(int i = 0; i < index; ++i)
                     distance -= cellLengths[i];
 
-                if (info.index != null)
+                if (info.isVail == 0)
+                    node.normalizedPosition -= math.select(float2.zero, distance / length, length > math.FLT_MIN_NORMAL);
+                else
                 {
                     float t = math.pow(instance.decelerationRate, deltaTime);
                     //t = t * t* (3.0f - (2.0f * t));
@@ -735,8 +737,6 @@ namespace ZG
 
                     node.normalizedPosition -= math.select(float2.zero, node.velocity / length, length > math.FLT_MIN_NORMAL) * deltaTime;
                 }
-                else
-                    node.normalizedPosition -= math.select(float2.zero, distance / length, length > math.FLT_MIN_NORMAL);
 
                 node.index = instance.GetIndex(node.normalizedPosition, length, offset, cellLengths);
                 
