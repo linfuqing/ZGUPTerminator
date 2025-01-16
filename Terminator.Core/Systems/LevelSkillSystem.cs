@@ -94,7 +94,8 @@ public partial struct LevelSkillPickableSystem : ISystem
         public double time;
         public Entity entity;
 
-        public BlobAssetReference<LevelSkillDefinition> definition;
+        [ReadOnly]
+        public ComponentLookup<LevelSkillDefinitionData> definitions;
         
         [ReadOnly]
         public BufferLookup<SkillActiveIndex> skillActiveIndices;
@@ -110,7 +111,15 @@ public partial struct LevelSkillPickableSystem : ISystem
 
         public void Execute()
         {
-            if (!this.skills.TryGetBuffer(this.entity, out var skills) || this.skills.IsBufferEnabled(this.entity))
+            if (!this.skills.TryGetBuffer(this.entity, out var skills) || 
+                !definitions.TryGetComponent(this.entity, out var definition))
+            {
+                results.Clear();
+
+                return;
+            }
+
+            if (this.skills.IsBufferEnabled(this.entity))
                 return;
 
             versions.TryGetComponent(this.entity, out var version);
@@ -172,7 +181,7 @@ public partial struct LevelSkillPickableSystem : ISystem
                     ? skillGroups.AsNativeArray().Reinterpret<int>()
                     : default;
                 
-                definition.Value.Select(
+                definition.definition.Value.Select(
                     skillActiveIndices.AsNativeArray(), 
                     skillGroupIndices, 
                     ref skills, 
@@ -212,6 +221,7 @@ public partial struct LevelSkillPickableSystem : ISystem
     private ComponentTypeHandle<LevelSkillPickable> __instanceType;
 
     private ComponentLookup<LevelSkillVersion> __versions;
+    private ComponentLookup<LevelSkillDefinitionData> __defintions;
 
     private BufferLookup<LevelSkill> __skills;
 
@@ -230,6 +240,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         __instanceType = state.GetComponentTypeHandle<LevelSkillPickable>(true);
         
         __versions = state.GetComponentLookup<LevelSkillVersion>();
+        __defintions = state.GetComponentLookup<LevelSkillDefinitionData>(true);
         __skills = state.GetBufferLookup<LevelSkill>();
         __skillGroups = state.GetBufferLookup<LevelSkillGroup>(true);
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>(true);
@@ -240,7 +251,7 @@ public partial struct LevelSkillPickableSystem : ISystem
                 .WithNone<Pickable>()
                 .Build(ref state);
         
-        state.RequireForUpdate<LevelSkillDefinitionData>();
+        //state.RequireForUpdate<LevelSkillDefinitionData>();
 
         __results = new NativeQueue<Result>(Allocator.Persistent);
     }
@@ -256,29 +267,34 @@ public partial struct LevelSkillPickableSystem : ISystem
     {
         __statusType.Update(ref state);
         __instanceType.Update(ref state);
-        
-        var entity = SystemAPI.GetSingletonEntity<LevelSkillDefinitionData>();
-        var definition = SystemAPI.GetComponent<LevelSkillDefinitionData>(entity).definition;
 
         double time = SystemAPI.Time.ElapsedTime;
-        CollectEx collect;
-        collect.version = entity;
-        collect.time = time;
-        collect.instanceType = __instanceType;
-        collect.statusType = __statusType;
-        collect.results = __results.AsParallelWriter();
-
-        var jobHandle = collect.ScheduleParallelByRef(__group, state.Dependency);
         
+        JobHandle jobHandle;
+        if (SystemAPI.TryGetSingletonEntity<LevelSkillDefinitionData>(out Entity entity))
+        {
+            CollectEx collect;
+            collect.version = entity;
+            collect.time = time;
+            collect.instanceType = __instanceType;
+            collect.statusType = __statusType;
+            collect.results = __results.AsParallelWriter();
+
+            jobHandle = collect.ScheduleParallelByRef(__group, state.Dependency);
+        }
+        else
+            jobHandle = state.Dependency;
+
         __versions.Update(ref state);
+        __defintions.Update(ref state);
         __skills.Update(ref state);
         __skillGroups.Update(ref state);
         __skillActiveIndices.Update(ref state);
         
         Select select;
         select.time = time;
-        select.definition = definition;
         select.entity = entity;
+        select.definitions = __defintions;
         select.skillActiveIndices = __skillActiveIndices;
         select.skillGroups = __skillGroups;
         select.skills = __skills;
