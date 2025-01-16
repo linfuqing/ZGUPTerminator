@@ -178,7 +178,7 @@ public sealed class LoginManager : MonoBehaviour
     /// <summary>
     /// 选择的超能武器的名字
     /// </summary>
-    public string activeSkillName
+    public string[] activeSkillNames
     {
         get;
 
@@ -218,11 +218,15 @@ public sealed class LoginManager : MonoBehaviour
 
         ref var activeSkills = ref LevelPlayerShared.activeSkills;
         activeSkills.Clear();
-        if (!string.IsNullOrEmpty(activeSkillName))
+        if (activeSkillNames != null && activeSkillNames.Length > 0)
         {
             LevelPlayerActiveSkill activeSkill;
-            activeSkill.name = activeSkillName;
-            activeSkills.Add(activeSkill);
+
+            foreach (var activeSkillName in activeSkillNames)
+            {
+                activeSkill.name = activeSkillName;
+                activeSkills.Add(activeSkill);
+            }
         }
 
         LevelPlayerShared.bulletDamageScale = bulletDamageScale;

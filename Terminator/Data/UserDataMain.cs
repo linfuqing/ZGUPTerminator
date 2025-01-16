@@ -59,7 +59,6 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(user, userEnergy);
     }
 
-
     [Serializable]
     internal struct Tip
     {
@@ -568,9 +567,6 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
 
-        flag |= UserTalent.Flag.Collected;
-        PlayerPrefs.SetInt(key, (int)flag);
-
         int gold = UserDataMain.gold;
         
         var talent = _talents[__ToIndex(talentID)];
@@ -582,6 +578,9 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
 
         UserDataMain.gold = gold - talent.gold;
+
+        flag |= UserTalent.Flag.Collected;
+        PlayerPrefs.SetInt(key, (int)flag);
 
         onComplete(true);
     }

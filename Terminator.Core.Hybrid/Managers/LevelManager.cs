@@ -195,7 +195,11 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Quit()
     {
-        StartCoroutine(ILevelData.instance.SubmitLevel(__stage, __gold, __OnQuit));
+        var levelData = ILevelData.instance;
+        if (levelData == null)
+            __OnQuit(true);
+        else
+            StartCoroutine(ILevelData.instance.SubmitLevel(__stage, __gold, __OnQuit));
     }
 
     private void __OnQuit(bool result)

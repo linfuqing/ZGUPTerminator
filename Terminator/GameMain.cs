@@ -107,11 +107,11 @@ public class GameMain : GameUser
         GameSceneActivation activation;
         if (string.IsNullOrEmpty(__defaultSceneName))
         {
+            activation = null;
             __defaultSceneName = GameConstantManager.Get(DefaultSceneName);
-            activation = new GameSceneActivation();
         }
         else
-            activation = null;
+            activation = new GameSceneActivation();
         
         return GameAssetManager.instance.Init(
             __defaultSceneName, 
