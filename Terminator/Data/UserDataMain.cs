@@ -43,7 +43,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
         
         User user;
-        user.id = 0;
+        user.id = UserData.id;
         user.gold = gold;
         //user.level = UserData.level;
 
@@ -68,6 +68,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     private const string NAME_SPACE_USER_TIP = "UserTip";
     private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
+    private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [SerializeField]
     internal Tip _tip;
@@ -78,14 +79,13 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        var dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        var timeUnix = DateTime.UtcNow - dateTime;
+        var timeUnix = DateTime.UtcNow - Utc1970;
         
         UserTip userTip;
         userTip.value = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
         userTip.max = _tip.max;
         userTip.unitTime = (uint)Mathf.RoundToInt(_tip.uintTime * 1000);
-        userTip.tick = (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds) * TimeSpan.TicksPerSecond + dateTime.Ticks;
+        userTip.tick = (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds) * TimeSpan.TicksPerSecond + Utc1970.Ticks;
         
         onComplete(userTip);
     }
@@ -95,8 +95,9 @@ public sealed partial class UserDataMain : MonoBehaviour
         Action<int> onComplete)
     {
         yield return null;
+
+        var timeUnix = DateTime.UtcNow - Utc1970;
         
-        var timeUnix = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         uint now = (uint)timeUnix.TotalSeconds, time = now;
         int tip = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
         if (_tip.uintTime > Mathf.Epsilon)
@@ -281,7 +282,9 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int i, j, numStages, stageIndex = 0, numLevels = Mathf.Min(_levels.Length, UserData.level), levelEnd = numLevels - 1;
+        int i, j, numStages, stageIndex = 0, 
+            numLevels = Mathf.Max(1, Mathf.Min(_levels.Length, UserData.level)), 
+            levelEnd = numLevels - 1;
         Level level;
         UserStage userStage;
         Stage stage;

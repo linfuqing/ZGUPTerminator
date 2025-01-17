@@ -107,6 +107,11 @@ public interface IUserData : IGameUserData
     IEnumerator QueryUser(
         string channelName, 
         string channelUser, 
+        Action<uint> onComplete);
+    
+    IEnumerator QueryUser(
+        string channelName, 
+        string channelUser, 
         Action<User, UserEnergy> onComplete);
     
     IEnumerator QueryTip(
@@ -190,8 +195,26 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
     
+    private const string NAME_SPACE_USER_ID = "UserLevelID";
+    
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
     private const string NAME_SPACE_USER_LEVEL = "UserLevel";
+
+    public static uint id
+    {
+        get
+        {
+            int id = PlayerPrefs.GetInt(NAME_SPACE_USER_ID);
+            if (id == 0)
+            {
+                id = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                
+                PlayerPrefs.SetInt(NAME_SPACE_USER_ID, id);
+            }
+
+            return (uint)id;
+        }
+    }
 
     public static int level
     {
@@ -220,6 +243,23 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
+    public IEnumerator QueryUser(
+        string channelName,
+        string channelUser,
+        Action<uint> onComplete)
+    {
+        yield return null;
+
+        LevelCache levelCache;
+        levelCache.id = 1;
+        levelCache.gold = 0;
+        levelCache.stage = 0;
+
+        UserData.levelCache = levelCache;
+
+        onComplete(id);
+    }
+    
     public IEnumerator SubmitLevel(
         uint userID,
         int stage,

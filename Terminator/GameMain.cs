@@ -26,6 +26,24 @@ public class GameSceneActivation : IEnumerator
 
 public class GameMain : GameUser
 {
+    private class LevelData : ILevelData
+    {
+        private uint __id;
+
+        public LevelData(uint id)
+        {
+            __id = id;
+        }
+        
+        public IEnumerator SubmitLevel(
+            int stage,
+            int gold,
+            Action<bool> onComplete)
+        {
+            return IUserData.instance.SubmitLevel(__id, stage, gold, onComplete);
+        }
+    }
+
     public event Func<IEnumerator> onStart;
 
     public static readonly string LanguagePackageResourcePath = "LanguagePackageResourcePath";
@@ -55,16 +73,6 @@ public class GameMain : GameUser
             yield return null;
         }
 
-#if ENABLE_CONTENT_DELIVERY
-        string localCachePath = GameConstantManager.Get(LocalCachePath);
-        RuntimeContentSystem.LoadContentCatalog(
-            GameConstantManager.Get(RemoteUrlRoot), 
-            string.IsNullOrEmpty(localCachePath) ? null : Path.Combine(Application.persistentDataPath, localCachePath), 
-            GameConstantManager.Get(InitialContentSet));
-#endif
-        
-        yield return null;
-        
         yield return GameAssetManager.InitLanguage(
             GameConstantManager.Get(LanguagePackageResourcePath),
             GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
@@ -77,6 +85,14 @@ public class GameMain : GameUser
             foreach (var onStart in onStarts)
                 yield return ((Func<IEnumerator>)onStart)();
         }
+
+#if ENABLE_CONTENT_DELIVERY
+        string localCachePath = GameConstantManager.Get(LocalCachePath);
+        RuntimeContentSystem.LoadContentCatalog(
+            GameConstantManager.Get(RemoteUrlRoot), 
+            string.IsNullOrEmpty(localCachePath) ? null : Path.Combine(Application.persistentDataPath, localCachePath), 
+            GameConstantManager.Get(InitialContentSet));
+#endif
 
         Shared.onActivated += __OnActivated;
         onLogin.AddListener(__OnLogin);
@@ -91,7 +107,7 @@ public class GameMain : GameUser
 
         var analytics = IAnalytics.instance as IAnalyticsEx;
         if(analytics != null)
-            analytics.Activate(GameUser.Shared.channelName, GameUser.Shared.channelUser);
+            analytics.Activate(Shared.channelName, Shared.channelUser);
     }
 
     private void __OnLogin()
@@ -111,15 +127,24 @@ public class GameMain : GameUser
             __defaultSceneName = GameConstantManager.Get(DefaultSceneName);
         }
         else
+        {
+            yield return IUserData.instance.QueryUser(Shared.channelName, Shared.channelUser, __OnLevelApply);
+            
             activation = new GameSceneActivation();
-        
-        return GameAssetManager.instance.Init(
+        }
+
+        yield return GameAssetManager.instance.Init(
             __defaultSceneName, 
             GameConstantManager.Get(AssetScenePath), 
                 GameConstantManager.Get(AssetPath), 
                     GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
             factory, 
             activation);
+    }
+
+    private void __OnLevelApply(uint id)
+    {
+        ILevelData.instance = new LevelData(id);
     }
 
     private void __OnConfirmCancel()
