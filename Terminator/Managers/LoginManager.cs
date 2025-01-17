@@ -336,7 +336,7 @@ public sealed class LoginManager : MonoBehaviour
         if (rewardSkills == null)
             return;
 
-        this.gold = gold;
+        this.gold += gold;
 
         if(onAwake != null)
             onAwake(rewardSkills);

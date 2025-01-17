@@ -68,6 +68,8 @@ public class GameMain : GameUser
 
     IEnumerator Start()
     {
+        Application.targetFrameRate = 60;
+        
         while(!GameConstantManager.isInit)
         {
             yield return null;

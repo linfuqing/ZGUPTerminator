@@ -429,9 +429,8 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
         }
 
-        int gold = UserDataMain.gold;
-        gold += levelCache.gold;
-        UserDataMain.gold = gold;
+        int gold = levelCache.gold;
+        UserDataMain.gold += gold;
 
         int stageIndex = 0;
         for (int i = 0; i < levelIndex; ++i)
