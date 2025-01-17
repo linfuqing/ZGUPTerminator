@@ -87,11 +87,78 @@ public class GameMain : GameUser
         }
 
 #if ENABLE_CONTENT_DELIVERY
-        string localCachePath = GameConstantManager.Get(LocalCachePath);
-        RuntimeContentSystem.LoadContentCatalog(
-            GameConstantManager.Get(RemoteUrlRoot), 
-            string.IsNullOrEmpty(localCachePath) ? null : Path.Combine(Application.persistentDataPath, localCachePath), 
-            GameConstantManager.Get(InitialContentSet));
+        string remoteUrlRoot = GameConstantManager.Get(RemoteUrlRoot), 
+            localCachePath = GameConstantManager.Get(LocalCachePath);
+        if (string.IsNullOrEmpty(remoteUrlRoot))
+        {
+            var pack = AssetUtility.RetrievePack(localCachePath);
+            if (pack == null)
+                RuntimeContentSystem.LoadContentCatalog(null, localCachePath, null);
+            else
+            {
+                var progressbar = GameProgressbar.instance;
+                progressbar.ShowProgressBar();
+
+                string packName;
+                var header = pack.header;
+                if (header == null)
+                    packName = localCachePath;
+                else
+                {
+                    while (!header.isDone)
+                        yield return null;
+
+                    packName = header.name;
+                }
+
+                while (!pack.isDone)
+                {
+                    progressbar.UpdateProgressBar(pack.downloadProgress);
+
+                    yield return null;
+                }
+
+                progressbar.ClearProgressBar();
+
+                ContentDeliveryGlobalState.Initialize(
+                    null, 
+                    null, 
+                    null, 
+                    null);
+
+                Func<string, string> remapFunc = x =>
+                {
+                    if (pack.GetFileInfo(x, out ulong fileOffset, out string filePath))
+                    {
+                        AssetUtility.UpdatePack(packName, ref filePath, ref fileOffset);
+                        
+                        Debug.Log($"UpdatePack {filePath}");
+                    }
+                    else
+                        Debug.LogError($"GetFileInfo {x} failed");
+
+                    UnityEngine.Assertions.Assert.AreEqual(0, fileOffset);
+
+                    return filePath;
+                };
+
+                ContentDeliveryGlobalState.PathRemapFunc = remapFunc;
+                
+                var catalogPath = remapFunc(RuntimeContentManager.RelativeCatalogPath);
+                RuntimeContentManager.LoadLocalCatalogData(catalogPath,
+                        RuntimeContentManager.DefaultContentFileNameFunc,
+                        p => remapFunc(RuntimeContentManager.DefaultArchivePathFunc(p)));
+            }
+        }
+        else
+        {
+            RuntimeContentSystem.LoadContentCatalog(
+                remoteUrlRoot,
+                string.IsNullOrEmpty(localCachePath)
+                    ? null
+                    : Path.Combine(Application.persistentDataPath, localCachePath),
+                GameConstantManager.Get(InitialContentSet));
+        }
 #endif
 
         Shared.onActivated += __OnActivated;

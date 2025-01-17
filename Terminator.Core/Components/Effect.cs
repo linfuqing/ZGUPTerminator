@@ -95,7 +95,8 @@ public struct EffectTargetData : IComponentData
     public int hpMax;
     public float resetTime;
 
-    public Message resetMessage;
+    public FixedString128Bytes resetMessageName;
+    public WeakObjectReference<Object> resetMessageValue;
 }
 
 public struct EffectTarget : IComponentData

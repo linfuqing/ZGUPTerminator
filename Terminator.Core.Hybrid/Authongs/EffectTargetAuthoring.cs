@@ -35,10 +35,19 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
             var entity = GetEntity(TransformUsageFlags.None);
 
-            EffectTarget instance;
-            instance.times = authoring._times;
-            instance.hp = authoring._hp;
+            EffectTargetData instance;
+            instance.hpMax = authoring._hp;
+            instance.resetTime = authoring._resetTime;
+            instance.resetMessageName = authoring._resetMessageName;
+            instance.resetMessageValue = authoring._resetMessageValue == null
+                ? default
+                : new WeakObjectReference<Object>(authoring._resetMessageValue);
             AddComponent(entity, instance);
+
+            EffectTarget target;
+            target.times = authoring._times;
+            target.hp = authoring._hp;
+            AddComponent(entity, target);
 
             EffectTargetLevel level;
             level.value = authoring._level;
@@ -111,6 +120,15 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
     [SerializeField] 
     internal float _damageScale = 1.0f;
+
+    [SerializeField] 
+    internal float _resetTime = 3.0f;
+
+    [Tooltip("复活事件")]
+    internal string _resetMessageName;
+    
+    [Tooltip("复活事件")]
+    internal Object _resetMessageValue;
 
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("attributeParameter")] 
     internal Object _attributeParameter;
