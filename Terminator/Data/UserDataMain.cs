@@ -249,9 +249,6 @@ public sealed partial class UserDataMain : MonoBehaviour
         public string[] rewardSkills;
     }
 
-    //private const string NAME_SPACE_USER_LEVEL_STAGE = "UserLevelStage";
-    private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
-
     [SerializeField]
     internal Level[] _levels;
 
@@ -264,7 +261,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int i, numLevels = _levels.Length;
+        int i, levelIndex = UserData.level, numLevels = Mathf.Clamp(levelIndex + 1, 1, _levels.Length);
         Level level;
         UserLevel userLevel;
         var userLevels = new UserLevel[numLevels];
@@ -274,16 +271,16 @@ public sealed partial class UserDataMain : MonoBehaviour
             userLevel.name = level.name;
             userLevel.id = __ToID(i);
             userLevel.energy = level.energy;
-            //userLevel.userStage = PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE}{i}");
-            userLevel.rewardSkills = level.rewardSkills;
+            userLevel.rewardSkills = levelIndex > i ? null : level.rewardSkills;
 
             userLevels[i] = userLevel;
         }
         
-        if(onComplete != null)
-            onComplete(userLevels);
+        onComplete(userLevels);
     }
 
+    private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
+    
     public IEnumerator QueryStages(
         uint userID,
         Action<Memory<UserStage>> onComplete)
@@ -291,7 +288,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
 
         int i, j, numStages, stageIndex = 0, 
-            numLevels = Mathf.Max(1, Mathf.Min(_levels.Length, UserData.level)), 
+            numLevels = Mathf.Clamp(UserData.level, 1, _levels.Length), 
             levelEnd = numLevels - 1;
         Level level;
         UserStage userStage;
