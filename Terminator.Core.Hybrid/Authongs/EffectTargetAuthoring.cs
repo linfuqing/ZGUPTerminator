@@ -124,10 +124,10 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [SerializeField] 
     internal float _resetTime = 3.0f;
 
-    [Tooltip("复活事件")]
+    [Tooltip("复活事件"), SerializeField]
     internal string _resetMessageName;
     
-    [Tooltip("复活事件")]
+    [Tooltip("复活事件"), SerializeField]
     internal Object _resetMessageValue;
 
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("attributeParameter")] 

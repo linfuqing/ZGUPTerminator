@@ -137,7 +137,15 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
         
         var skillString = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
-        var skills = string.IsNullOrEmpty(skillString) ? null : skillString.Split(SEPARATOR);
+        string[] skills;
+        if (string.IsNullOrEmpty(skillString))
+        {
+            skillString = string.Join(SEPARATOR, _defaultSkills);
+
+            skills = _defaultSkills;
+        }
+        else
+            skills = skillString.Split(SEPARATOR);
 
         int numSkills = skills == null ? 0 : skills.Length;
         UserSkill userSkill;
