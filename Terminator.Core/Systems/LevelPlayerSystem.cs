@@ -91,7 +91,7 @@ public partial struct LevelPlayerSystem : ISystem
                     {
                         for (i = 0; i < numGroups; ++i)
                         {
-                            if (definition.skills[i] == skillGroup.name)
+                            if (definition.groups[i] == skillGroup.name)
                                 break;
                         }
 
