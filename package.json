@@ -1,12 +1,14 @@
 {
   "name": "cn.com.zerogame.unitypackages.terminator",
   "displayName": "ZGUP Terminator",
-  "version": "0.18.35",
+  "version": "0.18.36",
   "unity": "2022.3",
   "unityRelease": "0f1",
   "dependencies": {
     "com.unity.charactercontroller": "1.2.4",
     "cn.com.zerogame.unitypackages": "2.2.1",
+    "cn.com.zerogame.unitypackages.assets": "2.2.1",
+    "cn.com.zerogame.unitypackages.ui": "2.2.1",
     "cn.com.zerogame.unitypackages.avatar": "2.2.1",
     "cn.com.zerogame.unitypackages.game.common": "2.2.1"
   },
