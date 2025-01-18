@@ -91,15 +91,6 @@ public struct SpawnerInstance
 
 public struct SpawnerDefinition
 {
-    public struct Area
-    {
-        public SpawnerSpace space;
-
-        public quaternion from;
-        public quaternion to;
-        public AABB aabb;
-    }
-    
     public struct Attribute
     {
         public int hp;
@@ -110,11 +101,15 @@ public struct SpawnerDefinition
         public int expMax;
         public int gold;
         public int goldMax;
-        
+
+        public float damageScale;
+        public float damageScaleMax;
+
         public float speedScale;
         public float speedScaleMax;
-        
+
         public float speedScaleBuff;
+        public float damageScaleBuff;
         public float hpBuff;
         public float levelBuff;
         public float expBuff;
@@ -123,11 +118,26 @@ public struct SpawnerDefinition
         public float interval;
     }
 
+    public struct Area
+    {
+        public SpawnerSpace space;
+
+        public quaternion from;
+        public quaternion to;
+        public AABB aabb;
+    }
+    
     public struct AreaIndex
     {
         public int value;
         public int layerMask;
         public int attributeIndex;
+    }
+
+    public struct LoaderIndex
+    {
+        public int value;
+        public float chance;
     }
 
     public struct Spawner
@@ -143,9 +153,9 @@ public struct SpawnerDefinition
         public int countPerTime;
         public int times;
         public int tryTimesPerArea;
-        public int loaderIndex;
         public int layerMask;
 
+        public BlobArray<LoaderIndex> loaderIndices;
         public BlobArray<AreaIndex> areaIndices;
     }
 
@@ -188,17 +198,39 @@ public struct SpawnerDefinition
             }
         }*/
         states.Resize(numSpawners, NativeArrayOptions.ClearMemory);
-        
+
+        int i, j, numLoaderIndices;
+        float randomValue;
         SpawnerEntity spawnerEntity;
         PrefabLoadResult prefabLoadResult;
-        for (int i = 0; i < numSpawners; ++i)
+        for (i = 0; i < numSpawners; ++i)
         {
             ref var spawner = ref this.spawners[i];
-            if(!prefabLoadResults.TryGetComponent(prefabs[spawner.loaderIndex].loader, out prefabLoadResult))
+
+            randomValue = random.NextFloat();
+            numLoaderIndices = spawner.loaderIndices.Length;
+            for (j = 0; j < numLoaderIndices; ++j)
+            {
+                ref var loaderIndex = ref spawner.loaderIndices[j];
+                if (loaderIndex.chance < randomValue)
+                {
+                    randomValue -= loaderIndex.chance;
+
+                    continue;
+                }
+
+                break;
+            }
+
+            if (j == numLoaderIndices)
                 continue;
-            
+
+            if (!prefabLoadResults.TryGetComponent(prefabs[spawner.loaderIndices[j].value].loader, out prefabLoadResult))
+                continue;
+
             spawnerEntity.spawner = entity;
-            spawnerEntity.index = i;
+            spawnerEntity.spawnerIndex = i;
+            spawnerEntity.loaderIndex = j;
 
             Update(
                 layerMask,
@@ -388,11 +420,19 @@ public struct SpawnerDefinition
                 entityManager.SetComponent(2, entity, followTargetSpeed);
             }
 
+            if (attribute.damageScale > math.FLT_MIN_NORMAL)
+            {
+                EffectDamage effectDamage;
+                effectDamage.scale = math.min(math.round(attribute.damageScale + attribute.damageScaleBuff * times), attribute.damageScaleMax);
+                entityManager.SetComponent(2, entity, effectDamage);
+            }
+
             if (attribute.hp != 0)
             {
                 EffectTarget effectTarget;
                 effectTarget.times = 0;
                 effectTarget.hp = math.min((int)math.round(attribute.hp + attribute.hpBuff * times), attribute.hpMax);
+                effectTarget.invincibleTime = 0.0;
                 entityManager.SetComponent(2, entity, effectTarget);
             }
 
@@ -459,16 +499,17 @@ public struct SpawnerStatus : IBufferElementData
 public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>
 {
     public Entity spawner;
-    public int index;
+    public int spawnerIndex;
+    public int loaderIndex;
 
     public bool Equals(SpawnerEntity other)
     {
-        return spawner == other.spawner && index == other.index;
+        return spawner == other.spawner && spawnerIndex == other.spawnerIndex && loaderIndex == other.loaderIndex;
     }
 
     public override int GetHashCode()
     {
-        return spawner.GetHashCode() ^ index;
+        return spawner.GetHashCode() ^ spawnerIndex ^ loaderIndex;
     }
 }
 

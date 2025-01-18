@@ -2,33 +2,34 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
-//[UpdateBefore(typeof(TransformSystemGroup))]
-[UpdateInGroup(typeof(SimulationSystemGroup), OrderFirst = true), UpdateBefore(typeof(FixedStepSimulationSystemGroup))]
-public partial struct AnimationCurveSystem : ISystem
+
+[BurstCompile, UpdateAfter(typeof(TransformSystemGroup))]
+public partial struct AnimationCurveUpdateSystem : ISystem
 {
     private struct Active
     {
         public double time;
 
-        [ReadOnly] 
+        [ReadOnly]
         public BufferLookup<Child> children;
-        
-        [ReadOnly] 
+
+        [ReadOnly]
         public NativeArray<AnimationCurveRoot> roots;
 
         [ReadOnly]
         public NativeArray<AnimationCurveTime> times;
 
-        [ReadOnly] 
+        [ReadOnly]
+        public NativeArray<AnimationCurveDelta> deltas;
+
+        [ReadOnly]
         public NativeArray<AnimationCurveSpeed> speeds;
 
         [ReadOnly]
         public NativeArray<AnimationCurveActive> actives;
-        
+
         [ReadOnly]
         public BufferAccessor<AnimationCurveEntity> entities;
 
@@ -36,13 +37,12 @@ public partial struct AnimationCurveSystem : ISystem
 
         public void Execute(int index)
         {
-            var time = times[index];
             actives[index].Evaluate(
                 index < roots.Length ? roots[index].length : 0.0f,
-                time.value,
-                time.GetDelta(this.time) * speeds[index].value, 
-                entities[index], 
-                children, 
+                times[index].value,
+                deltas[index].Update(this.time) * speeds[index].value,
+                entities[index],
+                children,
                 ref entityManager);
         }
     }
@@ -51,22 +51,25 @@ public partial struct AnimationCurveSystem : ISystem
     private struct ActiveEx : IJobChunk
     {
         public double time;
-        
-        [ReadOnly] 
+
+        [ReadOnly]
         public BufferLookup<Child> children;
 
-        [ReadOnly] 
+        [ReadOnly]
         public ComponentTypeHandle<AnimationCurveRoot> rootType;
 
         [ReadOnly]
         public ComponentTypeHandle<AnimationCurveTime> timeType;
 
-        [ReadOnly] 
+        [ReadOnly]
+        public ComponentTypeHandle<AnimationCurveDelta> deltaType;
+
+        [ReadOnly]
         public ComponentTypeHandle<AnimationCurveSpeed> speedType;
 
         [ReadOnly]
         public ComponentTypeHandle<AnimationCurveActive> activeType;
-        
+
         [ReadOnly]
         public BufferTypeHandle<AnimationCurveEntity> entityType;
 
@@ -80,6 +83,7 @@ public partial struct AnimationCurveSystem : ISystem
             active.children = children;
             active.roots = chunk.GetNativeArray(ref rootType);
             active.times = chunk.GetNativeArray(ref timeType);
+            active.deltas = chunk.GetNativeArray(ref deltaType);
             active.speeds = chunk.GetNativeArray(ref speedType);
             active.actives = chunk.GetNativeArray(ref activeType);
             active.entities = chunk.GetBufferAccessor(ref entityType);
@@ -90,32 +94,35 @@ public partial struct AnimationCurveSystem : ISystem
                 active.Execute(i);
         }
     }
-    
+
     private struct Update
     {
         public double time;
 
-        [ReadOnly] 
+        [ReadOnly]
         public BufferAccessor<AnimationCurveMessage> inputMessages;
-        
-        [ReadOnly] 
+
+        [ReadOnly]
         public NativeArray<AnimationCurveRoot> roots;
 
-        [ReadOnly] 
+        [ReadOnly]
         public NativeArray<AnimationCurveSpeed> speeds;
-        
+
         public NativeArray<AnimationCurveTime> times;
 
-        [ReadOnly] 
+        public NativeArray<AnimationCurveDelta> deltas;
+
+        [ReadOnly]
         public BufferAccessor<Message> outputMessages;
-        
+
         public bool Execute(int index)
         {
             bool isSendMessage = false;
             float speed = speeds[index].value;
+            var delta = deltas[index];
             var time = times[index];
             double oldTime = time.value;
-            time.value += time.GetDelta(this.time) * speed;
+            time.value += delta.Update(this.time) * speed;
             if (time.value > oldTime)
             {
                 Message message;
@@ -145,7 +152,7 @@ public partial struct AnimationCurveSystem : ISystem
 
                         time.value -= root.length;
 
-                        time.start = this.time - time.value / speed;
+                        delta.start = this.time - time.value / speed;
 
                         oldTime = 0;
                     }
@@ -168,8 +175,10 @@ public partial struct AnimationCurveSystem : ISystem
                     }
                 }
             }
-            
-            time.elapsed = this.time;
+
+            delta.elapsed = this.time;
+
+            deltas[index] = delta;
             times[index] = time;
 
             return isSendMessage;
@@ -180,20 +189,22 @@ public partial struct AnimationCurveSystem : ISystem
     private struct UpdateEx : IJobChunk
     {
         public double time;
-        
-        [ReadOnly] 
+
+        [ReadOnly]
         public BufferTypeHandle<AnimationCurveMessage> inputMessageType;
-        
-        [ReadOnly] 
+
+        [ReadOnly]
         public ComponentTypeHandle<AnimationCurveRoot> rootType;
 
-        [ReadOnly] 
+        [ReadOnly]
         public ComponentTypeHandle<AnimationCurveSpeed> speedType;
-        
+
         public ComponentTypeHandle<AnimationCurveTime> timeType;
 
+        public ComponentTypeHandle<AnimationCurveDelta> deltaType;
+
         public BufferTypeHandle<Message> outputMessageType;
-        
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Update update;
@@ -202,17 +213,108 @@ public partial struct AnimationCurveSystem : ISystem
             update.roots = chunk.GetNativeArray(ref rootType);
             update.speeds = chunk.GetNativeArray(ref speedType);
             update.times = chunk.GetNativeArray(ref timeType);
+            update.deltas = chunk.GetNativeArray(ref deltaType);
             update.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
-                if(update.Execute(i))
+                if (update.Execute(i))
                     chunk.SetComponentEnabled(ref outputMessageType, i, true);
             }
         }
     }
-    
+
+    private BufferLookup<Child> __children;
+
+    private ComponentTypeHandle<AnimationCurveTime> __timeType;
+
+    private ComponentTypeHandle<AnimationCurveDelta> __deltaType;
+
+    private ComponentTypeHandle<AnimationCurveRoot> __rootType;
+    private ComponentTypeHandle<AnimationCurveSpeed> __speedType;
+
+    private ComponentTypeHandle<AnimationCurveActive> __activeType;
+
+    private BufferTypeHandle<AnimationCurveEntity> __curveEntityType;
+
+    private BufferTypeHandle<AnimationCurveMessage> __inputMessageType;
+    private BufferTypeHandle<Message> __outputMessageType;
+
+    private EntityQuery __groupToActive;
+    private EntityQuery __groupToUpdate;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __children = state.GetBufferLookup<Child>(true);
+        __timeType = state.GetComponentTypeHandle<AnimationCurveTime>();
+        __deltaType = state.GetComponentTypeHandle<AnimationCurveDelta>();
+        __rootType = state.GetComponentTypeHandle<AnimationCurveRoot>(true);
+        __speedType = state.GetComponentTypeHandle<AnimationCurveSpeed>(true);
+        __activeType = state.GetComponentTypeHandle<AnimationCurveActive>(true);
+        __curveEntityType = state.GetBufferTypeHandle<AnimationCurveEntity>(true);
+        __inputMessageType = state.GetBufferTypeHandle<AnimationCurveMessage>(true);
+        __outputMessageType = state.GetBufferTypeHandle<Message>();
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __groupToActive = builder
+                .WithAll<AnimationCurveTime, AnimationCurveActive, AnimationCurveEntity>()
+                .Build(ref state);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __groupToUpdate = builder
+                .WithAll<AnimationCurveSpeed>()
+                .WithAllRW<AnimationCurveTime>()
+                .Build(ref state);
+
+        state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
+    }
+
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        double time = SystemAPI.Time.ElapsedTime;
+        __children.Update(ref state);
+        __rootType.Update(ref state);
+        __timeType.Update(ref state);
+        __deltaType.Update(ref state);
+        __speedType.Update(ref state);
+        __activeType.Update(ref state);
+        __curveEntityType.Update(ref state);
+
+        ActiveEx active;
+        active.time = time;
+        active.children = __children;
+        active.rootType = __rootType;
+        active.timeType = __timeType;
+        active.deltaType = __deltaType;
+        active.speedType = __speedType;
+        active.activeType = __activeType;
+        active.entityType = __curveEntityType;
+        active.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
+            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        var jobHandle = active.ScheduleParallelByRef(__groupToActive, state.Dependency);
+
+        __inputMessageType.Update(ref state);
+        __outputMessageType.Update(ref state);
+
+        UpdateEx update;
+        update.time = time;
+        update.inputMessageType = __inputMessageType;
+        update.rootType = __rootType;
+        update.speedType = __speedType;
+        update.timeType = __timeType;
+        update.deltaType = __deltaType;
+        update.outputMessageType = __outputMessageType;
+        state.Dependency = update.ScheduleParallelByRef(__groupToUpdate, jobHandle);
+    }
+}
+
+//[UpdateBefore(typeof(TransformSystemGroup))]
+[BurstCompile, UpdateInGroup(typeof(SimulationSystemGroup), OrderFirst = true), UpdateBefore(typeof(FixedStepSimulationSystemGroup))]
+public partial struct AnimationCurveSystem : ISystem
+{
     private struct Evaluate
     {
         [ReadOnly]
@@ -287,16 +389,9 @@ public partial struct AnimationCurveSystem : ISystem
         }
     }
 
-    private BufferLookup<Child> __children;
-
     private ComponentLookup<Parent> __parents;
     
     private ComponentLookup<AnimationCurveTime> __times;
-    
-    private ComponentTypeHandle<AnimationCurveTime> __timeType;
-
-    private ComponentTypeHandle<AnimationCurveRoot> __rootType;
-    private ComponentTypeHandle<AnimationCurveSpeed> __speedType;
     
     private ComponentTypeHandle<AnimationCurveTransform> __instanceType;
 
@@ -304,100 +399,38 @@ public partial struct AnimationCurveSystem : ISystem
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
-    private ComponentTypeHandle<AnimationCurveActive> __activeType;
-        
-    private BufferTypeHandle<AnimationCurveEntity> __curveEntityType;
-
-    private BufferTypeHandle<AnimationCurveMessage> __inputMessageType;
-    private BufferTypeHandle<Message> __outputMessageType;
-
     private EntityTypeHandle __entityType;
 
-    private EntityQuery __groupToActive;
-    private EntityQuery __groupToUpdate;
-    private EntityQuery __groupToEvaluate;
+    private EntityQuery __group;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __children = state.GetBufferLookup<Child>(true);
         __parents = state.GetComponentLookup<Parent>(true);
         __times = state.GetComponentLookup<AnimationCurveTime>(true);
-        __timeType = state.GetComponentTypeHandle<AnimationCurveTime>();
-        __rootType = state.GetComponentTypeHandle<AnimationCurveRoot>(true);
-        __speedType = state.GetComponentTypeHandle<AnimationCurveSpeed>(true);
         __instanceType = state.GetComponentTypeHandle<AnimationCurveTransform>(true);
         __motionType = state.GetComponentTypeHandle<AnimationCurveMotion>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
-        __activeType = state.GetComponentTypeHandle<AnimationCurveActive>(true);
-        __curveEntityType = state.GetBufferTypeHandle<AnimationCurveEntity>(true);
-        __inputMessageType = state.GetBufferTypeHandle<AnimationCurveMessage>(true);
-        __outputMessageType = state.GetBufferTypeHandle<Message>();
         __entityType = state.GetEntityTypeHandle();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __groupToActive = builder
-                .WithAll<AnimationCurveTime, AnimationCurveActive, AnimationCurveEntity>()
-                .Build(ref state);
-
-        using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __groupToUpdate = builder
-                .WithAll<AnimationCurveSpeed>()
-                .WithAllRW<AnimationCurveTime>()
-                .Build(ref state);
-        
-        using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __groupToEvaluate = builder
+            __group = builder
                 .WithAll<AnimationCurveTransform>()
                 .WithAllRW<LocalTransform>()
                 .WithOptions(EntityQueryOptions.FilterWriteGroup)
                 .Build(ref state);
-        
-        state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        double time = SystemAPI.Time.ElapsedTime;
-        __children.Update(ref state);
-        __rootType.Update(ref state);
-        __timeType.Update(ref state);
-        __speedType.Update(ref state);
-        __activeType.Update(ref state);
-        __curveEntityType.Update(ref state);
-        
-        ActiveEx active;
-        active.time = time;
-        active.children = __children;
-        active.rootType = __rootType;
-        active.timeType = __timeType;
-        active.speedType = __speedType;
-        active.activeType = __activeType;
-        active.entityType = __curveEntityType;
-        active.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
-            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-        var jobHandle = active.ScheduleParallelByRef(__groupToActive, state.Dependency);
-
-        __inputMessageType.Update(ref state);
-        __outputMessageType.Update(ref state);
-        
-        UpdateEx update;
-        update.time = time;
-        update.inputMessageType = __inputMessageType;
-        update.rootType = __rootType;
-        update.speedType = __speedType;
-        update.timeType = __timeType;
-        update.outputMessageType = __outputMessageType;
-        jobHandle = update.ScheduleParallelByRef(__groupToUpdate, jobHandle);
-
         __parents.Update(ref state);
         __times.Update(ref state);
-        __entityType.Update(ref state);
         __instanceType.Update(ref state);
         __motionType.Update(ref state);
         __localTransformType.Update(ref state);
-        
+        __entityType.Update(ref state);
+
         EvaluateEx evaluate;
         evaluate.parents = __parents;
         evaluate.times = __times;
@@ -406,6 +439,6 @@ public partial struct AnimationCurveSystem : ISystem
         evaluate.motionType = __motionType;
         evaluate.localTransformType = __localTransformType;
 
-        state.Dependency = evaluate.ScheduleParallelByRef(__groupToEvaluate, jobHandle);
+        state.Dependency = evaluate.ScheduleParallelByRef(__group, state.Dependency);
     }
 }

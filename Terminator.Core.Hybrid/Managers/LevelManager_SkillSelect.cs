@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using ZG;
 
 public struct LevelSkillData
 {
@@ -57,6 +58,12 @@ public partial class LevelManager
         public UnityEvent onDisable;
     }
 
+    [SerializeField]
+    internal IntEvent _onSkillSelectionGuide;
+
+    [SerializeField]
+    internal string[] _skillSelectionGuides;
+
     [SerializeField] 
     internal SkillSelection[] _skillSelections;
 
@@ -69,6 +76,8 @@ public partial class LevelManager
 
     private List<ResultSkillStyle> __resultSkillStyles;
     private Dictionary<string, LevelSkillStyle> __skillStyles;
+
+    public const string NAME_SPACE_SKILL_SELECTION_TIMES = "LevelManagerSkillSelectionTimes";
 
     public bool isClear => __gameObjectsToDestroy == null || __gameObjectsToDestroy.Count < 1;
 
@@ -154,6 +163,8 @@ public partial class LevelManager
         
         destination.onEnable.Invoke();
 
+        int skillSelectionGuideIndex, times;
+        string key;
         LevelSkillStyle style;
         for (int i = 0; i < numSkills; ++i)
         {
@@ -182,7 +193,26 @@ public partial class LevelManager
             }
 
             style.SetAsset(source.value);
-            
+
+            key = NAME_SPACE_SKILL_SELECTION_TIMES + source.value.name;
+            times = PlayerPrefs.GetInt(key);
+
+            if (times == 0 &&
+                _skillSelectionGuides != null)
+            {
+                skillSelectionGuideIndex = Array.IndexOf(_skillSelectionGuides, source.value.name);
+                if (skillSelectionGuideIndex != -1)
+                {
+                    if(style.onGuide != null)
+                        style.onGuide.Invoke();
+
+                    if (_onSkillSelectionGuide != null)
+                        _onSkillSelectionGuide.Invoke(skillSelectionGuideIndex);
+                }
+            }
+
+            PlayerPrefs.SetInt(key, ++times);
+
             if (__skillStyles == null)
                 __skillStyles = new Dictionary<string, LevelSkillStyle>();
 

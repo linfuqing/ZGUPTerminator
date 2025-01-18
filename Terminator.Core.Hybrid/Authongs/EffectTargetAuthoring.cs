@@ -25,6 +25,19 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         public GameObject receiverPrefab;
     }
 
+    [Serializable]
+    public struct InvulnerabilityData
+    {
+        [Tooltip("重复多少次，0为无限次")]
+        public int count;
+
+        [Tooltip("受到多少伤害后无敌")]
+        public int damage;
+
+        [Tooltip("每次进入无敌状态的持续时间")]
+        public float time;
+    }
+
     class Baker : Baker<EffectTargetAuthoring>
     {
         public override void Bake(EffectTargetAuthoring authoring)
@@ -47,6 +60,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             EffectTarget target;
             target.times = authoring._times;
             target.hp = authoring._hp;
+            target.invincibleTime = 0.0;
             AddComponent(entity, target);
 
             EffectTargetLevel level;
@@ -95,11 +109,32 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             damageScale.value = authoring._damageScale;
             AddComponent(entity, damageScale);
 
-            /*else
+            int numInvulnerabilities = authoring._invulnerabilities == null ? 0 : authoring._invulnerabilities.Length;
+            if (numInvulnerabilities > 0)
             {
-                AddComponent<Message>(entity);
-                AddComponent<MessageParameter>(entity);
-            }*/
+                EffectTargetInvulnerabilityDefinitionData invulnerability;
+                using(var builder = new BlobBuilder(Allocator.Temp))
+                {
+                    ref var definition = ref builder.ConstructRoot<EffectTargetInvulnerabilityDefinition>();
+                    var invulnerabilitys = builder.Allocate(ref definition.invulnerabilities, numInvulnerabilities);
+                    for(int i = 0; i < numInvulnerabilities; i++)
+                    {
+                        ref var source = ref authoring._invulnerabilities[i];
+                        ref var destination = ref invulnerabilitys[i];
+
+                        destination.count = source.count;
+                        destination.damage = source.damage;
+                        destination.time = source.time;
+                    }
+
+                    invulnerability.definition = builder.CreateBlobAssetReference<EffectTargetInvulnerabilityDefinition>(Allocator.Persistent);
+                }
+
+                AddBlobAsset(ref invulnerability.definition, out _);
+
+                AddComponent(entity, invulnerability);
+                AddComponent<EffectTargetInvulnerabilityStatus>(entity);
+            }
         }
     }
     
@@ -121,7 +156,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [SerializeField] 
     internal float _damageScale = 1.0f;
 
-    [SerializeField] 
+    [Tooltip("复活时间"), SerializeField] 
     internal float _resetTime = 3.0f;
 
     [Tooltip("复活事件"), SerializeField]
@@ -135,6 +170,9 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
     [SerializeField]
     internal MessageData[] _messages;
+
+    [Tooltip("无敌"), SerializeField]
+    internal InvulnerabilityData[] _invulnerabilities;
 
     public bool Apply(ref DynamicBuffer<Message> messages, ref DynamicBuffer<MessageParameter> messageParameters)
     {

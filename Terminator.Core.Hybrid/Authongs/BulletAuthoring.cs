@@ -491,7 +491,7 @@ public class BulletAuthoring : MonoBehaviour
     public struct ActiveData
     {
         public string name;
-        public int damage;
+        public float damageScale;
         
         #region CSV
         [CSVField]
@@ -504,11 +504,11 @@ public class BulletAuthoring : MonoBehaviour
         }
         
         [CSVField]
-        public int 子弹激活伤害
+        public float 子弹激活伤害
         {
             set
             {
-                damage = value;
+                damageScale = value;
             }
         }
         #endregion
@@ -699,7 +699,7 @@ public class BulletAuthoring : MonoBehaviour
             {
                 ref var source = ref authoring._actives[i];
                 ref var destination = ref activeIndices.ElementAt(i);
-                destination.damage = source.damage;
+                destination.damageScale = source.damageScale;
                 destination.value = -1;
                 for (j = 0; j < numBullets; ++j)
                 {

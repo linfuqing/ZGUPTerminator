@@ -423,6 +423,7 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
             AddComponent(entity, speed);
             
             AddComponent<AnimationCurveTime>(entity);
+            AddComponent<AnimationCurveDelta>(entity);
 
             var messages = AnimationCurveBakeUtility.ToAnimationCurveMessages(authoring._clip);
             if (messages != null)

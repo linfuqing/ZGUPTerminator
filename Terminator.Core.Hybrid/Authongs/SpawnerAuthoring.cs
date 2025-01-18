@@ -56,11 +56,15 @@ public class SpawnerAuthoring : MonoBehaviour
         public int expMax;
         public int gold;
         public int goldMax;
-        
+
+        public float damageScale;
+        public float damageScaleMax;
+
         public float speedScale;
         public float speedScaleMax;
         
         public float speedScaleBuff;
+        public float damageScaleBuff;
         public float hpBuff;
         public float levelBuff;
         public float expBuff;
@@ -151,6 +155,24 @@ public class SpawnerAuthoring : MonoBehaviour
         }
 
         [CSVField]
+        public float 刷怪伤害缩放
+        {
+            set
+            {
+                damageScale = value;
+            }
+        }
+
+        [CSVField]
+        public float 刷怪伤害缩放最大值
+        {
+            set
+            {
+                damageScaleMax = value;
+            }
+        }
+
+        [CSVField]
         public float 刷怪速度缩放
         {
             set
@@ -176,7 +198,16 @@ public class SpawnerAuthoring : MonoBehaviour
                 speedScaleBuff = value;
             }
         }
-        
+
+        [CSVField]
+        public float 刷怪伤害缩放每秒增益
+        {
+            set
+            {
+                damageScaleBuff = value;
+            }
+        }
+
         [CSVField]
         public float 刷怪血量每秒增益
         {
@@ -235,13 +266,21 @@ public class SpawnerAuthoring : MonoBehaviour
             
             public LayerMask layerMask;
         }
+
+        [Serializable]
+        public struct Prefab
+        {
+            public string name;
+            public GameObject gameObject;
+            public float chance;
+        }
         
         public string name;
 
         public Area[] areas;
         
         [Tooltip("怪的预制体")]
-        public GameObject prefab;
+        public Prefab[] prefabs;
         [Tooltip("开始时间")]
         public float startTime;
         [Tooltip("结束时间")]
@@ -325,7 +364,27 @@ public class SpawnerAuthoring : MonoBehaviour
         {
             set
             {
-                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(value);
+                var parameters = value.Split("/");
+                string parameter;
+                int numParameters = parameters.Length, index;
+
+                prefabs = new Prefab[numParameters];
+                for(int i = 0; i < numParameters; ++i)
+                {
+                    ref var prefab = ref prefabs[i];
+                    parameter = parameters[i];
+                    index = parameter.IndexOf(':');
+                    if (index == -1)
+                        prefab.chance = 1.0f;
+                    else
+                    {
+                        prefab.chance = float.Parse(parameter.Substring(index + 1));
+                        
+                        parameter = parameter.Remove(index);
+                    }
+
+                    prefab.gameObject = AssetDatabase.LoadAssetAtPath<GameObject>(parameter);
+                }
             }
         }
 
@@ -504,9 +563,12 @@ public class SpawnerAuthoring : MonoBehaviour
                     destination.expMax = source.expMax;
                     destination.gold = source.gold;
                     destination.goldMax = source.goldMax;
+                    destination.damageScale = source.damageScale;
+                    destination.damageScaleMax = source.damageScaleMax;
                     destination.speedScale = source.speedScale;
                     destination.speedScaleMax = source.speedScaleMax;
                     destination.speedScaleBuff = source.speedScaleBuff;
+                    destination.damageScaleBuff = source.damageScaleBuff;
                     destination.hpBuff = source.hpBuff;
                     destination.levelBuff = source.levelBuff;
                     destination.expBuff = source.expBuff;
@@ -520,10 +582,11 @@ public class SpawnerAuthoring : MonoBehaviour
                 
                 var prefabs = builder.Allocate(ref root.spawners, numSpawners);
                 BlobBuilderArray<SpawnerDefinition.AreaIndex> areaIndices;
+                BlobBuilderArray<SpawnerDefinition.LoaderIndex> loaderIndices;
                 var prefabEntities = new Dictionary<GameObject, int>();
                 RequestEntityPrefabLoaded requestEntityPrefabLoaded;
                 SpawnerPrefab prefab;
-                int prefabLoaderIndex, numAreaIndices, j, k;
+                int numPrefabLoaderIndices, numAreaIndices, j, k;
                 for (i = 0; i < numSpawners; ++i)
                 {
                     ref var destination = ref prefabs[i];
@@ -580,27 +643,34 @@ public class SpawnerAuthoring : MonoBehaviour
 
                         areaIndex.layerMask = area.layerMask.value;
                     }
-                    
-                    if(source.prefab == null)
-                        Debug.LogError($"Spawner {source.name} can not been found!");
 
-                    if (!prefabEntities.TryGetValue(source.prefab, out prefabLoaderIndex))
+                    numPrefabLoaderIndices = source.prefabs == null ? 0 : source.prefabs.Length;
+                    loaderIndices = builder.Allocate(ref destination.loaderIndices, numPrefabLoaderIndices);
+                    for (j = 0; j < numPrefabLoaderIndices; ++j)
                     {
-                        prefabLoaderIndex = prefabLoaders.Length;
-                        
-                        prefabEntities[source.prefab] = prefabLoaderIndex;
+                        ref var sourcePrefab = ref source.prefabs[j];
+                        ref var destinationLoaderIndex = ref loaderIndices[j];
+                        destinationLoaderIndex.chance = sourcePrefab.chance;
 
-                        prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
-                            source.prefab.name);
+                        if (!prefabEntities.TryGetValue(sourcePrefab.gameObject, out destinationLoaderIndex.value))
+                        {
+                            destinationLoaderIndex.value = prefabLoaders.Length;
 
-                        requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(source.prefab);
-                        AddComponent(prefab.loader, requestEntityPrefabLoaded);
+                            prefabEntities[sourcePrefab.gameObject] = destinationLoaderIndex.value;
 
-                        prefabLoaders.Add(prefab);
+                            prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
+                                sourcePrefab.gameObject.name);
+
+                            requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(sourcePrefab.gameObject);
+                            AddComponent(prefab.loader, requestEntityPrefabLoaded);
+
+                            prefabLoaders.Add(prefab);
+                        }
                     }
 
-                    destination.loaderIndex = prefabLoaderIndex;
-                    
+                    if (numPrefabLoaderIndices < 1)
+                        Debug.LogError($"Spawner {source.name} can not been found!");
+
                     destination.layerMask = source.layerMask.value;
                 }
 

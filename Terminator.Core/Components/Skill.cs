@@ -10,7 +10,7 @@ public struct SkillDefinition
     public struct Bullet
     {
         public int index;
-        public int damage;
+        public float damageScale;
         public float chance;
     }
     
@@ -187,7 +187,7 @@ public struct SkillDefinition
                     isSelected = true;
                     
                     bulletActiveIndex.value = bullet.index;
-                    bulletActiveIndex.damage = bullet.damage;
+                    bulletActiveIndex.damageScale = bullet.damageScale;
                     bulletActiveIndices.Add(bulletActiveIndex);
                 }
             }

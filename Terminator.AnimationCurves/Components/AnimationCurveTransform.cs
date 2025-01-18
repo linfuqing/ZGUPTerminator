@@ -188,10 +188,14 @@ public struct AnimationCurveTransform : IComponentData
 public struct AnimationCurveTime : IComponentData
 {
     public float value;
+}
+
+public struct AnimationCurveDelta : IComponentData
+{
     public double elapsed;
     public double start;
 
-    public float GetDelta(double time)
+    public float Update(double time)
     {
         if (elapsed > 0.0)
             return (float)(time - elapsed);

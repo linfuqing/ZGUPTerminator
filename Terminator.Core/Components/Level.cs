@@ -67,19 +67,19 @@ public struct LevelStageOption
                     using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                     {
                         SpawnerEntity spawnerEntity;
-                        SpawnerDefinitionData spawner;
+                        SpawnerDefinitionData spawnerDefinition;
                         int numKeys = spawnerEntities.Unique();
                         for (int i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
-                            if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawner))
+                            if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                                 continue;
 
-                            ref var definition = ref spawner.definition.Value;
-                            if(definition.spawners.Length <= spawnerEntity.index)
+                            ref var definition = ref spawnerDefinition.definition.Value;
+                            if(definition.spawners.Length <= spawnerEntity.spawnerIndex)
                                 continue;
 
-                            if ((definition.spawners[spawnerEntity.index].layerMask & value) == 0)
+                            if ((definition.spawners[spawnerEntity.spawnerIndex].layerMask & value) == 0)
                                 continue;
 
                             condition.value = 1;
@@ -100,23 +100,31 @@ public struct LevelStageOption
                     {
                         RequestEntityPrefabLoaded prefabReference;
                         SpawnerEntity spawnerEntity;
-                        SpawnerDefinitionData spawner;
+                        SpawnerDefinitionData spawnerDefinition;
                         DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
                         var prefab = prefabs[value];
                         int numKeys = spawnerEntities.Unique();
                         for(int i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
-                            if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawner))
+                            if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                                 continue;
 
-                            ref var definition = ref spawner.definition.Value;
-                            if(definition.spawners.Length <= spawnerEntity.index)
+                            ref var definition = ref spawnerDefinition.definition.Value;
+                            if(definition.spawners.Length <= spawnerEntity.spawnerIndex)
                                 continue;
+
+                            ref var spawner = ref definition.spawners[spawnerEntity.spawnerIndex];
+                            if(spawner.loaderIndices.Length <= spawnerEntity.loaderIndex)
+                                continue;
+
+                            ref var loaderIndex = ref spawner.loaderIndices[spawnerEntity.loaderIndex];
 
                             spawnerPrefabBuffer = spawnerPrefabs[spawnerEntity.spawner];
+                            if(spawnerPrefabBuffer.Length <= loaderIndex.value)
+                                continue;
 
-                            if (!prefabReferences.TryGetComponent(spawnerPrefabBuffer[definition.spawners[spawnerEntity.index].loaderIndex].loader,
+                            if (!prefabReferences.TryGetComponent(spawnerPrefabBuffer[loaderIndex.value].loader,
                                     out prefabReference) || prefabReference.Prefab != prefab.reference)
                                 continue;
 
@@ -189,10 +197,10 @@ public struct LevelStageOption
                             continue;
 
                         ref var definition = ref spawner.definition.Value;
-                        if(definition.spawners.Length <= spawnerEntity.index)
+                        if(definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
 
-                        if ((definition.spawners[spawnerEntity.index].layerMask & value) == 0)
+                        if ((definition.spawners[spawnerEntity.spawnerIndex].layerMask & value) == 0)
                             continue;
 
                         foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
@@ -206,23 +214,31 @@ public struct LevelStageOption
                 {
                     RequestEntityPrefabLoaded prefabReference;
                     SpawnerEntity spawnerEntity;
-                    SpawnerDefinitionData spawner;
+                    SpawnerDefinitionData spawnerDefinition;
                     DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
                     var prefab = prefabs[value];
                     int numKeys = spawnerEntities.Unique();
                     for(int i = 0; i < numKeys; ++i)
                     {
                         spawnerEntity = spawnerEntities[i];
-                        if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawner))
+                        if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                             continue;
 
-                        ref var definition = ref spawner.definition.Value;
-                        if(definition.spawners.Length <= spawnerEntity.index)
+                        ref var definition = ref spawnerDefinition.definition.Value;
+                        if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
+
+                        ref var spawner = ref definition.spawners[spawnerEntity.spawnerIndex];
+                        if (spawner.loaderIndices.Length <= spawnerEntity.loaderIndex)
+                            continue;
+
+                        ref var loaderIndex = ref spawner.loaderIndices[spawnerEntity.loaderIndex];
 
                         spawnerPrefabBuffer = spawnerPrefabs[spawnerEntity.spawner];
+                        if (spawnerPrefabBuffer.Length <= loaderIndex.value)
+                            continue;
 
-                        if (!prefabReferences.TryGetComponent(spawnerPrefabBuffer[definition.spawners[spawnerEntity.index].loaderIndex].loader,
+                        if (!prefabReferences.TryGetComponent(spawnerPrefabBuffer[loaderIndex.value].loader,
                                 out prefabReference) || prefabReference.Prefab != prefab.reference)
                             continue;
 

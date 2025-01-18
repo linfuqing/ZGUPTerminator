@@ -28,12 +28,12 @@ public class SkillAuthoring : MonoBehaviour
     public struct BulletData : IEquatable<BulletData>
     {
         public string name;
-        public int damage;
+        public float damageScale;
         public float chance;
 
         public bool Equals(BulletData other)
         {
-            return name == other.name && damage == other.damage && chance.Equals(other.chance);
+            return name == other.name && damageScale == other.damageScale && chance.Equals(other.chance);
         }
     }
     
@@ -121,7 +121,7 @@ public class SkillAuthoring : MonoBehaviour
                     if (index == -1)
                     {
                         bullet.name = parameter;
-                        bullet.damage = 0;
+                        bullet.damageScale = 0.0f;
                         bullet.chance = 1.0f;
                     }
                     else
@@ -131,12 +131,12 @@ public class SkillAuthoring : MonoBehaviour
                         count = parameter.IndexOf(':', index + 1);
                         if (count == -1)
                         {
-                            bullet.damage = int.Parse(parameter.Substring(index + 1));
+                            bullet.damageScale = float.Parse(parameter.Substring(index + 1));
                             bullet.chance = 1.0f;
                         }
                         else
                         {
-                            bullet.damage = int.Parse(parameter.Substring(index + 1, count - index - 1));
+                            bullet.damageScale = float.Parse(parameter.Substring(index + 1, count - index - 1));
                             bullet.chance = float.Parse(parameter.Substring(count + 1));
                         }
                     }
@@ -242,7 +242,7 @@ public class SkillAuthoring : MonoBehaviour
                             }
                             else
                             {
-                                destinationBullet.damage = sourceBullet.damage;
+                                destinationBullet.damageScale = sourceBullet.damageScale;
                                 destinationBullet.chance = sourceBullet.chance;
 
                                 bulletDataIndex = bulletList.Count;

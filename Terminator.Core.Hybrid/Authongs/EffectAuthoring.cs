@@ -30,6 +30,12 @@ public class EffectAuthoring : MonoBehaviour
     {
         public LayerMask layerMask;
 
+        [Tooltip("用来判断是否计算次数,配合messageLayerMask可以配出弹板不被黑球影响")]
+        public LayerMask entityLayerMask;
+
+        [Tooltip("命中后激活对应标签动画")]
+        public LayerMask messageLayerMask;
+
         [Tooltip("掉落伤害")]
         public int value;
         
@@ -61,9 +67,6 @@ public class EffectAuthoring : MonoBehaviour
     {
         public string name;
 
-        [Tooltip("对应DamageTarget.layerMask，激活目标对应受击动画")]
-        public LayerMask messageLayerMask;
-        
         [Tooltip("结算次数，结算时间不为零，按照时间结算（单位时间内，碰到的每个敌人之会结算一次伤害），否则每碰到一个敌人算一次次数，填0代表无限次结算")]
         public int count;
 
@@ -160,7 +163,6 @@ public class EffectAuthoring : MonoBehaviour
                             Debug.LogError($"Message {messageName} of effect {source.name} in {authoring} can not been found!");
                     }
 
-                    destination.messageLayerMask = source.messageLayerMask.value;
                     //destination.damage = source.damage;
                     //destination.dropToDamage = source.dropToDamage;
                     destination.count = source.count;
@@ -194,6 +196,8 @@ public class EffectAuthoring : MonoBehaviour
                     var source = damageDatas[i];
                     ref var destination = ref damages[i];
                     destination.layerMask = source.layerMask;
+                    destination.entityLayerMask = source.entityLayerMask.value;
+                    destination.messageLayerMask = source.messageLayerMask.value;
                     destination.value = source.value;
                     destination.valueToDrop = source.valueToDrop;
                     destination.spring = source.spring;

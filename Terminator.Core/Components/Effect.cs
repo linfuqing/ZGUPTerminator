@@ -12,12 +12,26 @@ public enum EffectAttributeID
     Damage
 }
 
+public struct EffectTargetInvulnerabilityDefinition
+{
+    public struct Invulnerability
+    {
+        public int count;
+        public int damage;
+        public float time;
+    }
+
+    public BlobArray<Invulnerability> invulnerabilities;
+}
+
 public struct EffectDefinition
 {
     public struct Damage
     {
         public int layerMask;
-        
+        public int entityLayerMask;
+        public int messageLayerMask;
+
         public int value;
 
         public int valueToDrop;
@@ -31,11 +45,7 @@ public struct EffectDefinition
     
     public struct Effect
     {
-        public int messageLayerMask;
-
         public int count;
-
-        //public float suction;
 
         public float time;
         
@@ -56,14 +66,14 @@ public struct EffectDefinitionData : IComponentData
 
 public struct EffectDamage : IComponentData
 {
-    public int scale;
+    public float scale;
 
-    public static int Compute(
+    public static float Compute(
         in Entity entity, 
         in ComponentLookup<Parent> parents,
         in ComponentLookup<EffectDamage> damages)
     {
-        int result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
+        float result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
         if (parents.TryGetComponent(entity, out var parent))
             result *= Compute(parent.Value, parents, damages);
 
@@ -103,6 +113,7 @@ public struct EffectTarget : IComponentData
 {
     public int times;
     public int hp;
+    public double invincibleTime;
 }
 
 public struct EffectTargetDamage : IComponentData, IEnableableComponent
@@ -144,6 +155,18 @@ public struct EffectTargetLevel : IComponentData
     public int value;
     public int exp;
     public int gold;
+}
+
+public struct EffectTargetInvulnerabilityDefinitionData : IComponentData
+{
+    public BlobAssetReference<EffectTargetInvulnerabilityDefinition> definition;
+}
+
+public struct EffectTargetInvulnerabilityStatus : IComponentData
+{
+    public int count;
+    public int index;
+    public int damage;
 }
 
 public struct EffectTargetMessage : IBufferElementData

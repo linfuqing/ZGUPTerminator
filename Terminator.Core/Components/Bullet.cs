@@ -483,9 +483,9 @@ public struct BulletDefinition
     public bool Update(
         BulletLocation location, 
         int layerMask, 
-        int damage, 
         int index,
         int version,
+        float damageScale,
         double time,
         in float3 up, 
         in quaternion cameraRotation, 
@@ -496,7 +496,7 @@ public struct BulletDefinition
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
-        in ComponentLookup<AnimationCurveTime> animationCurveTimes,
+        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in ComponentLookup<PrefabLoadResult> prefabLoadResults,
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletMessage> inputMessages,
@@ -689,8 +689,8 @@ public struct BulletDefinition
             var entity = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
 
             __Instantiate(
-                damage, 
-                index, 
+                index,
+                damageScale,
                 cooldown, 
                 transform.c3.xyz,
                 transformResult, 
@@ -700,8 +700,8 @@ public struct BulletDefinition
                 //cameraRotation, 
                 collisionWorld, 
                 //characterBodies, 
-                characterControls, 
-                animationCurveTimes, 
+                characterControls,
+                animationCurveDeltas, 
                 targetStatus, 
                 //status, 
                 ref data, 
@@ -729,8 +729,8 @@ public struct BulletDefinition
                     for(i = 0; i < count; ++i)
                     {
                         __Instantiate(
-                            damage,
                             index,
+                            damageScale,
                             cooldown,
                             transform.c3.xyz,
                             transformResult, 
@@ -741,7 +741,7 @@ public struct BulletDefinition
                             collisionWorld,
                             //characterBodies,
                             characterControls,
-                            animationCurveTimes,
+                            animationCurveDeltas,
                             targetStatus,
                             //status,
                             ref data,
@@ -782,7 +782,7 @@ public struct BulletDefinition
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
-        in ComponentLookup<AnimationCurveTime> animationCurveTimes,
+        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in ComponentLookup<PrefabLoadResult> prefabLoadResults,
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletActiveIndex> activeIndices, 
@@ -799,12 +799,12 @@ public struct BulletDefinition
         if (numStates < numBullets)
         {
             Entity temp = entity;
-            AnimationCurveTime animationCurveTime;
-            while(!animationCurveTimes.TryGetComponent(temp, out animationCurveTime) && parents.TryGetComponent(temp, out var parent))
+            AnimationCurveDelta animationCurveDelta;
+            while(!animationCurveDeltas.TryGetComponent(temp, out animationCurveDelta) && parents.TryGetComponent(temp, out var parent))
                 temp = parent.Value;
 
-            if (animationCurveTime.start > 0.0)
-                time = animationCurveTime.start;
+            if (animationCurveDelta.start > 0.0)
+                time = animationCurveDelta.start;
 
             states.Resize(numBullets, NativeArrayOptions.ClearMemory);
 
@@ -830,9 +830,9 @@ public struct BulletDefinition
             Update(
                 location, 
                 layerMask, 
-                (int)math.round(activeIndex.damage * damageScale), 
                 activeIndex.value, 
                 version.value,
+                activeIndex.damageScale * damageScale,
                 time,
                 up, 
                 cameraRotation, 
@@ -842,8 +842,8 @@ public struct BulletDefinition
                 collisionWorld,
                 physicsColliders,
                 characterBodies, 
-                characterControls, 
-                animationCurveTimes, 
+                characterControls,
+                animationCurveDeltas, 
                 prefabLoadResults,
                 prefabs, 
                 inputMessages,
@@ -913,8 +913,8 @@ public struct BulletDefinition
     }
 
     private static void __Instantiate(
-        int damage, 
-        int index, 
+        int index,
+        float damageScale,
         double time, 
         in float3 parentPosition,
         in RigidTransform transform, 
@@ -925,7 +925,7 @@ public struct BulletDefinition
         in CollisionWorld collisionWorld,
         //in ComponentLookup<KinematicCharacterBody> characterBodies,
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
-        in ComponentLookup<AnimationCurveTime> animationCurveTimes,
+        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in BulletTargetStatus targetStatus,
         //in BulletStatus status,
         ref Bullet data, 
@@ -1011,14 +1011,12 @@ public struct BulletDefinition
         entityManager.SetComponent(1, entity, localTransform);
 
 
-        if (animationCurveTimes.HasComponent(prefabRoot))
+        if (animationCurveDeltas.HasComponent(prefabRoot))
         {
-            AnimationCurveTime animationCurveTime;
-            //animationCurveTime.version = 0;
-            animationCurveTime.value = 0;
-            animationCurveTime.elapsed = time;
-            animationCurveTime.start = time;
-            entityManager.SetComponent(1, entity, animationCurveTime);
+            AnimationCurveDelta animationCurveDelta;
+            animationCurveDelta.elapsed = time;
+            animationCurveDelta.start = time;
+            entityManager.SetComponent(1, entity, animationCurveDelta);
         }
 
         if (data.animationCurveSpeed > math.FLT_MIN_NORMAL)
@@ -1047,10 +1045,10 @@ public struct BulletDefinition
             }
         }
 
-        if (damage != 0)
+        if (damageScale > math.FLT_MIN_NORMAL)
         {
             EffectDamage effectDamage;
-            effectDamage.scale = damage;
+            effectDamage.scale = damageScale;
             entityManager.AddComponent(1, entity, effectDamage);
         }
 
@@ -1105,7 +1103,7 @@ public struct BulletMessage : IBufferElementData
 public struct BulletActiveIndex : IBufferElementData
 {
     public int value;
-    public int damage;
+    public float damageScale;
 }
 
 public struct BulletVersion : IComponentData

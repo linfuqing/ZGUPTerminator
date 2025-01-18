@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public class LevelSkillStyle : SkillStyle
 {
+    public UnityEvent onGuide;
+
     public Button button;
 
     public LevelSkillStyle child;

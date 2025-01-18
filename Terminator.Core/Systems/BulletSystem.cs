@@ -46,7 +46,7 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<FollowTarget> followTargetMap;
 
         [ReadOnly]
-        public ComponentLookup<AnimationCurveTime> animationCurveTimes;
+        public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
         [ReadOnly]
         public ComponentLookup<BulletLayerMask> layerMaskMap;
@@ -189,8 +189,8 @@ public partial struct BulletSystem : ISystem
                 parents, 
                 physicsColliders,
                 characterBodyMap, 
-                characterControls, 
-                animationCurveTimes, 
+                characterControls,
+                animationCurveDeltas, 
                 prefabLoadResults,
                 prefabs[index],
                 activeIndices[index],
@@ -252,7 +252,7 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<FollowTarget> followTargets;
 
         [ReadOnly]
-        public ComponentLookup<AnimationCurveTime> animationCurveTimes;
+        public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
         [ReadOnly] 
         public ComponentLookup<BulletLayerMask> layerMasks;
@@ -316,7 +316,7 @@ public partial struct BulletSystem : ISystem
             collect.characterBodyMap = characterBodies;
             collect.characterControls = characterControls;
             collect.followTargetMap = followTargets;
-            collect.animationCurveTimes = animationCurveTimes;
+            collect.animationCurveDeltas = animationCurveDeltas;
             collect.layerMaskMap = layerMasks;
             collect.damageScaleMap = damageScales;
             collect.entityArray = chunk.GetNativeArray(entityType);
@@ -358,7 +358,7 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<FollowTarget> __followTargets;
 
-    private ComponentLookup<AnimationCurveTime> __animationCurveTimes;
+    private ComponentLookup<AnimationCurveDelta> __animationCurveDeltas;
 
     private ComponentLookup<BulletLayerMask> __layerMasks;
 
@@ -404,7 +404,7 @@ public partial struct BulletSystem : ISystem
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
         __followTargets = state.GetComponentLookup<FollowTarget>(true);
-        __animationCurveTimes = state.GetComponentLookup<AnimationCurveTime>(true);
+        __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
         __layerMasks = state.GetComponentLookup<BulletLayerMask>(true);
         __damageScales = state.GetComponentLookup<BulletDamageScale>(true);
         __entityType = state.GetEntityTypeHandle();
@@ -451,7 +451,7 @@ public partial struct BulletSystem : ISystem
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
         __followTargets.Update(ref state);
-        __animationCurveTimes.Update(ref state);
+        __animationCurveDeltas.Update(ref state);
         __layerMasks.Update(ref state);
         __damageScales.Update(ref state);
         __entityType.Update(ref state);
@@ -480,7 +480,7 @@ public partial struct BulletSystem : ISystem
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
         collect.followTargets = __followTargets;
-        collect.animationCurveTimes = __animationCurveTimes;
+        collect.animationCurveDeltas = __animationCurveDeltas;
         collect.layerMasks = __layerMasks;
         collect.damageScales = __damageScales;
         collect.entityType = __entityType;

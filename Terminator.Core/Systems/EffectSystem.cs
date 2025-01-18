@@ -91,7 +91,10 @@ public partial struct EffectSystem : ISystem
     private struct Clear
     {
         public double time;
-        
+
+        [ReadOnly]
+        public NativeArray<EffectDefinitionData> instances;
+
         [ReadOnly] 
         public BufferAccessor<SimulationEvent> simulationEvents;
 
@@ -106,7 +109,11 @@ public partial struct EffectSystem : ISystem
                 var status = states[index];
                 if (status.time < math.DBL_MIN_NORMAL)
                 {
-                    status.time = time;
+                    status.index = 0;
+
+                    status.count = 0;
+
+                    status.time = time + instances[index].definition.Value.effects[0].startTime;
 
                     states[index] = status;
                 }
@@ -148,7 +155,10 @@ public partial struct EffectSystem : ISystem
     private struct ClearEx : IJobChunk
     {
         public double time;
-        
+
+        [ReadOnly]
+        public ComponentTypeHandle<EffectDefinitionData> instanceType;
+
         [ReadOnly] 
         public BufferTypeHandle<SimulationEvent> simulationEventType;
 
@@ -161,6 +171,7 @@ public partial struct EffectSystem : ISystem
         {
             Clear clear;
             clear.time = time;
+            clear.instances = chunk.GetNativeArray(ref instanceType);
             clear.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
             clear.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
             clear.states = chunk.GetNativeArray(ref statusType);
@@ -285,9 +296,8 @@ public partial struct EffectSystem : ISystem
                     Entity messageReceiver;
                     LocalToWorld source = localToWorlds[entity], destination;
                     float3 forceResult, force;
-                    float delayDestroyTime, mass, lengthSQ;
-                    int damageScale = EffectDamage.Compute(entity, parents, damages),
-                        damageValue,
+                    float delayDestroyTime, mass, lengthSQ, damageScale = EffectDamage.Compute(entity, parents, damages);
+                    int damageValue,
                         layerMask,
                         belongsTo,
                         numMessageIndices,
@@ -333,7 +343,8 @@ public partial struct EffectSystem : ISystem
                         statusTarget.entity = simulationEvent.entity;
                         statusTargets.Add(statusTarget);
 
-                        ++entityCount;
+                        if(damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
+                            ++entityCount;
 
                         isResult = false;
 
@@ -357,14 +368,14 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageValue = damage.value * damageScale;
+                            damageValue = (int)math.ceil(damage.value * damageScale);
 
                             isResult = damageValue != 0;
 
                             ref var targetDamage = ref targetDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
                             if (isResult)
-                                targetDamage.Add(damageValue, effect.messageLayerMask);
+                                targetDamage.Add(damageValue, damage.messageLayerMask);
 
                             if (characterBody.IsValid)
                             {
@@ -372,13 +383,7 @@ public partial struct EffectSystem : ISystem
                                 {
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
-                                    Interlocked.Add(ref dropToDamage.value, damage.valueToDrop);
-
-                                    do
-                                    {
-                                        layerMask = dropToDamage.layerMask;
-                                    } while (Interlocked.CompareExchange(ref dropToDamage.layerMask,
-                                                 layerMask | effect.messageLayerMask, layerMask) != layerMask);
+                                    dropToDamage.Add((int)math.ceil(damage.valueToDrop * damageScale), damage.messageLayerMask);
 
                                     dropToDamage.isGrounded = characterBody.ValueRO.IsGrounded;
 
@@ -652,6 +657,8 @@ public partial struct EffectSystem : ISystem
 
     private struct Apply
     {
+        public double time;
+
         public quaternion inverseCameraRotation;
 
         public Random random;
@@ -679,9 +686,14 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public NativeArray<EffectTargetLevel> targetLevels;
-        
+
         [ReadOnly] 
         public NativeArray<EffectTargetDamageScale> targetDamageScales;
+
+        [ReadOnly]
+        public NativeArray<EffectTargetInvulnerabilityDefinitionData> targetInvulnerabilities;
+
+        public NativeArray<EffectTargetInvulnerabilityStatus> targetInvulnerabilityStates;
 
         public NativeArray<EffectTargetDamage> targetDamages;
 
@@ -697,9 +709,68 @@ public partial struct EffectSystem : ISystem
 
         public bool Execute(int index)
         {
-            var targetDamage = targetDamages[index];
             var target = targets[index];
-            target.hp += -(int)math.ceil(targetDamage.value * (index < targetDamageScales.Length ? targetDamageScales[index].value : 1.0f));
+            if (target.invincibleTime > time)
+                return false;
+
+            var targetDamage = targetDamages[index];
+            int damage = (int)math.ceil(targetDamage.value * (index < targetDamageScales.Length ? targetDamageScales[index].value : 1.0f));
+            if(damage > 0 && index < targetInvulnerabilityStates.Length)
+            {
+                var targetInvulnerabilityStatus = targetInvulnerabilityStates[index];
+                if (targetInvulnerabilityStatus.damage > damage)
+                    targetInvulnerabilityStatus.damage -= damage;
+                else
+                {
+                    bool isInvulnerability = targetInvulnerabilityStatus.damage > 0;
+                    if (isInvulnerability)
+                    {
+                        damage = targetInvulnerabilityStatus.damage;
+
+                        targetInvulnerabilityStatus.damage = 0;
+                        ++targetInvulnerabilityStatus.count;
+                    }
+
+                    if (index < targetInvulnerabilities.Length)
+                    {
+                        ref var definition = ref targetInvulnerabilities[index].definition.Value;
+                        while(definition.invulnerabilities.Length > targetInvulnerabilityStatus.index)
+                        {
+                            ref var invulnerablilitity = ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
+                            if (invulnerablilitity.count == 0 || invulnerablilitity.count >= targetInvulnerabilityStatus.count)
+                            {
+                                targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
+
+                                if (!isInvulnerability)
+                                {
+                                    if (targetInvulnerabilityStatus.damage > damage)
+                                        targetInvulnerabilityStatus.damage -= damage;
+                                    else
+                                    {
+                                        damage = targetInvulnerabilityStatus.damage;
+
+                                        targetInvulnerabilityStatus.damage = 0;
+
+                                        isInvulnerability = true;
+                                    }
+                                }
+
+                                if (isInvulnerability)
+                                    target.invincibleTime = time + invulnerablilitity.time;
+
+                                break;
+                            }
+
+                            targetInvulnerabilityStatus.count = 0;
+                            ++targetInvulnerabilityStatus.index;
+                        }
+                    }
+                }
+
+                targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
+            }
+
+            target.hp += -damage;
             if (target.hp <= 0)
             {
                 if (index < targetLevels.Length && this.levelStatus.IsValid)
@@ -741,63 +812,66 @@ public partial struct EffectSystem : ISystem
             targets[index] = target;
             
             bool result = false;
-            if (targetDamage.value != 0 && targetDamage.layerMask != 0 && index < targetMessages.Length)
+            if (targetDamage.value != 0 && targetDamage.layerMask != 0)
             {
-                float3 position = localToWorlds[index].Position;
-                Entity messageReceiver;
-                PrefabLoadResult prefabLoadResult;
-                Message message;
-                MessageParameter messageParameter;
-                var messageParameters = index < this.messageParameters.Length ? this.messageParameters[index] : default;
-                var messages = this.messages[index];
-                var targetMessages = this.targetMessages[index];
-                foreach (var targetMessage in targetMessages)
+                if (index < targetMessages.Length)
                 {
-                    if (targetMessage.layerMask == 0 || (targetMessage.layerMask & targetDamage.layerMask) != 0)
+                    float3 position = localToWorlds[index].Position;
+                    Entity messageReceiver;
+                    PrefabLoadResult prefabLoadResult;
+                    Message message;
+                    MessageParameter messageParameter;
+                    var messageParameters = index < this.messageParameters.Length ? this.messageParameters[index] : default;
+                    var messages = this.messages[index];
+                    var targetMessages = this.targetMessages[index];
+                    foreach (var targetMessage in targetMessages)
                     {
-                        message.key = random.NextInt();
-                        message.name = targetMessage.messageName;
-                        message.value = targetMessage.messageValue;
-                        
-                        //targetMessage.value.value.LoadAsync();
-                        if(prefabLoadResults.TryGetComponent(
-                               targetMessage.receiverPrefabLoader, out prefabLoadResult))
+                        if (targetMessage.layerMask == 0 || (targetMessage.layerMask & targetDamage.layerMask) != 0)
                         {
-                            messageReceiver = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
+                            message.key = random.NextInt();
+                            message.name = targetMessage.messageName;
+                            message.value = targetMessage.messageValue;
 
-                            if (!targetMessage.messageName.IsEmpty)
+                            //targetMessage.value.value.LoadAsync();
+                            if (prefabLoadResults.TryGetComponent(
+                                   targetMessage.receiverPrefabLoader, out prefabLoadResult))
                             {
-                                entityManager.SetBuffer<Message>(1, messageReceiver).Add(message);
-                                entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
+                                messageReceiver = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
 
-                                messageParameter.messageKey = message.key;
-                                messageParameter.value = -targetDamage.value;
-                                messageParameter.id = (int)EffectAttributeID.Damage;
-                                entityManager.SetBuffer<MessageParameter>(1, messageReceiver).Add(messageParameter);
+                                if (!targetMessage.messageName.IsEmpty)
+                                {
+                                    entityManager.SetBuffer<Message>(1, messageReceiver).Add(message);
+                                    entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
+
+                                    messageParameter.messageKey = message.key;
+                                    messageParameter.value = -targetDamage.value;
+                                    messageParameter.id = (int)EffectAttributeID.Damage;
+                                    entityManager.SetBuffer<MessageParameter>(1, messageReceiver).Add(messageParameter);
+                                }
+
+                                entityManager.SetComponent(1, messageReceiver,
+                                    LocalTransform.FromPositionRotation(position,
+                                        inverseCameraRotation));
                             }
-
-                            entityManager.SetComponent(1, messageReceiver,
-                                LocalTransform.FromPositionRotation(position,
-                                    inverseCameraRotation));
-                        }
-                        else if (index < this.messages.Length)
-                        {
-                            messages.Add(message);
-
-                            if (messageParameters.IsCreated)
+                            else if (index < this.messages.Length)
                             {
-                                messageParameter.messageKey = message.key;
-                                
-                                messageParameter.value = -targetDamage.value;
-                                messageParameter.id = (int)EffectAttributeID.Damage;
-                                messageParameters.Add(messageParameter);
-                                
-                                messageParameter.value = target.hp;
-                                messageParameter.id = (int)EffectAttributeID.HP;
-                                messageParameters.Add(messageParameter);
-                            }
+                                messages.Add(message);
 
-                            result = true;
+                                if (messageParameters.IsCreated)
+                                {
+                                    messageParameter.messageKey = message.key;
+
+                                    messageParameter.value = -targetDamage.value;
+                                    messageParameter.id = (int)EffectAttributeID.Damage;
+                                    messageParameters.Add(messageParameter);
+
+                                    messageParameter.value = target.hp;
+                                    messageParameter.id = (int)EffectAttributeID.HP;
+                                    messageParameters.Add(messageParameter);
+                                }
+
+                                result = true;
+                            }
                         }
                     }
                 }
@@ -845,6 +919,11 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public ComponentTypeHandle<EffectTargetDamageScale> targetDamageScaleType;
 
+        [ReadOnly]
+        public ComponentTypeHandle<EffectTargetInvulnerabilityDefinitionData> targetInvulnerabilityType;
+
+        public ComponentTypeHandle<EffectTargetInvulnerabilityStatus> targetInvulnerabilityStatusType;
+
         public ComponentTypeHandle<EffectTargetDamage> targetDamageType;
 
         public ComponentTypeHandle<EffectTarget> targetType;
@@ -862,6 +941,7 @@ public partial struct EffectSystem : ISystem
             ulong hash = math.asulong(time);
             
             Apply apply;
+            apply.time = time;
             apply.inverseCameraRotation = inverseCameraRotation;
             apply.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
@@ -873,6 +953,8 @@ public partial struct EffectSystem : ISystem
             apply.characterBodies = chunk.GetNativeArray(ref characterBodyType);
             apply.targetLevels = chunk.GetNativeArray(ref targetLevelType);
             apply.targetDamageScales = chunk.GetNativeArray(ref targetDamageScaleType);
+            apply.targetInvulnerabilities = chunk.GetNativeArray(ref targetInvulnerabilityType);
+            apply.targetInvulnerabilityStates = chunk.GetNativeArray(ref targetInvulnerabilityStatusType);
             apply.targetDamages = chunk.GetNativeArray(ref targetDamageType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.characterGravityFactors = chunk.GetNativeArray(ref characterGravityFactorType);
@@ -931,8 +1013,12 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<EffectTargetLevel> __targetLevelType;
 
+    private ComponentTypeHandle<EffectTargetInvulnerabilityDefinitionData> __targetInvulnerabilityType;
+
+    private ComponentTypeHandle<EffectTargetInvulnerabilityStatus> __targetInvulnerabilityStatusType;
+
     private ComponentTypeHandle<EffectTargetDamageScale> __targetDamageScaleType;
-    
+
     private ComponentTypeHandle<EffectTargetDamage> __targetDamageType;
 
     private ComponentTypeHandle<EffectTarget> __targetType;
@@ -980,6 +1066,8 @@ public partial struct EffectSystem : ISystem
         __statusTargetType = state.GetBufferTypeHandle<EffectStatusTarget>();
         __statusType = state.GetComponentTypeHandle<EffectStatus>();
         __targetLevelType = state.GetComponentTypeHandle<EffectTargetLevel>(true);
+        __targetInvulnerabilityType = state.GetComponentTypeHandle<EffectTargetInvulnerabilityDefinitionData>(true);
+        __targetInvulnerabilityStatusType = state.GetComponentTypeHandle<EffectTargetInvulnerabilityStatus>();
         __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
@@ -1038,6 +1126,7 @@ public partial struct EffectSystem : ISystem
         destroy.entityManager = entityManager;
         var jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, state.Dependency);
 
+        __instanceType.Update(ref state);
         __simulationEventType.Update(ref state);
         __statusTargetType.Update(ref state);
         __statusType.Update(ref state);
@@ -1046,6 +1135,7 @@ public partial struct EffectSystem : ISystem
 
         ClearEx clear;
         clear.time = time;
+        clear.instanceType = __instanceType;
         clear.simulationEventType = __simulationEventType;
         clear.statusTargetType = __statusTargetType;
         clear.statusType = __statusType;
@@ -1056,7 +1146,6 @@ public partial struct EffectSystem : ISystem
         __characterProperties.Update(ref state);
         __damages.Update(ref state);
         __prefabLoadResults.Update(ref state);
-        __instanceType.Update(ref state);
         __simulationCollisionType.Update(ref state);
         __outputMessageType.Update(ref state);
         __inputMessageType.Update(ref state);
@@ -1101,6 +1190,8 @@ public partial struct EffectSystem : ISystem
         __characterGravityFactorType.Update(ref state);
         __targetType.Update(ref state);
         __targetLevelType.Update(ref state);
+        __targetInvulnerabilityType.Update(ref state);
+        __targetInvulnerabilityStatusType.Update(ref state);
         __targetMessageType.Update(ref state);
         __targetDamageScaleType.Update(ref state);
         __targetDamageType.Update(ref state);
@@ -1118,6 +1209,8 @@ public partial struct EffectSystem : ISystem
         apply.targetLevelType = __targetLevelType;
         apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;
+        apply.targetInvulnerabilityType = __targetInvulnerabilityType;
+        apply.targetInvulnerabilityStatusType = __targetInvulnerabilityStatusType;
         apply.targetType = __targetType;
         apply.characterGravityFactorType = __characterGravityFactorType;
         apply.messageType = __outputMessageType;

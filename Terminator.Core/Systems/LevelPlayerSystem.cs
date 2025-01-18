@@ -34,6 +34,9 @@ public partial struct LevelPlayerSystem : ISystem
         public BufferLookup<SkillActiveIndex> skillActiveIndices;
 
         [NativeDisableParallelForRestriction]
+        public BufferLookup<MessageParameter> messageParameters;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTarget> effectTargets;
 
         [NativeDisableParallelForRestriction]
@@ -113,7 +116,25 @@ public partial struct LevelPlayerSystem : ISystem
 
             if (effectTargets.TryGetComponent(player, out var effectTarget))
             {
-                effectTarget.hp += (int)math.round(effectTarget.hp * effectTargetHPScale);
+                int hp = effectTarget.hp + (int)math.round(effectTarget.hp * effectTargetHPScale);
+                if (this.messageParameters.TryGetBuffer(player, out var messageParameters))
+                {
+                    int numMessageParameters = messageParameters.Length;
+                    for (int i = 0; i < numMessageParameters; ++i)
+                    {
+                        ref var messageParameter = ref messageParameters.ElementAt(i);
+                        switch((EffectAttributeID)messageParameter.id)
+                        {
+                            case EffectAttributeID.HPMax:
+                            case EffectAttributeID.HP:
+                                if(messageParameter.value == effectTarget.hp)
+                                    messageParameter.value = hp;
+                                break;
+                        }
+                    }
+                }
+
+                effectTarget.hp = hp;
 
                 effectTargets[player] = effectTarget;
             }
@@ -145,6 +166,8 @@ public partial struct LevelPlayerSystem : ISystem
 
     private BufferLookup<SkillActiveIndex> __skillActiveIndices;
 
+    private BufferLookup<MessageParameter> __messageParameters;
+
     private ComponentLookup<EffectTarget> __effectTargets;
 
     private ComponentLookup<EffectTargetDamageScale> __effectTargetDamageScales;
@@ -161,6 +184,7 @@ public partial struct LevelPlayerSystem : ISystem
         __levelSkillNameDefinitions = state.GetComponentLookup<LevelSkillNameDefinitionData>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
+        __messageParameters = state.GetBufferLookup<MessageParameter>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         __bulletDamageScales = state.GetComponentLookup<BulletDamageScale>();
@@ -195,6 +219,7 @@ public partial struct LevelPlayerSystem : ISystem
         __levelSkillNameDefinitions.Update(ref state);
         __levelSkillGroups.Update(ref state);
         __skillActiveIndices.Update(ref state);
+        __messageParameters.Update(ref state);
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
         __bulletDamageScales.Update(ref state);
@@ -211,6 +236,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
         apply.levelSkillGroups = __levelSkillGroups;
         apply.skillActiveIndices = __skillActiveIndices;
+        apply.messageParameters = __messageParameters;
         apply.effectTargets = __effectTargets;
         apply.effectTargetDamageScales = __effectTargetDamageScales;
         apply.bulletDamageScales = __bulletDamageScales;
