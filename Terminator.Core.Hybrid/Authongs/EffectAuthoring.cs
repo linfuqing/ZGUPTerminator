@@ -240,6 +240,9 @@ public class EffectAuthoring : MonoBehaviour
         for (i = 0; i < numEffects; ++i)
         {
             ref var effect = ref _effects[i];
+            if(effect.messageNames == null || effect.messageNames.Length < 1)
+                continue;
+            
             numDamages = effect.damages == null ? 0 : effect.damages.Length;
             if (numDamages > 0)
             {
