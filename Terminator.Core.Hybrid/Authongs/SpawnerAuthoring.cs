@@ -364,7 +364,7 @@ public class SpawnerAuthoring : MonoBehaviour
         {
             set
             {
-                var parameters = value.Split("/");
+                var parameters = value.Split("+");
                 string parameter;
                 int numParameters = parameters.Length, index;
 
