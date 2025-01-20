@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Entities.Serialization;
 using Unity.Scenes;
+using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -230,6 +231,10 @@ public class EffectAuthoring : MonoBehaviour
 
     private void OnValidate()
     {
+        var temp = PrefabUtility.GetCorrespondingObjectFromSource(this);
+        if (temp != null && temp != this)
+            return;
+        
         bool isDirty = false;
         int numEffects = _effects == null ? 0 : _effects.Length, numDamages, i, j;
         for (i = 0; i < numEffects; ++i)
@@ -242,10 +247,12 @@ public class EffectAuthoring : MonoBehaviour
                 {
                     ref var damage = ref effect.damages[j];
                     if (damage.messageNames == null || damage.messageNames.Length < 1)
+                    {
                         damage.messageNames = (string[])effect.messageNames.Clone();
+                        
+                        isDirty = true;
+                    }
                 }
-
-                isDirty = true;
             }
         }
         
