@@ -105,6 +105,9 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
             }
             
+            AddComponent<EffectTargetHP>(entity);
+            SetComponentEnabled<EffectTargetHP>(entity, false);
+            
             AddComponent<EffectTargetDamage>(entity);
             SetComponentEnabled<EffectTargetDamage>(entity, false);
 

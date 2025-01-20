@@ -191,8 +191,12 @@ public partial struct LocalTransformToParentSystem : ISystem
             }
             else
             {
+                float3 up = characterBodies[characterBodyEntity].GroundingUp;
                 var targetLocalTransform = localTransforms[characterBodyEntity];
-                targetLocalTransform.Position = localTransform.Position;
+                targetLocalTransform.Position =
+                    localTransform.Position - math.projectsafe(localTransform.Position,
+                        up) + 
+                    math.projectsafe(targetLocalTransform.Position, up);
                 localTransforms[characterBodyEntity] = targetLocalTransform;
             }
 
