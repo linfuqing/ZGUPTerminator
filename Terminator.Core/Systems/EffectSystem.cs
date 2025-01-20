@@ -447,10 +447,10 @@ public partial struct EffectSystem : ISystem
                         {
                             enabledFlags |= EnabledFlags.StatusTarget;
 
-                            numMessageIndices = effect.messageIndices.Length;
+                            numMessageIndices = damage.messageIndices.Length;
                             for (i = 0; i < numMessageIndices; ++i)
                             {
-                                inputMessage = inputMessages[effect.messageIndices[i]];
+                                inputMessage = inputMessages[damage.messageIndices[i]];
                                 outputMessage.key = random.NextInt();
                                 outputMessage.name = inputMessage.name;
                                 outputMessage.value = inputMessage.value;

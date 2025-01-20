@@ -51,6 +51,9 @@ public class EffectAuthoring : MonoBehaviour
         [Tooltip("增加的延迟销毁时间")]
         public float delayDestroyTime;
         
+        [Tooltip("消息名称，用来触发触碰动画")]
+        public string[] messageNames;
+
         public bool Equals(DamageData other)
         {
             return layerMask == other.layerMask &&
@@ -142,27 +145,6 @@ public class EffectAuthoring : MonoBehaviour
                     ref var source = ref authoring._effects[i];
                     ref var destination = ref effects[i];
 
-                    numMessageNames = source.messageNames == null ? 0 : source.messageNames.Length;
-                    messageIndices = builder.Allocate(ref destination.messageIndices, numMessageNames);
-                    for(j = 0; j < numMessageNames; ++j)
-                    {
-                        messageIndices[j] = -1;
-                        
-                        messageName = source.messageNames[j];
-                        for (k = 0; k < numMessages; ++k)
-                        {
-                            if (authoring._messages[k].name == messageName)
-                            {
-                                messageIndices[j] = k;
-                                
-                                break;
-                            }
-                        }
-                         
-                        if(messageIndices[j] == -1)
-                            Debug.LogError($"Message {messageName} of effect {source.name} in {authoring} can not been found!");
-                    }
-
                     //destination.damage = source.damage;
                     //destination.dropToDamage = source.dropToDamage;
                     destination.count = source.count;
@@ -203,6 +185,27 @@ public class EffectAuthoring : MonoBehaviour
                     destination.spring = source.spring;
                     destination.explosion = source.explosion;
                     destination.delayDestroyTime = source.delayDestroyTime;
+                    
+                    numMessageNames = source.messageNames == null ? 0 : source.messageNames.Length;
+                    messageIndices = builder.Allocate(ref destination.messageIndices, numMessageNames);
+                    for(j = 0; j < numMessageNames; ++j)
+                    {
+                        messageIndices[j] = -1;
+                        
+                        messageName = source.messageNames[j];
+                        for (k = 0; k < numMessages; ++k)
+                        {
+                            if (authoring._messages[k].name == messageName)
+                            {
+                                messageIndices[j] = k;
+                                
+                                break;
+                            }
+                        }
+                         
+                        if(messageIndices[j] == -1)
+                            Debug.LogError($"Message {messageName} of effect damage {i} in {authoring} can not been found!");
+                    }
                 }
                 
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);
@@ -225,30 +228,22 @@ public class EffectAuthoring : MonoBehaviour
     [UnityEngine.Serialization.FormerlySerializedAs("_damages")]
     internal EffectData[] _effects;
 
-    /*private void OnValidate()
+    private void OnValidate()
     {
         bool isDirty = false;
-        int numEffects = _effects == null ? 0 : _effects.Length;
-        for (int i = 0; i < numEffects; ++i)
+        int numEffects = _effects == null ? 0 : _effects.Length, numDamages, i, j;
+        for (i = 0; i < numEffects; ++i)
         {
             ref var effect = ref _effects[i];
-            if (effect.damages == null || effect.damages.Length < 1 || !effect.damages[0].Equals(new DamageData()
-                {
-                    layerMask = effect.damages[0].layerMask, 
-                    value = effect.damage,
-                    valueToDrop = effect.dropToDamage,
-                    spring = effect.spring,
-                    explosion = effect.explosion,
-                }))
+            numDamages = effect.damages == null ? 0 : effect.damages.Length;
+            if (numDamages > 0)
             {
-                effect.damages = new DamageData[1];
-
-                ref var damage = ref effect.damages[0];
-                damage.layerMask = 0;
-                damage.value = effect.damage;
-                damage.valueToDrop = effect.dropToDamage;
-                damage.spring = effect.spring;
-                damage.explosion = effect.explosion;
+                for (j = 0; j < numDamages; ++j)
+                {
+                    ref var damage = ref effect.damages[j];
+                    if (damage.messageNames == null || damage.messageNames.Length < 1)
+                        damage.messageNames = (string[])effect.messageNames.Clone();
+                }
 
                 isDirty = true;
             }
@@ -260,6 +255,6 @@ public class EffectAuthoring : MonoBehaviour
             UnityEditor.EditorUtility.SetDirty(this);
         }
         ;
-    }*/
+    }
 }
 #endif

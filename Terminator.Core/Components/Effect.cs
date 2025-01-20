@@ -42,6 +42,8 @@ public struct EffectDefinition
         public float explosion;
 
         public float delayDestroyTime;
+        
+        public BlobArray<int> messageIndices;
     }
     
     public struct Effect
@@ -52,7 +54,6 @@ public struct EffectDefinition
         
         public float startTime;
 
-        public BlobArray<int> messageIndices;
         public BlobArray<int> damageIndices;
     }
 
