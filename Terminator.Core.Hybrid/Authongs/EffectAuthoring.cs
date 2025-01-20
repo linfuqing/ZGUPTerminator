@@ -80,8 +80,8 @@ public class EffectAuthoring : MonoBehaviour
         [Tooltip("这组效果的开始时间，用来配合动画做受击延迟")]
         public float startTime;
 
-        [Tooltip("消息名称，用来触发触碰动画")]
-        public string[] messageNames;
+        //[Tooltip("消息名称，用来触发触碰动画")]
+        //public string[] messageNames;
 
         public DamageData[] damages;
     }
@@ -229,7 +229,7 @@ public class EffectAuthoring : MonoBehaviour
     [UnityEngine.Serialization.FormerlySerializedAs("_damages")]
     internal EffectData[] _effects;
 
-    private void OnValidate()
+    /*private void OnValidate()
     {
         var temp = PrefabUtility.GetCorrespondingObjectFromSource(this);
         if (temp != null && temp != this)
@@ -265,6 +265,6 @@ public class EffectAuthoring : MonoBehaviour
             UnityEditor.EditorUtility.SetDirty(this);
         }
         ;
-    }
+    }*/
 }
 #endif
