@@ -18,14 +18,18 @@ public class PickableAuthoring : MonoBehaviour
 
             Pickable pickable;
             pickable.speed = authoring._speed;
+            pickable.startTime = authoring._startTime;
             AddComponent(entity, pickable);
             
             AddComponent<PickableStatus>(entity);
-            SetComponentEnabled<PickableStatus>(entity, false);
+            //SetComponentEnabled<PickableStatus>(entity, false);
         }
     }
     
     [SerializeField] 
     internal float _speed;
+    
+    [SerializeField] 
+    internal float _startTime;
 }
 #endif
