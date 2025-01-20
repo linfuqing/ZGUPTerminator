@@ -718,16 +718,28 @@ public partial struct EffectSystem : ISystem
             if(damage > 0 && index < targetInvulnerabilityStates.Length)
             {
                 var targetInvulnerabilityStatus = targetInvulnerabilityStates[index];
-                if (targetInvulnerabilityStatus.damage > damage)
-                    targetInvulnerabilityStatus.damage -= damage;
+                if (targetInvulnerabilityStatus.damage > damage || targetInvulnerabilityStatus.times > 0)
+                {
+                    if (targetInvulnerabilityStatus.damage > damage)
+                        targetInvulnerabilityStatus.damage -= damage;
+                    else
+                        targetInvulnerabilityStatus.damage = 0;
+                    
+                    if (targetInvulnerabilityStatus.times > 0)
+                        --targetInvulnerabilityStatus.times;
+                }
                 else
                 {
-                    bool isInvulnerability = targetInvulnerabilityStatus.damage > 0;
+                    bool isInvulnerability = targetInvulnerabilityStatus.damage > 0 || targetInvulnerabilityStatus.times > 0;
                     if (isInvulnerability)
                     {
-                        damage = targetInvulnerabilityStatus.damage;
+                        if (targetInvulnerabilityStatus.damage > 0)
+                        {
+                            damage = targetInvulnerabilityStatus.damage;
 
-                        targetInvulnerabilityStatus.damage = 0;
+                            targetInvulnerabilityStatus.damage = 0;
+                        }
+
                         ++targetInvulnerabilityStatus.count;
                     }
 
@@ -740,18 +752,35 @@ public partial struct EffectSystem : ISystem
                             if (invulnerablilitity.count == 0 || invulnerablilitity.count >= targetInvulnerabilityStatus.count)
                             {
                                 targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
+                                targetInvulnerabilityStatus.times = invulnerablilitity.times;
 
                                 if (!isInvulnerability)
                                 {
-                                    if (targetInvulnerabilityStatus.damage > damage)
-                                        targetInvulnerabilityStatus.damage -= damage;
+                                    if (targetInvulnerabilityStatus.damage > damage ||
+                                        targetInvulnerabilityStatus.times > 0)
+                                    {
+                                        if (targetInvulnerabilityStatus.damage > damage)
+                                            targetInvulnerabilityStatus.damage -= damage;
+                                        else
+                                            targetInvulnerabilityStatus.damage = 0;
+                    
+                                        if (targetInvulnerabilityStatus.times > 0)
+                                            --targetInvulnerabilityStatus.times;
+                                    }
                                     else
                                     {
-                                        damage = targetInvulnerabilityStatus.damage;
+                                        if (targetInvulnerabilityStatus.damage > 0)
+                                        {
+                                            damage = targetInvulnerabilityStatus.damage;
 
-                                        targetInvulnerabilityStatus.damage = 0;
+                                            targetInvulnerabilityStatus.damage = 0;
+                                        }
 
+                                        ++targetInvulnerabilityStatus.count;
+                                        
                                         isInvulnerability = true;
+                                        
+                                        continue;
                                     }
                                 }
 

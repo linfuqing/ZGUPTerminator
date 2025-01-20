@@ -31,7 +31,10 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         [Tooltip("重复多少次，0为无限次")]
         public int count;
 
-        [Tooltip("受到多少伤害后无敌")]
+        [Tooltip("受到多少次伤害后无敌，填0不生效")]
+        public int times;
+        
+        [Tooltip("受到多少伤害后无敌，填0不生效")]
         public int damage;
 
         [Tooltip("每次进入无敌状态的持续时间")]
@@ -123,6 +126,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                         ref var destination = ref invulnerabilitys[i];
 
                         destination.count = source.count;
+                        destination.times = source.times;
                         destination.damage = source.damage;
                         destination.time = source.time;
                     }

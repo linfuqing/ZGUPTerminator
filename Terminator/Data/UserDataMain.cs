@@ -602,7 +602,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         {
             gameObject.AddComponent<UserData>();
 
-            UserData.level = int.MaxValue;
+            UserData.level = int.MaxValue - 1;
         }
 
         instance = this;

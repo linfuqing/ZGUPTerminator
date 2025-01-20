@@ -17,6 +17,7 @@ public struct EffectTargetInvulnerabilityDefinition
     public struct Invulnerability
     {
         public int count;
+        public int times;
         public int damage;
         public float time;
     }
@@ -166,6 +167,7 @@ public struct EffectTargetInvulnerabilityStatus : IComponentData
 {
     public int count;
     public int index;
+    public int times;
     public int damage;
 }
 
