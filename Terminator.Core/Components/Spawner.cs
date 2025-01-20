@@ -424,7 +424,7 @@ public struct SpawnerDefinition
             {
                 EffectDamage effectDamage;
                 effectDamage.scale = math.min(math.round(attribute.damageScale + attribute.damageScaleBuff * times), attribute.damageScaleMax);
-                entityManager.SetComponent(2, entity, effectDamage);
+                entityManager.AddComponent(1, entity, effectDamage);
             }
 
             if (attribute.hp != 0)
