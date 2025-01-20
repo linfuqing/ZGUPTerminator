@@ -133,7 +133,10 @@ public struct LevelSkillDefinition
                         }
                         
                         if(weight.activeIndex != -1 && 
-                           __GetSkillIndices(group.index, index).Length < 1)
+                           (__GetSkillIndices(group.index, index).Length < 1 || 
+                           groupsToFilter.IsCreated && 
+                           groupsToFilter.Length > 0 && 
+                           groupsToFilter.IndexOf(group.index) == -1))
                             continue;
                         
                         weight.value = 0.0f;
@@ -183,7 +186,10 @@ public struct LevelSkillDefinition
                     continue;
                 
                 if(weight.activeIndex != -1 && 
-                   __GetSkillIndices(i, index).Length < 1)
+                   (__GetSkillIndices(i, index).Length < 1 || 
+                    groupsToFilter.IsCreated && 
+                    groupsToFilter.Length > 0 && 
+                    groupsToFilter.IndexOf(i) == -1))
                     continue;
                 
                 weight.value = group.weight;
