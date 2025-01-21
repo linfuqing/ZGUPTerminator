@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.Systems;
 using Unity.Scenes;
 using Unity.Transforms;
 
@@ -17,7 +18,7 @@ public struct SpawnerSingleton : IComponentData
     public NativeParallelMultiHashMap<SpawnerEntity, Entity> entities;
 }
 
-[BurstCompile]
+[BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial struct SpawnerRecountSystem : ISystem
 {
     private struct Recount
@@ -135,7 +136,7 @@ public partial struct SpawnerRecountSystem : ISystem
     }
 }
 
-[BurstCompile, UpdateAfter(typeof(SpawnerRecountSystem))]
+[BurstCompile, UpdateInGroup(typeof(AfterPhysicsSystemGroup))]
 public partial struct SpawnerSystem : ISystem
 {
     private struct Counter : IComponentData

@@ -7,7 +7,7 @@ using Unity.Scenes;
 using Unity.Transforms;
 using Random = Unity.Mathematics.Random;
 
-[BurstCompile, UpdateBefore(typeof(SpawnerSystem)), UpdateAfter(typeof(SpawnerRecountSystem)), UpdateAfter(typeof(TransformSystemGroup))]
+[BurstCompile, /*UpdateBefore(typeof(SpawnerSystem)), UpdateAfter(typeof(SpawnerRecountSystem)), */UpdateAfter(typeof(TransformSystemGroup))]
 public partial struct LevelSystem : ISystem
 {
     private struct Update
