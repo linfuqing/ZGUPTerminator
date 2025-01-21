@@ -117,7 +117,7 @@ public struct SkillDefinition
                         status.time = time;
                         status.cooldown = time + (skill.duration + skill.cooldown * cooldownScale);
 
-                        if (skill.cooldown > math.FLT_MIN_NORMAL)
+                        if (status.cooldown > time)
                         {
                             for (j = 0; j < numBulletIndices; ++j)
                             {

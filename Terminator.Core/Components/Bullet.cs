@@ -572,23 +572,9 @@ public struct BulletDefinition
                 return false;
         }
 
-        if (!prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out var prefabLoadResult))
+        result = prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out var prefabLoadResult);
+        if (!result && data.capacity < 2 && data.times > 0 && data.times < 2)
             return false;
-
-        int numMessageIndices = data.messageIndices.Length;
-        if (numMessageIndices > 0)
-        {
-            Message outputMessage;
-            for (int i = 0; i < numMessageIndices; ++i)
-            {
-                var inputMessage = inputMessages[data.messageIndices[i]];
-
-                outputMessage.key = 0;//random.NextInt();
-                outputMessage.name = inputMessage.name;
-                outputMessage.value = inputMessage.value;
-                outputMessages.Add(outputMessage);
-            }
-        }
 
         /*double cooldown;
         if (status.count < 0)
@@ -652,6 +638,21 @@ public struct BulletDefinition
             return false;
         }
         
+        int numMessageIndices = data.messageIndices.Length;
+        if (numMessageIndices > 0)
+        {
+            Message outputMessage;
+            for (int i = 0; i < numMessageIndices; ++i)
+            {
+                var inputMessage = inputMessages[data.messageIndices[i]];
+
+                outputMessage.key = 0;//random.NextInt();
+                outputMessage.name = inputMessage.name;
+                outputMessage.value = inputMessage.value;
+                outputMessages.Add(outputMessage);
+            }
+        }
+
         RigidTransform transformResult;
         transformResult.pos = targetStatus.transform.pos;
 
