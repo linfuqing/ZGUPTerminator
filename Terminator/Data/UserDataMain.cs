@@ -60,10 +60,45 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
 
     [Serializable]
-    internal struct Tip
+    public struct Tip
     {
         public int max;
         public float uintTime;
+
+        public int value => GetValue(out _);
+
+        public int GetValue(int value, uint utcTime, out uint time)
+        {
+            var timeUnix = DateTime.UtcNow - Utc1970;
+
+            uint now = (uint)timeUnix.TotalSeconds;
+            
+            time = now;
+            if (uintTime > Mathf.Epsilon)
+            {
+                float tipFloat = (time - (utcTime > 0 ? utcTime : time)) / uintTime;
+                int tipInt =  Mathf.FloorToInt(tipFloat);
+                value += tipInt;
+
+                time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * uintTime);
+            }
+        
+            if (value >= max)
+            {
+                value = max;
+
+                time = now;
+            }
+
+            return value;
+        }
+
+        public int GetValue(out uint time)
+        {
+            return GetValue(PlayerPrefs.GetInt(NAME_SPACE_USER_TIP), 
+                (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME),
+                out time);
+        }
     }
 
     private const string NAME_SPACE_USER_TIP = "UserTip";
@@ -96,7 +131,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        var timeUnix = DateTime.UtcNow - Utc1970;
+        /*var timeUnix = DateTime.UtcNow - Utc1970;
         
         uint now = (uint)timeUnix.TotalSeconds, time = now;
         int tip = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
@@ -106,7 +141,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             int tipInt =  Mathf.FloorToInt(tipFloat);
             tip += tipInt;
 
-            time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * _energy.uintTime);
+            time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * _tip.uintTime);
         }
         
         if (tip >= _tip.max)
@@ -114,8 +149,9 @@ public sealed partial class UserDataMain : MonoBehaviour
             tip = _tip.max;
 
             time = now;
-        }
+        }*/
 
+        int tip = _tip.GetValue(out uint time);
         gold += tip;
 
         PlayerPrefs.SetInt(NAME_SPACE_USER_TIP, 0);

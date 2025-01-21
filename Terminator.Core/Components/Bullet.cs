@@ -549,7 +549,7 @@ public struct BulletDefinition
                     characterBodies);
         }
 
-        if (!result)
+        if (!result || !isLocation && data.capacity < 2 && data.times == 1)
         {
             status.times = 0;
             status.cooldown = 0.0f;
@@ -573,7 +573,7 @@ public struct BulletDefinition
         }
 
         result = prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out var prefabLoadResult);
-        if (!result && data.capacity < 2 && data.times > 0 && data.times < 2)
+        if (!result && data.capacity < 2 && data.times == 1)
             return false;
 
         /*double cooldown;
