@@ -12,7 +12,7 @@ public class SettingManager : MonoBehaviour
     }
 
     [SerializeField]
-    private ToggleSetting[] _toggleSettings;
+    internal ToggleSetting[] _toggleSettings;
 
     public const string NAME_SPACE = "SettingManager";
 
