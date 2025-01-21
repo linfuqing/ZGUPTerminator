@@ -14,6 +14,7 @@ public partial struct PickableSystem : ISystem
 {
     private struct Pick
     {
+        public float deltaTime;
         public double time;
         
         [ReadOnly]
@@ -38,14 +39,13 @@ public partial struct PickableSystem : ISystem
 
         public PickableStatus.Value Execute(int index)
         {
-            float deltaTime;
             var status = states[index];
             if (status.time > math.DBL_MIN_NORMAL)
             {
                 if (status.time > time)
                     return status.value;
 
-                deltaTime = (float)(time - status.time);
+                //deltaTime = (float)(time - status.time);
 
                 status.time = time;
             }
@@ -59,7 +59,7 @@ public partial struct PickableSystem : ISystem
                     return status.value;
                 }
 
-                deltaTime = 0.0f;
+                //deltaTime = 0.0f;
             }
             
             if (status.entity == Entity.Null)
@@ -127,6 +127,7 @@ public partial struct PickableSystem : ISystem
     [BurstCompile]
     private struct PickEx : IJobChunk
     {
+        public float deltaTime;
         public double time;
 
         [ReadOnly]
@@ -151,6 +152,7 @@ public partial struct PickableSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Pick pick;
+            pick.deltaTime = deltaTime;
             pick.time = time;
             pick.localTransforms = localTransforms;
             pick.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
@@ -228,6 +230,7 @@ public partial struct PickableSystem : ISystem
         __physicsVelocityType.Update(ref state);
 
         PickEx pick;
+        pick.deltaTime = SystemAPI.Time.DeltaTime;
         pick.time = SystemAPI.Time.ElapsedTime;
         pick.localTransforms = __localTransforms;
         pick.entityType = __entityType;
