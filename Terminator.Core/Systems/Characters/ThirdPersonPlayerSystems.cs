@@ -55,6 +55,7 @@ public partial struct ThirdPersonPlayerFixedStepControlSystem : ISystem
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
 
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
         
         public void Execute(ref ThirdPersonPlayerInputs playerInputs, ThirdPersonPlayer player)
