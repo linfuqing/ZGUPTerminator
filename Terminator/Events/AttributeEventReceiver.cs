@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using ZG;
 
 public class AttributeEventReceiver : MonoBehaviour
 {
@@ -12,6 +13,9 @@ public class AttributeEventReceiver : MonoBehaviour
     private int __instanceID;
 
     private int __hpMax;
+
+    public event Action<int> onHPMaxChanged;
+    public event Action<int> onHPChanged;
 
     public void Die()
     {
@@ -30,10 +34,16 @@ public class AttributeEventReceiver : MonoBehaviour
             __instanceID = transform.GetInstanceID();
 
         if (parameters.TryGet((int)EffectAttributeID.HPMax, out int hpMax))
+        {
+            onHPMaxChanged?.Invoke(hpMax);
+            
             __hpMax = hpMax;
+        }
 
         if (!parameters.TryGet((int)EffectAttributeID.HP, out int hp))
             hp = __hpMax;
+        
+        onHPChanged?.Invoke(hp);
         
         AttributeManager.instance.Set(
             _space, 

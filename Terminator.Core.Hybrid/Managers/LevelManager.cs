@@ -84,6 +84,8 @@ public partial class LevelManager : MonoBehaviour
         int gold, 
         int stage)
     {
+        IAnalytics.instance?.Set(value, max, maxExp, exp, count, gold, stage);
+        
         if (__stages != null)
         {
             foreach (var stageIndex in __stages)
@@ -177,6 +179,8 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Pause()
     {
+        IAnalytics.instance?.Pause();
+        
         if (_onGameTime != null)
         {
             var timeSpan = new TimeSpan((long)((Time.time - __startTime) * TimeSpan.TicksPerSecond));
@@ -187,6 +191,8 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Restart()
     {
+        IAnalytics.instance?.Restart();
+        
         isRestart = true;
 
         __startTime = Time.time;

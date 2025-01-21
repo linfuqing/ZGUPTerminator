@@ -69,6 +69,16 @@ public class PlayerController : MonoBehaviour
     {
         if (__attributeEventReceiver == null)
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
+
+        if (__attributeEventReceiver != null)
+        {
+            var analytics = IAnalyticsEx.instance as IAnalyticsEx;
+            if (analytics != null)
+            {
+                __attributeEventReceiver.onHPMaxChanged += analytics.SetPlayerHPMax;
+                __attributeEventReceiver.onHPChanged += analytics.SetPlayerHP;
+            }
+        }
     }
 
     protected void OnEnable()

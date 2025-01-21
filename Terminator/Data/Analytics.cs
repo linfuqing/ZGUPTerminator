@@ -10,7 +10,11 @@ public interface IAnalyticsEx : IAnalytics
 
     void StartLevel(string name);
 
-    void PlayerEnable();
+    void EnablePlayer();
     
-    void PlayerDisable();
+    void DisablePlayer();
+
+    void SetPlayerHPMax(int value);
+    
+    void SetPlayerHP(int value);
 }

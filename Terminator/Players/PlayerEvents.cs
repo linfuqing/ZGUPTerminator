@@ -30,9 +30,9 @@ public class PlayerEvents : MonoBehaviour
             if (analytics != null)
             {
                 if(value)
-                    analytics.PlayerEnable();
+                    analytics.EnablePlayer();
                 else
-                    analytics.PlayerDisable();
+                    analytics.DisablePlayer();
             }
             
             if (__instances != null)

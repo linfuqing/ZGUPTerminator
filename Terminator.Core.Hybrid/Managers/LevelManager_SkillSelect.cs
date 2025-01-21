@@ -92,6 +92,8 @@ public partial class LevelManager
 
     public void SelectSkillBegin(int selectionIndex)
     {
+        IAnalytics.instance?.SelectSkillBegin(selectionIndex);
+
         UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
         UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
 
@@ -119,6 +121,8 @@ public partial class LevelManager
 
     public void SelectSkillEnd()
     {
+        IAnalytics.instance?.SelectSkillEnd();
+        
         //UnityEngine.Assertions.Assert.AreNotEqual(-1, __skillSelectionIndex);
         __skillSelectionStatus |= SkillSelectionStatus.Finish;
 
@@ -130,6 +134,8 @@ public partial class LevelManager
 
     public void SelectSkills(int styleIndex, LevelSkillData[] skills)
     {
+        IAnalytics.instance?.SelectSkills(styleIndex, skills);
+        
         if(__selectedSkillIndices != null)
             __selectedSkillIndices.Clear();
 
