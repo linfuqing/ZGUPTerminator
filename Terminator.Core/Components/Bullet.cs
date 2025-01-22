@@ -577,8 +577,6 @@ public struct BulletDefinition
 
         PrefabLoadResult prefabLoadResult = default;
         result = result && prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out prefabLoadResult);
-        if (!result && data.capacity < 2 && data.times == 1)
-            return false;
 
         /*double cooldown;
         if (status.count < 0)
@@ -592,7 +590,7 @@ public struct BulletDefinition
 
         int statusCount = status.count, entityCount = 0;
 
-        if (data.capacity > 0)
+        if (data.capacity > 0 && (data.interval > math.FLT_MIN_NORMAL || data.cooldown > math.FLT_MIN_NORMAL))
         {
             //status.cooldown = cooldown;
 
@@ -627,7 +625,7 @@ public struct BulletDefinition
         }
         else
         {
-            if (status.count > 0)
+            if (!result || status.count > 0)
                 return false;
 
             status.count = 1;

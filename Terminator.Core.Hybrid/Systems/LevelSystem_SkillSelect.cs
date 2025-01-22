@@ -303,7 +303,7 @@ public partial class LevelSystemManaged
         int stage, 
         LevelManager manager)
     {
-        if (manager.isRestart)
+        if (manager.isRestart || !SystemAPI.Exists(player))
         {
             __skillSelection.Reset(this);
 
