@@ -114,8 +114,8 @@ public struct SkillDefinition
 
                     if (isSelected)
                     {
-                        status.time = time;
-                        status.cooldown = time + (skill.duration + skill.cooldown * cooldownScale);
+                        status.time = time + skill.duration;
+                        status.cooldown = status.time + skill.cooldown * cooldownScale;
 
                         if (status.cooldown > time)
                         {
@@ -125,7 +125,7 @@ public struct SkillDefinition
                                 if (bullet.index < bulletStates.Length)
                                 {
                                     ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                                    bulletStatus.cooldown = time + bulletDefinition.bullets[bullet.index].startTime;
+                                    bulletStatus.cooldown = status.time + bulletDefinition.bullets[bullet.index].startTime;
                                     bulletStatus.count = 0;
                                 }
                             }
