@@ -131,7 +131,7 @@ public partial class LevelSystemManaged : SystemBase
         CompleteDependency();
 
         var manager = LevelManager.instance;
-        if (manager == null || SystemAPI.TryGetSingleton<LevelStatus>(out var status))
+        if (manager == null || !SystemAPI.TryGetSingleton<LevelStatus>(out var status))
         {
             __DestroyEntities(__group);
             

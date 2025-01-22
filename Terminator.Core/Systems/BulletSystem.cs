@@ -98,6 +98,10 @@ public partial struct BulletEntitySystem : ISystem
 
         using (var results = new NativeList<Entity>(__group.CalculateEntityCount(), Allocator.TempJob))
         {
+            __instances.Update(ref state);
+            __bulletEntityType.Update(ref state);
+            __entityType.Update(ref state);
+            
             CollectEx collect;
             collect.instances = __instances;
             collect.bulletEntityType = __bulletEntityType;
