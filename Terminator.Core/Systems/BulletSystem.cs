@@ -9,6 +9,108 @@ using Unity.Physics.Systems;
 using Unity.Transforms;
 using Unity.Scenes;
 
+[BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
+public partial struct BulletEntitySystem : ISystem
+{
+    private struct Collect
+    {
+        [ReadOnly]
+        public ComponentLookup<BulletDefinitionData> instances;
+        
+        [ReadOnly]
+        public NativeArray<BulletEntity> bulletEntities;
+
+        [ReadOnly]
+        public NativeArray<Entity> entityArray;
+
+        public NativeList<Entity> results;
+
+        public void Execute(int index)
+        {
+            if (instances.HasComponent(bulletEntities[index].parent))
+                return;
+            
+            results.Add(entityArray[index]);
+        }
+    }
+
+    [BurstCompile]
+    private struct CollectEx : IJobChunk
+    {
+        [ReadOnly]
+        public ComponentLookup<BulletDefinitionData> instances;
+        
+        [ReadOnly]
+        public ComponentTypeHandle<BulletEntity> bulletEntityType;
+
+        [ReadOnly]
+        public EntityTypeHandle entityType;
+
+        public NativeList<Entity> results;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            Collect collect;
+            collect.instances = instances;
+            collect.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
+            collect.entityArray = chunk.GetNativeArray(entityType);
+            collect.results = results;
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+                collect.Execute(i);
+        }
+    }
+    
+    private uint __version;
+    
+    private ComponentLookup<BulletDefinitionData> __instances;
+        
+    private ComponentTypeHandle<BulletEntity> __bulletEntityType;
+
+    private EntityTypeHandle __entityType;
+
+    private EntityQuery __group;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __instances = state.GetComponentLookup<BulletDefinitionData>(true);
+        __bulletEntityType = state.GetComponentTypeHandle<BulletEntity>(true);
+        __entityType = state.GetEntityTypeHandle();
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __group = builder
+                .WithAll<BulletEntity>()
+                .Build(ref state);
+    }
+
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        var entityManager = state.EntityManager;
+        uint version = (uint)entityManager.GetComponentOrderVersion<BulletDefinitionData>();
+        if (!ChangeVersionUtility.DidChange(version, __version))
+            return;
+
+        __version = version;
+        
+        state.CompleteDependency();
+
+        using (var results = new NativeList<Entity>(__group.CalculateEntityCount(), Allocator.TempJob))
+        {
+            CollectEx collect;
+            collect.instances = __instances;
+            collect.bulletEntityType = __bulletEntityType;
+            collect.entityType = __entityType;
+            collect.results = results;
+            
+            collect.RunByRef(__group);
+            
+            entityManager.DestroyEntity(results.AsArray());
+        }
+    }
+}
+
 [BurstCompile, 
  UpdateInGroup(typeof(AfterPhysicsSystemGroup)), UpdateAfter(typeof(KinematicCharacterPhysicsUpdateGroup))]//, UpdateAfter(typeof(LookAtSystem))]
 public partial struct BulletSystem : ISystem

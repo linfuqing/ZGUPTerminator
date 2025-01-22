@@ -195,6 +195,8 @@ public partial class LevelSystemManaged
         public SkillSelectionStatus status;
         
         public SkillVersion version;
+
+        private int __stage;
     
         private ComponentTypeHandle<BulletEntity> __bulletEntityType;
 
@@ -208,6 +210,7 @@ public partial class LevelSystemManaged
         {
             status = SkillSelectionStatus.None;
             version = default;
+            __stage = 0;
             __bulletEntityType = system.GetComponentTypeHandle<BulletEntity>(true);
             __skills = system.GetComponentLookup<SkillDefinitionData>(true);
 
@@ -259,6 +262,18 @@ public partial class LevelSystemManaged
             __spriteRefCounts[sprite] = refCount;
         }
 
+        public bool SetStage(int value, LevelSystemManaged system)
+        {
+            if (value == __stage)
+                return false;
+            
+            system.__DestroyEntities(__bulletGroup);
+
+            __stage = value;
+
+            return true;
+        }
+
         public void UpdateBullets(in Entity parent, in NativeArray<int> skillIndices, LevelSystemManaged system)
         {
             __bulletEntityType.Update(system);
@@ -279,27 +294,18 @@ public partial class LevelSystemManaged
         in DynamicBuffer<LevelSkillDesc> descs, 
         in BlobAssetReference<SkillDefinition> definition, 
         in Entity player, 
+        int stage, 
         LevelManager manager)
     {
-        
         if (manager.isRestart)
         {
             __skillSelection.Reset(this);
 
-            if (SystemAPI.Exists(player))
-            {
-                if (SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
-                {
-                    var instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player);
-                    instanceID.isSendMessageOnDestroy = false;
-                    SystemAPI.SetComponent(player, instanceID);
-                }
-                
-                EntityManager.DestroyEntity(player);
-            }
-
             return;
         }
+
+        if (__skillSelection.SetStage(stage, this))
+            SystemAPI.GetBuffer<BulletStatus>(player).Clear();
         
         if (SystemAPI.TryGetSingletonEntity<LevelSkillVersion>(out Entity entity))
         {

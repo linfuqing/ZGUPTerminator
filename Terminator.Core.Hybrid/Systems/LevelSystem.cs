@@ -12,7 +12,7 @@ using Unity.Transforms;
 using Random = Unity.Mathematics.Random;
 using UnityEngine;
 
-[UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true)]
+[UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class LevelSystemManaged : SystemBase
 {
     private interface ICollectLinkedEntitiesWrapper
@@ -131,10 +131,10 @@ public partial class LevelSystemManaged : SystemBase
         CompleteDependency();
 
         var manager = LevelManager.instance;
-        if (manager == null || !SystemAPI.TryGetSingleton(out LevelStatus status))
+        if (manager == null || SystemAPI.TryGetSingleton<LevelStatus>(out var status))
         {
             __DestroyEntities(__group);
-
+            
             return;
         }
 
@@ -144,14 +144,33 @@ public partial class LevelSystemManaged : SystemBase
         {
             //manager.Pause();
             __DestroyEntities(__group);
-            
+
             status.count = 0;
-            if (!SystemAPI.Exists(player))
+            if (SystemAPI.Exists(player))
+            {
+                if (SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
+                {
+                    var instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player);
+                    instanceID.isSendMessageOnDestroy = false;
+                    SystemAPI.SetComponent(player, instanceID);
+                }
+                
+                EntityManager.DestroyEntity(player);
+            }
+            else
                 status.gold = 0;
 
+            status.stage = 0;
             SystemAPI.SetSingleton(status);
             
+            if(thirdPersonPlayerEntity != Entity.Null)
+                EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
+        }
+        else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))
+        {
             EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
+
+            return;
         }
 
         manager.Set(
@@ -179,6 +198,7 @@ public partial class LevelSystemManaged : SystemBase
             skillDescs, 
             skillDefinition, 
             player, 
+            status.stage, 
             manager);
 
 #if DEBUG

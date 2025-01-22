@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class SettingManager : MonoBehaviour
@@ -9,6 +10,9 @@ public class SettingManager : MonoBehaviour
     {
         public string name;
         public Toggle control;
+
+        public UnityEvent onEnable;
+        public UnityEvent onDisable;
     }
 
     [SerializeField]
@@ -18,17 +22,41 @@ public class SettingManager : MonoBehaviour
 
     void Awake()
     {
-        if (_toggleSettings != null)
+        bool isOn;
+        int numToggleSettings = _toggleSettings == null ? 0 : _toggleSettings.Length;
+        for(int i = 0; i < numToggleSettings; ++i)
         {
-            foreach (var toggleSetting in _toggleSettings)
+            var toggleSetting = _toggleSettings[i];
+            
+            string key = $"{NAME_SPACE}{toggleSetting.name}";
+            isOn = PlayerPrefs.GetInt(key) != 0;
+            if (isOn)
             {
-                string key = $"{NAME_SPACE}{toggleSetting.name}";
-                toggleSetting.control.isOn = PlayerPrefs.GetInt(key) != 0;
-                toggleSetting.control.onValueChanged.AddListener(x =>
-                {
-                    PlayerPrefs.SetInt(key, x ? 1 : 0);
-                });
+                if(toggleSetting.onEnable != null)
+                    toggleSetting.onEnable.Invoke();
             }
+            else if(toggleSetting.onDisable != null)
+                toggleSetting.onDisable.Invoke();
+            
+            toggleSetting.control.isOn = isOn;
+            toggleSetting.control.onValueChanged.AddListener(x =>
+            {
+                if (x)
+                {
+                    PlayerPrefs.SetInt(key, 1);
+                    
+                    if(toggleSetting.onEnable != null)
+                        toggleSetting.onEnable.Invoke();
+                }
+                else
+                {
+                    
+                    PlayerPrefs.SetInt(key, 0);
+                    
+                    if(toggleSetting.onDisable != null)
+                        toggleSetting.onDisable.Invoke();
+                }
+            });
         }
     }
 }
