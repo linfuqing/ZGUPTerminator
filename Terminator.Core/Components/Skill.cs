@@ -114,8 +114,8 @@ public struct SkillDefinition
 
                     if (isSelected)
                     {
-                        status.time = time + skill.duration;
-                        status.cooldown = status.time + skill.cooldown * cooldownScale;
+                        status.time = time + skill.cooldown * cooldownScale;
+                        status.cooldown = status.time + skill.duration;
 
                         if (status.cooldown > time)
                         {
