@@ -396,7 +396,7 @@ public partial class LevelSystemManaged
                     switch (desc.loadingStatus)
                     {
                         case LevelSkillDesc.LoadingStatus.None:
-                            __skillSelection.Retain(desc.sprite);
+                            __skillSelection.Retain(desc);
                             
                             isAllDone = false;
                             break;
