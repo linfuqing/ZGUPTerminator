@@ -5,7 +5,7 @@ using Unity.Entities.Content;
 using Unity.Jobs;
 using UnityEngine;
 
-[UpdateInGroup(typeof(InitializationSystemGroup))]
+[UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateBefore(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class MessageSystem : SystemBase
 {
     [BurstCompile]

@@ -8,8 +8,8 @@ using Unity.Scenes;
 using Unity.Transforms;
 
 [CreateAfter(typeof(CopyMatrixToTransformSystem)), 
- UpdateInGroup(typeof(InitializationSystemGroup)), 
- UpdateAfter(typeof(MessageSystem))]
+ UpdateInGroup(typeof(InitializationSystemGroup))/*, 
+ UpdateAfter(typeof(MessageSystem))*/]
 public partial class InstanceSystem : SystemBase
 {
     private struct Scene

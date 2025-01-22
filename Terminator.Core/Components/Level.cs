@@ -10,6 +10,13 @@ using Random = Unity.Mathematics.Random;
 [Serializable]
 public struct LevelStageOption
 {
+    private enum Status
+    {
+        None, 
+        Start, 
+        Finish
+    }
+    
     public enum Type
     {
         SpawnerLayerMaskInclude = 1,
@@ -63,13 +70,13 @@ public struct LevelStageOption
                 if (condition.version != spawnerSingleton.version)
                 {
                     condition.version = spawnerSingleton.version;
-                    condition.value = 0;
+                    //condition.value = 0;
                     using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                     {
                         SpawnerEntity spawnerEntity;
                         SpawnerDefinitionData spawnerDefinition;
-                        int numKeys = spawnerEntities.Unique();
-                        for (int i = 0; i < numKeys; ++i)
+                        int numKeys = spawnerEntities.Unique(), i;
+                        for (i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
                             if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
@@ -82,14 +89,17 @@ public struct LevelStageOption
                             if ((definition.spawners[spawnerEntity.spawnerIndex].layerMask & value) == 0)
                                 continue;
 
-                            condition.value = 1;
+                            condition.value = (int)Status.Start;
 
                             break;
                         }
+
+                        if ((Status)condition.value == Status.Start && i == numKeys)
+                            condition.value = (int)Status.Finish;
                     }
                 }
 
-                return value == 0;
+                return (Status)condition.value == Status.Finish;
             case Type.PrefabRemaining:
                 if (condition.version != spawnerSingleton.version)
                 {
@@ -103,8 +113,8 @@ public struct LevelStageOption
                         SpawnerDefinitionData spawnerDefinition;
                         DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
                         var prefab = prefabs[value];
-                        int numKeys = spawnerEntities.Unique();
-                        for(int i = 0; i < numKeys; ++i)
+                        int numKeys = spawnerEntities.Unique(), i;
+                        for(i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
                             if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
@@ -128,14 +138,17 @@ public struct LevelStageOption
                                     out prefabReference) || prefabReference.Prefab != prefab.reference)
                                 continue;
 
-                            condition.value = 1;
+                            condition.value = (int)Status.Start;
 
                             break;
                         }
+                        
+                        if ((Status)condition.value == Status.Start && i == numKeys)
+                            condition.value = (int)Status.Finish;
                     }
                 }
 
-                return condition.value == 0;
+                return (Status)condition.value == Status.Finish;
             case Type.PlayerArea:
                 return areas[value].Contains(playerPosition);
             case Type.Millisecond:
