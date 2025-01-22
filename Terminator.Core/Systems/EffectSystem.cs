@@ -197,6 +197,9 @@ public partial struct EffectSystem : ISystem
         public Random random;
 
         [ReadOnly] 
+        public ComponentLookup<FollowTargetParent> followTargetParents;
+        
+        [ReadOnly] 
         public ComponentLookup<Parent> parents;
 
         [ReadOnly] 
@@ -296,7 +299,11 @@ public partial struct EffectSystem : ISystem
                     Entity messageReceiver;
                     LocalToWorld source = localToWorlds[entity], destination;
                     float3 forceResult, force;
-                    float delayDestroyTime, mass, lengthSQ, damageScale = EffectDamage.Compute(entity, parents, damages);
+                    float delayDestroyTime, mass, lengthSQ, damageScale = EffectDamage.Compute(
+                        entity, 
+                        parents, 
+                        followTargetParents, 
+                        damages);
                     int damageValue,
                         layerMask,
                         belongsTo,
@@ -554,6 +561,9 @@ public partial struct EffectSystem : ISystem
         public quaternion inverseCameraRotation;
         
         [ReadOnly] 
+        public ComponentLookup<FollowTargetParent> followTargetParents;
+
+        [ReadOnly] 
         public ComponentLookup<Parent> parents;
 
         [ReadOnly] 
@@ -617,6 +627,7 @@ public partial struct EffectSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
+            collect.followTargetParents = followTargetParents;
             collect.parents = parents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
@@ -1032,6 +1043,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectDamage> __damages;
 
+    private ComponentLookup<FollowTargetParent> __followTargetParents;
+
     private ComponentLookup<Parent> __parents;
 
     private EntityTypeHandle __entityType;
@@ -1101,6 +1114,7 @@ public partial struct EffectSystem : ISystem
         __characterProperties = state.GetComponentLookup<KinematicCharacterProperties>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>();
         __damages = state.GetComponentLookup<EffectDamage>(true);
+        __followTargetParents = state.GetComponentLookup<FollowTargetParent>(true);
         __parents = state.GetComponentLookup<Parent>(true);
         __entityType = state.GetEntityTypeHandle();
         __childType = state.GetBufferTypeHandle<Child>(true);
@@ -1193,6 +1207,7 @@ public partial struct EffectSystem : ISystem
         clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
+        __followTargetParents.Update(ref state);
         __parents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
@@ -1214,6 +1229,7 @@ public partial struct EffectSystem : ISystem
         collect.deltaTime = SystemAPI.Time.DeltaTime;
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
+        collect.followTargetParents = __followTargetParents;
         collect.parents = __parents;
         collect.prefabLoadResults = __prefabLoadResults;
         collect.physicsColliders = __physicsColliders;

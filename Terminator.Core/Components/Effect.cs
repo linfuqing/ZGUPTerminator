@@ -73,11 +73,14 @@ public struct EffectDamage : IComponentData
     public static float Compute(
         in Entity entity, 
         in ComponentLookup<Parent> parents,
+        in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamage> damages)
     {
         float result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
         if (parents.TryGetComponent(entity, out var parent))
-            result *= Compute(parent.Value, parents, damages);
+            result *= Compute(parent.Value, parents, followTargetParents, damages);
+        else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
+            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);
 
         return result;
     }

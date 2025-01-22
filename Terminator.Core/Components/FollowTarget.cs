@@ -64,7 +64,6 @@ public struct FollowTargetDistance : IBufferElementData, IComparable<FollowTarge
     }
 }
 
-
 public struct FollowTargetParent : IComponentData
 {
     public Entity entity;

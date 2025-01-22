@@ -1055,6 +1055,10 @@ public struct BulletDefinition
             EffectDamage effectDamage;
             effectDamage.scale = damageScale;
             entityManager.AddComponent(1, entity, effectDamage);
+
+            BulletDamageScale bulletDamageScale;
+            bulletDamageScale.value = damageScale;
+            entityManager.AddComponent(1, entity, bulletDamageScale);
         }
 
     }

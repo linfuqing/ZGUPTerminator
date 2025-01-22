@@ -157,7 +157,7 @@ public partial struct LevelPlayerSystem : ISystem
             
             if (bulletDamageScales.TryGetComponent(player, out var bulletDamageScale))
             {
-                bulletDamageScale.value += bulletDamageScale.value * this.bulletDamageScale;
+                bulletDamageScale.value = 1.0f + this.bulletDamageScale;
 
                 bulletDamageScales[player] = bulletDamageScale;
             }
@@ -225,7 +225,9 @@ public partial struct LevelPlayerSystem : ISystem
             int count = entityArray.Length;
             players = new NativeArray<Entity>(count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             for(int i = 0; i < count; ++i)
-                players[i] = state.EntityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
+                players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
+
+            entityManager.AddComponent<BulletDamageScale>(players);
         }
         
         __levelSkillNameDefinitions.Update(ref state);
