@@ -222,6 +222,7 @@ public partial class LevelSystemManaged
                 bool result = false, isCompleted = true;
                 int temp, level;
                 LevelSkillDesc desc;
+                SkillAsset? asset;
                 foreach (var key in keys)
                 {
                     temp = __indices[key];
@@ -243,6 +244,7 @@ public partial class LevelSystemManaged
                                 continue;
                             }
 
+                            asset = desc.ToAsset(false);
                             break;
                         case LevelManager.SkillActiveImageType.Sprite:
                             if (ObjectLoadingStatus.Completed != desc.sprite.LoadingStatus)
@@ -252,6 +254,10 @@ public partial class LevelSystemManaged
                                 continue;
                             }
 
+                            asset = desc.ToAsset(true);
+                            break;
+                        default:
+                            asset = null;
                             break;
                     }
                     
@@ -259,7 +265,7 @@ public partial class LevelSystemManaged
                     {
                         __indices[key] = index;
 
-                        manager.SetActiveSkill(index, level, desc.ToAsset(false));
+                        manager.SetActiveSkill(index, level, asset);
                     }
 
                     result = true;
