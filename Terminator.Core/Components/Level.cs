@@ -104,8 +104,7 @@ public struct LevelStageOption
                 if (condition.version != spawnerSingleton.version)
                 {
                     condition.version = spawnerSingleton.version;
-                    condition.value = 0;
-
+                    //condition.value = 0;
                     using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                     {
                         RequestEntityPrefabLoaded prefabReference;
