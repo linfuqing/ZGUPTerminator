@@ -126,7 +126,7 @@ public partial class LevelManager
                 float value = cooldown > Mathf.Epsilon ? elapsedTime / cooldown : 1.0f;
                 foreach (var style in styles)
                 {
-                    if(style.cooldown == null)
+                    if(style == null || style.cooldown == null)
                         continue;
                 
                     style.cooldown.value = value;
