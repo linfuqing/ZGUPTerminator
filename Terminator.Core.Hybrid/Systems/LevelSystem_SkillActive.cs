@@ -46,10 +46,8 @@ public partial class LevelSystemManaged
                         __indices[key] = -1;
                 }
             }
-            
-            //__activeSkillIndexMap.Clear();
 
-            //WeakObjectReference<Sprite> icon;
+            LevelSkillDesc desc;
             SkillStatus status;
             int i, level, originIndex, index, numActiveIndices = activeIndices.Length;
             bool isComplete;
@@ -89,9 +87,10 @@ public partial class LevelSystemManaged
                 else
                 {
                     __indices[index] = -1;
-                    
-                    //icon = descs[index].icon;
-                    descs[index].icon.LoadAsync();
+
+                    desc = descs[index];
+                    desc.sprite.LoadAsync();
+                    desc.icon.LoadAsync();
                     isComplete = __Set(i, index, descs, ref definition, manager);
                     if (isComplete)
                         originIndex = __indices[index];
@@ -188,6 +187,7 @@ public partial class LevelSystemManaged
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
             {
+                LevelSkillDesc desc;
                 int temp, level;
                 foreach (var key in keys)
                 {
@@ -199,7 +199,9 @@ public partial class LevelSystemManaged
                     if(level == -1)
                         continue;
 
-                    descs[key].icon.Release();
+                    desc = descs[key];
+                    desc.sprite.Release();
+                    desc.icon.Release();
                     
                     __indices[key] = -1;
                     
@@ -231,13 +233,28 @@ public partial class LevelSystemManaged
                         continue;
 
                     desc = descs[key];
-                    if (ObjectLoadingStatus.Completed != desc.icon.LoadingStatus)
+                    switch (manager.GetImageType(level))
                     {
-                        isCompleted = false;
+                        case LevelManager.SkillActiveImageType.Icon:
+                            if (ObjectLoadingStatus.Completed != desc.icon.LoadingStatus)
+                            {
+                                isCompleted = false;
                         
-                        continue;
-                    }
+                                continue;
+                            }
 
+                            break;
+                        case LevelManager.SkillActiveImageType.Sprite:
+                            if (ObjectLoadingStatus.Completed != desc.sprite.LoadingStatus)
+                            {
+                                isCompleted = false;
+                        
+                                continue;
+                            }
+
+                            break;
+                    }
+                    
                     if (level == 0 || manager.HasActiveSkill(index, level - 1))
                     {
                         __indices[key] = index;

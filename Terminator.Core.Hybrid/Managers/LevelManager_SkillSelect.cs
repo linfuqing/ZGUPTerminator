@@ -45,7 +45,7 @@ public partial class LevelManager
     }
     
     [Serializable]
-    internal struct Skill
+    internal struct SkillSelectionData
     {
         public string name;
 
@@ -67,8 +67,8 @@ public partial class LevelManager
     [SerializeField] 
     internal SkillSelection[] _skillSelections;
 
-    [SerializeField] 
-    internal Skill[] _skills;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_skills")] 
+    internal SkillSelectionData[] _skillSelectionDatas;
 
     private SkillSelectionStatus __skillSelectionStatus;
 
@@ -148,7 +148,7 @@ public partial class LevelManager
             yield return null;
         
         int numSkills = skills.Length;
-        var destination = _skills[styleIndex];
+        var destination = _skillSelectionDatas[styleIndex];
         if (destination.style == null)
         {
             LevelSkillData skill;

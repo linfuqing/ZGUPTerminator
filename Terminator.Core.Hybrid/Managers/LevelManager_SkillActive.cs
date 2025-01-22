@@ -7,21 +7,28 @@ using ZG;
 
 public partial class LevelManager
 {
-    private struct ActiveSkill
+    public enum SkillActiveImageType
+    {
+        None, 
+        Icon, 
+        Sprite
+    }
+
+    private struct SkillActive
     {
         //private ActiveSkillStyle[] __styles;
         private List<ActiveSkillStyle[]> __styles;
 
-        public ActiveSkill(
+        public SkillActive(
             int siblingIndex, 
-            ActiveSkillStyle[] styles)
+            SkillActiveData[] instances)
         {
-            int numStyles = styles == null ? 0 : styles.Length;
+            int numStyles = instances == null ? 0 : instances.Length;
             ActiveSkillStyle style;
             var results = new ActiveSkillStyle[numStyles];
             for (int i = 0; i < numStyles; ++i)
             {
-                style = styles[i];
+                style = instances[i].style;
                 if(style == null)
                     continue;
 
@@ -79,11 +86,8 @@ public partial class LevelManager
                 for(int i = 0; i < numStyles; ++i)
                 {
                     style = styles[i];
-                    style = style.GetChild(level);
-                    if(style == null)
-                        continue;
-                    
-                    style = Instantiate(style, style.transform.parent);
+                    style = style == null ? null : style.GetChild(level);
+                    style = style == null ? null : Instantiate(style, style.transform.parent);
                     styles[i] = style;
                 }
                 
@@ -131,15 +135,35 @@ public partial class LevelManager
         }
     }
 
-    [SerializeField] 
-    internal ActiveSkillStyle[] _activeSkillStyles;
+    [Serializable]
+    internal struct SkillActiveData
+    {
+        public string name;
 
-    private Pool<ActiveSkill> __activeSkills;
+        public SkillActiveImageType imageType;
+        
+        public ActiveSkillStyle style;
+    }
+
+    //[SerializeField] 
+    //internal ActiveSkillStyle[] _activeSkillStyles;
+
+    [SerializeField] 
+    internal SkillActiveData[] _skillActiveDatas;
+
+    private Pool<SkillActive> __skillActives;
+
+    public SkillActiveImageType GetImageType(int level)
+    {
+        return _skillActiveDatas != null && _skillActiveDatas.Length > level
+            ? _skillActiveDatas[level].imageType
+            : SkillActiveImageType.None;
+    }
 
     public bool HasActiveSkill(int index, int level)
     {
-        return __activeSkills != null && 
-               __activeSkills.TryGetValue(index, out var activeSkill) &&
+        return __skillActives != null && 
+               __skillActives.TryGetValue(index, out var activeSkill) &&
                activeSkill.Contains(level);
     }
     
@@ -147,21 +171,21 @@ public partial class LevelManager
     {
         if (value == null)
         {
-            if (__activeSkills != null && __activeSkills.TryGetValue(index, out var origin) && origin.Dispose(level))
-                __activeSkills.RemoveAt(index);
+            if (__skillActives != null && __skillActives.TryGetValue(index, out var origin) && origin.Dispose(level))
+                __skillActives.RemoveAt(index);
         }
         else
         {
             IAnalytics.instance?.SetActiveSkill(value.Value.name);
             
-            if (__activeSkills == null)
-                __activeSkills = new Pool<ActiveSkill>();
+            if (__skillActives == null)
+                __skillActives = new Pool<SkillActive>();
             
-            if(!__activeSkills.TryGetValue(index, out var origin))
+            if(!__skillActives.TryGetValue(index, out var origin))
             {
-                origin = new ActiveSkill(index, _activeSkillStyles);
+                origin = new SkillActive(index, _skillActiveDatas);
                 
-                __activeSkills.Insert(index, origin);
+                __skillActives.Insert(index, origin);
             }
             
             origin.Reset(level, value.Value);
@@ -170,7 +194,7 @@ public partial class LevelManager
     
     public void SetActiveSkill(int index, int level, float cooldown, float elapsedTime)
     {
-        if (!__activeSkills.TryGetValue(index, out var value))
+        if (!__skillActives.TryGetValue(index, out var value))
             return;
         
         value.Set(level, cooldown, elapsedTime);
