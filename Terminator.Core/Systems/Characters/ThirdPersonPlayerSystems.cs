@@ -60,15 +60,21 @@ public partial struct ThirdPersonPlayerFixedStepControlSystem : ISystem
         
         public void Execute(ref ThirdPersonPlayerInputs playerInputs, [ReadOnly]in ThirdPersonPlayer player)
         {
-            var characterControl = characterControls[player.ControlledCharacter];
-            
-            float3 characterUp = MathUtilities.GetUpFromRotation(localTransforms[player.ControlledCharacter].Rotation);
-            
-            float3 cameraForwardOnUpPlane = math.normalizesafe(MathUtilities.ProjectOnPlane(MathUtilities.GetForwardFromRotation(cameraRotation), characterUp));
+            if (!characterControls.TryGetComponent(player.ControlledCharacter, out var characterControl))
+                return;
+
+            float3 characterUp = localTransforms.TryGetComponent(player.ControlledCharacter, out var localTransform)
+                ? MathUtilities.GetUpFromRotation(localTransform.Rotation)
+                : math.up();
+
+            float3 cameraForwardOnUpPlane =
+                math.normalizesafe(MathUtilities.ProjectOnPlane(MathUtilities.GetForwardFromRotation(cameraRotation),
+                    characterUp));
             float3 cameraRight = MathUtilities.GetRightFromRotation(cameraRotation);
  
             // Move
-            characterControl.MoveVector = (playerInputs.MoveInput.y * cameraForwardOnUpPlane) + (playerInputs.MoveInput.x * cameraRight);
+            characterControl.MoveVector = (playerInputs.MoveInput.y * cameraForwardOnUpPlane) +
+                                          (playerInputs.MoveInput.x * cameraRight);
             characterControl.MoveVector = MathUtilities.ClampToMaxLength(characterControl.MoveVector, 1f);
 
             // Jump
