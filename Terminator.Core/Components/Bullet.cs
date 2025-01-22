@@ -1123,3 +1123,8 @@ public struct BulletEntity : IComponentData
     public int index;
     public Entity parent;
 }
+
+public struct BulletEntityManaged: IComponentData
+{
+    
+}

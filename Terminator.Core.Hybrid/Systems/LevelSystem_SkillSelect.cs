@@ -40,6 +40,66 @@ public partial class LevelSystemManaged
         }
     }
 
+    private struct ClearBulletEntitiesUnmanaged
+    {
+        public double time;
+        
+        [ReadOnly]
+        public NativeArray<BulletEntity> bulletEntities;
+
+        [ReadOnly]
+        public ComponentLookup<BulletDefinitionData> bulletDefinitions;
+
+        public BufferLookup<BulletStatus> bulletStates;
+
+        public void Execute(int index)
+        {
+            var bulletEntity = this.bulletEntities[index];
+            if (!this.bulletStates.TryGetBuffer(bulletEntity.parent, out var bulletStates) || 
+                bulletStates.Length <= bulletEntity.index)
+                return;
+
+            float startTime = 0.0f;
+            if (bulletDefinitions.TryGetComponent(bulletEntity.parent, out var bulletDefinition))
+            {
+                ref var definition = ref bulletDefinition.definition.Value;
+                if(definition.bullets.Length > bulletEntity.index)
+                    startTime = definition.bullets[bulletEntity.index].startTime;
+            }
+
+            ref var bulletStatus = ref bulletStates.ElementAt(bulletEntity.index);
+            bulletStatus = default;
+            bulletStatus.cooldown = time + startTime;
+        }
+    }
+
+    [BurstCompile]
+    private struct ClearBulletEntitiesUnmanagedEx : IJobChunk
+    {
+        public double time;
+
+        [ReadOnly]
+        public ComponentTypeHandle<BulletEntity> bulletEntityType;
+
+        [ReadOnly]
+        public ComponentLookup<BulletDefinitionData> bulletDefinitions;
+
+        public BufferLookup<BulletStatus> bulletStates;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            ClearBulletEntitiesUnmanaged clearBulletEntitiesUnmanaged;
+            clearBulletEntitiesUnmanaged.time = time;
+            clearBulletEntitiesUnmanaged.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
+            clearBulletEntitiesUnmanaged.bulletDefinitions = bulletDefinitions;
+            clearBulletEntitiesUnmanaged.bulletStates = bulletStates;
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+                clearBulletEntitiesUnmanaged.Execute(i);
+        }
+    }
+    
     private struct CollectBulletEntities
     {
         public Entity parent;
@@ -149,7 +209,6 @@ public partial class LevelSystemManaged
         }
     }
 
-    
     private readonly struct CollectBulletEntitiesWrapper : ICollectLinkedEntitiesWrapper
     {
         public readonly Entity Parent;
@@ -200,9 +259,14 @@ public partial class LevelSystemManaged
     
         private ComponentTypeHandle<BulletEntity> __bulletEntityType;
 
+        private ComponentLookup<BulletDefinitionData> __bulletDefinitions;
+
         private ComponentLookup<SkillDefinitionData> __skills;
 
+        public BufferLookup<BulletStatus> __bulletStates;
+
         private EntityQuery __bulletGroup;
+        private EntityQuery __bulletGroupUnmanaged;
 
         private NativeHashMap<WeakObjectReference<Sprite>, int> __spriteRefCounts; 
 
@@ -212,13 +276,21 @@ public partial class LevelSystemManaged
             version = default;
             __stage = 0;
             __bulletEntityType = system.GetComponentTypeHandle<BulletEntity>(true);
+            __bulletDefinitions = system.GetComponentLookup<BulletDefinitionData>(true);
             __skills = system.GetComponentLookup<SkillDefinitionData>(true);
+            __bulletStates = system.GetBufferLookup<BulletStatus>();
 
             using (var builder = new EntityQueryBuilder(Allocator.Temp))
                 __bulletGroup = builder
                     .WithAll<BulletEntity>()
                     .Build(system);
 
+            using (var builder = new EntityQueryBuilder(Allocator.Temp))
+                __bulletGroupUnmanaged = builder
+                    .WithAll<BulletEntity>()
+                    .WithNone<BulletEntityManaged>()
+                    .Build(system);
+            
             //system.RequireForUpdate<LevelSkillVersion>();
             //system.RequireForUpdate<LevelSkillDesc>();
             //system.RequireForUpdate<ThirdPersonPlayer>();
@@ -268,16 +340,25 @@ public partial class LevelSystemManaged
             Retain(desc.icon);
         }
 
-        public bool SetStage(int value, LevelSystemManaged system)
+        public void SetStage(int value, LevelSystemManaged system)
         {
             if (value == __stage)
-                return false;
+                return;
             
-            system.__DestroyEntities(__bulletGroup);
-
             __stage = value;
+            
+            __bulletEntityType.Update(system);
+            __bulletDefinitions.Update(system);
+            __bulletStates.Update(system);
 
-            return true;
+            ClearBulletEntitiesUnmanagedEx clearBulletEntitiesUnmanaged;
+            clearBulletEntitiesUnmanaged.time = system.World.Time.ElapsedTime;
+            clearBulletEntitiesUnmanaged.bulletEntityType = __bulletEntityType;
+            clearBulletEntitiesUnmanaged.bulletDefinitions = __bulletDefinitions;
+            clearBulletEntitiesUnmanaged.bulletStates = __bulletStates;
+            clearBulletEntitiesUnmanaged.RunByRef(__bulletGroupUnmanaged);
+            
+            system.__DestroyEntities(__bulletGroupUnmanaged);
         }
 
         public void UpdateBullets(in Entity parent, in NativeArray<int> skillIndices, LevelSystemManaged system)
@@ -310,8 +391,7 @@ public partial class LevelSystemManaged
             return;
         }
 
-        if (__skillSelection.SetStage(stage, this))
-            SystemAPI.GetBuffer<BulletStatus>(player).Clear();
+        __skillSelection.SetStage(stage, this);
         
         if (SystemAPI.TryGetSingletonEntity<LevelSkillVersion>(out Entity entity))
         {

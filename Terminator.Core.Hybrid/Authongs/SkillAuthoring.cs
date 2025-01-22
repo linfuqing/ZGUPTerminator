@@ -17,10 +17,14 @@ public class SkillAuthoring : MonoBehaviour
         public string name;
         public string messageName;
         public Object messageValue;
+        public SkillMessageType type;
 
         public bool Equals(MessageData other)
         {
-            return name == other.name && messageName == other.messageName && messageValue.Equals(other.messageValue);
+            return type == other.type && 
+                   name == other.name && 
+                   messageName == other.messageName && 
+                   messageValue == other.messageValue;
         }
     }
     
@@ -345,6 +349,8 @@ public class SkillAuthoring : MonoBehaviour
             {
                 ref var source = ref authoring._messages[i];
                 ref var destination = ref messages.ElementAt(i);
+
+                destination.type = source.type;
                 destination.name = source.messageName;
                 if(source.messageValue == null)
                     destination.value = default;

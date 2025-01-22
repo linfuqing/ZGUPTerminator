@@ -5,6 +5,13 @@ using Unity.Mathematics;
 using Object = UnityEngine.Object;
 using Random = Unity.Mathematics.Random;
 
+
+public enum SkillMessageType
+{
+    Cooldown,
+    Running
+}
+
 public struct SkillDefinition
 {
     public struct Bullet
@@ -70,7 +77,37 @@ public struct SkillDefinition
             numBulletIndices = skill.bulletIndices.Length;
             cooldown = status.cooldown - time;
             if (cooldown > math.DBL_MIN_NORMAL)
+            {
                 isCooldown = cooldown < skill.duration;
+                if (isCooldown == (SkillMessageType.Cooldown != status.messageType))
+                {
+                    status.messageType = isCooldown ? SkillMessageType.Running : SkillMessageType.Cooldown;
+                    
+                    if (messageOffset >= 0)
+                    {
+                        numMessageIndices = skill.messageIndices.Length;
+                        if (numMessageIndices > 0)
+                        {
+                            result = true;
+
+                            outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
+                            for (j = 0; j < numMessageIndices; ++j)
+                            {
+                                ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
+                                inputMessage = inputMessages[skill.messageIndices[j]];
+                                if(inputMessage.type != status.messageType)
+                                    continue;
+                                
+                                outputMessage.key = 0;
+                                outputMessage.name = inputMessage.name;
+                                outputMessage.value = inputMessage.value;
+                            }
+
+                            messageOffset += numMessageIndices;
+                        }
+                    }
+                }
+            }
             else
             {
                 isCooldown = status.cooldown > math.DBL_MIN_NORMAL;
@@ -127,27 +164,6 @@ public struct SkillDefinition
                                     ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
                                     bulletStatus.cooldown = status.time + bulletDefinition.bullets[bullet.index].startTime;
                                     bulletStatus.count = 0;
-                                }
-                            }
-
-                            if (messageOffset >= 0)
-                            {
-                                numMessageIndices = skill.messageIndices.Length;
-                                if (numMessageIndices > 0)
-                                {
-                                    result = true;
-
-                                    outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
-                                    for (j = 0; j < numMessageIndices; ++j)
-                                    {
-                                        ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
-                                        inputMessage = inputMessages[skill.messageIndices[j]];
-                                        outputMessage.key = 0;
-                                        outputMessage.name = inputMessage.name;
-                                        outputMessage.value = inputMessage.value;
-                                    }
-
-                                    messageOffset += numMessageIndices;
                                 }
                             }
                         }
@@ -211,6 +227,7 @@ public struct SkillCooldownScale : IComponentData
 
 public struct SkillMessage : IBufferElementData
 {
+    public SkillMessageType type;
     public FixedString128Bytes name;
     public WeakObjectReference<Object> value;
 }
@@ -222,6 +239,8 @@ public struct SkillActiveIndex : IBufferElementData
 
 public struct SkillStatus : IBufferElementData
 {
+    public SkillMessageType messageType;
+    
     public double time;
     public double cooldown;
 }
