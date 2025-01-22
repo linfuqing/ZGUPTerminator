@@ -35,6 +35,8 @@ public partial struct PickableSystem : ISystem
 
         public NativeArray<PhysicsVelocity> physicsVelocities;
         
+        public NativeArray<DelayDestroy> delayDestroys;
+
         public BufferAccessor<Message> messages;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
@@ -108,7 +110,17 @@ public partial struct PickableSystem : ISystem
                         messages[index].Add(message);
                     }
 
-                    entityManager.DestroyEntity(0, entityArray[index]);
+                    if (instance.pickedUpTime > math.FLT_MIN_NORMAL)
+                    {
+                        DelayDestroy delayDestroy;
+                        delayDestroy.time = instance.pickedUpTime;
+                        if (index < delayDestroys.Length)
+                            delayDestroys[index] = delayDestroy;
+                        else
+                            entityManager.AddComponent(0, entityArray[index], delayDestroy);
+                    }
+                    else
+                        entityManager.DestroyEntity(0, entityArray[index]);
 
                     //source.Position = destination.Position;
                     physicsVelocity.Linear = float3.zero;
@@ -159,6 +171,8 @@ public partial struct PickableSystem : ISystem
 
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
 
+        public ComponentTypeHandle<DelayDestroy> delayDestroyType;
+
         public BufferTypeHandle<Message> messageType;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
@@ -175,6 +189,7 @@ public partial struct PickableSystem : ISystem
             pick.states = chunk.GetNativeArray(ref statusType);
             pick.physicsGravityFactors = chunk.GetNativeArray(ref physicsGravityFactorType);
             pick.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
+            pick.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
             pick.messages = chunk.GetBufferAccessor(ref messageType);
             pick.entityManager = entityManager;
 
@@ -213,6 +228,8 @@ public partial struct PickableSystem : ISystem
 
     private ComponentTypeHandle<PhysicsVelocity> __physicsVelocityType;
 
+    private ComponentTypeHandle<DelayDestroy> __delayDestroyType;
+
     private BufferTypeHandle<Message> __messageType;
 
     private EntityQuery __group;
@@ -227,6 +244,7 @@ public partial struct PickableSystem : ISystem
         __statusType = state.GetComponentTypeHandle<PickableStatus>();
         __physicsGravityFactorType = state.GetComponentTypeHandle<PhysicsGravityFactor>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
+        __delayDestroyType = state.GetComponentTypeHandle<DelayDestroy>();
         __messageType = state.GetBufferTypeHandle<Message>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -249,6 +267,7 @@ public partial struct PickableSystem : ISystem
         __statusType.Update(ref state);
         __physicsGravityFactorType.Update(ref state);
         __physicsVelocityType.Update(ref state);
+        __delayDestroyType.Update(ref state);
         __messageType.Update(ref state);
 
         PickEx pick;
@@ -261,6 +280,7 @@ public partial struct PickableSystem : ISystem
         pick.statusType = __statusType;
         pick.physicsGravityFactorType = __physicsGravityFactorType;
         pick.physicsVelocityType = __physicsVelocityType;
+        pick.delayDestroyType = __delayDestroyType;
         pick.messageType = __messageType;
         pick.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();

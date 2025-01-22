@@ -4,6 +4,7 @@ using Unity.Entities.Content;
 
 public struct Pickable : IComponentData, IEnableableComponent
 {
+    public float pickedUpTime;
     public float startTime;
     public float speed;
 

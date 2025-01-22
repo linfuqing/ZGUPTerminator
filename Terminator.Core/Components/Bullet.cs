@@ -575,7 +575,8 @@ public struct BulletDefinition
                 return false;
         }
 
-        result = prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out var prefabLoadResult);
+        PrefabLoadResult prefabLoadResult = default;
+        result = result && prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out prefabLoadResult);
         if (!result && data.capacity < 2 && data.times == 1)
             return false;
 

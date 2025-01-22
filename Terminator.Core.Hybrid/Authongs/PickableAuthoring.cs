@@ -18,8 +18,9 @@ public class PickableAuthoring : MonoBehaviour
             //AddComponent<SimulationEvent>(entity);
 
             Pickable pickable;
-            pickable.speed = authoring._speed;
+            pickable.pickedUpTime = authoring._pickedUpTime;
             pickable.startTime = authoring._startTime;
+            pickable.speed = authoring._speed;
             pickable.messageName = authoring._messageName;
             pickable.messageValue = authoring._messageValue == null ? default : new WeakObjectReference<Object>(authoring._messageValue);
             AddComponent(entity, pickable);
@@ -30,10 +31,13 @@ public class PickableAuthoring : MonoBehaviour
     }
     
     [SerializeField] 
-    internal float _speed;
+    internal float _pickedUpTime;
     
     [SerializeField] 
     internal float _startTime;
+    
+    [SerializeField] 
+    internal float _speed;
     
     [SerializeField] 
     internal string _messageName;
