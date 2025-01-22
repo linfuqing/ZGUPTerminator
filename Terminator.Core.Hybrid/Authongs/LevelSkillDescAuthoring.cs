@@ -187,6 +187,7 @@ public struct SkillAsset
     public string detail;
     
     public Sprite sprite;
+    public Sprite icon;
 
     public int level;
     public int rarity;
@@ -194,6 +195,13 @@ public struct SkillAsset
 
 public struct LevelSkillDesc : IBufferElementData
 {
+    public enum LoadingStatus
+    {
+        None,
+        Loading,
+        Completed,
+    }
+    
     public FixedString128Bytes name;
 
     public FixedString512Bytes detail;
@@ -208,12 +216,61 @@ public struct LevelSkillDesc : IBufferElementData
 
     //public FixedList32Bytes<int> preIndices;
 
-    public SkillAsset ToAsset(bool isSpriteOrIcon)
+    public LoadingStatus loadingStatus
+    {
+        get
+        {
+            switch (sprite.LoadingStatus)
+            {
+                case ObjectLoadingStatus.Queued:
+                case ObjectLoadingStatus.Loading:
+                    return LoadingStatus.Loading;
+                case ObjectLoadingStatus.Completed:
+                    break;
+                case ObjectLoadingStatus.Error:
+                    Debug.LogError($"Sprite {name} loaded failed!");
+                    break;
+                default:
+                    return LoadingStatus.None;
+            }
+
+            switch (icon.LoadingStatus)
+            {
+                case ObjectLoadingStatus.Queued:
+                case ObjectLoadingStatus.Loading:
+                    return LoadingStatus.Loading;
+                case ObjectLoadingStatus.Completed:
+                    break;
+                case ObjectLoadingStatus.Error:
+                    Debug.LogError($"Sprite {name} loaded failed!");
+                    break;
+                default:
+                    return LoadingStatus.None;
+            }
+
+            return LoadingStatus.Completed;
+        }
+    }
+    
+    public void Release()
+    {
+        sprite.Release();
+        icon.Release();
+    }
+
+    public void Retain()
+    {
+        sprite.LoadAsync();
+        icon.LoadAsync();
+    }
+
+    public SkillAsset ToAsset()
     {
         SkillAsset result;
         result.name = name.ToString();
         result.detail = detail.ToString();
-        result.sprite = isSpriteOrIcon ? sprite.Result : icon.Result;
+        result.sprite = sprite.Result;
+        result.icon = icon.Result;
         result.level = level;
         result.rarity = rarity;
 

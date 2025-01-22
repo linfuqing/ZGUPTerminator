@@ -248,7 +248,7 @@ public partial class LevelSystemManaged
             __spriteRefCounts.Clear();
         }
 
-        public void Retain(WeakObjectReference<Sprite> sprite)
+        public void Retain(in WeakObjectReference<Sprite> sprite)
         {
             if (__spriteRefCounts.TryGetValue(sprite, out int refCount))
                 ++refCount;
@@ -260,6 +260,12 @@ public partial class LevelSystemManaged
             }
 
             __spriteRefCounts[sprite] = refCount;
+        }
+
+        public void Retain(in LevelSkillDesc desc)
+        {
+            Retain(desc.sprite);
+            Retain(desc.icon);
         }
 
         public bool SetStage(int value, LevelSystemManaged system)
@@ -371,17 +377,14 @@ public partial class LevelSystemManaged
                     if (skill.originIndex != -1)
                     {
                         activeDesc = descs[skill.originIndex];
-                        switch (activeDesc.sprite.LoadingStatus)
+                        switch (activeDesc.loadingStatus)
                         {
-                            case ObjectLoadingStatus.None:
-                                __skillSelection.Retain(activeDesc.sprite);
+                            case LevelSkillDesc.LoadingStatus.None:
+                                __skillSelection.Retain(activeDesc);
                                 
                                 isAllDone = false;
                                 break;
-                            case ObjectLoadingStatus.Error:
-                                UnityEngine.Debug.LogError($"Sprite {activeDesc.name} loaded failed!");
-                                break;
-                            case ObjectLoadingStatus.Completed:
+                            case LevelSkillDesc.LoadingStatus.Completed:
                                 break;
                             default:
                                 isAllDone = false;
@@ -390,17 +393,14 @@ public partial class LevelSystemManaged
                     }
 
                     desc = descs[skill.index];
-                    switch (desc.sprite.LoadingStatus)
+                    switch (desc.loadingStatus)
                     {
-                        case ObjectLoadingStatus.None:
+                        case LevelSkillDesc.LoadingStatus.None:
                             __skillSelection.Retain(desc.sprite);
                             
                             isAllDone = false;
                             break;
-                        case ObjectLoadingStatus.Error:
-                            Debug.LogError($"Sprite {desc.name} loaded failed!");
-                            break;
-                        case ObjectLoadingStatus.Completed:
+                        case LevelSkillDesc.LoadingStatus.Completed:
                             break;
                         default:
                             isAllDone = false;
@@ -426,7 +426,7 @@ public partial class LevelSystemManaged
                             {
                                 activeDesc = descs[skill.originIndex];
                                 result.selectIndex = -1;
-                                result.value = activeDesc.ToAsset(true);
+                                result.value = activeDesc.ToAsset();
 
                                 results.Add(result);
 
@@ -438,7 +438,7 @@ public partial class LevelSystemManaged
 
                         desc = descs[skill.index];
                         result.selectIndex = i;
-                        result.value = desc.ToAsset(true);
+                        result.value = desc.ToAsset();
 
                         results.Add(result);
 

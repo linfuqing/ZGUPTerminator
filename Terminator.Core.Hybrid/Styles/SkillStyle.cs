@@ -5,7 +5,11 @@ public class SkillStyle : MonoBehaviour
     public StringEvent onName;
     public StringEvent onDetail;
 
-    public SpriteEvent onImage;
+    [UnityEngine.Serialization.FormerlySerializedAs("onImage")]
+    public SpriteEvent onSprite;
+    
+    [UnityEngine.Serialization.FormerlySerializedAs("onImage")]
+    public SpriteEvent onIcon;
     
     //public ZG.UI.Progressbar cooldown;
     
@@ -20,8 +24,11 @@ public class SkillStyle : MonoBehaviour
         if(onDetail != null)
             onDetail.Invoke(value.detail);
             
-        if(onImage != null)
-            onImage.Invoke(value.sprite);
+        if(onSprite != null)
+            onSprite.Invoke(value.sprite);
+
+        if(onIcon != null)
+            onIcon.Invoke(value.icon);
 
         __SetActive(levels, value.level);
         

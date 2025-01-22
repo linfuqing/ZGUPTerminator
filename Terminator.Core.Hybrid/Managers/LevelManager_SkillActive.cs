@@ -7,13 +7,6 @@ using ZG;
 
 public partial class LevelManager
 {
-    public enum SkillActiveImageType
-    {
-        None, 
-        Icon, 
-        Sprite
-    }
-
     private struct SkillActive
     {
         //private ActiveSkillStyle[] __styles;
@@ -140,8 +133,6 @@ public partial class LevelManager
     {
         public string name;
 
-        public SkillActiveImageType imageType;
-        
         public ActiveSkillStyle style;
     }
 
@@ -152,13 +143,6 @@ public partial class LevelManager
     internal SkillActiveData[] _skillActiveDatas;
 
     private Pool<SkillActive> __skillActives;
-
-    public SkillActiveImageType GetImageType(int level)
-    {
-        return _skillActiveDatas != null && _skillActiveDatas.Length > level
-            ? _skillActiveDatas[level].imageType
-            : SkillActiveImageType.None;
-    }
 
     public bool HasActiveSkill(int index, int level)
     {

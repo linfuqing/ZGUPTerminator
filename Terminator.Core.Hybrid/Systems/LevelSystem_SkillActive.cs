@@ -89,8 +89,7 @@ public partial class LevelSystemManaged
                     __indices[index] = -1;
 
                     desc = descs[index];
-                    desc.sprite.LoadAsync();
-                    desc.icon.LoadAsync();
+                    desc.Retain();
                     isComplete = __Set(i, index, descs, ref definition, manager);
                     if (isComplete)
                         originIndex = __indices[index];
@@ -187,7 +186,6 @@ public partial class LevelSystemManaged
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
             {
-                LevelSkillDesc desc;
                 int temp, level;
                 foreach (var key in keys)
                 {
@@ -199,9 +197,7 @@ public partial class LevelSystemManaged
                     if(level == -1)
                         continue;
 
-                    desc = descs[key];
-                    desc.sprite.Release();
-                    desc.icon.Release();
+                    descs[key].Release();
                     
                     __indices[key] = -1;
                     
@@ -222,7 +218,6 @@ public partial class LevelSystemManaged
                 bool result = false, isCompleted = true;
                 int temp, level;
                 LevelSkillDesc desc;
-                SkillAsset? asset;
                 foreach (var key in keys)
                 {
                     temp = __indices[key];
@@ -234,38 +229,18 @@ public partial class LevelSystemManaged
                         continue;
 
                     desc = descs[key];
-                    switch (manager.GetImageType(level))
+                    if (LevelSkillDesc.LoadingStatus.Completed != desc.loadingStatus)
                     {
-                        case LevelManager.SkillActiveImageType.Icon:
-                            if (ObjectLoadingStatus.Completed != desc.icon.LoadingStatus)
-                            {
-                                isCompleted = false;
+                        isCompleted = false;
                         
-                                continue;
-                            }
-
-                            asset = desc.ToAsset(false);
-                            break;
-                        case LevelManager.SkillActiveImageType.Sprite:
-                            if (ObjectLoadingStatus.Completed != desc.sprite.LoadingStatus)
-                            {
-                                isCompleted = false;
-                        
-                                continue;
-                            }
-
-                            asset = desc.ToAsset(true);
-                            break;
-                        default:
-                            asset = null;
-                            break;
+                        continue;
                     }
                     
                     if (level == 0 || manager.HasActiveSkill(index, level - 1))
                     {
                         __indices[key] = index;
 
-                        manager.SetActiveSkill(index, level, asset);
+                        manager.SetActiveSkill(index, level, desc.ToAsset());
                     }
 
                     result = true;
