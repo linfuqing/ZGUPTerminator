@@ -176,7 +176,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         string[] skills;
         if (string.IsNullOrEmpty(skillString))
         {
-            skillString = string.Join(SEPARATOR, _defaultSkills);
+            //skillString = string.Join(SEPARATOR, _defaultSkills);
 
             skills = _defaultSkills;
         }

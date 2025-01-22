@@ -166,12 +166,12 @@ public partial class LevelSystemManaged : SystemBase
             if(thirdPersonPlayerEntity != Entity.Null)
                 EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
         }
-        else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))
+        /*else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))
         {
             EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
 
             return;
-        }
+        }*/
 
         manager.Set(
             status.value, 

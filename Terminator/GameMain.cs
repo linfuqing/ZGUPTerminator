@@ -198,6 +198,7 @@ public class GameMain : GameUser
         else
         {
             yield return IUserData.instance.QueryUser(Shared.channelName, Shared.channelUser, __OnLevelApply);
+            //yield return IUserData.instance.QuerySkills(Shared.channelName, Shared.channelUser, __OnLevelApply);
             
             activation = new GameSceneActivation();
         }
