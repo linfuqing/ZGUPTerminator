@@ -70,7 +70,7 @@ public struct SkillDefinition
             numBulletIndices = skill.bulletIndices.Length;
             cooldown = status.cooldown - time;
             if (cooldown > math.DBL_MIN_NORMAL)
-                isCooldown = cooldown >= skill.cooldown;
+                isCooldown = cooldown < skill.duration;
             else
             {
                 isCooldown = status.cooldown > math.DBL_MIN_NORMAL;

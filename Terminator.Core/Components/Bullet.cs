@@ -511,8 +511,8 @@ public struct BulletDefinition
 
         ref var data = ref bullets[index];
 
-        bool result = data.layerMask == 0 || (data.layerMask & layerMask) != 0, 
-            isLocation = data.location == 0 || (data.location & location) != 0;
+        bool result = data.layerMask == 0 || (data.layerMask & layerMask) != 0 && 
+            data.location == 0 || (data.location & location) != 0;
         
         if (targetStates.Length <= data.targetIndex)
             targetStates.Resize(targets.Length, NativeArrayOptions.ClearMemory);
@@ -522,9 +522,8 @@ public struct BulletDefinition
         if (result)
         {
             ref var target = ref targets[data.targetIndex];
-            result = (isLocation || target.minDistance >= target.maxDistance) &&
+            result = //(isLocation || target.minDistance >= target.maxDistance) &&
                      target.Update(
-                         //(location & BulletLocation.Ground) == BulletLocation.Ground,
                          version,
                          time,
                          up,
@@ -549,18 +548,22 @@ public struct BulletDefinition
                     characterBodies);
         }
 
-        if (!result || !isLocation && data.capacity < 2 && data.times == 1)
+        /*if (!result || !isLocation && data.capacity < 2 && data.times == 1)
         {
             status.times = 0;
             status.cooldown = 0.0f;
 
             return false;
-        }
+        }*/
 
         if (data.times > 0 && data.times <= status.times)
         {
-            status.cooldown = 0.0f;
-            
+            if (!result)
+            {
+                status.times = 0;
+                status.cooldown = 0.0f;
+            }
+
             return false;
         }
 
@@ -631,7 +634,7 @@ public struct BulletDefinition
             entityCount = 1;
         }
 
-        if (!isLocation)
+        if (!result)
         {
             status.times = 0;
             
