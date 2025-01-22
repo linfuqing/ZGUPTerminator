@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Entities.Content;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -19,6 +20,8 @@ public class PickableAuthoring : MonoBehaviour
             Pickable pickable;
             pickable.speed = authoring._speed;
             pickable.startTime = authoring._startTime;
+            pickable.messageName = authoring._messageName;
+            pickable.messageValue = authoring._messageValue == null ? default : new WeakObjectReference<Object>(authoring._messageValue);
             AddComponent(entity, pickable);
             
             AddComponent<PickableStatus>(entity);
@@ -31,5 +34,11 @@ public class PickableAuthoring : MonoBehaviour
     
     [SerializeField] 
     internal float _startTime;
+    
+    [SerializeField] 
+    internal string _messageName;
+    
+    [SerializeField] 
+    internal Object _messageValue;
 }
 #endif

@@ -58,7 +58,7 @@ public partial struct ThirdPersonPlayerFixedStepControlSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
         
-        public void Execute(ref ThirdPersonPlayerInputs playerInputs, ThirdPersonPlayer player)
+        public void Execute(ref ThirdPersonPlayerInputs playerInputs, [ReadOnly]in ThirdPersonPlayer player)
         {
             var characterControl = characterControls[player.ControlledCharacter];
             
