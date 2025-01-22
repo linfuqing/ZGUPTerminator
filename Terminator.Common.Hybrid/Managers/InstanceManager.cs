@@ -286,11 +286,14 @@ public sealed class InstanceManager : MonoBehaviour
         if(gameObject == null)
             yield break;
 
-        if (isSendMessage && !string.IsNullOrEmpty(instance.destroyMessageName))
-            gameObject.BroadcastMessage(instance.destroyMessageName, instance.destroyMessageValue);
+        if (isSendMessage)
+        {
+            if (!string.IsNullOrEmpty(instance.destroyMessageName))
+                gameObject.BroadcastMessage(instance.destroyMessageName, instance.destroyMessageValue);
 
-        yield return new WaitForSeconds(instance.destroyTime);
-        
+            yield return new WaitForSeconds(instance.destroyTime);
+        }
+
         if (__gameObjects == null)
             __gameObjects = new Dictionary<GameObject, List<GameObject>>();
 

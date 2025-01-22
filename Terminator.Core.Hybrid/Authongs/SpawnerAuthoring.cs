@@ -681,6 +681,7 @@ public class SpawnerAuthoring : MonoBehaviour
             
             AddComponent(entity, instance);
             AddComponent<SpawnerStatus>(entity);
+            AddComponent<SpawnerEntityCount>(entity);
 
             SpawnerLayerMask layerMask;
             layerMask.value = authoring._layerMask.value;

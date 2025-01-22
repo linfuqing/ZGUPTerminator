@@ -289,9 +289,9 @@ public partial class UserData : MonoBehaviour, IUserData
     {
         yield return null;
 
-        onComplete(level > 0
-            ? IGameUserData.UserStatus.Ok
-            : IGameUserData.UserStatus.New);
+        onComplete(PlayerPrefs.GetInt(NAME_SPACE_USER_ID) == 0
+            ? IGameUserData.UserStatus.New
+            : IGameUserData.UserStatus.Ok);
     }
 
     public IEnumerator Check(
@@ -301,9 +301,9 @@ public partial class UserData : MonoBehaviour, IUserData
     {
         yield return null;
 
-        onComplete(level > 0
-            ? IGameUserData.UserStatus.Ok
-            : IGameUserData.UserStatus.New);
+        onComplete(PlayerPrefs.GetInt(NAME_SPACE_USER_ID) == 0
+            ? IGameUserData.UserStatus.New
+            : IGameUserData.UserStatus.Ok);
     }
 
     public IEnumerator Bind(

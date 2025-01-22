@@ -61,12 +61,29 @@ public partial struct SpawnerRecountSystem : ISystem
         }
     }
 
+    [BurstCompile]
+    private struct Clear : IJobChunk
+    {
+        public BufferTypeHandle<SpawnerEntityCount> entityCountType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            var entityCounts = chunk.GetBufferAccessor(ref entityCountType);
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+                entityCounts[i].Clear();
+        }
+    }
+
     private int __version;
     
     private EntityTypeHandle __entityType;
     private ComponentTypeHandle<SpawnerEntity> __spawnerEntityType;
+    private BufferTypeHandle<SpawnerEntityCount> __entityCountType;
 
-    private EntityQuery __group;
+    private EntityQuery __entityGroup;
+    private EntityQuery __counterGroup;
 
     private NativeArray<int> __instanceCount;
     private NativeParallelMultiHashMap<SpawnerEntity, Entity> __entities;
@@ -76,13 +93,17 @@ public partial struct SpawnerRecountSystem : ISystem
     {
         __entityType = state.GetEntityTypeHandle();
         __spawnerEntityType = state.GetComponentTypeHandle<SpawnerEntity>(true);
+        __entityCountType = state.GetBufferTypeHandle<SpawnerEntityCount>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __group = builder
+            __entityGroup = builder
                 .WithAll<SpawnerEntity>()
                 .Build(ref state);
         
-        //state.RequireForUpdate(__group);
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __counterGroup = builder
+                .WithAll<SpawnerEntityCount>()
+                .Build(ref state);
 
         __instanceCount = new NativeArray<int>(1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
         __entities = new NativeParallelMultiHashMap<SpawnerEntity, Entity>(1, Allocator.Persistent);
@@ -105,34 +126,41 @@ public partial struct SpawnerRecountSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        int version = __group.GetCombinedComponentOrderVersion(false);
-        if (version == __version)
-            return;
+        int version = __entityGroup.GetCombinedComponentOrderVersion(false);
+        if (version != __version)
+        {
+            int entityCount = __entityGroup.CalculateEntityCount();
 
-        int entityCount = __group.CalculateEntityCount();
+            __instanceCount[0] = entityCount;
 
-        __instanceCount[0] = entityCount;
+            __version = version;
+
+            __entities.Clear();
+            __entities.Capacity = math.max(__entities.Capacity, entityCount);
+
+            __entityType.Update(ref state);
+            __spawnerEntityType.Update(ref state);
+
+            RecountEx recount;
+            recount.entityType = __entityType;
+            recount.inputType = __spawnerEntityType;
+            recount.outputs = __entities.AsParallelWriter();
+            state.Dependency = recount.ScheduleByRef(__entityGroup, state.Dependency);
+
+            SpawnerSingleton spawnerSingleton;
+            spawnerSingleton.version = version;
+            spawnerSingleton.instanceCount = __instanceCount;
+            spawnerSingleton.entities = __entities;
+
+            SystemAPI.SetSingleton(spawnerSingleton);
+        }
+
+        __entityCountType.Update(ref state);
         
-        __version = version;
+        Clear clear;
+        clear.entityCountType = __entityCountType;
         
-        __entities.Clear();
-        __entities.Capacity = math.max(__entities.Capacity, entityCount);
-
-        __entityType.Update(ref state);
-        __spawnerEntityType.Update(ref state);
-
-        RecountEx recount;
-        recount.entityType = __entityType;
-        recount.inputType = __spawnerEntityType;
-        recount.outputs = __entities.AsParallelWriter();
-        state.Dependency = recount.ScheduleByRef(__group, state.Dependency);
-        
-        SpawnerSingleton spawnerSingleton;
-        spawnerSingleton.version = version;
-        spawnerSingleton.instanceCount = __instanceCount;
-        spawnerSingleton.entities = __entities;
-
-        SystemAPI.SetSingleton(spawnerSingleton);
+        state.Dependency = clear.ScheduleParallelByRef(__counterGroup, state.Dependency);
     }
 }
 
@@ -242,12 +270,14 @@ public partial struct SpawnerSystem : ISystem
         public BufferAccessor<SpawnerPrefab> prefabs;
 
         public BufferAccessor<SpawnerStatus> states;
+        public BufferAccessor<SpawnerEntityCount> entityCounts;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
         public void Execute(int index)
         {
             var states = this.states[index];
+            var entityCounts = this.entityCounts[index];
 
             int layerMask = layerMasks[index].Get(layerMaskOverrides[index], layerMaskIncludes[index], layerMaskExcludes[index]);
 
@@ -263,6 +293,7 @@ public partial struct SpawnerSystem : ISystem
                 entities, 
                 prefabs[index], 
                 ref states, 
+                ref entityCounts, 
                 ref entityManager, 
                 ref random, 
                 ref instanceCount.ValueRW.value);
@@ -312,6 +343,8 @@ public partial struct SpawnerSystem : ISystem
 
         public BufferTypeHandle<SpawnerStatus> statusType;
 
+        public BufferTypeHandle<SpawnerEntityCount> entityCountType;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -338,6 +371,7 @@ public partial struct SpawnerSystem : ISystem
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
+            collect.entityCounts = chunk.GetBufferAccessor(ref entityCountType);
             collect.entityManager = entityManager;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -366,6 +400,7 @@ public partial struct SpawnerSystem : ISystem
     private ComponentTypeHandle<SpawnerDefinitionData> __instanceType;
     private BufferTypeHandle<SpawnerPrefab> __prefabType;
     private BufferTypeHandle<SpawnerStatus> __statusType;
+    private BufferTypeHandle<SpawnerEntityCount> __entityCountType;
 
     private EntityQuery __groupToTrigger;
     private EntityQuery __groupToCollect;
@@ -386,6 +421,7 @@ public partial struct SpawnerSystem : ISystem
         __instanceType = state.GetComponentTypeHandle<SpawnerDefinitionData>(true);
         __prefabType = state.GetBufferTypeHandle<SpawnerPrefab>(true);
         __statusType = state.GetBufferTypeHandle<SpawnerStatus>();
+        __entityCountType = state.GetBufferTypeHandle<SpawnerEntityCount>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToTrigger = builder
@@ -442,6 +478,7 @@ public partial struct SpawnerSystem : ISystem
         __instanceType.Update(ref state);
         __prefabType.Update(ref state);
         __statusType.Update(ref state);
+        __entityCountType.Update(ref state);
 
         var spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         
@@ -462,6 +499,7 @@ public partial struct SpawnerSystem : ISystem
         collect.instanceType = __instanceType;
         collect.prefabType = __prefabType;
         collect.statusType = __statusType;
+        collect.entityCountType = __entityCountType;
         collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
 
         state.Dependency = collect.ScheduleParallelByRef(__groupToCollect, JobHandle.CombineDependencies(triggerJobHandle, jobHandle));

@@ -176,6 +176,7 @@ public struct SpawnerDefinition
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities,
         in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref DynamicBuffer<SpawnerStatus> states, 
+        ref DynamicBuffer<SpawnerEntityCount> entityCounts,
         ref EntityCommandBuffer.ParallelWriter entityManager,
         ref Random random, 
         ref int instanceCount)
@@ -198,6 +199,7 @@ public struct SpawnerDefinition
             }
         }*/
         states.Resize(numSpawners, NativeArrayOptions.ClearMemory);
+        entityCounts.Resize(numSpawners, NativeArrayOptions.ClearMemory);
 
         int i, j, numLoaderIndices;
         float randomValue;
@@ -243,6 +245,7 @@ public struct SpawnerDefinition
                 entities, 
                 ref spawner, 
                 ref states.ElementAt(i), 
+                ref entityCounts.ElementAt(i), 
                 ref entityManager, 
                 ref random, 
                 ref instanceCount);
@@ -260,6 +263,7 @@ public struct SpawnerDefinition
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities, 
         ref Spawner data, 
         ref SpawnerStatus status, 
+        ref SpawnerEntityCount count,
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref Random random, 
         ref int instanceCount)
@@ -277,7 +281,7 @@ public struct SpawnerDefinition
         if (status.startTime + data.startTime > time || data.endTime > math.FLT_MIN_NORMAL && status.startTime + data.endTime < time)
             return false;
         
-        int entityCount = entities.CountValuesForKey(spawnerEntity);
+        int entityCount = entities.CountValuesForKey(spawnerEntity) + count.value;
         /*if (status.cooldown > time && entityCount >= data.maxCountToNextTime)
             return false;*/
 
@@ -313,6 +317,8 @@ public struct SpawnerDefinition
                     System.Threading.Interlocked.Increment(ref instanceCount);
 
                     ++entityCount;
+                    
+                    ++count.value;
                     
                     result = true;
                 }
@@ -488,10 +494,15 @@ public struct SpawnerPrefab : IBufferElementData
     public Entity loader;
 }
 
+public struct SpawnerEntityCount : IBufferElementData
+{
+    public int value;
+}
+
 public struct SpawnerStatus : IBufferElementData
 {
-    public int times;
     public int count;
+    public int times;
     public double cooldown;
     public double startTime;
 }
