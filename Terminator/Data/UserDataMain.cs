@@ -589,12 +589,20 @@ public sealed partial class UserDataMain : MonoBehaviour
     
     private int __ToIndex(uint id) => (int)(id - 1);
     
+#if UNITY_EDITOR
+    [SerializeField]
+    internal bool _isDebugLevel = true;
+#endif
+    
     void Awake()
     {
         if (IUserData.instance == null)
         {
             gameObject.AddComponent<UserData>();
 
+#if UNITY_EDITOR
+            if(_isDebugLevel)
+#endif
             UserData.level = int.MaxValue - 1;
         }
 
