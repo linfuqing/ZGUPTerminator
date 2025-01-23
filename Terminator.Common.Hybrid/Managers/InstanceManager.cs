@@ -225,7 +225,7 @@ public sealed class InstanceManager : MonoBehaviour
         var entityManager = system.EntityManager;
         for (int i = 0; i < numEntities; ++i)
         {
-            if (entityManager.Exists(entities[i]))
+            if (entityManager.HasComponent<global::Instance>(entities[i]))
                 continue;
 
             __Destroy(results[i], prefab.gameObject);
