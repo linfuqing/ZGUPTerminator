@@ -247,6 +247,8 @@ public partial class MessageSystem : SystemBase
                     var transform = Resources.InstanceIDToObject(instanceID.value) as Transform;
                     if (transform != null)
                     {
+                        UnityEngine.Assertions.Assert.IsTrue(transform.gameObject.activeSelf);
+                        
                         do
                         {
                             messageValue = message.value.IsReferenceValid ? message.value.Result : null;

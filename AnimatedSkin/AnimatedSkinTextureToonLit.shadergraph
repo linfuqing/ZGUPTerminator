@@ -451,7 +451,7 @@
     "hlslDeclarationOverride": 0,
     "m_Hidden": false,
     "m_Value": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
+        "m_SerializedTexture": "",
         "m_Guid": ""
     },
     "isMainTexture": false,
@@ -1053,7 +1053,7 @@
     "m_StageCapability": 2,
     "m_BareResource": false,
     "m_Texture": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
+        "m_SerializedTexture": "",
         "m_Guid": ""
     },
     "m_DefaultType": 0
@@ -1187,7 +1187,7 @@
     "hlslDeclarationOverride": 0,
     "m_Hidden": false,
     "m_Value": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
+        "m_SerializedTexture": "",
         "m_Guid": ""
     },
     "isMainTexture": false,
@@ -1303,6 +1303,9 @@
             "m_Id": "f470157ed14548ebb9a1eafed5577e21"
         },
         {
+            "m_Id": "e8d9a458bcf14371ab330f6127c22bca"
+        },
+        {
             "m_Id": "8d5f8466d1bd41df8d1e808e8b4d91ea"
         }
     ],
@@ -1326,7 +1329,8 @@
         "95bc6800-5a0e-4b1f-bf0c-10e6d69b6056",
         "14d02e5f-f036-4077-b689-9bb9d2ec3033",
         "b4eb9d5e-27e3-48c7-b07f-56002ba35a0f",
-        "96f831eb-ae92-4192-b7bc-ccef22e6b807"
+        "96f831eb-ae92-4192-b7bc-ccef22e6b807",
+        "21dc2725-d1cf-4305-b0c5-eb5bac886cb0"
     ],
     "m_PropertyIds": [
         -1864295918,
@@ -1339,7 +1343,8 @@
         1859364199,
         -569591027,
         -215980506,
-        1058981356
+        1058981356,
+        -1990280202
     ],
     "m_Dropdowns": [],
     "m_DropdownSelectedEntries": []
@@ -1508,7 +1513,7 @@
     "hlslDeclarationOverride": 0,
     "m_Hidden": false,
     "m_Value": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
+        "m_SerializedTexture": "",
         "m_Guid": ""
     },
     "isMainTexture": false,
@@ -2054,7 +2059,7 @@
     "m_StageCapability": 3,
     "m_BareResource": false,
     "m_Texture": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
+        "m_SerializedTexture": "",
         "m_Guid": ""
     },
     "m_DefaultType": 0
@@ -2270,6 +2275,31 @@
         "x": 0.0,
         "y": 0.0,
         "z": 0.0
+    },
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector4MaterialSlot",
+    "m_ObjectId": "e8d9a458bcf14371ab330f6127c22bca",
+    "m_Id": -1990280202,
+    "m_DisplayName": "Emission",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "_Emission",
+    "m_StageCapability": 2,
+    "m_Value": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "w": 0.0
+    },
+    "m_DefaultValue": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "w": 0.0
     },
     "m_Labels": []
 }
