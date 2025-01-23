@@ -39,9 +39,7 @@ public partial class MessageSystem : SystemBase
                     switch (message.value.LoadingStatus)
                     {
                         case ObjectLoadingStatus.None:
-                            if (message.value.IsReferenceValid)
-                                message.value.LoadAsync();
-                            else
+                            if (message.value.GetHashCode() == 0)
                             {
                                 __Collect(entity, message, ref parameters);
 
@@ -49,6 +47,8 @@ public partial class MessageSystem : SystemBase
 
                                 --numMessages;
                             }
+                            else
+                                message.value.LoadAsync();
 
                             break;
                         case ObjectLoadingStatus.Completed:
