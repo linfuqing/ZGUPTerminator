@@ -23,3 +23,8 @@ public struct MessageParameter : IBufferElementData
     public int value;
     public int id;
 }
+
+public struct MessageParent : IComponentData
+{
+    public Entity entity;
+}

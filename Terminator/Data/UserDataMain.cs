@@ -160,42 +160,6 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(tip);
     }
 
-    private const char SEPARATOR = ',';
-    private const string NAME_SPACE_USER_SKILLS = "UserSkills";
-
-    [SerializeField]
-    internal string[] _defaultSkills;
-    
-    public IEnumerator QuerySkills(
-        uint userID,
-        Action<Memory<UserSkill>> onComplete)
-    {
-        yield return null;
-        
-        var skillString = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
-        string[] skills;
-        if (string.IsNullOrEmpty(skillString))
-        {
-            //skillString = string.Join(SEPARATOR, _defaultSkills);
-
-            skills = _defaultSkills;
-        }
-        else
-            skills = skillString.Split(SEPARATOR);
-
-        int numSkills = skills == null ? 0 : skills.Length;
-        UserSkill userSkill;
-        var userSkills = new UserSkill[numSkills];
-        for (int i = 0; i < numSkills; ++i)
-        {
-            userSkill.name = skills[i];
-
-            userSkills[i] = userSkill;
-        }
-
-        onComplete(userSkills);
-    }
-
     [Serializable]
     internal struct Weapon
     {
@@ -225,7 +189,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
 
         var weaponString = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS);
-        var weaponNames = string.IsNullOrEmpty(weaponString) ? null : weaponString.Split(SEPARATOR);
+        var weaponNames = string.IsNullOrEmpty(weaponString) ? null : weaponString.Split(UserData.SEPARATOR);
         int numWeaponNames = weaponNames == null ? 0 : weaponNames.Length,
             weaponSelectedID = PlayerPrefs.GetInt(NAME_SPACE_USER_WEAPON_SELECTED, -1),
             weaponIndex;
@@ -254,7 +218,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
 
         var weaponString = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS);
-        var weaponNames = string.IsNullOrEmpty(weaponString) ? null : weaponString.Split(SEPARATOR);
+        var weaponNames = string.IsNullOrEmpty(weaponString) ? null : weaponString.Split(UserData.SEPARATOR);
         if (weaponNames == null || weaponNames.IndexOf(_weapons[__ToIndex(weaponID)].name) == -1)
         {
             onComplete(false);
@@ -458,15 +422,8 @@ public sealed partial class UserDataMain : MonoBehaviour
                 UserData.level = ++userLevel;
 
                 rewardSkills = level.rewardSkills;
-
-                string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS),
-                    destination = string.Join(',', rewardSkills);
-                if (string.IsNullOrEmpty(source))
-                    source = destination;
-                else
-                    source = $"{source},{destination}";
-
-                PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
+                
+                UserData.RewardSkills(rewardSkills);
             }
         }
 
@@ -660,13 +617,6 @@ public partial class UserData
         Action<UserTip> onComplete)
     {
         return UserDataMain.instance.QueryTip(userID, onComplete);
-    }
-
-    public IEnumerator QuerySkills(
-        uint userID,
-        Action<Memory<UserSkill>> onComplete)
-    {
-        return UserDataMain.instance.QuerySkills(userID, onComplete);
     }
 
     public IEnumerator QueryWeapons(

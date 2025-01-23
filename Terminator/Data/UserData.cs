@@ -200,6 +200,8 @@ public partial class UserData : MonoBehaviour, IUserData
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
     private const string NAME_SPACE_USER_LEVEL = "UserLevel";
 
+    public const char SEPARATOR = ',';
+    
     public static uint id
     {
         get
@@ -243,6 +245,48 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
+    public UserSkill[] userSkills
+    {
+        get
+        {
+            
+            var skillString = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
+            string[] skills;
+            if (string.IsNullOrEmpty(skillString))
+            {
+                //skillString = string.Join(SEPARATOR, _defaultSkills);
+
+                skills = _defaultSkills;
+            }
+            else
+                skills = skillString.Split(SEPARATOR);
+
+            int numSkills = skills == null ? 0 : skills.Length;
+            UserSkill userSkill;
+            var userSkills = new UserSkill[numSkills];
+            for (int i = 0; i < numSkills; ++i)
+            {
+                userSkill.name = skills[i];
+
+                userSkills[i] = userSkill;
+            }
+
+            return userSkills;
+        }
+    }
+
+    public static void RewardSkills(string[] names)
+    {
+        string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS),
+            destination = string.Join(',', names);
+        if (string.IsNullOrEmpty(source))
+            source = destination;
+        else
+            source = $"{source},{destination}";
+
+        PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
+    }
+
     public IEnumerator QueryUser(
         string channelName,
         string channelUser,
@@ -260,6 +304,20 @@ public partial class UserData : MonoBehaviour, IUserData
         onComplete(id);
     }
     
+    private const string NAME_SPACE_USER_SKILLS = "UserSkills";
+
+    [SerializeField]
+    internal string[] _defaultSkills;
+    
+    public IEnumerator QuerySkills(
+        uint userID,
+        Action<Memory<UserSkill>> onComplete)
+    {
+        yield return null;
+        
+        onComplete(userSkills);
+    }
+
     public IEnumerator SubmitLevel(
         uint userID,
         int stage,

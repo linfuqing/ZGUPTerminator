@@ -55,6 +55,7 @@ public class GameMain : GameUser
     public static readonly string LocalCachePath = "LocalCachePath";
     public static readonly string RemoteUrlRoot = "RemoteUrlRoot";
 
+    private uint __id;
     private string __defaultSceneName;
 
     public IAssetBundleFactory factory
@@ -197,8 +198,8 @@ public class GameMain : GameUser
         }
         else
         {
-            yield return IUserData.instance.QueryUser(Shared.channelName, Shared.channelUser, __OnLevelApply);
-            //yield return IUserData.instance.QuerySkills(Shared.channelName, Shared.channelUser, __OnLevelApply);
+            yield return IUserData.instance.QueryUser(Shared.channelName, Shared.channelUser, __OnApplyLevel);
+            yield return IUserData.instance.QuerySkills(__id, __OnApplySkills);
             
             activation = new GameSceneActivation();
         }
@@ -212,9 +213,24 @@ public class GameMain : GameUser
             activation);
     }
 
-    private void __OnLevelApply(uint id)
+    private void __OnApplyLevel(uint id)
     {
+        __id = id;
         ILevelData.instance = new LevelData(id);
+    }
+
+    private void __OnApplySkills(Memory<UserSkill> skills)
+    {
+        ref var skillGroups = ref LevelPlayerShared.skillGroups;
+        skillGroups.Clear();
+
+        LevelPlayerSkillGroup skillGroup;
+        foreach (var skill in skills.Span)
+        {
+            skillGroup.name = skill.name;
+            skillGroups.Add(skillGroup);
+        }
+
     }
 
     private void __OnConfirmCancel()
