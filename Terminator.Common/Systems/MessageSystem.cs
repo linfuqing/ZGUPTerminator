@@ -213,8 +213,8 @@ public partial class MessageSystem : SystemBase
     protected override void OnUpdate()
     {
         __entitiesToDisable.Clear();
-        __instances.Clear();
-        __parameters.Clear();
+        //__instances.Clear();
+        //__parameters.Clear();
         
         CompleteDependency();
 
@@ -238,33 +238,37 @@ public partial class MessageSystem : SystemBase
             Entities.ForEach((
                 Entity entity, 
                 in CopyMatrixToTransformInstanceID instanceID) =>
-            {
-                if(__instances.TryGetFirstValue(entity, out var message, out var iterator) || 
-                   __parents.TryGetComponent(entity, out var parent) && 
-                   __instances.TryGetFirstValue(parent.entity, out message, out iterator))
                 {
-                    Object messageValue;
-                    var transform = Resources.InstanceIDToObject(instanceID.value) as Transform;
-                    if (transform != null)
+                    MessageParent parent = default;
+                    if (__instances.TryGetFirstValue(entity, out var message, out var iterator) ||
+                        __parents.TryGetComponent(entity, out parent) &&
+                        __instances.TryGetFirstValue(parent.entity, out message, out iterator))
                     {
-                        UnityEngine.Assertions.Assert.IsTrue(transform.gameObject.activeSelf);
-                        
+                        Object messageValue;
+                        var transform = Resources.InstanceIDToObject(instanceID.value) as Transform;
                         do
                         {
                             messageValue = message.value.IsReferenceValid ? message.value.Result : null;
-                            if (message.key != 0 && messageValue is IMessage temp)
+                            if (message.key != 0)
                             {
-                                temp.Clear();
+                                if (messageValue is IMessage temp)
+                                {
+                                    temp.Clear();
 
-                                foreach (var parameter in __parameters.GetValuesForKey(message.key))
-                                    temp.Set(parameter.id, parameter.value);
+                                    foreach (var parameter in __parameters.GetValuesForKey(message.key))
+                                        temp.Set(parameter.id, parameter.value);
+                                }
+
+                                __parameters.Remove(message.key);
                             }
 
-                            transform.BroadcastMessage(message.name.ToString(), messageValue);
-                        }while(__instances.TryGetNextValue(out message, ref iterator));
+                            if(transform != null)
+                                transform.BroadcastMessage(message.name.ToString(), messageValue);
+                        } while (__instances.TryGetNextValue(out message, ref iterator));
+
+                        __instances.Remove(parent.entity == Entity.Null ? entity : parent.entity);
                     }
-                }
-            })
+                })
             .WithAll<CopyMatrixToTransformInstanceID>()
             .WithAny<Message, MessageParent>()
             .WithoutBurst()
