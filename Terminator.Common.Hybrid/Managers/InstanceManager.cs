@@ -228,7 +228,7 @@ public sealed class InstanceManager : MonoBehaviour
             if (entityManager.Exists(entities[i]))
                 continue;
 
-            Destroy(results[i]);
+            __Destroy(results[i], prefab.gameObject);
 
             results.RemoveAtSwapBack(i);
 
@@ -294,14 +294,20 @@ public sealed class InstanceManager : MonoBehaviour
             yield return new WaitForSeconds(instance.destroyTime);
         }
 
+        __Destroy(gameObject, instance.prefab);
+    }
+
+    private void __Destroy(GameObject gameObject, GameObject prefab)
+    {
+        
         if (__gameObjects == null)
             __gameObjects = new Dictionary<GameObject, List<GameObject>>();
 
-        if (!__gameObjects.TryGetValue(instance.prefab, out var gameObjects))
+        if (!__gameObjects.TryGetValue(prefab, out var gameObjects))
         {
             gameObjects = new List<GameObject>();
 
-            __gameObjects[instance.prefab] = gameObjects;
+            __gameObjects[prefab] = gameObjects;
         }
 
         gameObject.SetActive(false);

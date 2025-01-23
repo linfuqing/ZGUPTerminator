@@ -288,7 +288,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
 
         int i, j, numStages, stageIndex = 0, 
-            numLevels = Mathf.Clamp(UserData.level, 1, _levels.Length), 
+            numLevels = Mathf.Min(UserData.level + 1, _levels.Length), 
             levelEnd = numLevels - 1;
         Level level;
         UserStage userStage;
@@ -468,7 +468,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
 
-        int stageIndex = __ToIndex(stageID), numStages, numLevels = Mathf.Min(_levels.Length, UserData.level);
+        int stageIndex = __ToIndex(stageID), numStages, numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
         Level level;
         Stage stage;
         for (int i = 0; i < numLevels; ++i)

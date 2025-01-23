@@ -14,6 +14,5 @@ public struct InstanceEntity : ICleanupComponentData
 
 public struct InstancePrefab : IBufferElementData, IEnableableComponent
 {
-    public int layerMask;
     public EntityPrefabReference reference;
 }

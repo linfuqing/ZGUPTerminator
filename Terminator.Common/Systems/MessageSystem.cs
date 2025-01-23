@@ -265,7 +265,6 @@ public partial class MessageSystem : SystemBase
             {
                 using (var keys = __instances.GetKeyArray(Allocator.Temp))
                 {
-                    Object messageValue;
                     Transform transform;
                     CopyMatrixToTransformInstanceID instanceID;
                     __instanceIDs.Update(this);
