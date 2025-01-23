@@ -1,8 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
 
+#if UNITY_EDITOR
 public class MessageParentAuthoring : MonoBehaviour
 {
     class Baker : Baker<MessageParentAuthoring>
@@ -33,3 +32,4 @@ public class MessageParentAuthoring : MonoBehaviour
         }
     }
 }
+#endif
