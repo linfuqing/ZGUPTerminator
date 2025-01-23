@@ -164,6 +164,8 @@ public partial class MessageSystem : SystemBase
     
     private EntityTypeHandle __entityType;
     
+    private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
+
     private ComponentLookup<MessageParent> __parents;
 
     private BufferLookup<Message> __messages;
@@ -184,6 +186,7 @@ public partial class MessageSystem : SystemBase
     {
         base.OnCreate();
 
+        __instanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>(true);
         __parents = GetComponentLookup<MessageParent>(true);
         __messages = GetBufferLookup<Message>();
         __instanceType = GetBufferTypeHandle<Message>();
@@ -194,7 +197,7 @@ public partial class MessageSystem : SystemBase
                 .WithAll<Message>()
                 .Build(this);
         
-        RequireForUpdate(__group);
+        //RequireForUpdate(__group);
 
         __entitiesToDisable = new NativeList<Entity>(Allocator.Persistent);
         __instances = new NativeParallelMultiHashMap<Entity, Message>(1, Allocator.Persistent);
@@ -244,26 +247,10 @@ public partial class MessageSystem : SystemBase
                         __parents.TryGetComponent(entity, out parent) &&
                         __instances.TryGetFirstValue(parent.entity, out message, out iterator))
                     {
-                        Object messageValue;
                         var transform = Resources.InstanceIDToObject(instanceID.value) as Transform;
                         do
                         {
-                            messageValue = message.value.IsReferenceValid ? message.value.Result : null;
-                            if (message.key != 0)
-                            {
-                                if (messageValue is IMessage temp)
-                                {
-                                    temp.Clear();
-
-                                    foreach (var parameter in __parameters.GetValuesForKey(message.key))
-                                        temp.Set(parameter.id, parameter.value);
-                                }
-
-                                __parameters.Remove(message.key);
-                            }
-
-                            if(transform != null)
-                                transform.BroadcastMessage(message.name.ToString(), messageValue);
+                            __Send(message, transform);
                         } while (__instances.TryGetNextValue(out message, ref iterator));
 
                         __instances.Remove(parent.entity == Entity.Null ? entity : parent.entity);
@@ -273,6 +260,29 @@ public partial class MessageSystem : SystemBase
             .WithAny<Message, MessageParent>()
             .WithoutBurst()
             .Run();
+
+            if (!__instances.IsEmpty)
+            {
+                using (var keys = __instances.GetKeyArray(Allocator.Temp))
+                {
+                    Object messageValue;
+                    Transform transform;
+                    CopyMatrixToTransformInstanceID instanceID;
+                    __instanceIDs.Update(this);
+                    foreach (var key in keys)
+                    {
+                        if(!__instanceIDs.TryGetComponent(key, out instanceID))
+                            continue;
+
+                        transform = Resources.InstanceIDToObject(instanceID.value) as Transform;
+ 
+                        foreach (var message in __instances.GetValuesForKey(key))
+                            __Send(message, transform);
+                        
+                        __instances.Remove(key);
+                    }
+                }
+            }
         }
         
         __messages.Update(this);
@@ -281,5 +291,25 @@ public partial class MessageSystem : SystemBase
         disable.entities = __entitiesToDisable.AsArray();
         disable.messages = __messages;
         Dependency = disable.ScheduleByRef(__entitiesToDisable.Length, 4, Dependency);
+    }
+
+    private void __Send(in Message message, Transform transform)
+    {
+        var messageValue = message.value.IsReferenceValid ? message.value.Result : null;
+        if (message.key != 0)
+        {
+            if (messageValue is IMessage temp)
+            {
+                temp.Clear();
+
+                foreach (var parameter in __parameters.GetValuesForKey(message.key))
+                    temp.Set(parameter.id, parameter.value);
+            }
+
+            __parameters.Remove(message.key);
+        }
+
+        if(transform != null)
+            transform.BroadcastMessage(message.name.ToString(), messageValue);
     }
 }
