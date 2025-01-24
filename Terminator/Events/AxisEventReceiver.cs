@@ -29,7 +29,7 @@ public class AxisEventReceiver : MonoBehaviour
         #if UNITY_EDITOR
         count = 2;
         #else
-        count = Mathf.Min(parameters == null ? 0 : parameters.Count, 2);
+        count = Mathf.Min(parameters == null ? 0 : parameters.count, 2);
         #endif
         for (int i = 0; i < count; ++i)
             __axis[i] = parameters.TryGet(i, out value) ? math.asfloat(value) : 0.0f;
