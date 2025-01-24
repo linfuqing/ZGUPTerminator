@@ -327,11 +327,11 @@ public class LevelSkillAuthoring : MonoBehaviour
             var levelSkillGroups = AddBuffer<LevelSkillGroup>(entity);
             LevelSkillGroup levelSkillGroup;
             string groupName;
-            int numGroupNames = authoring._groups == null ? 0 : authoring._groups.Length;
+            int numGroupNames = authoring._groupNames == null ? 0 : authoring._groupNames.Length;
             //defaultGroups.ResizeUninitialized(numGroupNames);
             for (i = 0; i < numGroupNames; ++i)
             {
-                groupName = authoring._groups[i].name;
+                groupName = authoring._groupNames[i];
 
                 levelSkillGroup.value = -1;
                 for (j = 0; j < numGroups; ++j)

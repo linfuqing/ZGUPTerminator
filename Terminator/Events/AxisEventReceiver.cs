@@ -25,8 +25,14 @@ public class AxisEventReceiver : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void SetAxis(Parameters parameters)
     {
-        for (int i = 0; i < 2; ++i)
-            __axis[i] = math.asfloat(parameters[i]);
+        int value, count;
+        #if UNITY_EDITOR
+        count = 2;
+        #else
+        count = Mathf.Min(parameters == null ? 0 : parameters.Count, 2);
+        #endif
+        for (int i = 0; i < count; ++i)
+            __axis[i] = parameters.TryGet(i, out value) ? math.asfloat(value) : 0.0f;
     }
 
     protected void Update()

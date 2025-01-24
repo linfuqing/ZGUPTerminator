@@ -1,3 +1,4 @@
+using System;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -283,13 +284,16 @@ public partial class MessageSystem : SystemBase
                 }
             }
         }
-        
-        __messages.Update(this);
 
-        Disable disable;
-        disable.entities = __entitiesToDisable.AsArray();
-        disable.messages = __messages;
-        Dependency = disable.ScheduleByRef(__entitiesToDisable.Length, 4, Dependency);
+        if (!__entitiesToDisable.IsEmpty)
+        {
+            __messages.Update(this);
+
+            Disable disable;
+            disable.entities = __entitiesToDisable.AsArray();
+            disable.messages = __messages;
+            Dependency = disable.ScheduleByRef(__entitiesToDisable.Length, 4, Dependency);
+        }
     }
 
     private void __Send(in Message message, Transform transform)
@@ -308,7 +312,16 @@ public partial class MessageSystem : SystemBase
             __parameters.Remove(message.key);
         }
 
-        if(transform != null)
-            transform.BroadcastMessage(message.name.ToString(), messageValue);
+        if (transform != null)
+        {
+            try
+            {
+                transform.BroadcastMessage(message.name.ToString(), messageValue);
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogException(e.InnerException ?? e);
+            }
+        }
     }
 }
