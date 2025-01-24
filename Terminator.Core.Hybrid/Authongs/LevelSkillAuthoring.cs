@@ -158,7 +158,7 @@ public class LevelSkillAuthoring : MonoBehaviour
             
             Entity entity = GetEntity(authoring, TransformUsageFlags.None);
             
-            int numSkills = authoring._skillAuthoring._skills.Length, numGroups = authoring._groups.Length;
+            int numSkills = authoring._skillAuthoring._skills.Length, numGroups = authoring._groups.Length, i, j;
             LevelSkillDefinitionData instance;
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
@@ -166,7 +166,7 @@ public class LevelSkillAuthoring : MonoBehaviour
 
                 root.maxActiveCount = authoring._maxActiveCount;
 
-                int i, numPriorities = authoring._priorities.Length;
+                int numPriorities = authoring._priorities.Length;
                 var priorities = builder.Allocate(ref root.priorities, numPriorities);
                 for (i = 0; i < numPriorities; ++i)
                 {
@@ -180,7 +180,7 @@ public class LevelSkillAuthoring : MonoBehaviour
                 for(i = 0; i < numSkills; ++i)
                     skillNameIndices.Add(authoring._skillAuthoring._skills[i].name, i);
                 
-                int j, k, numFirstSkillIndices;
+                int k, numFirstSkillIndices;
                 BlobBuilderArray<int> firstSkillIndices;
                 var groups = builder.Allocate(ref root.groups, numGroups);
                 for (i = 0; i < numGroups; ++i)
@@ -307,11 +307,11 @@ public class LevelSkillAuthoring : MonoBehaviour
             {
                 ref var root = ref builder.ConstructRoot<LevelSkillNameDefinition>();
                 var skills = builder.Allocate(ref root.skills, numSkills);
-                for (int i = 0; i < numSkills; ++i)
+                for (i = 0; i < numSkills; ++i)
                     skills[i] = authoring._skillAuthoring._skills[i].name;
                 
                 var groups = builder.Allocate(ref root.groups, numGroups);
-                for (int i = 0; i < numGroups; ++i)
+                for (i = 0; i < numGroups; ++i)
                     groups[i] = authoring._groups[i].name;
 
                 name.definition = builder.CreateBlobAssetReference<LevelSkillNameDefinition>(Allocator.Persistent);
@@ -324,13 +324,45 @@ public class LevelSkillAuthoring : MonoBehaviour
             AddComponent<LevelSkill>(entity);
             SetComponentEnabled<LevelSkill>(entity, false);
             
-            AddComponent<LevelSkillGroup>(entity);
+            var levelSkillGroups = AddBuffer<LevelSkillGroup>(entity);
+            LevelSkillGroup levelSkillGroup;
+            string groupName;
+            int numGroupNames = authoring._groups == null ? 0 : authoring._groups.Length;
+            //defaultGroups.ResizeUninitialized(numGroupNames);
+            for (i = 0; i < numGroupNames; ++i)
+            {
+                groupName = authoring._groups[i].name;
+
+                levelSkillGroup.value = -1;
+                for (j = 0; j < numGroups; ++j)
+                {
+                    if (authoring._groups[j].name == groupName)
+                    {
+                        levelSkillGroup.value = j;
+
+                        break;
+                    }
+                }
+
+                if (levelSkillGroup.value == -1)
+                {
+                    Debug.LogError(
+                        $"Level skill group {groupName} can not been found!");
+
+                    continue;
+                }
+
+                levelSkillGroups.Add(levelSkillGroup);
+            }
         }
     }
 
     [Tooltip("最大能同时激活的技能数。")]
     [SerializeField]
     internal int _maxActiveCount;
+
+    [Tooltip("基础技能组")] 
+    internal string[] _groupNames;
     
     [SerializeField] 
     internal PriorityData[] _priorities;

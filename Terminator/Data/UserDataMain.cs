@@ -49,12 +49,20 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         var dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         var timeUnix = DateTime.UtcNow - dateTime;
+
+        int time = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME);
+        if (time == 0)
+        {
+            time = (int)timeUnix.TotalSeconds;
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, time);
+        }
         
         UserEnergy userEnergy;
         userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         userEnergy.max = _energy.max;
         userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
-        userEnergy.tick = (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)timeUnix.TotalSeconds) * TimeSpan.TicksPerSecond + dateTime.Ticks;
+        userEnergy.tick = (uint)time * TimeSpan.TicksPerSecond + dateTime.Ticks;
         
         onComplete(user, userEnergy);
     }
@@ -422,8 +430,10 @@ public sealed partial class UserDataMain : MonoBehaviour
                 UserData.level = ++userLevel;
 
                 rewardSkills = level.rewardSkills;
-                
-                UserData.RewardSkills(rewardSkills);
+
+                var instance = IUserData.instance as UserData;
+                if(instance != null)
+                    instance.RewardSkills(rewardSkills);
             }
         }
 

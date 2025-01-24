@@ -29,7 +29,7 @@ public class SettingManager : MonoBehaviour
             var toggleSetting = _toggleSettings[i];
             
             string key = $"{NAME_SPACE}{toggleSetting.name}";
-            isOn = PlayerPrefs.GetInt(key) != 0;
+            isOn = PlayerPrefs.GetInt(key, 1) != 0;
             if (isOn)
             {
                 if(toggleSetting.onEnable != null)

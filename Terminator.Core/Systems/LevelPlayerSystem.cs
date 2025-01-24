@@ -92,7 +92,7 @@ public partial struct LevelPlayerSystem : ISystem
                 {
                     LevelSkillGroup levelSkillGroup;
                     int numGroups = definition.groups.Length, i;
-                    bool isClear = true;
+                    //bool isClear = true;
                     foreach (var skillGroup in skillGroups)
                     {
                         for (i = 0; i < numGroups; ++i)
@@ -103,12 +103,12 @@ public partial struct LevelPlayerSystem : ISystem
 
                         if (i < numGroups)
                         {
-                            if (isClear)
+                            /*if (isClear)
                             {
                                 isClear = false;
                                 
                                 levelSkillGroups.Clear();
-                            }
+                            }*/
 
                             levelSkillGroup.value = i;
                             levelSkillGroups.Add(levelSkillGroup);

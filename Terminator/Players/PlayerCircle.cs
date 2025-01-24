@@ -16,9 +16,9 @@ public class PlayerCircle : MonoBehaviour
 
         var center = lookAtInstance.transform.position;
         var distance = positionInstance.transform.position - center;
-        distance.y = 0.0f;
+        //distance.y = 0.0f;
 
         transform.position = distance.normalized * radius + center;
-        transform.rotation = Quaternion.LookRotation(-distance, Vector3.up);
+        transform.rotation = Quaternion.LookRotation(new Vector3(-distance.x, 0.0f, -distance.z), Vector3.up);
     }
 }

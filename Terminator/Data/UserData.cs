@@ -275,14 +275,14 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
-    public static void RewardSkills(string[] names)
+    public void RewardSkills(string[] names)
     {
         string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS),
-            destination = string.Join(',', names);
+            destination = string.Join(SEPARATOR, names);
         if (string.IsNullOrEmpty(source))
-            source = destination;
-        else
-            source = $"{source},{destination}";
+            source = string.Join(SEPARATOR, _defaultSkills);
+        
+        source = $"{source}{SEPARATOR}{destination}";
 
         PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
     }

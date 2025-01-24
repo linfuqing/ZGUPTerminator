@@ -3,31 +3,31 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    private enum AnimatorStatus
+    /*private enum AnimatorStatus
     {
         Normal, 
         Jump
-    }
+    }*/
     
     //public static readonly int AxisX = Animator.StringToHash("AxisX");
     //public static readonly int AxisY = Animator.StringToHash("AxisY");
     
-    public static readonly int Jump = Animator.StringToHash("Jump");
+    //public static readonly int Jump = Animator.StringToHash("Jump");
     
-    public static readonly int Status = Animator.StringToHash("Status");
+    //public static readonly int Status = Animator.StringToHash("Status");
 
     //[SerializeField]
     //internal float _smoothTime = 0.01f;
 
-    [SerializeField]
-    internal float _minJumpHeight = 0.1f;
+    //[SerializeField]
+    //internal float _minJumpHeight = 0.1f;
 
-    [SerializeField]
-    internal float _minJumpVelocity = 0.01f;
+    //[SerializeField]
+    //internal float _minJumpVelocity = 0.01f;
 
     private bool __isDead;
     
-    private float __jumpHeight;
+    //private float __jumpHeight;
     
     private Animator __animator;
     private AttributeEventReceiver __attributeEventReceiver;
@@ -118,7 +118,7 @@ public class PlayerController : MonoBehaviour
 
         JoystickAnimatorController.Update(animator);
 
-        if (position.y > _minJumpHeight)
+        /*if (position.y > _minJumpHeight)
         {
             float velocity = position.y - __jumpHeight;
             int sign = Mathf.Abs(velocity) > _minJumpVelocity ? (int)Mathf.Sign(velocity) : 0;
@@ -134,6 +134,6 @@ public class PlayerController : MonoBehaviour
             animator.SetInteger(Status, (int)AnimatorStatus.Normal);
         }
 
-        __jumpHeight = position.y;
+        __jumpHeight = position.y;*/
     }
 }
