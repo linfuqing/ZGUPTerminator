@@ -326,9 +326,13 @@ public sealed class LoginManager : MonoBehaviour
             }
 
             style.gameObject.SetActive(true);
-
+            
             __styles[index] = style;
         }
+
+        var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>();
+        if(scrollRect != null)
+            scrollRect.MoveTo(userLevels.Length - 1);
     }
 
     private void __ApplyLevel(int gold, string[] rewardSkills)

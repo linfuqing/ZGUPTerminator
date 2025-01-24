@@ -262,8 +262,8 @@ public partial class UserData : MonoBehaviour, IUserData
         onComplete(id);
     }
     
-    [SerializeField]
-    internal string[] _defaultSkills;
+    //[SerializeField]
+    //internal string[] _defaultSkills;
     
     public IEnumerator SubmitLevel(
         uint userID,
