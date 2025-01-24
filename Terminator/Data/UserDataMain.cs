@@ -168,6 +168,39 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(tip);
     }
 
+    
+    private const string NAME_SPACE_USER_SKILLS = "UserSkills";
+
+    public IEnumerator QuerySkills(
+        uint userID,
+        Action<Memory<UserSkill>> onComplete)
+    {
+        yield return null;
+        
+        var skillString = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS);
+        string[] skills;
+        if (string.IsNullOrEmpty(skillString))
+        {
+            //skillString = string.Join(SEPARATOR, _defaultSkills);
+
+            skills = null;
+        }
+        else
+            skills = skillString.Split(UserData.SEPARATOR);
+
+        int numSkills = skills == null ? 0 : skills.Length;
+        UserSkill userSkill;
+        var userSkills = new UserSkill[numSkills];
+        for (int i = 0; i < numSkills; ++i)
+        {
+            userSkill.name = skills[i];
+
+            userSkills[i] = userSkill;
+        }
+        
+        onComplete(userSkills);
+    }
+
     [Serializable]
     internal struct Weapon
     {
@@ -431,9 +464,14 @@ public sealed partial class UserDataMain : MonoBehaviour
 
                 rewardSkills = level.rewardSkills;
 
-                var instance = IUserData.instance as UserData;
-                if(instance != null)
-                    instance.RewardSkills(rewardSkills);
+                string source = PlayerPrefs.GetString(NAME_SPACE_USER_SKILLS),
+                    destination = string.Join(UserData.SEPARATOR, rewardSkills);
+                if (string.IsNullOrEmpty(source))
+                    source = destination;
+                else
+                    source = $"{source}{UserData.SEPARATOR}{destination}";
+
+                PlayerPrefs.SetString(NAME_SPACE_USER_SKILLS, source);
             }
         }
 
@@ -635,6 +673,13 @@ public partial class UserData
         Action<UserTip> onComplete)
     {
         return UserDataMain.instance.QueryTip(userID, onComplete);
+    }
+
+    public IEnumerator QuerySkills(
+        uint userID,
+        Action<Memory<UserSkill>> onComplete)
+    {
+        return UserDataMain.instance.QuerySkills(userID, onComplete);
     }
 
     public IEnumerator QueryWeapons(

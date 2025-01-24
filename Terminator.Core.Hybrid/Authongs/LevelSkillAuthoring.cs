@@ -362,6 +362,7 @@ public class LevelSkillAuthoring : MonoBehaviour
     internal int _maxActiveCount;
 
     [Tooltip("基础技能组")] 
+    [SerializeField]
     internal string[] _groupNames;
     
     [SerializeField] 
