@@ -639,6 +639,8 @@ public struct BulletDefinition
             
             return false;
         }
+
+        status.version += entityCount;
         
         int numMessageIndices = data.messageIndices.Length;
         if (numMessageIndices > 0)
@@ -1079,6 +1081,7 @@ public struct BulletDamageScale : IComponentData
 
 public struct BulletStatus : IBufferElementData
 {
+    public int version;
     public int times;
     public int count;
     public double cooldown;

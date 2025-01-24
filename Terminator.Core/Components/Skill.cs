@@ -119,7 +119,7 @@ public struct SkillDefinition
                         if (bullet.index < bulletStates.Length)
                         {
                             ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                            if (bulletStatus.cooldown > status.time + bulletDefinition.bullets[bullet.index].startTime)
+                            if (bulletStatus.version != 0)//cooldown > status.time + bulletDefinition.bullets[bullet.index].startTime)
                             {
                                 isCooldown = false;
 
@@ -151,8 +151,8 @@ public struct SkillDefinition
 
                     if (isSelected)
                     {
-                        status.time = time + skill.cooldown * cooldownScale;
-                        status.cooldown = status.time + skill.duration;
+                        cooldown = time + skill.cooldown * cooldownScale;
+                        status.cooldown = cooldown + skill.duration;
 
                         if (status.cooldown > time)
                         {
@@ -162,8 +162,9 @@ public struct SkillDefinition
                                 if (bullet.index < bulletStates.Length)
                                 {
                                     ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                                    bulletStatus.cooldown = status.time + bulletDefinition.bullets[bullet.index].startTime;
+                                    bulletStatus.cooldown = cooldown + bulletDefinition.bullets[bullet.index].startTime;
                                     bulletStatus.count = 0;
+                                    bulletStatus.version = 0;
                                 }
                             }
                         }
@@ -241,6 +242,6 @@ public struct SkillStatus : IBufferElementData
 {
     public SkillMessageType messageType;
     
-    public double time;
+    //public double time;
     public double cooldown;
 }
