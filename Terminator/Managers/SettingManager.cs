@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-public class SettingManager : MonoBehaviour
+public sealed class SettingManager : MonoBehaviour
 {
     [Serializable]
     public struct ToggleSetting
@@ -19,6 +19,14 @@ public class SettingManager : MonoBehaviour
     internal ToggleSetting[] _toggleSettings;
 
     public const string NAME_SPACE = "SettingManager";
+
+    public float audioVolume
+    {
+        set
+        {
+            AudioListener.volume = value;
+        }
+    }
 
     void Awake()
     {
