@@ -51,11 +51,10 @@ public class GameMain : GameUser
     public static readonly string AssetScenePath = "AssetScenePath";
     public static readonly string DefaultSceneName = "DefaultSceneName";
     public static readonly string DefaultLevelSceneName = "DefaultLevelSceneName";
-    public static readonly string InitialContentSet = "InitialContentSet";
-    public static readonly string LocalCachePath = "LocalCachePath";
-    public static readonly string RemoteUrlRoot = "RemoteUrlRoot";
+    public static readonly string ContentSet = "ContentSet";
+    public static readonly string ContentPackPath = "ContentPackPath";
 
-    private uint __id;
+    //private uint __id;
     private string __defaultSceneName;
 
     public IAssetBundleFactory factory
@@ -90,51 +89,54 @@ public class GameMain : GameUser
         }
 
 #if ENABLE_CONTENT_DELIVERY
-        string remoteUrlRoot = GameConstantManager.Get(RemoteUrlRoot), 
-            localCachePath = GameConstantManager.Get(LocalCachePath);
-        if (string.IsNullOrEmpty(remoteUrlRoot))
+        string contentPackPath = GameConstantManager.Get(ContentPackPath);
+        var contentPack = AssetUtility.RetrievePack(contentPackPath);
+        if (contentPack == null)
+            RuntimeContentSystem.LoadContentCatalog(
+                contentPackPath,
+                    null,
+                    GameConstantManager.Get(ContentSet));
+        else
         {
-            var pack = AssetUtility.RetrievePack(localCachePath);
-            if (pack == null)
-                RuntimeContentSystem.LoadContentCatalog(null, localCachePath, null);
+            var progressbar = GameProgressbar.instance;
+            progressbar.ShowProgressBar();
+
+            string packName;
+            var header = contentPack.header;
+            if (header == null)
+            {
+                packName = contentPackPath;
+            }
             else
             {
-                var progressbar = GameProgressbar.instance;
-                progressbar.ShowProgressBar();
-
-                string packName;
-                var header = pack.header;
-                if (header == null)
-                    packName = localCachePath;
-                else
-                {
-                    while (!header.isDone)
-                        yield return null;
-
-                    packName = header.name;
-                }
-
-                while (!pack.isDone)
-                {
-                    progressbar.UpdateProgressBar(pack.downloadProgress);
-
+                while (!header.isDone)
                     yield return null;
-                }
 
-                progressbar.ClearProgressBar();
+                packName = header.name;
+            }
 
+            while (!contentPack.isDone)
+            {
+                progressbar.UpdateProgressBar(contentPack.downloadProgress);
+
+                yield return null;
+            }
+
+            string filePath = header?.filePath;
+            if (string.IsNullOrEmpty(filePath))
+            {
                 ContentDeliveryGlobalState.Initialize(
                     null, 
                     null, 
                     null, 
                     null);
-
+                
                 Func<string, string> remapFunc = x =>
                 {
-                    if (pack.GetFileInfo(x, out ulong fileOffset, out string filePath))
+                    if (contentPack.GetFileInfo(x, out ulong fileOffset, out string filePath))
                     {
                         AssetUtility.UpdatePack(packName, ref filePath, ref fileOffset);
-                        
+
                         Debug.Log($"UpdatePack {filePath}");
                     }
                     else
@@ -146,22 +148,21 @@ public class GameMain : GameUser
                 };
 
                 ContentDeliveryGlobalState.PathRemapFunc = remapFunc;
-                
+
                 var catalogPath = remapFunc(RuntimeContentManager.RelativeCatalogPath);
                 RuntimeContentManager.LoadLocalCatalogData(catalogPath,
-                        RuntimeContentManager.DefaultContentFileNameFunc,
-                        p => remapFunc(RuntimeContentManager.DefaultArchivePathFunc(p)));
+                    RuntimeContentManager.DefaultContentFileNameFunc,
+                    p => remapFunc(RuntimeContentManager.DefaultArchivePathFunc(p)));
             }
+            else
+                RuntimeContentSystem.LoadContentCatalog(
+                     $"{GameAssetManager.GetURL(filePath)}/",
+                    null,
+                    GameConstantManager.Get(ContentSet));
+
+            progressbar.ClearProgressBar();
         }
-        else
-        {
-            RuntimeContentSystem.LoadContentCatalog(
-                remoteUrlRoot,
-                string.IsNullOrEmpty(localCachePath)
-                    ? null
-                    : Path.Combine(Application.persistentDataPath, localCachePath),
-                GameConstantManager.Get(InitialContentSet));
-        }
+
 #endif
 
         Shared.onActivated += __OnActivated;
@@ -199,7 +200,7 @@ public class GameMain : GameUser
         else
         {
             yield return IUserData.instance.QueryUser(Shared.channelName, Shared.channelUser, __OnApplyLevel);
-            yield return IUserData.instance.QuerySkills(__id, __OnApplySkills);
+            //yield return IUserData.instance.QuerySkills(__id, __OnApplySkills);
             
             activation = new GameSceneActivation();
         }
@@ -215,11 +216,11 @@ public class GameMain : GameUser
 
     private void __OnApplyLevel(uint id)
     {
-        __id = id;
+        //__id = id;
         ILevelData.instance = new LevelData(id);
     }
 
-    private void __OnApplySkills(Memory<UserSkill> skills)
+    /*private void __OnApplySkills(Memory<UserSkill> skills)
     {
         ref var skillGroups = ref LevelPlayerShared.skillGroups;
         skillGroups.Clear();
@@ -231,7 +232,7 @@ public class GameMain : GameUser
             skillGroups.Add(skillGroup);
         }
 
-    }
+    }*/
 
     private void __OnConfirmCancel()
     {

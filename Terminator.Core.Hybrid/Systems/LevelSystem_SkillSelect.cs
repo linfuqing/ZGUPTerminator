@@ -313,10 +313,17 @@ public partial class LevelSystemManaged
         public void Release()
         {
             status = SkillSelectionStatus.None;
-            
+
+            WeakObjectReference<Sprite> key;
+            int value, i;
             foreach (var spriteRefCount in __spriteRefCounts)
-                spriteRefCount.Key.Release();
-            
+            {
+                key = spriteRefCount.Key;
+                value = spriteRefCount.Value;
+                for(i = 0; i < value; ++i)
+                    key.Release();
+            }
+
             __spriteRefCounts.Clear();
         }
 
@@ -386,6 +393,7 @@ public partial class LevelSystemManaged
     {
         if (manager.isRestart || !SystemAPI.Exists(player))
         {
+            __skillSelection.Release();
             __skillSelection.Reset(this);
 
             return;
@@ -457,7 +465,14 @@ public partial class LevelSystemManaged
                     if (skill.originIndex != -1)
                     {
                         activeDesc = descs[skill.originIndex];
-                        switch (activeDesc.loadingStatus)
+                        if (!activeDesc.WaitForCompletion())
+                        {
+                            isAllDone = false;
+                            
+                            __skillSelection.Retain(activeDesc);
+                        }
+                        
+                        /*switch (activeDesc.loadingStatus)
                         {
                             case LevelSkillDesc.LoadingStatus.None:
                                 __skillSelection.Retain(activeDesc);
@@ -467,13 +482,20 @@ public partial class LevelSystemManaged
                             case LevelSkillDesc.LoadingStatus.Completed:
                                 break;
                             default:
-                                isAllDone = false;
+                                activeDesc.WaitForCompletion();
+                                //isAllDone = false;
                                 break;
-                        }
+                        }*/
                     }
 
                     desc = descs[skill.index];
-                    switch (desc.loadingStatus)
+                    if (!desc.WaitForCompletion())
+                    {
+                        isAllDone = false;
+                            
+                        __skillSelection.Retain(desc);
+                    }
+                    /*switch (desc.loadingStatus)
                     {
                         case LevelSkillDesc.LoadingStatus.None:
                             __skillSelection.Retain(desc);
@@ -483,9 +505,10 @@ public partial class LevelSystemManaged
                         case LevelSkillDesc.LoadingStatus.Completed:
                             break;
                         default:
-                            isAllDone = false;
+                            //isAllDone = false;
+                            desc.WaitForCompletion();
                             break;
-                    }
+                    }*/
                 }
 
                 if (isAllDone)

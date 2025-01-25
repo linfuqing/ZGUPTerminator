@@ -84,6 +84,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private int __energyMax;
 
+    private int __selectedLevelEnergy;
     private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
 
@@ -266,8 +267,10 @@ public sealed class LoginManager : MonoBehaviour
             {
                 if (x)
                 {
+                    __selectedLevelEnergy = selectedLevel.energy;
+                    
                     if (style.button != null)
-                        style.button.interactable = selectedLevel.energy <= energy && !__isStart;
+                        style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;
                     
                     __selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
@@ -376,6 +379,12 @@ public sealed class LoginManager : MonoBehaviour
     private void __IncreaseEnergy()
     {
         energy = Mathf.Min(energy + 1, energyMax);
+        
+        if(!__isStart && 
+           __selectedLevelEnergy <= energy && 
+           __styles.TryGetValue(__selectedLevelIndex, out var style) && 
+           style.button != null)
+            style.button.interactable = true;
     }
 
     private IEnumerator __Start()

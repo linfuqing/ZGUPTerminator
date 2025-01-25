@@ -242,7 +242,7 @@ public struct LevelSkillDesc : IBufferElementData
                 case ObjectLoadingStatus.Completed:
                     break;
                 case ObjectLoadingStatus.Error:
-                    Debug.LogError($"Sprite {name} loaded failed!");
+                    Debug.LogError($"Icon {name} loaded failed!");
                     break;
                 default:
                     return LoadingStatus.None;
@@ -250,6 +250,47 @@ public struct LevelSkillDesc : IBufferElementData
 
             return LoadingStatus.Completed;
         }
+    }
+
+    public bool WaitForCompletion(int timeoutMs = 0)
+    {
+        switch (sprite.LoadingStatus)
+        {
+            case ObjectLoadingStatus.None:
+                //sprite.LoadAsync();
+                return false;
+            case ObjectLoadingStatus.Loading:
+                if (!sprite.WaitForCompletion(timeoutMs))
+                    return false;
+                break;
+            case ObjectLoadingStatus.Completed:
+                break;
+            case ObjectLoadingStatus.Error:
+                Debug.LogError($"Sprite {name} loaded failed!");
+                break;
+            default:
+                return false;
+        }
+
+        switch (icon.LoadingStatus)
+        {
+            case ObjectLoadingStatus.None:
+                //icon.LoadAsync();
+                return false;
+            case ObjectLoadingStatus.Loading:
+                if (!icon.WaitForCompletion(timeoutMs))
+                    return false;
+                break;
+            case ObjectLoadingStatus.Completed:
+                break;
+            case ObjectLoadingStatus.Error:
+                Debug.LogError($"Icon {name} loaded failed!");
+                break;
+            default:
+                return false;
+        }
+
+        return true;
     }
     
     public void Release()

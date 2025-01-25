@@ -113,7 +113,11 @@ public partial struct EffectSystem : ISystem
 
                     status.count = 0;
 
-                    status.time = time + instances[index].definition.Value.effects[0].startTime;
+                    status.time = time;
+
+                    ref var definition = ref instances[index].definition.Value;
+
+                    status.time += definition.effects.Length > 0 ? definition.effects[0].startTime : 0.0f;
 
                     states[index] = status;
                 }

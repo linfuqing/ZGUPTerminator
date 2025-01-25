@@ -20,13 +20,25 @@ public partial class LevelSystemManaged
             __values.Dispose();
         }
 
+        public void Clear()
+        {
+            __values.Clear();
+        }
+
         public void Update(
             LevelManager manager, 
             in DynamicBuffer<LevelStage> stages, 
             ref LevelDefinition definition)
         {
-            int numStages = stages.Length;
-            __values.Resize(numStages, NativeArrayOptions.ClearMemory);
+            int numStages = stages.Length, numValues = __values.Length;
+            if (numValues < numStages)
+            {
+                __values.Resize(numStages, NativeArrayOptions.UninitializedMemory);
+
+                for (int i = numValues; i < numStages; i++)
+                    __values[i] = -1;
+            }
+
             for(int i = 0; i < numStages; ++i)
             {
                 ref var source = ref __values.ElementAt(i);
@@ -51,7 +63,7 @@ public partial class LevelSystemManaged
     {
         if (!SystemAPI.HasSingleton<LevelStage>() || !SystemAPI.HasSingleton<LevelDefinitionData>())
             return;
-        
+
         bool isRestart = manager.isRestart;
         var stages = SystemAPI.GetSingletonBuffer<LevelStage>(!isRestart);
         
@@ -84,6 +96,8 @@ public partial class LevelSystemManaged
             
             if(SystemAPI.HasSingleton<SpawnerLayerMaskExclude>())
                 SystemAPI.SetSingleton(exclude);
+            
+            __stage.Clear();
         }
         
         __stage.Update(manager, stages, ref definition);
