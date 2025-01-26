@@ -295,8 +295,10 @@ public struct LevelSkillDesc : IBufferElementData
     
     public void Release()
     {
+#if UNITY_EDITOR
         sprite.Release();
         icon.Release();
+#endif
     }
 
     public void Retain()

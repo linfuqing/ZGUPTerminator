@@ -314,6 +314,7 @@ public partial class LevelSystemManaged
         {
             status = SkillSelectionStatus.None;
 
+#if UNITY_EDITOR
             WeakObjectReference<Sprite> key;
             int value, i;
             foreach (var spriteRefCount in __spriteRefCounts)
@@ -325,6 +326,7 @@ public partial class LevelSystemManaged
             }
 
             __spriteRefCounts.Clear();
+#endif
         }
 
         public void Retain(in WeakObjectReference<Sprite> sprite)
