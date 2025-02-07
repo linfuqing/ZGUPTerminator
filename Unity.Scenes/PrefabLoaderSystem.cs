@@ -59,7 +59,7 @@ public struct PrefabLoader
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
-                .WithAll<PrefabLoaderSingleton>()
+                .WithAllRW<PrefabLoaderSingleton>()
                 .Build(ref systemState);
     }
 
@@ -68,10 +68,10 @@ public struct PrefabLoader
         __prefabLoadResults.Update(ref systemState);
     }
 
-    public void AddDependency(in JobHandle jobHandle)
+    /*public void AddDependency(in JobHandle jobHandle)
     {
         __group.AddDependency(jobHandle);
-    }
+    }*/
 
     public ParallelWriter AsParallelWriter()
     {
