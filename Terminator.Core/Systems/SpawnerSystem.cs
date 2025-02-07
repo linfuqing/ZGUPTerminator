@@ -437,6 +437,8 @@ public partial struct SpawnerSystem : ISystem
         state.RequireForUpdate<SpawnerSingleton>();
         state.RequireForUpdate<SpawnerLayerMask>();
         state.RequireForUpdate<ThirdPersonPlayer>();
+
+        __prefabLoader = new PrefabLoader(ref state);
     }
 
     [BurstCompile]
