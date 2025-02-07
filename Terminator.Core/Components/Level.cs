@@ -47,8 +47,7 @@ public struct LevelStageOption
         in SpawnerSingleton spawnerSingleton, 
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
-        in ComponentLookup<SpawnerDefinitionData> spawners, 
-        in ComponentLookup<RequestEntityPrefabLoaded> prefabReferences)
+        in ComponentLookup<SpawnerDefinitionData> spawners)
     {
         switch (type)
         {
@@ -107,7 +106,6 @@ public struct LevelStageOption
                     //condition.value = 0;
                     using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                     {
-                        RequestEntityPrefabLoaded prefabReference;
                         SpawnerEntity spawnerEntity;
                         SpawnerDefinitionData spawnerDefinition;
                         DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
@@ -133,8 +131,7 @@ public struct LevelStageOption
                             if(spawnerPrefabBuffer.Length <= loaderIndex.value)
                                 continue;
 
-                            if (!prefabReferences.TryGetComponent(spawnerPrefabBuffer[loaderIndex.value].loader,
-                                    out prefabReference) || prefabReference.Prefab != prefab.reference)
+                            if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
                                 continue;
 
                             condition.value = (int)Status.Start;
@@ -170,8 +167,7 @@ public struct LevelStageOption
         in SpawnerSingleton spawnerSingleton, 
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
-        in ComponentLookup<SpawnerDefinitionData> spawners, 
-        in ComponentLookup<RequestEntityPrefabLoaded> prefabReferences)
+        in ComponentLookup<SpawnerDefinitionData> spawners)
     {
         switch (type)
         {
@@ -224,7 +220,6 @@ public struct LevelStageOption
             case Type.PrefabRemaining:
                 using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                 {
-                    RequestEntityPrefabLoaded prefabReference;
                     SpawnerEntity spawnerEntity;
                     SpawnerDefinitionData spawnerDefinition;
                     DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
@@ -250,8 +245,7 @@ public struct LevelStageOption
                         if (spawnerPrefabBuffer.Length <= loaderIndex.value)
                             continue;
 
-                        if (!prefabReferences.TryGetComponent(spawnerPrefabBuffer[loaderIndex.value].loader,
-                                out prefabReference) || prefabReference.Prefab != prefab.reference)
+                        if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
                             continue;
 
                         foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))

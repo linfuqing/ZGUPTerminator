@@ -177,8 +177,7 @@ public class GameMain : GameUser
         __defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
 
         var analytics = IAnalytics.instance as IAnalyticsEx;
-        if(analytics != null)
-            analytics.Activate(Shared.channelName, Shared.channelUser);
+        analytics?.Activate(Shared.channelName, Shared.channelUser);
     }
 
     private void __OnLogin()
@@ -203,6 +202,9 @@ public class GameMain : GameUser
             //yield return IUserData.instance.QuerySkills(__id, __OnApplySkills);
             
             activation = new GameSceneActivation();
+            
+            var analytics = IAnalytics.instance as IAnalyticsEx;
+            analytics?.StartLevel(__defaultSceneName);
         }
 
         yield return GameAssetManager.instance.Init(

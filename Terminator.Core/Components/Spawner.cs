@@ -1,6 +1,7 @@
 using System;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Serialization;
 using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -172,12 +173,13 @@ public struct SpawnerDefinition
         in Entity entity,
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
-        in ComponentLookup<PrefabLoadResult> prefabLoadResults,
+        //in ComponentLookup<PrefabLoadResult> prefabLoadResults,
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities,
         in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref DynamicBuffer<SpawnerStatus> states, 
         ref DynamicBuffer<SpawnerEntityCount> entityCounts,
         ref EntityCommandBuffer.ParallelWriter entityManager,
+        ref PrefabLoader.ParallelWriter prefabLoader,
         ref Random random, 
         ref int instanceCount)
     {
@@ -203,8 +205,8 @@ public struct SpawnerDefinition
 
         int i, j, numLoaderIndices;
         float randomValue;
+        Entity prefabLoadResult;
         SpawnerEntity spawnerEntity;
-        PrefabLoadResult prefabLoadResult;
         for (i = 0; i < numSpawners; ++i)
         {
             ref var spawner = ref this.spawners[i];
@@ -227,7 +229,7 @@ public struct SpawnerDefinition
             if (j == numLoaderIndices)
                 continue;
 
-            if (!prefabLoadResults.TryGetComponent(prefabs[spawner.loaderIndices[j].value].loader, out prefabLoadResult))
+            if (!prefabLoader.GetOrLoadPrefabRoot(prefabs[spawner.loaderIndices[j].value].prefab, out prefabLoadResult))
                 continue;
 
             spawnerEntity.spawner = entity;
@@ -238,7 +240,7 @@ public struct SpawnerDefinition
                 layerMask,
                 time,
                 playerPosition,
-                prefabLoadResult.PrefabRoot,
+                prefabLoadResult,
                 spawnerEntity, 
                 collisionWorld,
                 colliders, 
@@ -491,7 +493,7 @@ public struct SpawnerLayerMask : IComponentData
 
 public struct SpawnerPrefab : IBufferElementData
 {
-    public Entity loader;
+    public EntityPrefabReference prefab;
 }
 
 public struct SpawnerEntityCount : IBufferElementData

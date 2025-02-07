@@ -26,9 +26,6 @@ public partial struct LevelSystem : ISystem
         public Random random;
 
         [ReadOnly]
-        public ComponentLookup<RequestEntityPrefabLoaded> prefabReferences;
-
-        [ReadOnly]
         public ComponentLookup<SpawnerDefinitionData> spawners;
 
         [ReadOnly]
@@ -94,8 +91,7 @@ public partial struct LevelSystem : ISystem
                                 spawnerSingleton,
                                 prefabs,
                                 spawnerPrefabs,
-                                spawners,
-                                prefabReferences))
+                                spawners))
                             break;
                     }
 
@@ -128,8 +124,7 @@ public partial struct LevelSystem : ISystem
                             spawnerSingleton,
                             prefabs,
                             spawnerPrefabs,
-                            spawners,
-                            prefabReferences);
+                            spawners);
                     }
 
                     stageResultStatus.layerMaskInclude = spawnerLayerMaskInclude.value;
@@ -186,9 +181,6 @@ public partial struct LevelSystem : ISystem
         public ComponentLookup<SpawnerLayerMaskOverride> spawnerLayerMaskOverrides;
 
         [ReadOnly]
-        public ComponentLookup<RequestEntityPrefabLoaded> prefabReferences;
-
-        [ReadOnly]
         public ComponentLookup<SpawnerDefinitionData> spawners;
 
         [ReadOnly]
@@ -229,7 +221,6 @@ public partial struct LevelSystem : ISystem
             update.spawnerLayerMaskExclude = spawnerLayerMaskExcludes.GetRefRW(spawnerLayerMaskEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)time ^ (int)(time >> 32)));
-            update.prefabReferences = prefabReferences;
             update.spawners = spawners;
             update.spawnerPrefabs = spawnerPrefabs;
             update.spawnerSingleton = spawnerSingleton;
@@ -253,8 +244,6 @@ public partial struct LevelSystem : ISystem
     private ComponentLookup<SpawnerLayerMaskOverride> __spawnerLayerMaskOverrides;
     private ComponentLookup<SpawnerLayerMaskInclude> __spawnerLayerMaskIncludes;
     private ComponentLookup<SpawnerLayerMaskExclude> __spawnerLayerMaskExcludes;
-
-    private ComponentLookup<RequestEntityPrefabLoaded> __prefabReferences;
 
     private ComponentLookup<SpawnerDefinitionData> __spawners;
 
@@ -280,7 +269,6 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskOverrides = state.GetComponentLookup<SpawnerLayerMaskOverride>(true);
         __spawnerLayerMaskIncludes = state.GetComponentLookup<SpawnerLayerMaskInclude>();
         __spawnerLayerMaskExcludes = state.GetComponentLookup<SpawnerLayerMaskExclude>();
-        __prefabReferences = state.GetComponentLookup<RequestEntityPrefabLoaded>(true);
         __spawners = state.GetComponentLookup<SpawnerDefinitionData>(true);
         __spawnerPrefabs = state.GetBufferLookup<SpawnerPrefab>(true);
         __prefabType = state.GetBufferTypeHandle<LevelPrefab>(true);
@@ -309,7 +297,6 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskOverrides.Update(ref state);
         __spawnerLayerMaskIncludes.Update(ref state);
         __spawnerLayerMaskExcludes.Update(ref state);
-        __prefabReferences.Update(ref state);
         __spawners.Update(ref state);
         __spawnerPrefabs.Update(ref state);
         __prefabType.Update(ref state);
@@ -330,7 +317,6 @@ public partial struct LevelSystem : ISystem
         update.spawnerLayerMaskOverrides = __spawnerLayerMaskOverrides;
         update.spawnerLayerMaskIncludes = __spawnerLayerMaskIncludes;
         update.spawnerLayerMaskExcludes = __spawnerLayerMaskExcludes;
-        update.prefabReferences = __prefabReferences;
         update.spawnerPrefabs = __spawnerPrefabs;
         update.spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         update.spawners = __spawners;

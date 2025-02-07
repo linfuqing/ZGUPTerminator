@@ -584,7 +584,6 @@ public class SpawnerAuthoring : MonoBehaviour
                 BlobBuilderArray<SpawnerDefinition.AreaIndex> areaIndices;
                 BlobBuilderArray<SpawnerDefinition.LoaderIndex> loaderIndices;
                 var prefabEntities = new Dictionary<GameObject, int>();
-                RequestEntityPrefabLoaded requestEntityPrefabLoaded;
                 SpawnerPrefab prefab;
                 int numPrefabLoaderIndices, numAreaIndices, j, k;
                 for (i = 0; i < numSpawners; ++i)
@@ -658,11 +657,12 @@ public class SpawnerAuthoring : MonoBehaviour
 
                             prefabEntities[sourcePrefab.gameObject] = destinationLoaderIndex.value;
 
-                            prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
+                            prefab.prefab = new EntityPrefabReference(sourcePrefab.gameObject);
+                            /*prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
                                 sourcePrefab.gameObject.name);
 
                             requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(sourcePrefab.gameObject);
-                            AddComponent(prefab.loader, requestEntityPrefabLoaded);
+                            AddComponent(prefab.loader, requestEntityPrefabLoaded);*/
 
                             prefabLoaders.Add(prefab);
                         }
