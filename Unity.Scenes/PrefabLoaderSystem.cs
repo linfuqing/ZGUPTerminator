@@ -99,6 +99,7 @@ public partial struct PrefabLoaderSystem : ISystem
         [ReadOnly]
         public NativeArray<EntityPrefabReference> entityPrefabReferences;
         
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<RequestEntityPrefabLoaded> requestEntityPrefabLoadeds;
 
         public void Execute(int index)
