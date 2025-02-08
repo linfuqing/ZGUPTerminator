@@ -203,70 +203,45 @@ public struct SpawnerDefinition
         states.Resize(numSpawners, NativeArrayOptions.ClearMemory);
         entityCounts.Resize(numSpawners, NativeArrayOptions.ClearMemory);
 
-        int i, j, numLoaderIndices;
-        float randomValue;
-        Entity prefabLoadResult;
-        SpawnerEntity spawnerEntity;
-        for (i = 0; i < numSpawners; ++i)
+        for (int i = 0; i < numSpawners; ++i)
         {
             ref var spawner = ref this.spawners[i];
 
-            randomValue = random.NextFloat();
-            numLoaderIndices = spawner.loaderIndices.Length;
-            for (j = 0; j < numLoaderIndices; ++j)
-            {
-                ref var loaderIndex = ref spawner.loaderIndices[j];
-                if (loaderIndex.chance < randomValue)
-                {
-                    randomValue -= loaderIndex.chance;
-
-                    continue;
-                }
-
-                break;
-            }
-
-            if (j == numLoaderIndices)
-                continue;
-
-            if (!prefabLoader.GetOrLoadPrefabRoot(prefabs[spawner.loaderIndices[j].value].prefab, out prefabLoadResult))
-                continue;
-
-            spawnerEntity.spawner = entity;
-            spawnerEntity.spawnerIndex = i;
-            spawnerEntity.loaderIndex = j;
-
             Update(
+                i, 
                 layerMask,
                 time,
                 playerPosition,
-                prefabLoadResult,
-                spawnerEntity, 
+                entity,
                 collisionWorld,
                 colliders, 
                 entities, 
+                prefabs,
                 ref spawner, 
                 ref states.ElementAt(i), 
                 ref entityCounts.ElementAt(i), 
                 ref entityManager, 
+                ref prefabLoader, 
                 ref random, 
                 ref instanceCount);
         }
     }
     
     public bool Update(
+        int index, 
         int layerMask, 
         double time, 
         in float3 playerPosition, 
-        in Entity prefab, 
-        in SpawnerEntity spawnerEntity, 
+        in Entity entity, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities, 
+        in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref Spawner data, 
         ref SpawnerStatus status, 
         ref SpawnerEntityCount count,
         ref EntityCommandBuffer.ParallelWriter entityManager, 
+        ref PrefabLoader.ParallelWriter prefabLoader,
         ref Random random, 
         ref int instanceCount)
     {
@@ -282,6 +257,32 @@ public struct SpawnerDefinition
 
         if (status.startTime + data.startTime > time || data.endTime > math.FLT_MIN_NORMAL && status.startTime + data.endTime < time)
             return false;
+        
+        float chance = random.NextFloat();
+        int numLoaderIndices = data.loaderIndices.Length, i;
+        for (i = 0; i < numLoaderIndices; ++i)
+        {
+            ref var loaderIndex = ref data.loaderIndices[i];
+            if (loaderIndex.chance < chance)
+            {
+                chance -= loaderIndex.chance;
+
+                continue;
+            }
+
+            break;
+        }
+
+        if (i == numLoaderIndices)
+            return false;
+
+        if (!prefabLoader.GetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
+            return false;
+
+        SpawnerEntity spawnerEntity;
+        spawnerEntity.spawner = entity;
+        spawnerEntity.spawnerIndex = index;
+        spawnerEntity.loaderIndex = i;
         
         int entityCount = entities.CountValuesForKey(spawnerEntity) + count.value;
         /*if (status.cooldown > time && entityCount >= data.maxCountToNextTime)

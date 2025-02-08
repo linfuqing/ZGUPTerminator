@@ -67,7 +67,7 @@ public sealed class InstanceManager : MonoBehaviour
             instanceManager.__instances == null ||
             !instanceManager.__instances.TryGetValue(instanceID, out var instance))
         {
-            Debug.LogError($"Destroy {instanceID} has been failed!", Resources.InstanceIDToObject(instanceID));
+            Debug.LogWarning($"Destroy {instanceID} has been failed!", Resources.InstanceIDToObject(instanceID));
             
             return;
         }
