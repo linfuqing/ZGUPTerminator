@@ -11,6 +11,45 @@ using Unity.Scenes;
 
 public struct PrefabLoader
 {
+    public struct Writer
+    {
+        [ReadOnly]
+        private WeakAssetReferenceLoadingData __weakAssetReferenceLoadingData;
+
+        private NativeQueue<PrefabLoaderSingleton.Result> __results;
+
+        internal Writer(ref PrefabLoader value)
+        {
+            __weakAssetReferenceLoadingData = value.__weakAssetReferenceLoadingData;
+            __results = value.__group.GetSingleton<PrefabLoaderSingleton>().results;
+        }
+
+        public bool GetOrLoadPrefabRoot(in EntityPrefabReference entityPrefabReference, out Entity entity)
+        {
+            PrefabLoaderSingleton.Result result;
+            result.entityPrefabReference = entityPrefabReference;
+            if (__weakAssetReferenceLoadingData.LoadedPrefabs.TryGetValue(entityPrefabReference,
+                    out var loadedPrefab))
+            {
+                entity = loadedPrefab.PrefabRoot;
+
+                result.status = PrefabLoaderSingleton.Status.Loaded;
+            } 
+            else 
+            {
+                entity = Entity.Null;
+
+                result.status = __weakAssetReferenceLoadingData.InProgressLoads.ContainsKey(entityPrefabReference)
+                    ? PrefabLoaderSingleton.Status.InProgressLoad
+                    : PrefabLoaderSingleton.Status.None;
+            }
+            
+            __results.Enqueue(result);
+
+            return entity != Entity.Null;
+        }
+    }
+    
     public struct ParallelWriter
     {
         [ReadOnly]
@@ -68,12 +107,31 @@ public struct PrefabLoader
                 .WithAllRW<PrefabLoaderSingleton>()
                 .Build(ref systemState);
     }
+    
+    public PrefabLoader(SystemBase system)
+    {
+        var world = system.World;
+        var entityManager = world.EntityManager;
+        var systemHandle = world.GetExistingSystem<WeakAssetReferenceLoadingSystem>();
+        __weakAssetReferenceLoadingData = 
+            entityManager.GetComponentData<WeakAssetReferenceLoadingData>(systemHandle);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __group = builder
+                .WithAllRW<PrefabLoaderSingleton>()
+                .Build(system);
+    }
 
     /*public void AddDependency(in JobHandle jobHandle)
     {
         __group.AddDependency(jobHandle);
     }*/
 
+    public Writer AsWriter()
+    {
+        return new Writer(ref this);
+    }
+    
     public ParallelWriter AsParallelWriter()
     {
         return new ParallelWriter(ref this);

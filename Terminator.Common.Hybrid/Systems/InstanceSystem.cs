@@ -7,16 +7,17 @@ using Unity.Mathematics;
 using Unity.Scenes;
 using Unity.Transforms;
 
-[CreateAfter(typeof(CopyMatrixToTransformSystem)), 
- UpdateInGroup(typeof(InitializationSystemGroup))/*, 
+[CreateAfter(typeof(PrefabLoaderSystem)), 
+ CreateAfter(typeof(CopyMatrixToTransformSystem)), 
+ UpdateInGroup(typeof(InitializationSystemGroup))/*,
  UpdateAfter(typeof(MessageSystem))*/]
 public partial class InstanceSystem : SystemBase
 {
-    private struct Scene
+    /*private struct Scene
     {
         public int count;
         public Entity entity;
-    }
+    }*/
     
     private struct Save
     {
@@ -113,16 +114,16 @@ public partial class InstanceSystem : SystemBase
     private ComponentLookup<LocalTransform> __localTransforms;
     private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
 
-    private EntityQuery __groupToClear;
     private EntityQuery __groupToEnable;
     private EntityQuery __groupToDisable;
     private EntityQuery __groupToDestroy;
     private EntityQuery __groupToCreate;
     private NativeParallelMultiHashMap<FixedString128Bytes, Entity> __entities;
     private NativeParallelMultiHashMap<int, EntityPrefabReference> __entityPrefabReferences;
-    private NativeParallelMultiHashMap<Entity, RigidTransform> __loaders;
-    private NativeHashMap<EntityPrefabReference, Scene> __scenes;
-    private NativeHashMap<Entity, EntityPrefabReference> __instances;
+    private NativeParallelMultiHashMap<EntityPrefabReference, RigidTransform> __loaders;
+    //private NativeHashMap<EntityPrefabReference, Scene> __scenes;
+    //private NativeHashMap<Entity, EntityPrefabReference> __instances;
+    private PrefabLoader __prefabLoader;
 
     protected override void OnCreate()
     {
@@ -135,12 +136,6 @@ public partial class InstanceSystem : SystemBase
         __localToWorlds = GetComponentLookup<LocalToWorld>(true);
         __localTransforms = GetComponentLookup<LocalTransform>();
         __instanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
-
-        using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __groupToClear = builder
-                .WithAll<InstanceEntity>()
-                .WithNone<SceneSection>()
-                .Build(this);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToEnable = builder
@@ -170,15 +165,13 @@ public partial class InstanceSystem : SystemBase
 
         __entities = new NativeParallelMultiHashMap<FixedString128Bytes, Entity>(1, Allocator.Persistent);
         __entityPrefabReferences = new NativeParallelMultiHashMap<int, EntityPrefabReference>(1, Allocator.Persistent);
-        __loaders = new NativeParallelMultiHashMap<Entity, RigidTransform>(1, Allocator.Persistent);
-        __scenes = new NativeHashMap<EntityPrefabReference, Scene>(1, Allocator.Persistent);
-        __instances = new NativeHashMap<Entity, EntityPrefabReference>(1, Allocator.Persistent);
+        __loaders = new NativeParallelMultiHashMap<EntityPrefabReference, RigidTransform>(1, Allocator.Persistent);
+
+        __prefabLoader = new PrefabLoader(this);
     }
 
     protected override void OnDestroy()
     {
-        __instances.Dispose();
-        __scenes.Dispose();
         __loaders.Dispose();
         __entityPrefabReferences.Dispose();
         __entities.Dispose();
@@ -188,119 +181,70 @@ public partial class InstanceSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        CompleteDependency();
+        
         var world = World.Unmanaged;
         var entityManager = world.EntityManager;
+        
         if (!__loaders.IsEmpty)
         {
+            var prefabLoader = __prefabLoader.AsWriter();
             using (var keys = __loaders.GetKeyArray(Allocator.Temp))
             {
-                LocalTransform localTransform;
-                localTransform.Scale = 1.0f;
-
                 NativeList<Entity> entities = default;
-                Entity key, entity, prefabRoot;
-                EntityPrefabReference instance;
-                Scene scene;
-                SceneSystem.SceneStreamingState state;
-                int entityOffset, length = keys.Unique();
-                for (int i = 0; i < length; ++i)
+                NativeList<RigidTransform> transforms = default;
+                Entity entity;
+                EntityPrefabReference key;
+                int numEntities, entityOffset, numKeys = keys.Unique(), capacity = keys.Length;
+                for (int i = 0; i < numKeys; ++i)
                 {
                     key = keys[i];
-                    state = SceneSystem.GetSceneStreamingState(world, key);
-                    switch (state)
+                    if(!prefabLoader.GetOrLoadPrefabRoot(key, out entity))
+                        continue;
+                
+                    numEntities = __loaders.CountValuesForKey(key);
+
+                    if (!entities.IsCreated)
                     {
-                        case SceneSystem.SceneStreamingState.Loading:
-                            break;
-                        case SceneSystem.SceneStreamingState.LoadedSuccessfully:
-                        //case SceneSystem.SceneStreamingState.LoadedSectionEntities:
-                        //case SceneSystem.SceneStreamingState.LoadedWithSectionErrors:
-                            int numEntities = __loaders.CountValuesForKey(key);
-                            if (!entities.IsCreated)
-                                entities = new NativeList<Entity>(numEntities, Allocator.Temp);
-
-                            entityOffset = entities.Length;
-                            entities.ResizeUninitialized(entityOffset + numEntities);
- 
-                            prefabRoot = entityManager.GetComponentData<PrefabRoot>(key).Root;
-                            entityManager.Instantiate(prefabRoot, entities.AsArray().GetSubArray(entityOffset, numEntities));
-                        
-                            instance = __instances[key];
-                            __localTransforms.Update(this);
-                            foreach (var loader in __loaders.GetValuesForKey(key))
-                            {
-                                entity = entities[--numEntities + entityOffset];
-                                
-                                localTransform.Position = loader.pos;
-                                localTransform.Rotation = loader.rot;
-
-                                __localTransforms[entity] = localTransform;
-
-                                __instances[entity] = instance;
-                            }
-
-                            __loaders.Remove(key);
-
-                            //SceneSystem.UnloadScene(world, entity);
-
-                            break;
-                        default:
-                            UnityEngine.Debug.LogError(state);
-                            
-                            instance = __instances[key];
-                            scene = __scenes[instance];
-                            scene.count -= __loaders.CountValuesForKey(key);
-                            if (scene.count > 0)
-                                __scenes[instance] = scene;
-                            else
-                            {
-                                SceneSystem.UnloadScene(world, scene.entity);
-                                
-                                __scenes.Remove(instance);
-
-                                __instances.Remove(key);
-                            }
-
-                            __loaders.Remove(key);
-
-                            break;
+                        entities = new NativeList<Entity>(capacity, Allocator.Temp);
+                        transforms = new NativeList<RigidTransform>(capacity, Allocator.Temp);
                     }
+
+                    entityOffset = entities.Length;
+                    entities.ResizeUninitialized(entityOffset + numEntities);
+ 
+                    entityManager.Instantiate(entity, entities.AsArray().GetSubArray(entityOffset, numEntities));
+                    
+                    foreach (var loader in __loaders.GetValuesForKey(key))
+                        transforms.Add(loader);
+
+                    __loaders.Remove(key);
                 }
 
                 if (entities.IsCreated)
                 {
-                    entityManager.AddComponent<InstanceEntity>(entities.AsArray());
-                    
-                    entities.Dispose();
-                }
-            }
-        }
+                    __localTransforms.Update(this);
 
-        if (!__groupToClear.IsEmpty)
-        {
-            using (var entities = __groupToClear.ToEntityArray(Allocator.Temp))
-            {
-                entityManager.RemoveComponent<InstanceEntity>(__groupToClear);
-                
-                EntityPrefabReference instance;
-                foreach (var entity in entities)
-                {
-                    instance = __instances[entity];
-                    var scene = __scenes[instance];
-                    if (--scene.count > 0)
-                        __scenes[instance] = scene;
-                    else
+                    LocalTransform localTransform;
+                    localTransform.Scale = 1.0f;
+
+                    RigidTransform transform;
+                    int length = entities.Length;
+                    for(int i = 0; i < length; ++i)
                     {
-                        SceneSystem.UnloadScene(World.Unmanaged, scene.entity);
-                       
-                        __instances.Remove(scene.entity); 
-                        __scenes.Remove(instance);
+                        transform = transforms[i];
+                        localTransform.Position = transform.pos;
+                        localTransform.Rotation = transform.rot;
+
+                        __localTransforms[entities[i]] = localTransform;
                     }
                     
-                    __instances.Remove(entity);
+                    entities.Dispose();
+                    transforms.Dispose();
                 }
             }
         }
-
+        
         if (!__groupToEnable.IsEmpty)
         {
             __prefabType.Update(this);
@@ -339,7 +283,6 @@ public partial class InstanceSystem : SystemBase
                    __groupToDestroy.ToComponentDataArray<CopyMatrixToTransformInstanceID>(Allocator.Temp))
             {
                 UnityEngine.Transform transform;
-                Scene scene;
                 EntityPrefabReference entityPrefabReference;
                 NativeParallelMultiHashMapIterator<int> iterator;
                 foreach (var id in ids)
@@ -352,19 +295,7 @@ public partial class InstanceSystem : SystemBase
                         {
                             do
                             {
-                                if (__scenes.TryGetValue(entityPrefabReference, out scene))
-                                    ++scene.count;
-                                else
-                                {
-                                    scene.count = 1;
-                                    scene.entity = SceneSystem.LoadPrefabAsync(world, entityPrefabReference);
-
-                                    __instances[scene.entity] = entityPrefabReference;
-                                }
-                                
-                                __scenes[entityPrefabReference] = scene;
-                                
-                                __loaders.Add(scene.entity, math.RigidTransform(transform.rotation, transform.position));
+                                __loaders.Add(entityPrefabReference, math.RigidTransform(transform.rotation, transform.position));
                             } while (__entityPrefabReferences.TryGetNextValue(out entityPrefabReference, ref iterator));
                         }
 
