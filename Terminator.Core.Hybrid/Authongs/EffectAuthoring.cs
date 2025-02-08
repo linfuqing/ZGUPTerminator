@@ -14,6 +14,18 @@ using Object = UnityEngine.Object;
 public class EffectAuthoring : MonoBehaviour
 {
     [Serializable]
+    internal struct PrefabData
+    {
+        public string name;
+
+        public EffectSpace space;
+
+        public float chance;
+
+        public GameObject gameObject;
+    }
+    
+    [Serializable]
     internal struct MessageData
     {
         public string name;
@@ -55,6 +67,9 @@ public class EffectAuthoring : MonoBehaviour
         [Tooltip("消息名称，用来触发触碰动画")]
         public string[] messageNames;
 
+        [Tooltip("击中掉落")]
+        public PrefabData[] prefabs;
+        
         public bool Equals(DamageData other)
         {
             return layerMask == other.layerMask &&
@@ -98,8 +113,7 @@ public class EffectAuthoring : MonoBehaviour
                 var messages = AddBuffer<EffectMessage>(entity);
                 messages.ResizeUninitialized(numMessages);
                 
-                var prefabLoaders = new Dictionary<GameObject, Entity>();
-                RequestEntityPrefabLoaded requestEntityPrefabLoaded;
+                var prefabLoaders = new Dictionary<GameObject, EntityPrefabReference>();
                 for (int i = 0; i < numMessages; ++i)
                 {
                     ref var source = ref authoring._messages[i];
@@ -109,19 +123,13 @@ public class EffectAuthoring : MonoBehaviour
                     destination.value = new WeakObjectReference<Object>(source.value);
                     
                     if (source.receiverPrefab == null)
-                        destination.receiverPrefabLoader = Entity.Null;
-                    else if (!prefabLoaders.TryGetValue(source.receiverPrefab, out destination.receiverPrefabLoader))
+                        destination.entityPrefabReference = default;
+                    else if (!prefabLoaders.TryGetValue(source.receiverPrefab, out destination.entityPrefabReference))
                     {
-                        destination.receiverPrefabLoader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
-                            source.receiverPrefab.name);
+                        destination.entityPrefabReference = new EntityPrefabReference(source.receiverPrefab);
 
-                        requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(source.receiverPrefab);
-
-                        AddComponent(destination.receiverPrefabLoader, requestEntityPrefabLoaded);
-
-                        prefabLoaders[source.receiverPrefab] = destination.receiverPrefabLoader;
+                        prefabLoaders[source.receiverPrefab] = destination.entityPrefabReference;
                     }
-
                 }
                 
                 //AddComponent<Message>(entity);
@@ -130,14 +138,16 @@ public class EffectAuthoring : MonoBehaviour
                 //AddComponent<MessageParameter>(entity);
             }
 
+            var prefabIndices = new Dictionary<GameObject, int>();
             EffectDefinitionData instance;
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
                 ref var root = ref builder.ConstructRoot<EffectDefinition>();
                 
-                int i, j, k, damageIndex, numMessageNames, numDamages, numEffects = authoring._effects.Length;
+                int i, j, k, damageIndex, numDamages, numPrefabs, numMessageNames, numEffects = authoring._effects.Length;
                 string messageName;
                 BlobBuilderArray<int> messageIndices, damageIndices;
+                BlobBuilderArray<EffectDefinition.Prefab> prefabs;
                 var damageDataIndices = new Dictionary<DamageData, int>();
                 var damageDatas = new List<DamageData>();
                 var effects = builder.Allocate(ref root.effects, numEffects);
@@ -207,11 +217,41 @@ public class EffectAuthoring : MonoBehaviour
                         if(messageIndices[j] == -1)
                             Debug.LogError($"Message {messageName} of effect damage {i} in {authoring} can not been found!");
                     }
+                    
+                    numPrefabs = source.prefabs == null ? 0 : source.prefabs.Length;
+                    prefabs = builder.Allocate(ref destination.prefabs, numPrefabs);
+                    for(j = 0; j < numPrefabs; ++j)
+                    {
+                        ref var sourcePrefab = ref source.prefabs[j];
+                        ref var destinationPrefab = ref prefabs[j];
+                        destinationPrefab.space = sourcePrefab.space;
+                        
+                        if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
+                        {
+                            destinationPrefab.index = prefabIndices.Count;
+                            
+                            prefabIndices[sourcePrefab.gameObject] = destinationPrefab.index;
+                        }
+
+                        destinationPrefab.chance = sourcePrefab.chance;
+                    }
                 }
-                
+
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);
             }
             
+            if (prefabIndices.Count > 0)
+            {
+                var prefabs = AddBuffer<EffectPrefab>(entity);
+                EffectPrefab prefab;
+                foreach (var gameObject in prefabIndices.Keys)
+                {
+                    prefab.entityPrefabReference = new EntityPrefabReference(gameObject);
+
+                    prefabs.Add(prefab);
+                }
+            }
+
             AddBlobAsset(ref instance.definition, out _);
 
             AddComponent(entity, instance);
@@ -221,7 +261,7 @@ public class EffectAuthoring : MonoBehaviour
             //AddComponent<SimulationEvent>(entity);
         }
     }
-    
+
     [SerializeField]
     internal MessageData[] _messages;
     

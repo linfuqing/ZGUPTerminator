@@ -78,8 +78,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             
             messages.Resize(numMessages, NativeArrayOptions.UninitializedMemory);
             
-            var prefabLoaders = new Dictionary<GameObject, Entity>();
-            RequestEntityPrefabLoaded requestEntityPrefabLoaded;
+            var prefabLoaders = new Dictionary<GameObject, EntityPrefabReference>();
             for (int i = 0; i < numMessages; ++i)
             {
                 ref var source = ref authoring._messages[i];
@@ -90,17 +89,12 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                 destination.messageValue = new WeakObjectReference<Object>(source.messageValue);
                 
                 if (source.receiverPrefab == null)
-                    destination.receiverPrefabLoader = Entity.Null;
-                else if (!prefabLoaders.TryGetValue(source.receiverPrefab, out destination.receiverPrefabLoader))
+                    destination.entityPrefabReference = default;
+                else if (!prefabLoaders.TryGetValue(source.receiverPrefab, out destination.entityPrefabReference))
                 {
-                    destination.receiverPrefabLoader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
-                        source.receiverPrefab.name);
+                    destination.entityPrefabReference = new EntityPrefabReference(source.receiverPrefab);
 
-                    requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(source.receiverPrefab);
-
-                    AddComponent(destination.receiverPrefabLoader, requestEntityPrefabLoaded);
-
-                    prefabLoaders[source.receiverPrefab] = destination.receiverPrefabLoader;
+                    prefabLoaders[source.receiverPrefab] = destination.entityPrefabReference;
                 }
 
             }

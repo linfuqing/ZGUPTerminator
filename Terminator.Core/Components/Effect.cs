@@ -2,6 +2,7 @@ using System.Threading;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Content;
+using Unity.Entities.Serialization;
 using Unity.Transforms;
 using Object = UnityEngine.Object;
 
@@ -10,6 +11,13 @@ public enum EffectAttributeID
     HPMax, 
     HP,
     Damage
+}
+
+public enum EffectSpace
+{
+    Source, 
+    Destination, 
+    Target
 }
 
 public struct EffectTargetInvulnerabilityDefinition
@@ -27,6 +35,13 @@ public struct EffectTargetInvulnerabilityDefinition
 
 public struct EffectDefinition
 {
+    public struct Prefab
+    {
+        public EffectSpace space;
+        public int index;
+        public float chance;
+    }
+    
     public struct Damage
     {
         public int layerMask;
@@ -44,6 +59,8 @@ public struct EffectDefinition
         public float delayDestroyTime;
         
         public BlobArray<int> messageIndices;
+        
+        public BlobArray<Prefab> prefabs;
     }
     
     public struct Effect
@@ -57,8 +74,8 @@ public struct EffectDefinition
         public BlobArray<int> damageIndices;
     }
 
-    public BlobArray<Effect> effects;
     public BlobArray<Damage> damages;
+    public BlobArray<Effect> effects;
 }
 
 public struct EffectDefinitionData : IComponentData
@@ -73,14 +90,14 @@ public struct EffectDamage : IComponentData
     public static float Compute(
         in Entity entity, 
         in ComponentLookup<Parent> parents,
-        in ComponentLookup<FollowTargetParent> followTargetParents,
+        //in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamage> damages)
     {
         float result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
         if (parents.TryGetComponent(entity, out var parent))
-            result *= Compute(parent.Value, parents, followTargetParents, damages);
-        else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
-            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);
+            result *= Compute(parent.Value, parents, damages);
+        /*else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
+            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);*/
 
         return result;
     }
@@ -93,11 +110,16 @@ public struct EffectStatus : IComponentData, IEnableableComponent
     public double time;
 }
 
+public struct EffectPrefab : IBufferElementData
+{
+    public EntityPrefabReference entityPrefabReference;
+}
+
 public struct EffectMessage : IBufferElementData
 {
     public FixedString128Bytes name;
     public WeakObjectReference<Object> value;
-    public Entity receiverPrefabLoader;
+    public EntityPrefabReference entityPrefabReference;
 }
 
 public struct EffectStatusTarget : IBufferElementData, IEnableableComponent
@@ -193,7 +215,7 @@ public struct EffectTargetInvulnerabilityStatus : IComponentData
 public struct EffectTargetMessage : IBufferElementData
 {
     public uint layerMask;
-    public Entity receiverPrefabLoader;
+    public EntityPrefabReference entityPrefabReference;
     public FixedString128Bytes messageName;
     public WeakObjectReference<Object> messageValue;
 }

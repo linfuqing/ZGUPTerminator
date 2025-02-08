@@ -281,7 +281,7 @@ public struct BulletDefinition
 
                 if (!hasTarget)
                 {
-                    if (prefabLoader.GetOrLoadPrefabRoot(prefabs[prefabLoaderIndex].entityPrefabReference, out var prefab) &&
+                    if (prefabLoader.TryGetOrLoadPrefabRoot(prefabs[prefabLoaderIndex].entityPrefabReference, out var prefab) &&
                         physicsColliders.TryGetComponent(prefab, out var physicsCollider) &&
                         physicsCollider.IsValid)
                     {
@@ -578,7 +578,7 @@ public struct BulletDefinition
 
         Entity prefab = Entity.Null;
         result = result &&
-                 prefabLoader.GetOrLoadPrefabRoot(prefabs[data.prefabLoaderIndex].entityPrefabReference, out prefab);
+                 prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.prefabLoaderIndex].entityPrefabReference, out prefab);
 
         /*double cooldown;
         if (status.count < 0)

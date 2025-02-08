@@ -196,18 +196,10 @@ public partial struct EffectSystem : ISystem
 
         public quaternion inverseCameraRotation;
         
-        //[NativeDisableParallelForRestriction]
-        //public RefRW<LevelStatus> levelStatus;
         public Random random;
 
         [ReadOnly] 
-        public ComponentLookup<FollowTargetParent> followTargetParents;
-        
-        [ReadOnly] 
         public ComponentLookup<Parent> parents;
-
-        [ReadOnly] 
-        public ComponentLookup<PrefabLoadResult> prefabLoadResults;
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
@@ -229,6 +221,9 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public BufferAccessor<SimulationEvent> simulationEvents;
+
+        [ReadOnly] 
+        public BufferAccessor<EffectPrefab> prefabs;
 
         [ReadOnly] 
         public BufferAccessor<EffectMessage> inputMessages;
@@ -255,6 +250,8 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<LocalToWorld> localToWorlds;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
+        
+        public PrefabLoader.ParallelWriter prefabLoader;
 
         public EnabledFlags Execute(int index)
         {
@@ -287,30 +284,34 @@ public partial struct EffectSystem : ISystem
                 if (result)
                 {
                     //ref var levelStatus = ref this.levelStatus.ValueRW;
+                    var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
                     var inputMessages = index < this.inputMessages.Length ? this.inputMessages[index] : default;
                     var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
                     var simulationEvents = this.simulationEvents[index];
                     EffectStatusTarget statusTarget;
-                    PrefabLoadResult prefabLoadResult;
                     PhysicsCollider physicsCollider;
-                    //KinematicCharacterBody characterBody;
-                    //EffectTargetLevel targetLevel;
-                    //Result result;
                     RefRW<KinematicCharacterBody> characterBody;
                     EffectMessage inputMessage;
                     Message outputMessage;
                     MessageParameter messageParameter;
-                    Entity messageReceiver;
+                    Parent parent;
+                    Entity instance;
                     LocalToWorld source = localToWorlds[entity], destination;
                     float3 forceResult, force;
-                    float delayDestroyTime, mass, lengthSQ, damageScale = EffectDamage.Compute(
-                        entity, 
-                        parents, 
-                        followTargetParents, 
-                        damages);
+                    float chance,
+                        totalChance,
+                        delayDestroyTime,
+                        mass,
+                        lengthSQ,
+                        damageScale = EffectDamage.Compute(
+                            entity,
+                            parents,
+                            //followTargetParents, 
+                            damages);
                     int damageValue,
                         layerMask,
                         belongsTo,
+                        numPrefabs, 
                         numMessageIndices,
                         numDamageIndices,
                         damageIndex,
@@ -457,7 +458,7 @@ public partial struct EffectSystem : ISystem
                         if (isResult)
                         {
                             enabledFlags |= EnabledFlags.StatusTarget;
-
+                            
                             numMessageIndices = damage.messageIndices.Length;
                             for (i = 0; i < numMessageIndices; ++i)
                             {
@@ -466,35 +467,85 @@ public partial struct EffectSystem : ISystem
                                 outputMessage.name = inputMessage.name;
                                 outputMessage.value = inputMessage.value;
 
-                                if (inputMessage.receiverPrefabLoader == Entity.Null)
+#if UNITY_EDITOR
+                                if (inputMessage.entityPrefabReference.Equals(default))
+#else
+                                if (!inputMessage.entityPrefabReference.IsReferenceValid)
+#endif
                                 {
                                     enabledFlags |= EnabledFlags.Message;
 
                                     outputMessages.Add(outputMessage);
                                 }
                                 else if ((damageValue != 0 || outputMessage.name.IsEmpty) &&
-                                         prefabLoadResults.TryGetComponent(
-                                             inputMessage.receiverPrefabLoader,
-                                             out prefabLoadResult))
+                                         prefabLoader.TryGetOrLoadPrefabRoot(
+                                             inputMessage.entityPrefabReference,
+                                             out instance))
                                 {
-                                    messageReceiver = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
+                                    instance = entityManager.Instantiate(0, instance);
 
                                     if (!outputMessage.name.IsEmpty)
                                     {
-                                        entityManager.SetBuffer<Message>(1, messageReceiver).Add(outputMessage);
-                                        entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
+                                        entityManager.SetBuffer<Message>(1, instance).Add(outputMessage);
+                                        entityManager.SetComponentEnabled<Message>(1, instance, true);
 
                                         messageParameter.messageKey = outputMessage.key;
                                         messageParameter.value = -damageValue;
                                         messageParameter.id = (int)EffectAttributeID.Damage;
-                                        entityManager.SetBuffer<MessageParameter>(1, messageReceiver)
+                                        entityManager.SetBuffer<MessageParameter>(1, instance)
                                             .Add(messageParameter);
                                     }
 
-                                    entityManager.SetComponent(1, messageReceiver,
+                                    entityManager.SetComponent(1, instance,
                                         LocalTransform.FromPositionRotation(destination.Position,
                                             inverseCameraRotation));
                                 }
+                            }
+
+                            isContains = false;
+                            numPrefabs = damage.prefabs.Length;
+                            chance = random.NextFloat();
+                            totalChance = 0.0f;
+                            for (i = 0; i < numPrefabs; ++i)
+                            {
+                                ref var prefab = ref damage.prefabs[i];
+                                totalChance += prefab.chance;
+                                if (totalChance > 1.0f)
+                                {
+                                    totalChance -= 1.0f;
+
+                                    chance = random.NextFloat();
+
+                                    isContains = false;
+                                }
+
+                                if (isContains || totalChance < chance)
+                                    continue;
+
+                                if (!prefabLoader.TryGetOrLoadPrefabRoot(
+                                        prefabs[prefab.index].entityPrefabReference, out instance))
+                                    continue;
+
+                                instance = entityManager.Instantiate(0, instance);
+                                switch (prefab.space)
+                                {
+                                    case EffectSpace.Source:
+                                        entityManager.SetComponent(1, instance,
+                                            LocalTransform.FromPositionRotation(source.Position,
+                                                source.Rotation));
+                                        break;
+                                    case EffectSpace.Destination:
+                                        entityManager.SetComponent(1, instance,
+                                            LocalTransform.FromPositionRotation(destination.Position,
+                                                destination.Rotation));
+                                        break;
+                                    case EffectSpace.Target:
+                                        parent.Value = simulationEvent.entity;
+                                        entityManager.AddComponent(1, instance, parent);
+                                        break;
+                                }
+
+                                isContains = true;
                             }
                         }
                     }
@@ -565,13 +616,7 @@ public partial struct EffectSystem : ISystem
         public quaternion inverseCameraRotation;
         
         [ReadOnly] 
-        public ComponentLookup<FollowTargetParent> followTargetParents;
-
-        [ReadOnly] 
         public ComponentLookup<Parent> parents;
-
-        [ReadOnly] 
-        public ComponentLookup<PrefabLoadResult> prefabLoadResults;
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
@@ -593,6 +638,9 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public BufferTypeHandle<SimulationEvent> simulationEventType;
+
+        [ReadOnly] 
+        public BufferTypeHandle<EffectPrefab> prefabType;
 
         [ReadOnly] 
         public BufferTypeHandle<EffectMessage> inputMessageType;
@@ -618,9 +666,9 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalToWorld> localToWorlds;
 
-        //public NativeQueue<Result>.ParallelWriter results;
-
         public EntityCommandBuffer.ParallelWriter entityManager;
+
+        public PrefabLoader.ParallelWriter prefabLoader;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
@@ -631,16 +679,15 @@ public partial struct EffectSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
-            collect.followTargetParents = followTargetParents;
             collect.parents = parents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
             collect.damages = damages;
-            collect.prefabLoadResults = prefabLoadResults;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.simulationCollisions = chunk.GetNativeArray(ref simulationCollisionType);
             collect.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
+            collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
@@ -652,6 +699,7 @@ public partial struct EffectSystem : ISystem
             collect.localToWorlds = localToWorlds;
             //collect.results = results;
             collect.entityManager = entityManager;
+            collect.prefabLoader = prefabLoader;
 
             EnabledFlags enabledFlags;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -680,9 +728,6 @@ public partial struct EffectSystem : ISystem
         
         [NativeDisableParallelForRestriction]
         public RefRW<LevelStatus> levelStatus;
-
-        [ReadOnly] 
-        public ComponentLookup<PrefabLoadResult> prefabLoadResults;
 
         [ReadOnly]
         public BufferAccessor<EffectTargetMessage> targetMessages;
@@ -723,6 +768,8 @@ public partial struct EffectSystem : ISystem
         public BufferAccessor<MessageParameter> messageParameters;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
+
+        public PrefabLoader.ParallelWriter prefabLoader;
 
         public bool Execute(int index)
         {
@@ -873,7 +920,6 @@ public partial struct EffectSystem : ISystem
                 {
                     float3 position = localToWorlds[index].Position;
                     Entity messageReceiver;
-                    PrefabLoadResult prefabLoadResult;
                     Message message;
                     MessageParameter messageParameter;
                     var messageParameters = index < this.messageParameters.Length ? this.messageParameters[index] : default;
@@ -888,26 +934,33 @@ public partial struct EffectSystem : ISystem
                             message.name = targetMessage.messageName;
                             message.value = targetMessage.messageValue;
 
-                            //targetMessage.value.value.LoadAsync();
-                            if (prefabLoadResults.TryGetComponent(
-                                   targetMessage.receiverPrefabLoader, out prefabLoadResult))
+#if UNITY_EDITOR
+                            if (!targetMessage.entityPrefabReference.Equals(default))
+#else
+                            if (!targetMessage.IsReferenceValid)
+#endif
                             {
-                                messageReceiver = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
-
-                                if (!targetMessage.messageName.IsEmpty)
+                                if (prefabLoader.TryGetOrLoadPrefabRoot(
+                                        targetMessage.entityPrefabReference, out messageReceiver))
                                 {
-                                    entityManager.SetBuffer<Message>(1, messageReceiver).Add(message);
-                                    entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
+                                    messageReceiver = entityManager.Instantiate(0, messageReceiver);
 
-                                    messageParameter.messageKey = message.key;
-                                    messageParameter.value = -targetDamage.value;
-                                    messageParameter.id = (int)EffectAttributeID.Damage;
-                                    entityManager.SetBuffer<MessageParameter>(1, messageReceiver).Add(messageParameter);
+                                    if (!targetMessage.messageName.IsEmpty)
+                                    {
+                                        entityManager.SetBuffer<Message>(1, messageReceiver).Add(message);
+                                        entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
+
+                                        messageParameter.messageKey = message.key;
+                                        messageParameter.value = -targetDamage.value;
+                                        messageParameter.id = (int)EffectAttributeID.Damage;
+                                        entityManager.SetBuffer<MessageParameter>(1, messageReceiver)
+                                            .Add(messageParameter);
+                                    }
+
+                                    entityManager.SetComponent(1, messageReceiver,
+                                        LocalTransform.FromPositionRotation(position,
+                                            inverseCameraRotation));
                                 }
-
-                                entityManager.SetComponent(1, messageReceiver,
-                                    LocalTransform.FromPositionRotation(position,
-                                        inverseCameraRotation));
                             }
                             else if (index < this.messages.Length)
                             {
@@ -955,9 +1008,6 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LevelStatus> levelStates;
         
-        [ReadOnly] 
-        public ComponentLookup<PrefabLoadResult> prefabLoadResults;
-
         [ReadOnly]
         public BufferTypeHandle<EffectTargetMessage> targetMessageType;
 
@@ -997,6 +1047,8 @@ public partial struct EffectSystem : ISystem
         public BufferTypeHandle<MessageParameter> messageParameterType;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
+        
+        public PrefabLoader.ParallelWriter prefabLoader;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
@@ -1007,7 +1059,6 @@ public partial struct EffectSystem : ISystem
             apply.inverseCameraRotation = inverseCameraRotation;
             apply.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
-            apply.prefabLoadResults = prefabLoadResults;
             apply.targetMessages = chunk.GetBufferAccessor(ref targetMessageType);
             apply.children = chunk.GetBufferAccessor(ref childType);
             apply.entityArray = chunk.GetNativeArray(entityType);
@@ -1024,6 +1075,7 @@ public partial struct EffectSystem : ISystem
             apply.messages = chunk.GetBufferAccessor(ref messageType);
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             apply.entityManager = entityManager;
+            apply.prefabLoader = prefabLoader;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -1037,8 +1089,6 @@ public partial struct EffectSystem : ISystem
         }
     }
 
-    private ComponentLookup<PrefabLoadResult> __prefabLoadResults;
-
     private ComponentLookup<PhysicsCollider> __physicsColliders;
 
     private ComponentLookup<KinematicCharacterProperties> __characterProperties;
@@ -1046,8 +1096,6 @@ public partial struct EffectSystem : ISystem
     private ComponentLookup<LevelStatus> __levelStates;
 
     private ComponentLookup<EffectDamage> __damages;
-
-    private ComponentLookup<FollowTargetParent> __followTargetParents;
 
     private ComponentLookup<Parent> __parents;
 
@@ -1073,6 +1121,8 @@ public partial struct EffectSystem : ISystem
 
     private BufferTypeHandle<EffectTargetMessage> __targetMessageType;
     
+    private BufferTypeHandle<EffectPrefab> __prefabType;
+
     private BufferTypeHandle<EffectStatusTarget> __statusTargetType;
 
     private ComponentTypeHandle<EffectStatus> __statusType;
@@ -1109,16 +1159,16 @@ public partial struct EffectSystem : ISystem
     private EntityQuery __groupToCollect;
 
     private EntityQuery __groupToApply;
+    
+    private PrefabLoader __prefabLoader;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __prefabLoadResults = state.GetComponentLookup<PrefabLoadResult>(true);
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __characterProperties = state.GetComponentLookup<KinematicCharacterProperties>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>();
         __damages = state.GetComponentLookup<EffectDamage>(true);
-        __followTargetParents = state.GetComponentLookup<FollowTargetParent>(true);
         __parents = state.GetComponentLookup<Parent>(true);
         __entityType = state.GetEntityTypeHandle();
         __childType = state.GetBufferTypeHandle<Child>(true);
@@ -1131,6 +1181,7 @@ public partial struct EffectSystem : ISystem
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __inputMessageType = state.GetBufferTypeHandle<EffectMessage>(true);
         __targetMessageType = state.GetBufferTypeHandle<EffectTargetMessage>(true);
+        __prefabType = state.GetBufferTypeHandle<EffectPrefab>(true);
         __statusTargetType = state.GetBufferTypeHandle<EffectStatusTarget>();
         __statusType = state.GetComponentTypeHandle<EffectStatus>();
         __targetLevelType = state.GetComponentTypeHandle<EffectTargetLevel>(true);
@@ -1172,6 +1223,8 @@ public partial struct EffectSystem : ISystem
                 .Build(ref state);
         
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
+
+        __prefabLoader = new PrefabLoader(ref state);
     }
 
     [BurstCompile]
@@ -1211,13 +1264,12 @@ public partial struct EffectSystem : ISystem
         clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
-        __followTargetParents.Update(ref state);
         __parents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
         __damages.Update(ref state);
-        __prefabLoadResults.Update(ref state);
         __simulationCollisionType.Update(ref state);
+        __prefabType.Update(ref state);
         __outputMessageType.Update(ref state);
         __inputMessageType.Update(ref state);
         __targetDamages.Update(ref state);
@@ -1225,6 +1277,8 @@ public partial struct EffectSystem : ISystem
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
+        
+        var prefabLoader = __prefabLoader.AsParallelWriter();
 
         quaternion inverseCameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
             ? math.inverse(mainCameraTransform.value.rot)
@@ -1233,9 +1287,7 @@ public partial struct EffectSystem : ISystem
         collect.deltaTime = SystemAPI.Time.DeltaTime;
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
-        collect.followTargetParents = __followTargetParents;
         collect.parents = __parents;
-        collect.prefabLoadResults = __prefabLoadResults;
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
         collect.damages = __damages;
@@ -1243,6 +1295,7 @@ public partial struct EffectSystem : ISystem
         collect.instanceType = __instanceType;
         collect.simulationCollisionType = __simulationCollisionType;
         collect.simulationEventType = __simulationEventType;
+        collect.prefabType = __prefabType;
         collect.outputMessageType = __outputMessageType;
         collect.inputMessageType = __inputMessageType;
         collect.statusTargetType = __statusTargetType;
@@ -1253,6 +1306,7 @@ public partial struct EffectSystem : ISystem
         collect.characterBodies = __characterBodies;
         collect.localToWorlds = __localToWorlds;
         collect.entityManager = entityManager;
+        collect.prefabLoader = prefabLoader;
         jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
 
         ApplyEx apply;
@@ -1273,7 +1327,6 @@ public partial struct EffectSystem : ISystem
         apply.time = time;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
-        apply.prefabLoadResults = __prefabLoadResults;
         apply.targetMessageType = __targetMessageType;
         apply.childType = __childType;
         apply.entityType = __entityType;
@@ -1290,6 +1343,7 @@ public partial struct EffectSystem : ISystem
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;
         apply.entityManager = entityManager;
+        apply.prefabLoader = prefabLoader;
         state.Dependency = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
     }
 }

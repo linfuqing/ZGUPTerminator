@@ -276,7 +276,7 @@ public struct SpawnerDefinition
         if (i == numLoaderIndices)
             return false;
 
-        if (!prefabLoader.GetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
+        if (!prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
             return false;
 
         SpawnerEntity spawnerEntity;
