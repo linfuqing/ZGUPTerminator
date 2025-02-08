@@ -573,7 +573,7 @@ public partial struct BulletSystem : ISystem
         __inputMessageType.Update(ref state);
         __outputMessageType.Update(ref state);
         __versionType.Update(ref state);
-        __prefabLoader.Update(ref state);
+        //__prefabLoader.Update(ref state);
 
         CollectEx collect;
         collect.time = SystemAPI.Time.ElapsedTime;

@@ -14,16 +14,12 @@ public struct PrefabLoader
     public struct ParallelWriter
     {
         [ReadOnly]
-        private ComponentLookup<PrefabLoadResult> __prefabLoadResults;
-
-        [ReadOnly]
         private WeakAssetReferenceLoadingData __weakAssetReferenceLoadingData;
 
         private NativeQueue<PrefabLoaderSingleton.Result>.ParallelWriter __results;
 
         internal ParallelWriter(ref PrefabLoader value)
         {
-            __prefabLoadResults = value.__prefabLoadResults;
             __weakAssetReferenceLoadingData = value.__weakAssetReferenceLoadingData;
             __results = value.__group.GetSingleton<PrefabLoaderSingleton>().results.AsParallelWriter();
         }
@@ -41,7 +37,6 @@ public struct PrefabLoader
             } 
             else 
             {
-                
                 entity = Entity.Null;
 
                 result.status = __weakAssetReferenceLoadingData.InProgressLoads.ContainsKey(entityPrefabReference)
@@ -56,17 +51,12 @@ public struct PrefabLoader
     }
     
     [ReadOnly]
-    private ComponentLookup<PrefabLoadResult> __prefabLoadResults;
-
-    [ReadOnly]
     private WeakAssetReferenceLoadingData __weakAssetReferenceLoadingData;
     
     private EntityQuery __group;
 
     public PrefabLoader(ref SystemState systemState)
     {
-        __prefabLoadResults = systemState.GetComponentLookup<PrefabLoadResult>(true);
-
         var world = systemState.WorldUnmanaged;
         var entityManager = world.EntityManager;
         var systemHandle = world.GetExistingUnmanagedSystem<WeakAssetReferenceLoadingSystem>();
@@ -77,11 +67,6 @@ public struct PrefabLoader
             __group = builder
                 .WithAllRW<PrefabLoaderSingleton>()
                 .Build(ref systemState);
-    }
-
-    public void Update(ref SystemState systemState)
-    {
-        __prefabLoadResults.Update(ref systemState);
     }
 
     /*public void AddDependency(in JobHandle jobHandle)
@@ -154,7 +139,7 @@ public partial struct PrefabLoaderSystem : ISystem
         public float savedTime;
         public double time;
         public NativeQueue<PrefabLoaderSingleton.Result> results;
-        public NativeHashMap<EntityPrefabReference, Instance> instances;
+        public NativeParallelHashMap<EntityPrefabReference, Instance> instances;
         public NativeList<EntityPrefabReference> entityPrefabReferences;
         public NativeList<Entity> entities;
 
@@ -225,6 +210,8 @@ public partial struct PrefabLoaderSystem : ISystem
     [BurstCompile]
     private struct Apply : IJobParallelFor
     {
+        public double time;
+        
         [ReadOnly]
         public NativeArray<Entity> entityArray;
 
@@ -234,24 +221,43 @@ public partial struct PrefabLoaderSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<RequestEntityPrefabLoaded> requestEntityPrefabLoadeds;
 
+        public NativeParallelHashMap<EntityPrefabReference, Instance>.ParallelWriter instances;
+        
         public void Execute(int index)
         {
+            Instance instance;
+            instance.time = time;
+            instance.entity = entityArray[index];
+            
             RequestEntityPrefabLoaded requestEntityPrefabLoaded;
             requestEntityPrefabLoaded.Prefab = entityPrefabReferences[index];
-            requestEntityPrefabLoadeds[entityArray[index]] = requestEntityPrefabLoaded;
+
+            instances.TryAdd(requestEntityPrefabLoaded.Prefab, instance);
+                
+            requestEntityPrefabLoadeds[instance.entity] = requestEntityPrefabLoaded;
         }
     }
     
     private ComponentLookup<RequestEntityPrefabLoaded> __requestEntityPrefabLoadeds;
 
     private EntityArchetype __entityArchetype;
-    private NativeHashMap<EntityPrefabReference, Instance> __instances;
+    private NativeParallelHashMap<EntityPrefabReference, Instance> __instances;
     private NativeQueue<PrefabLoaderSingleton.Result> __results;
     
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __requestEntityPrefabLoadeds = state.GetComponentLookup<RequestEntityPrefabLoaded>();
+        
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            builder
+                .WithAllRW<WeakAssetReferenceLoadingData>()
+                .Build(ref state);
+        
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            builder
+                .WithAllRW<PrefabLoaderSingleton>()
+                .Build(ref state);
         
         var entityManager = state.EntityManager;
         using (var componentTypes = new NativeList<ComponentType>(Allocator.Temp)
@@ -260,14 +266,12 @@ public partial struct PrefabLoaderSystem : ISystem
                })
             __entityArchetype = entityManager.CreateArchetype(componentTypes);
 
-        __instances = new NativeHashMap<EntityPrefabReference, Instance>(1, Allocator.Persistent);
+        __instances = new NativeParallelHashMap<EntityPrefabReference, Instance>(1, Allocator.Persistent);
         __results = new NativeQueue<PrefabLoaderSingleton.Result>(Allocator.Persistent);
 
         PrefabLoaderSingleton singleton;
         singleton.results = __results;
         entityManager.CreateSingleton(singleton);
-        
-        state.RequireForUpdate<PrefabLoaderSingleton>();
     }
 
     [BurstCompile]
@@ -289,10 +293,13 @@ public partial struct PrefabLoaderSystem : ISystem
         var worldUpdateAllocator = state.WorldUpdateAllocator;
         var entityPrefabReferences = new NativeList<EntityPrefabReference>(count, worldUpdateAllocator);
         var entities = new NativeList<Entity>(count, worldUpdateAllocator);
+        
+        float savedTime = PrefabLoaderSettings.savedTime;
+        double time = SystemAPI.Time.ElapsedTime;
 
         Collect collect;
-        collect.savedTime = PrefabLoaderSettings.savedTime;
-        collect.time = SystemAPI.Time.ElapsedTime;
+        collect.savedTime = savedTime;
+        collect.time = time;
         collect.results = __results;
         collect.instances = __instances;
         collect.entityPrefabReferences = entityPrefabReferences;
@@ -310,10 +317,14 @@ public partial struct PrefabLoaderSystem : ISystem
 
             __requestEntityPrefabLoadeds.Update(ref state);
 
+            __instances.Capacity = math.max(__instances.Capacity, __instances.Count() + entityArray.Length);
+
             Apply apply;
+            apply.time = time + savedTime;
             apply.entityArray = entityArray;
             apply.entityPrefabReferences = entityPrefabReferences;
             apply.requestEntityPrefabLoadeds = __requestEntityPrefabLoadeds;
+            apply.instances = __instances.AsParallelWriter();
 
             state.Dependency = apply.ScheduleByRef(entityArray.Length, 1, state.Dependency);
         }

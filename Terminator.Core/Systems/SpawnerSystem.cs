@@ -479,7 +479,7 @@ public partial struct SpawnerSystem : ISystem
         __prefabType.Update(ref state);
         __statusType.Update(ref state);
         __entityCountType.Update(ref state);
-        __prefabLoader.Update(ref state);
+        //__prefabLoader.Update(ref state);
 
         var spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         
