@@ -3,6 +3,7 @@ using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Content;
+using Unity.Entities.Serialization;
 using Unity.Scenes;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -207,8 +208,8 @@ public struct BulletDefinition
             in ComponentLookup<PhysicsCollider> physicsColliders,
             in ComponentLookup<KinematicCharacterBody> characterBodies,
             in DynamicBuffer<BulletPrefab> prefabs,
-            in ComponentLookup<PrefabLoadResult> prefabLoadResults,
             in NativeArray<BulletTargetStatus> states,
+            ref PrefabLoader.ParallelWriter prefabLoader,
             ref BulletTargetStatus status,
             ref Random random)
         {
@@ -280,8 +281,8 @@ public struct BulletDefinition
 
                 if (!hasTarget)
                 {
-                    if (prefabLoadResults.TryGetComponent(prefabs[prefabLoaderIndex].loader, out var result) &&
-                        physicsColliders.TryGetComponent(result.PrefabRoot, out var physicsCollider) &&
+                    if (prefabLoader.GetOrLoadPrefabRoot(prefabs[prefabLoaderIndex].entityPrefabReference, out var prefab) &&
+                        physicsColliders.TryGetComponent(prefab, out var physicsCollider) &&
                         physicsCollider.IsValid)
                     {
                         //var rigidTransform = math.RigidTransform(math.inverse(status.transform.rot), status.transform.pos);
@@ -497,12 +498,12 @@ public struct BulletDefinition
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
-        in ComponentLookup<PrefabLoadResult> prefabLoadResults,
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref EntityCommandBuffer.ParallelWriter entityManager,
+        ref PrefabLoader.ParallelWriter prefabLoader,
         ref BulletStatus status, 
         ref Random random)
     {
@@ -534,8 +535,8 @@ public struct BulletDefinition
                          physicsColliders,
                          characterBodies,
                          prefabs,
-                         prefabLoadResults,
                          targetStates.AsNativeArray(),
+                         ref prefabLoader, 
                          ref targetStatus,
                          ref random);
 
@@ -575,8 +576,9 @@ public struct BulletDefinition
                 return false;
         }
 
-        PrefabLoadResult prefabLoadResult = default;
-        result = result && prefabLoadResults.TryGetComponent(prefabs[data.prefabLoaderIndex].loader, out prefabLoadResult);
+        Entity prefab = Entity.Null;
+        result = result &&
+                 prefabLoader.GetOrLoadPrefabRoot(prefabs[data.prefabLoaderIndex].entityPrefabReference, out prefab);
 
         /*double cooldown;
         if (status.count < 0)
@@ -691,7 +693,7 @@ public struct BulletDefinition
 
         if(entityCount == 1)
         {
-            var entity = entityManager.Instantiate(0, prefabLoadResult.PrefabRoot);
+            var entity = entityManager.Instantiate(0, prefab);
 
             __Instantiate(
                 index,
@@ -701,7 +703,7 @@ public struct BulletDefinition
                 transformResult, 
                 parent, 
                 entity, 
-                prefabLoadResult.PrefabRoot, 
+                prefab, 
                 //cameraRotation, 
                 collisionWorld, 
                 //characterBodies, 
@@ -717,7 +719,7 @@ public struct BulletDefinition
         {
             using(var entityArray = new NativeArray<Entity>(entityCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
             {
-                entityManager.Instantiate(0, prefabLoadResult.PrefabRoot, entityArray);
+                entityManager.Instantiate(0, prefab, entityArray);
 
                 entityCount = 0;
                 int count, i;
@@ -741,7 +743,7 @@ public struct BulletDefinition
                             transformResult, 
                             parent,
                             entityArray[entityCount + i],
-                            prefabLoadResult.PrefabRoot,
+                            prefab,
                             //cameraRotation,
                             collisionWorld,
                             //characterBodies,
@@ -788,7 +790,6 @@ public struct BulletDefinition
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
-        in ComponentLookup<PrefabLoadResult> prefabLoadResults,
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletActiveIndex> activeIndices, 
         in DynamicBuffer<BulletMessage> inputMessages,
@@ -796,6 +797,7 @@ public struct BulletDefinition
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref DynamicBuffer<BulletStatus> states,
         ref EntityCommandBuffer.ParallelWriter entityManager,
+        ref PrefabLoader.ParallelWriter prefabLoader,
         ref BulletVersion version, 
         ref Random random)
     {
@@ -849,12 +851,12 @@ public struct BulletDefinition
                 characterBodies, 
                 characterControls,
                 animationCurveDeltas, 
-                prefabLoadResults,
                 prefabs, 
                 inputMessages,
                 ref outputMessages,
                 ref targetStates,
                 ref entityManager, 
+                ref prefabLoader, 
                 ref states.ElementAt(activeIndex.value), 
                 ref random);
         }
@@ -1098,7 +1100,7 @@ public struct BulletTargetStatus : IBufferElementData
 
 public struct BulletPrefab : IBufferElementData
 {
-    public Entity loader;
+    public EntityPrefabReference entityPrefabReference;
 }
 
 public struct BulletMessage : IBufferElementData

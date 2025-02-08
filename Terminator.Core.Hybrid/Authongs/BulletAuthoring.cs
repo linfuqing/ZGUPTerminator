@@ -532,7 +532,7 @@ public class BulletAuthoring : MonoBehaviour
                 
                 var numTargets = authoring._targets.Length;
                 BulletPrefab prefab;
-                RequestEntityPrefabLoaded requestEntityPrefabLoaded;
+                //RequestEntityPrefabLoaded requestEntityPrefabLoaded;
                 var targets = builder.Allocate(ref root.targets, numTargets);
                 for (i = 0; i < numTargets; ++i)
                 {
@@ -542,17 +542,18 @@ public class BulletAuthoring : MonoBehaviour
                         destination.prefabLoaderIndex = -1;
                     else if (!prefabIndices.TryGetValue(source.prefab, out destination.prefabLoaderIndex))
                     {
-                        prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
+                        /*prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
                             source.prefab.name);
 
                         requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(source.prefab);
 
-                        AddComponent(prefab.loader, requestEntityPrefabLoaded);
+                        AddComponent(prefab.loader, requestEntityPrefabLoaded);*/
 
                         destination.prefabLoaderIndex = prefabs.Length;
                         
                         prefabIndices[source.prefab] = destination.prefabLoaderIndex;
 
+                        prefab.entityPrefabReference = new EntityPrefabReference(source.prefab);
                         prefabs.Add(prefab);
                     }
 
@@ -594,17 +595,18 @@ public class BulletAuthoring : MonoBehaviour
                         destination.prefabLoaderIndex = -1;
                     else if (!prefabIndices.TryGetValue(source.prefab, out destination.prefabLoaderIndex))
                     {
-                        prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
+                        /*prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
                             source.prefab.name);
 
                         requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(source.prefab);
 
-                        AddComponent(prefab.loader, requestEntityPrefabLoaded);
+                        AddComponent(prefab.loader, requestEntityPrefabLoaded);*/
 
                         destination.prefabLoaderIndex = prefabs.Length;
                         
                         prefabIndices[source.prefab] = destination.prefabLoaderIndex;
 
+                        prefab.entityPrefabReference = new EntityPrefabReference(source.prefab);
                         prefabs.Add(prefab);
                     }
 

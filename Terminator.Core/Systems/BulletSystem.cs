@@ -137,9 +137,6 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<LocalTransform> localTransforms;
 
         [ReadOnly] 
-        public ComponentLookup<PrefabLoadResult> prefabLoadResults;
-        
-        [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
 
         [ReadOnly] 
@@ -200,6 +197,8 @@ public partial struct BulletSystem : ISystem
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
+        public PrefabLoader.ParallelWriter prefabLoader;
+        
         public bool Execute(int index)
         {
             int layerMask = index < layerMasks.Length ? layerMasks[index].value : -1;
@@ -297,7 +296,6 @@ public partial struct BulletSystem : ISystem
                 characterBodyMap, 
                 characterControls,
                 animationCurveDeltas, 
-                prefabLoadResults,
                 prefabs[index],
                 activeIndices[index],
                 inputMessages[index],
@@ -305,6 +303,7 @@ public partial struct BulletSystem : ISystem
                 ref targetStates,
                 ref states,
                 ref entityManager,
+                ref prefabLoader, 
                 ref version, 
                 ref random);
             
@@ -341,9 +340,6 @@ public partial struct BulletSystem : ISystem
 
         [ReadOnly] 
         public ComponentLookup<LocalTransform> localTransforms;
-
-        [ReadOnly] 
-        public ComponentLookup<PrefabLoadResult> prefabLoadResults;
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
@@ -406,6 +402,8 @@ public partial struct BulletSystem : ISystem
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
+        public PrefabLoader.ParallelWriter prefabLoader;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             long hash = math.aslong(time);
@@ -417,7 +415,6 @@ public partial struct BulletSystem : ISystem
             collect.collisionWorld = collisionWorld;
             collect.parents = parents;
             collect.localTransforms = localTransforms;
-            collect.prefabLoadResults = prefabLoadResults;
             collect.physicsColliders = physicsColliders;
             collect.characterBodyMap = characterBodies;
             collect.characterControls = characterControls;
@@ -440,6 +437,7 @@ public partial struct BulletSystem : ISystem
             collect.targetStates = chunk.GetBufferAccessor(ref targetStatusType);
             collect.versions = chunk.GetNativeArray(ref versionType);
             collect.entityManager = entityManager;
+            collect.prefabLoader = prefabLoader;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -454,8 +452,6 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<LocalTransform> __localTransforms;
     
-    private ComponentLookup<PrefabLoadResult> __prefabLoadResults;
-
     private ComponentLookup<PhysicsCollider> __physicsColliders;
     
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
@@ -500,12 +496,13 @@ public partial struct BulletSystem : ISystem
 
     private EntityQuery __group;
 
+    public PrefabLoader __prefabLoader;
+
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __parents = state.GetComponentLookup<Parent>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
-        __prefabLoadResults = state.GetComponentLookup<PrefabLoadResult>(true);
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
@@ -535,6 +532,8 @@ public partial struct BulletSystem : ISystem
                 .WithAllRW<BulletVersion>()
                 .Build(ref state);
 
+        __prefabLoader = new PrefabLoader(ref state);
+
         state.RequireForUpdate<MainCameraTransform>();
         
         state.RequireForUpdate<PhysicsWorldSingleton>();
@@ -552,7 +551,6 @@ public partial struct BulletSystem : ISystem
     {
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
-        __prefabLoadResults.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
@@ -574,6 +572,7 @@ public partial struct BulletSystem : ISystem
         __inputMessageType.Update(ref state);
         __outputMessageType.Update(ref state);
         __versionType.Update(ref state);
+        __prefabLoader.Update(ref state);
 
         CollectEx collect;
         collect.time = SystemAPI.Time.ElapsedTime;
@@ -581,7 +580,6 @@ public partial struct BulletSystem : ISystem
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         collect.parents = __parents;
         collect.localTransforms = __localTransforms;
-        collect.prefabLoadResults = __prefabLoadResults;
         collect.physicsColliders = __physicsColliders;
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
@@ -604,6 +602,7 @@ public partial struct BulletSystem : ISystem
         collect.outputMessageType = __outputMessageType;
         collect.versionType = __versionType;
         collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        collect.prefabLoader = __prefabLoader.AsParallelWriter();
 
         state.Dependency = collect.ScheduleParallelByRef(__group, state.Dependency);
     }

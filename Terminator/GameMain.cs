@@ -218,6 +218,8 @@ public class GameMain : GameUser
 
     private void __OnApplyLevel(uint id)
     {
+        (IAnalytics.instance as IAnalyticsEx)?.Login(id);
+
         //__id = id;
         ILevelData.instance = new LevelData(id);
     }
