@@ -116,6 +116,7 @@ public partial struct BulletEntitySystem : ISystem
 }
 
 [BurstCompile, 
+ CreateAfter(typeof(PrefabLoaderSystem)), 
  UpdateInGroup(typeof(AfterPhysicsSystemGroup)), UpdateAfter(typeof(KinematicCharacterPhysicsUpdateGroup))]//, UpdateAfter(typeof(LookAtSystem))]
 public partial struct BulletSystem : ISystem
 {

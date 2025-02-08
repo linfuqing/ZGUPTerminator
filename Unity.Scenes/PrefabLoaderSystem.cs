@@ -70,7 +70,7 @@ public struct PrefabLoader
         var world = systemState.WorldUnmanaged;
         var entityManager = world.EntityManager;
         var systemHandle = world.GetExistingUnmanagedSystem<WeakAssetReferenceLoadingSystem>();
-        __weakAssetReferenceLoadingData =
+        __weakAssetReferenceLoadingData = 
             entityManager.GetComponentData<WeakAssetReferenceLoadingData>(systemHandle);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
