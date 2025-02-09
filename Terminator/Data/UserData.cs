@@ -100,7 +100,7 @@ public struct UserSkill
     public string name;
 }
 
-public interface IUserData : IGameUserData
+public partial interface IUserData : IGameUserData
 {
     public static IUserData instance;
 
