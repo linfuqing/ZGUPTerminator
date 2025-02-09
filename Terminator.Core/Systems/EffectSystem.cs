@@ -198,6 +198,12 @@ public partial struct EffectSystem : ISystem
         
         public Random random;
 
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParents;
+
+        [ReadOnly]
+        public ComponentLookup<FollowTargetParent> followTargetParents;
+
         [ReadOnly] 
         public ComponentLookup<Parent> parents;
 
@@ -249,6 +255,9 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<LocalToWorld> localToWorlds;
 
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<EffectDamageStatistic> damageStatistics;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
         
         public PrefabLoader.ParallelWriter prefabLoader;
@@ -283,6 +292,13 @@ public partial struct EffectSystem : ISystem
                 var statusTargets = this.statusTargets[index];
                 if (result)
                 {
+                    EffectDamage instanceDamage;
+                    instanceDamage.scale = EffectDamage.Compute(
+                            entity,
+                            parents,
+                            followTargetParents,
+                            damages);
+
                     //ref var levelStatus = ref this.levelStatus.ValueRW;
                     var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
                     var inputMessages = index < this.inputMessages.Length ? this.inputMessages[index] : default;
@@ -302,13 +318,10 @@ public partial struct EffectSystem : ISystem
                         totalChance,
                         delayDestroyTime,
                         mass,
-                        lengthSQ,
-                        damageScale = EffectDamage.Compute(
-                            entity,
-                            parents,
-                            //followTargetParents, 
-                            damages);
-                    int damageValue,
+                        lengthSQ;
+                    int totalDamageValue = 0, 
+                        damageValue,
+                        dropDamageValue, 
                         layerMask,
                         belongsTo,
                         numPrefabs, 
@@ -380,7 +393,9 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageValue = (int)math.ceil(damage.value * damageScale);
+                            damageValue = (int)math.ceil(damage.value * instanceDamage.scale);
+
+                            totalDamageValue += damageValue;
 
                             isResult = damageValue != 0;
 
@@ -391,11 +406,15 @@ public partial struct EffectSystem : ISystem
 
                             if (characterBody.IsValid)
                             {
-                                if (damage.valueToDrop != 0 && dropToDamages.HasComponent(simulationEvent.entity))
+                                dropDamageValue = (int)math.ceil(damage.valueToDrop * instanceDamage.scale);
+
+                                if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
+                                    totalDamageValue += dropDamageValue;
+
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
-                                    dropToDamage.Add((int)math.ceil(damage.valueToDrop * damageScale), damage.messageLayerMask);
+                                    dropToDamage.Add(dropDamageValue, damage.messageLayerMask);
 
                                     dropToDamage.isGrounded = characterBody.ValueRO.IsGrounded;
 
@@ -527,21 +546,23 @@ public partial struct EffectSystem : ISystem
                                     continue;
 
                                 instance = entityManager.Instantiate(0, instance);
+                                entityManager.AddComponent(1, instance, instanceDamage);
+
                                 switch (prefab.space)
                                 {
                                     case EffectSpace.Source:
-                                        entityManager.SetComponent(1, instance,
+                                        entityManager.SetComponent(2, instance,
                                             LocalTransform.FromPositionRotation(source.Position,
                                                 source.Rotation));
                                         break;
                                     case EffectSpace.Destination:
-                                        entityManager.SetComponent(1, instance,
+                                        entityManager.SetComponent(2, instance,
                                             LocalTransform.FromPositionRotation(destination.Position,
                                                 destination.Rotation));
                                         break;
                                     case EffectSpace.Target:
                                         parent.Value = simulationEvent.entity;
-                                        entityManager.AddComponent(1, instance, parent);
+                                        entityManager.AddComponent(2, instance, parent);
                                         break;
                                 }
 
@@ -549,6 +570,15 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                     }
+
+                    if(totalDamageValue != 0)
+                        EffectDamageStatistic.Add(
+                            totalDamageValue, 
+                            entity, 
+                            parents, 
+                            followTargetParents, 
+                            damageParents, 
+                            ref damageStatistics);
                 }
 
                 count = count > 0 ? count - 1 : entityCount;
@@ -614,7 +644,13 @@ public partial struct EffectSystem : ISystem
         public double time;
 
         public quaternion inverseCameraRotation;
-        
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParents;
+
+        [ReadOnly]
+        public ComponentLookup<FollowTargetParent> followTargetParents;
+
         [ReadOnly] 
         public ComponentLookup<Parent> parents;
 
@@ -666,6 +702,9 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalToWorld> localToWorlds;
 
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<EffectDamageStatistic> damageStatistics;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
 
         public PrefabLoader.ParallelWriter prefabLoader;
@@ -679,6 +718,8 @@ public partial struct EffectSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
+            collect.damageParents = damageParents;
+            collect.followTargetParents = followTargetParents;
             collect.parents = parents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
@@ -697,7 +738,7 @@ public partial struct EffectSystem : ISystem
             collect.dropToDamages = dropToDamages;
             collect.characterBodies = characterBodies;
             collect.localToWorlds = localToWorlds;
-            //collect.results = results;
+            collect.damageStatistics = damageStatistics;
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
 
@@ -937,7 +978,7 @@ public partial struct EffectSystem : ISystem
 #if UNITY_EDITOR
                             if (!targetMessage.entityPrefabReference.Equals(default))
 #else
-                            if (!targetMessage.IsReferenceValid)
+                            if (!targetMessage.entityPrefabReference.IsReferenceValid)
 #endif
                             {
                                 if (prefabLoader.TryGetOrLoadPrefabRoot(
@@ -1097,7 +1138,11 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectDamage> __damages;
 
+    private ComponentLookup<EffectDamageParent> __damageParents;
+
     private ComponentLookup<Parent> __parents;
+
+    private ComponentLookup<FollowTargetParent> __followTargetParents;
 
     private EntityTypeHandle __entityType;
     
@@ -1152,6 +1197,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<LocalToWorld> __localToWorlds;
 
+    private BufferLookup<EffectDamageStatistic> __damageStatistics;
+
     private EntityQuery __groupToDestroy;
 
     private EntityQuery __groupToClear;
@@ -1169,7 +1216,9 @@ public partial struct EffectSystem : ISystem
         __characterProperties = state.GetComponentLookup<KinematicCharacterProperties>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>();
         __damages = state.GetComponentLookup<EffectDamage>(true);
+        __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __parents = state.GetComponentLookup<Parent>(true);
+        __followTargetParents = state.GetComponentLookup<FollowTargetParent>(true);
         __entityType = state.GetEntityTypeHandle();
         __childType = state.GetBufferTypeHandle<Child>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
@@ -1197,6 +1246,7 @@ public partial struct EffectSystem : ISystem
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
+        __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToDestroy = builder
@@ -1263,7 +1313,9 @@ public partial struct EffectSystem : ISystem
         clear.statusTargetType = __statusTargetType;
         clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
-        
+
+        __damageParents.Update(ref state);
+        __followTargetParents.Update(ref state);
         __parents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
@@ -1277,6 +1329,7 @@ public partial struct EffectSystem : ISystem
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
+        __damageStatistics.Update(ref state);
         
         var prefabLoader = __prefabLoader.AsParallelWriter();
 
@@ -1287,6 +1340,8 @@ public partial struct EffectSystem : ISystem
         collect.deltaTime = SystemAPI.Time.DeltaTime;
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
+        collect.damageParents = __damageParents;
+        collect.followTargetParents = __followTargetParents;
         collect.parents = __parents;
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
@@ -1305,6 +1360,7 @@ public partial struct EffectSystem : ISystem
         collect.dropToDamages = __dropToDamages;
         collect.characterBodies = __characterBodies;
         collect.localToWorlds = __localToWorlds;
+        collect.damageStatistics = __damageStatistics;
         collect.entityManager = entityManager;
         collect.prefabLoader = prefabLoader;
         jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);

@@ -90,16 +90,49 @@ public struct EffectDamage : IComponentData
     public static float Compute(
         in Entity entity, 
         in ComponentLookup<Parent> parents,
-        //in ComponentLookup<FollowTargetParent> followTargetParents,
+        //мсбщ
+        in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamage> damages)
     {
         float result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
         if (parents.TryGetComponent(entity, out var parent))
-            result *= Compute(parent.Value, parents, damages);
-        /*else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
-            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);*/
+            result *= Compute(parent.Value, parents, followTargetParents, damages);
+        else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
+            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);
 
         return result;
+    }
+}
+
+public struct EffectDamageParent : IComponentData
+{
+    public int index;
+    public Entity entity;
+}
+
+public struct EffectDamageStatistic : IBufferElementData
+{
+    public int value;
+
+    public static void Add(
+        int value,
+        in Entity entity,
+        in ComponentLookup<Parent> parents,
+        //мсбщ
+        in ComponentLookup<FollowTargetParent> followTargetParents,
+        in ComponentLookup<EffectDamageParent> damageParents,
+        ref BufferLookup<EffectDamageStatistic> instances)
+    {
+        if(damageParents.TryGetComponent(entity, out var damageParent) &&
+            //damageParent.index >= 0 && 
+            instances.TryGetBuffer(damageParent.entity, out var buffer) && 
+            buffer.Length > damageParent.index)
+            Interlocked.Add(ref buffer.ElementAt(damageParent.index).value, value);
+
+        if (parents.TryGetComponent(entity, out var parent))
+            Add(value, parent.Value, parents, followTargetParents, damageParents, ref instances);
+        else if (followTargetParents.TryGetComponent(entity, out var followTargetParent))
+            Add(value, followTargetParent.entity, parents, followTargetParents, damageParents, ref instances);
     }
 }
 

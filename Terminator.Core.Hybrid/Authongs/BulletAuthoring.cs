@@ -520,10 +520,14 @@ public class BulletAuthoring : MonoBehaviour
         {
             Entity entity = GetEntity(TransformUsageFlags.None);
 
+            int numBullets = authoring._bullets.Length;
+
+            AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);
+
             var prefabIndices = new Dictionary<GameObject, int>();
             var prefabs = AddBuffer<BulletPrefab>(entity);
             BulletDefinitionData instance;
-            int i, j, numBullets = authoring._bullets.Length;
+            int i, j;
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
                 ref var root = ref builder.ConstructRoot<BulletDefinition>();
