@@ -90,7 +90,7 @@ public struct EffectDamage : IComponentData
     public static float Compute(
         in Entity entity, 
         in ComponentLookup<Parent> parents,
-        //ÍÓÂÝ
+        //é™€èžº
         in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamage> damages)
     {
@@ -118,7 +118,7 @@ public struct EffectDamageStatistic : IBufferElementData
         int value,
         in Entity entity,
         in ComponentLookup<Parent> parents,
-        //ÍÓÂÝ
+        //é™€èžº
         in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamageParent> damageParents,
         ref BufferLookup<EffectDamageStatistic> instances)

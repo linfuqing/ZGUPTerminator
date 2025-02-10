@@ -39,19 +39,19 @@ public struct UserPurchases
     }
 
     /// <summary>
-    /// ÓÃÀ´ÅĞ¶¨Ê×´Î½âËø²¢²¥·Å¶¯»­
+    /// ç”¨æ¥åˆ¤å®šé¦–æ¬¡è§£é”å¹¶æ’­æ”¾åŠ¨ç”»
     /// </summary>
     public Flag flag;
     /// <summary>
-    /// ×êÊ¯ÊıÁ¿
+    /// é’»çŸ³æ•°é‡
     /// </summary>
     public int diamond;
     /// <summary>
-    /// ¿¨³Ø
+    /// å¡æ± 
     /// </summary>
     public UserPurchasePool[] pools;
     /// <summary>
-    /// Ô¿³×
+    /// é’¥åŒ™
     /// </summary>
     public PoolKey[] poolKeys;
 }
@@ -65,11 +65,11 @@ public struct UserCardStyle
         public string name;
 
         /// <summary>
-        /// Éı¼¶ĞèÒªµÄ¿¨Æ¬ÊıÁ¿
+        /// å‡çº§éœ€è¦çš„å¡ç‰‡æ•°é‡
         /// </summary>
         public int count;
         /// <summary>
-        /// Éı¼¶ĞèÒªµÄ½ğ±ÒÊıÁ¿
+        /// å‡çº§éœ€è¦çš„é‡‘å¸æ•°é‡
         /// </summary>
         public int gold;
     }
@@ -88,7 +88,7 @@ public struct UserCard
         public uint groupID;
 
         /// <summary>
-        /// ×°±¸Î»ÖÃ£¬-1´ú±íÃ»×°±¸
+        /// è£…å¤‡ä½ç½®ï¼Œ-1ä»£è¡¨æ²¡è£…å¤‡
         /// </summary>
         public int position;
     }
@@ -98,22 +98,22 @@ public struct UserCard
     public uint id;
 
     /// <summary>
-    /// ÊôÓÚÊ²Ã´Æ·ÖÊ<see cref="UserCardStyle"/>£ºÆÕÍ¨¡¢Ï¡ÓĞ¡¢Ê·Ê«¡¢´«Ëµ
+    /// å±äºä»€ä¹ˆå“è´¨<see cref="UserCardStyle"/>ï¼šæ™®é€šã€ç¨€æœ‰ã€å²è¯—ã€ä¼ è¯´
     /// </summary>
     public uint styleID;
 
     /// <summary>
-    /// µÈ¼¶
+    /// ç­‰çº§
     /// </summary>
     public int level;
 
     /// <summary>
-    /// ¿¨Æ¬ÊıÁ¿
+    /// å¡ç‰‡æ•°é‡
     /// </summary>
     public int count;
 
     /// <summary>
-    /// ×°±¸¿¨×é
+    /// è£…å¤‡å¡ç»„
     /// </summary>
     public Group[] groups;
 }
@@ -127,27 +127,27 @@ public struct UserCards
     }
 
     /// <summary>
-    /// ÓÃÀ´ÅĞ¶¨Ê×´Î½âËøÍêÕû¿¨²Û²¢²¥·Å¶¯»­
+    /// ç”¨æ¥åˆ¤å®šé¦–æ¬¡è§£é”å®Œæ•´å¡æ§½å¹¶æ’­æ”¾åŠ¨ç”»
     /// </summary>
     public Flag flag;
 
     /// <summary>
-    /// ¿¨ÅÆÈİÁ¿
+    /// å¡ç‰Œå®¹é‡
     /// </summary>
     public int capacity;
 
     /// <summary>
-    /// ¿¨ÅÆÆ·ÖÊ
+    /// å¡ç‰Œå“è´¨
     /// </summary>
     public UserCardStyle[] cardStyles;
 
     /// <summary>
-    /// ¿¨ÅÆ
+    /// å¡ç‰Œ
     /// </summary>
     public UserCard[] cards;
 
     /// <summary>
-    /// ¿¨×é
+    /// å¡ç»„
     /// </summary>
     public UserGroup[] groups;
 }
@@ -164,7 +164,7 @@ public struct UserRole
     public int defence;
 
     /// <summary>
-    /// ±»×°±¸µ½µÄÌ××°ID
+    /// è¢«è£…å¤‡åˆ°çš„å¥—è£…ID
     /// </summary>
     public uint[] groupIDs;
 }
@@ -178,12 +178,12 @@ public struct UserAccessoryStyle
         public string name;
 
         /// <summary>
-        /// Éı¼¶ĞèÒªµÄ¾íÖáID
+        /// å‡çº§éœ€è¦çš„å·è½´ID
         /// </summary>
         public uint itemID;
 
         /// <summary>
-        /// Éı¼¶ĞèÒªµÄ¾íÖáÊıÁ¿
+        /// å‡çº§éœ€è¦çš„å·è½´æ•°é‡
         /// </summary>
         public int count;
     }
@@ -194,7 +194,7 @@ public struct UserAccessoryStyle
         public string name;
 
         /// <summary>
-        /// Éı½×ĞèÒªµÄÏàÍ¬×°±¸ÊıÁ¿
+        /// å‡é˜¶éœ€è¦çš„ç›¸åŒè£…å¤‡æ•°é‡
         /// </summary>
         public int count;
     }
@@ -204,17 +204,17 @@ public struct UserAccessoryStyle
     public uint id;
 
     /// <summary>
-    /// µ±Ç°µÈ¼¶
+    /// å½“å‰ç­‰çº§
     /// </summary>
     public int level;
 
     /// <summary>
-    /// µ±Ç°µÈ¼¶ÃèÊö
+    /// å½“å‰ç­‰çº§æè¿°
     /// </summary>
     public Level levelDesc;
 
     /// <summary>
-    /// ½×
+    /// é˜¶
     /// </summary>
     public Stage[] stages;
 }
@@ -226,17 +226,17 @@ public struct UserAccessory
     public uint id;
 
     /// <summary>
-    /// ÊôÓÚÊ²Ã´ÀàĞÍ<see cref="UserAccessoryStyle"/>£ºÍ·¡¢ÊÖ¡¢½Å¡¢±³°ü¡¢³¬ÄÜÎäÆ÷
+    /// å±äºä»€ä¹ˆç±»å‹<see cref="UserAccessoryStyle"/>ï¼šå¤´ã€æ‰‹ã€è„šã€èƒŒåŒ…ã€è¶…èƒ½æ­¦å™¨
     /// </summary>
     public uint styleID;
 
     /// <summary>
-    /// ½×
+    /// é˜¶
     /// </summary>
     public int stage;
 
     /// <summary>
-    /// ±»×°±¸µ½µÄÌ××°ID
+    /// è¢«è£…å¤‡åˆ°çš„å¥—è£…ID
     /// </summary>
     public int[] groupIDs;
 }
@@ -252,27 +252,27 @@ public struct UserRoles
     public Flag flag;
 
     /// <summary>
-    /// ½ÇÉ«
+    /// è§’è‰²
     /// </summary>
     public UserRole[] roles;
 
     /// <summary>
-    /// ×°±¸ÀàĞÍ
+    /// è£…å¤‡ç±»å‹
     /// </summary>
     public UserAccessoryStyle[] accessoryStyles;
 
     /// <summary>
-    /// ×°±¸
+    /// è£…å¤‡
     /// </summary>
     public UserAccessory[] accessories;
 
     /// <summary>
-    /// ¾íÖá
+    /// å·è½´
     /// </summary>
     public UserItem[] items;
 
     /// <summary>
-    /// Ì××°
+    /// å¥—è£…
     /// </summary>
     public UserGroup[] groups;
 }
@@ -280,14 +280,14 @@ public struct UserRoles
 public partial interface IUserData
 {
     /// <summary>
-    /// ÉÌµê
+    /// å•†åº—
     /// </summary>
     IEnumerator QueryPurchases(
         uint userID,
         Action<UserPurchases> onComplete);
 
     /// <summary>
-    /// ³é¿¨
+    /// æŠ½å¡
     /// </summary>
     IEnumerator Purchase(
         uint userID,
@@ -296,36 +296,36 @@ public partial interface IUserData
         Action<Memory<UserItem>> onComplete);
 
     /// <summary>
-    /// ¿¨ÅÆ
+    /// å¡ç‰Œ
     /// </summary>
     IEnumerator QueryCards(
         uint userID,
         Action<UserCards> onComplete);
 
     /// <summary>
-    /// ×°±¸¿¨×é»òĞ¶ÏÂ¿¨×é(positionÎª-1£©
+    /// è£…å¤‡å¡ç»„æˆ–å¸ä¸‹å¡ç»„(positionä¸º-1ï¼‰
     /// </summary>
     IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete);
 
     /// <summary>
-    /// Éı¼¶¿¨ÅÆ
+    /// å‡çº§å¡ç‰Œ
     /// </summary>
     IEnumerator UpgradeCard(uint userID, Action<bool> onComplete);
 
     /// <summary>
-    /// ½ÇÉ«
+    /// è§’è‰²
     /// </summary>
     IEnumerator QueryRoles(
         uint userID,
         Action<UserRoles> onComplete);
 
     /// <summary>
-    /// ×°±¸½ÇÉ«
+    /// è£…å¤‡è§’è‰²
     /// </summary>
     IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete);
 
     /// <summary>
-    /// ½ÇÉ«Ñø³É
+    /// è§’è‰²å…»æˆ
     /// </summary>
     IEnumerator QueryRoleTalents(
         uint userID,
@@ -333,7 +333,7 @@ public partial interface IUserData
         Action<Memory<UserTalent>> onComplete);
 
     /// <summary>
-    /// ½ÇÉ«Ñø³ÉÉı¼¶
+    /// è§’è‰²å…»æˆå‡çº§
     /// </summary>
     IEnumerator UpgradeRoleTalent(
         uint userID,
@@ -342,17 +342,17 @@ public partial interface IUserData
         Action<bool> onComplete);
 
     /// <summary>
-    /// ×°±¸»òĞ¶ÏÂ×°±¸
+    /// è£…å¤‡æˆ–å¸ä¸‹è£…å¤‡
     /// </summary>
     IEnumerator SetAccessory(uint userID, uint accessoryID, int groupID, Action<bool> onComplete);
 
     /// <summary>
-    /// Éı¼¶×°±¸£¬·µ»ØÏÂÒ»¼¶ÃèÊö
+    /// å‡çº§è£…å¤‡ï¼Œè¿”å›ä¸‹ä¸€çº§æè¿°
     /// </summary>
     IEnumerator UpgradeAccessory(uint userID, uint accessoryStyleID, Action<UserAccessoryStyle.Level?> onComplete);
 
     /// <summary>
-    /// Éı½××°±¸
+    /// å‡é˜¶è£…å¤‡
     /// </summary>
     IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete);
 }
