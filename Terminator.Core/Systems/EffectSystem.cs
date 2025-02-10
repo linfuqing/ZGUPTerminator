@@ -1368,6 +1368,8 @@ public partial struct EffectSystem : ISystem
         var entityCommandBuffer = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged);
 
+        var entityManager = entityCommandBuffer.AsParallelWriter();
+
         Instantiate instantiate;
         instantiate.damageInstances = __damageInstances;
         instantiate.entityManager = entityCommandBuffer;
@@ -1378,8 +1380,6 @@ public partial struct EffectSystem : ISystem
         __childType.Update(ref state);
         __characterBodyType.Update(ref state);
         
-        var entityManager = entityCommandBuffer.AsParallelWriter();
-
         DestroyEx destroy;
         destroy.entityType = __entityType;
         destroy.characterBodyType = __characterBodyType;
