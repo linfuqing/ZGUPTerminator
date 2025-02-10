@@ -370,17 +370,18 @@ public partial struct EffectSystem : ISystem
                         statusTarget.entity = simulationEvent.entity;
                         statusTargets.Add(statusTarget);
 
-                        if(damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
+                        if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
                             ++entityCount;
 
                         isResult = false;
 
                         if (delayDestroies.HasComponent(simulationEvent.entity))
                         {
-                            delayDestroyTime = damage.delayDestroyTime;// * damageScale;
+                            delayDestroyTime = damage.delayDestroyTime; // * damageScale;
                             if (math.abs(delayDestroyTime) > math.FLT_MIN_NORMAL)
                             {
-                                Math.InterlockedAdd(ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
+                                Math.InterlockedAdd(
+                                    ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
                                     delayDestroyTime);
 
                                 isResult = true;
@@ -476,10 +477,58 @@ public partial struct EffectSystem : ISystem
                             }
                         }
 
+                        isContains = false;
+                        numPrefabs = damage.prefabs.Length;
+                        chance = random.NextFloat();
+                        totalChance = 0.0f;
+                        for (i = 0; i < numPrefabs; ++i)
+                        {
+                            ref var prefab = ref damage.prefabs[i];
+                            totalChance += prefab.chance;
+                            if (totalChance > 1.0f)
+                            {
+                                totalChance -= 1.0f;
+
+                                chance = random.NextFloat();
+
+                                isContains = false;
+                            }
+
+                            if (isContains || totalChance < chance)
+                                continue;
+
+                            if (!prefabLoader.TryGetOrLoadPrefabRoot(
+                                    prefabs[prefab.index].entityPrefabReference, out instance))
+                                continue;
+
+                            instance = entityManager.Instantiate(0, instance);
+                            entityManager.AddComponent(1, instance, instanceDamage);
+
+                            switch (prefab.space)
+                            {
+                                case EffectSpace.Source:
+                                    entityManager.SetComponent(2, instance,
+                                        LocalTransform.FromPositionRotation(source.Position,
+                                            source.Rotation));
+                                    break;
+                                case EffectSpace.Destination:
+                                    entityManager.SetComponent(2, instance,
+                                        LocalTransform.FromPositionRotation(destination.Position,
+                                            destination.Rotation));
+                                    break;
+                                case EffectSpace.Target:
+                                    parent.Value = simulationEvent.entity;
+                                    entityManager.AddComponent(2, instance, parent);
+                                    break;
+                            }
+
+                            isContains = true;
+                        }
+
                         if (isResult)
                         {
                             enabledFlags |= EnabledFlags.StatusTarget;
-                            
+
                             numMessageIndices = damage.messageIndices.Length;
                             for (i = 0; i < numMessageIndices; ++i)
                             {
@@ -521,54 +570,6 @@ public partial struct EffectSystem : ISystem
                                         LocalTransform.FromPositionRotation(destination.Position,
                                             inverseCameraRotation));
                                 }
-                            }
-
-                            isContains = false;
-                            numPrefabs = damage.prefabs.Length;
-                            chance = random.NextFloat();
-                            totalChance = 0.0f;
-                            for (i = 0; i < numPrefabs; ++i)
-                            {
-                                ref var prefab = ref damage.prefabs[i];
-                                totalChance += prefab.chance;
-                                if (totalChance > 1.0f)
-                                {
-                                    totalChance -= 1.0f;
-
-                                    chance = random.NextFloat();
-
-                                    isContains = false;
-                                }
-
-                                if (isContains || totalChance < chance)
-                                    continue;
-
-                                if (!prefabLoader.TryGetOrLoadPrefabRoot(
-                                        prefabs[prefab.index].entityPrefabReference, out instance))
-                                    continue;
-
-                                instance = entityManager.Instantiate(0, instance);
-                                entityManager.AddComponent(1, instance, instanceDamage);
-
-                                switch (prefab.space)
-                                {
-                                    case EffectSpace.Source:
-                                        entityManager.SetComponent(2, instance,
-                                            LocalTransform.FromPositionRotation(source.Position,
-                                                source.Rotation));
-                                        break;
-                                    case EffectSpace.Destination:
-                                        entityManager.SetComponent(2, instance,
-                                            LocalTransform.FromPositionRotation(destination.Position,
-                                                destination.Rotation));
-                                        break;
-                                    case EffectSpace.Target:
-                                        parent.Value = simulationEvent.entity;
-                                        entityManager.AddComponent(2, instance, parent);
-                                        break;
-                                }
-
-                                isContains = true;
                             }
                         }
                     }
