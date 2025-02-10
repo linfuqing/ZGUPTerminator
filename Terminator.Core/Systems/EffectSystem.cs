@@ -5,6 +5,7 @@ using Unity.Burst.Intrinsics;
 using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.Serialization;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -19,19 +20,62 @@ using Random = Unity.Mathematics.Random;
 public partial struct EffectSystem : ISystem
 {
     [Flags]
-    public enum EnabledFlags
+    private enum EnabledFlags
     {
         Message = 0x01,
         StatusTarget = 0x02, 
         Destroyed = 0x04, 
     }
     
-    /*private struct Result
+    private struct DamageInstance
     {
-        //public int layerMask;
-        public float3 force;
-        public Entity entity;
-    }*/
+        public float scale;
+        public RigidTransform transform;
+        public Entity parent;
+        public EntityPrefabReference entityPrefabReference;
+    }
+
+    [BurstCompile]
+    private struct Instantiate : IJob
+    {
+        public NativeQueue<DamageInstance> damageInstances;
+
+        public PrefabLoader.Writer prefabLoader;
+
+        public EntityCommandBuffer entityManager;
+
+        public void Execute()
+        {
+            DamageInstance damageInstance;
+            EffectDamage damage;
+            Parent parent;
+            Entity entity;
+            int count = damageInstances.Count;
+            for(int i = 0; i < count; ++i)
+            {
+                damageInstance = damageInstances.Dequeue();
+                if (prefabLoader.TryGetOrLoadPrefabRoot(damageInstance.entityPrefabReference, out entity))
+                {
+                    entity = entityManager.Instantiate(entity);
+
+                    damage.scale = damageInstance.scale;
+                    entityManager.AddComponent(entity, damage);
+
+                    entityManager.SetComponent(entity,
+                        LocalTransform.FromPositionRotation(damageInstance.transform.pos,
+                            damageInstance.transform.rot));
+
+                    if (damageInstance.parent != Entity.Null)
+                    {
+                        parent.Value = damageInstance.parent;
+                        entityManager.AddComponent(entity, parent);
+                    }
+                }
+                else
+                    damageInstances.Enqueue(damageInstance);
+            }
+        }
+    }
 
     private struct Destroy
     {
@@ -263,6 +307,8 @@ public partial struct EffectSystem : ISystem
         public EntityCommandBuffer.ParallelWriter entityManager;
         
         public PrefabLoader.ParallelWriter prefabLoader;
+        
+        public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
 
         public EnabledFlags Execute(int index)
         {
@@ -309,6 +355,7 @@ public partial struct EffectSystem : ISystem
                     EffectStatusTarget statusTarget;
                     PhysicsCollider physicsCollider;
                     RefRW<KinematicCharacterBody> characterBody;
+                    DamageInstance damageInstance;
                     EffectMessage inputMessage;
                     Message outputMessage;
                     MessageParameter messageParameter;
@@ -497,29 +544,51 @@ public partial struct EffectSystem : ISystem
                             if (isContains || totalChance < chance)
                                 continue;
 
-                            if (!prefabLoader.TryGetOrLoadPrefabRoot(
-                                    prefabs[prefab.index].entityPrefabReference, out instance))
-                                continue;
-
-                            instance = entityManager.Instantiate(0, instance);
-                            entityManager.AddComponent(1, instance, instanceDamage);
-
-                            switch (prefab.space)
+                            damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
+                            if (prefabLoader.TryGetOrLoadPrefabRoot(
+                                    damageInstance.entityPrefabReference, out instance))
                             {
-                                case EffectSpace.Source:
-                                    entityManager.SetComponent(2, instance,
-                                        LocalTransform.FromPositionRotation(source.Position,
-                                            source.Rotation));
-                                    break;
-                                case EffectSpace.Destination:
-                                    entityManager.SetComponent(2, instance,
-                                        LocalTransform.FromPositionRotation(destination.Position,
-                                            destination.Rotation));
-                                    break;
-                                case EffectSpace.Target:
-                                    parent.Value = simulationEvent.entity;
-                                    entityManager.AddComponent(2, instance, parent);
-                                    break;
+                                instance = entityManager.Instantiate(0, instance);
+                                entityManager.AddComponent(1, instance, instanceDamage);
+
+                                switch (prefab.space)
+                                {
+                                    case EffectSpace.Source:
+                                        entityManager.SetComponent(2, instance,
+                                            LocalTransform.FromPositionRotation(source.Position,
+                                                source.Rotation));
+                                        break;
+                                    case EffectSpace.Destination:
+                                        entityManager.SetComponent(2, instance,
+                                            LocalTransform.FromPositionRotation(destination.Position,
+                                                destination.Rotation));
+                                        break;
+                                    case EffectSpace.Target:
+                                        parent.Value = simulationEvent.entity;
+                                        entityManager.AddComponent(2, instance, parent);
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                damageInstance.scale = instanceDamage.scale;
+                                switch (prefab.space)
+                                {
+                                    case EffectSpace.Source:
+                                        damageInstance.parent = Entity.Null;
+                                        damageInstance.transform = math.RigidTransform(source.Value);
+                                        break;
+                                    case EffectSpace.Destination:
+                                        damageInstance.parent = Entity.Null;
+                                        damageInstance.transform = math.RigidTransform(destination.Value);
+                                        break;
+                                    default:
+                                        damageInstance.parent = simulationEvent.entity;
+                                        damageInstance.transform = RigidTransform.identity;
+                                        break;
+                                }
+                                
+                                damageInstances.Enqueue(damageInstance);
                             }
 
                             isContains = true;
@@ -712,6 +781,8 @@ public partial struct EffectSystem : ISystem
 
         public PrefabLoader.ParallelWriter prefabLoader;
 
+        public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             ulong hash = math.asulong(time);
@@ -744,6 +815,7 @@ public partial struct EffectSystem : ISystem
             collect.damageStatistics = damageStatistics;
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
+            collect.damageInstances = damageInstances;
 
             EnabledFlags enabledFlags;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -1211,6 +1283,8 @@ public partial struct EffectSystem : ISystem
     private EntityQuery __groupToApply;
     
     private PrefabLoader __prefabLoader;
+    
+    private NativeQueue<DamageInstance> __damageInstances;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -1278,29 +1352,40 @@ public partial struct EffectSystem : ISystem
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
 
         __prefabLoader = new PrefabLoader(ref state);
+
+        __damageInstances = new NativeQueue<DamageInstance>(Allocator.Persistent);
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
+        __damageInstances.Dispose();
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        var entityCommandBuffer = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
+            .CreateCommandBuffer(state.WorldUnmanaged);
+
+        Instantiate instantiate;
+        instantiate.damageInstances = __damageInstances;
+        instantiate.entityManager = entityCommandBuffer;
+        instantiate.prefabLoader = __prefabLoader.AsWriter();
+        var jobHandle = instantiate.Schedule(state.Dependency);
+            
         __entityType.Update(ref state);
         __childType.Update(ref state);
         __characterBodyType.Update(ref state);
         
-        var entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
-            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        var entityManager = entityCommandBuffer.AsParallelWriter();
 
         DestroyEx destroy;
         destroy.entityType = __entityType;
         destroy.characterBodyType = __characterBodyType;
         destroy.childType = __childType;
         destroy.entityManager = entityManager;
-        var jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, state.Dependency);
+        jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, jobHandle);
 
         __instanceType.Update(ref state);
         __simulationEventType.Update(ref state);
@@ -1366,6 +1451,7 @@ public partial struct EffectSystem : ISystem
         collect.damageStatistics = __damageStatistics;
         collect.entityManager = entityManager;
         collect.prefabLoader = prefabLoader;
+        collect.damageInstances = __damageInstances.AsParallelWriter();
         jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
 
         ApplyEx apply;

@@ -24,7 +24,7 @@ public struct PrefabLoader
             __results = value.__group.GetSingleton<PrefabLoaderSingleton>().results;
         }
 
-        public bool GetOrLoadPrefabRoot(in EntityPrefabReference entityPrefabReference, out Entity entity)
+        public bool TryGetOrLoadPrefabRoot(in EntityPrefabReference entityPrefabReference, out Entity entity)
         {
             PrefabLoaderSingleton.Result result;
             result.entityPrefabReference = entityPrefabReference;

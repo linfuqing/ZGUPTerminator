@@ -199,7 +199,7 @@ public partial class InstanceSystem : SystemBase
                 for (int i = 0; i < numKeys; ++i)
                 {
                     key = keys[i];
-                    if(!prefabLoader.GetOrLoadPrefabRoot(key, out entity))
+                    if(!prefabLoader.TryGetOrLoadPrefabRoot(key, out entity))
                         continue;
                 
                     numEntities = __loaders.CountValuesForKey(key);
