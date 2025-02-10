@@ -374,6 +374,10 @@ public class LevelSkillAuthoring : MonoBehaviour
     [SerializeField] 
     internal SkillData[] _skills;
 
+    public GroupData[] groups => _groups;
+    
+    public SkillData[] skills => _skills;
+
     #region CSV
     [SerializeField]
     [CSV("_skills", guidIndex = -1, nameIndex = 0)]
