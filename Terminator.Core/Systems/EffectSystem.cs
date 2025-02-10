@@ -13,7 +13,9 @@ using Unity.Transforms;
 using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
 
-[BurstCompile, UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true), UpdateBefore(typeof(CopyMatrixToTransformSystem))]
+[BurstCompile, 
+ CreateAfter(typeof(PrefabLoaderSystem)), 
+ UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true), UpdateBefore(typeof(CopyMatrixToTransformSystem))]
 public partial struct EffectSystem : ISystem
 {
     [Flags]
