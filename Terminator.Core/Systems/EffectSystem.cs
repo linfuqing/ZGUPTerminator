@@ -355,6 +355,7 @@ public partial struct EffectSystem : ISystem
                     EffectStatusTarget statusTarget;
                     PhysicsCollider physicsCollider;
                     RefRW<KinematicCharacterBody> characterBody;
+                    ColliderCastHit closestHit;
                     DamageInstance damageInstance;
                     EffectMessage inputMessage;
                     Message outputMessage;
@@ -554,9 +555,23 @@ public partial struct EffectSystem : ISystem
                                 switch (prefab.space)
                                 {
                                     case EffectSpace.Source:
-                                        entityManager.SetComponent(2, instance,
-                                            LocalTransform.FromPositionRotation(source.Position,
-                                                source.Rotation));
+                                        if (index < simulationCollisions.Length)
+                                        {
+                                            closestHit = simulationCollisions[index].closestHit;
+                                            if (closestHit.Entity != Entity.Null)
+                                            {
+                                                entityManager.SetComponent(2, instance,
+                                                    LocalTransform.FromPositionRotation(closestHit.Position,
+                                                        Math.FromToRotation(math.up(), closestHit.SurfaceNormal)));
+
+                                                isContains = true;
+                                            }
+                                        }
+                                        
+                                        if(!isContains)
+                                            entityManager.SetComponent(2, instance,
+                                                LocalTransform.FromPositionRotation(source.Position,
+                                                    source.Rotation));
                                         break;
                                     case EffectSpace.Destination:
                                         entityManager.SetComponent(2, instance,
