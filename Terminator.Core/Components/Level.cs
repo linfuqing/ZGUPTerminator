@@ -278,12 +278,12 @@ public struct LevelDefinition
         //public int spawnerLayerMaskExclude;
 
         //public int exp;
-        public int nextStageIndex;
-
         public FixedString128Bytes name;
 
         public BlobArray<LevelStageOption> conditions;
         public BlobArray<LevelStageOption> results;
+        
+        public BlobArray<int> nextStageIndies;
     }
 
     public struct Area

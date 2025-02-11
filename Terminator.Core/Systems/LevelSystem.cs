@@ -58,7 +58,7 @@ public partial struct LevelSystem : ISystem
 
             var stageConditionStates = this.stageConditionStates[index];
             bool isResultChanged = stageConditionStates.Length < 1;
-            int conditionOffset = 0, conditionCount, numResults, i, j;
+            int conditionOffset = 0, conditionCount, numConditions, numNextStageIndices, numResults, i, j, k;
             float3 playerPosition = this.playerTransform.ValueRO.Position;
             SpawnerLayerMaskInclude spawnerLayerMaskInclude;
             SpawnerLayerMaskExclude spawnerLayerMaskExclude;
@@ -72,37 +72,51 @@ public partial struct LevelSystem : ISystem
                     continue;
 
                 ref var stageDefinition = ref definition.stages[stage.value];
-                int numConditions = stageDefinition.conditions.Length;
-                if (numConditions > 0)
+                numNextStageIndices = stageDefinition.nextStageIndies.Length;
+                for (j = 0; j < numNextStageIndices; ++j)
                 {
-                    conditionCount = conditionOffset + numConditions;
-                    if(stageConditionStates.Length < conditionCount)
-                        stageConditionStates.Resize(conditionCount, NativeArrayOptions.ClearMemory);
-
-                    for (j = 0; j < numConditions; ++j)
-                    {
-                        if (!stageDefinition.conditions[j].Judge(
-                                deltaTime,
-                                ref stageConditionStates.ElementAt(conditionOffset + j),
-                                ref definition.areas,
-                                playerPosition,
-                                status,
-                                spawnerLayerMaskOverride.ValueRO,
-                                spawnerSingleton,
-                                prefabs,
-                                spawnerPrefabs,
-                                spawners))
-                            break;
-                    }
-
-                    conditionOffset = conditionCount;
-
-                    if (j < numConditions)
-                        continue;
+                    ref var nextStageIndex = ref stageDefinition.nextStageIndies[j];
+                    ref var conditions = ref definition.stages[nextStageIndex].conditions;
                     
-                    for (j = 0; j < numConditions; ++j)
-                        stageConditionStates.ElementAt(conditionOffset - j - 1) = default;
+                    numConditions = conditions.Length;
+                    if (numConditions > 0)
+                    {
+                        conditionCount = conditionOffset + numConditions;
+                        if (stageConditionStates.Length < conditionCount)
+                            stageConditionStates.Resize(conditionCount, NativeArrayOptions.ClearMemory);
+
+                        for (k = 0; k < numConditions; ++k)
+                        {
+                            if (!conditions[k].Judge(
+                                    deltaTime,
+                                    ref stageConditionStates.ElementAt(conditionOffset + k),
+                                    ref definition.areas,
+                                    playerPosition,
+                                    status,
+                                    spawnerLayerMaskOverride.ValueRO,
+                                    spawnerSingleton,
+                                    prefabs,
+                                    spawnerPrefabs,
+                                    spawners))
+                                break;
+                        }
+
+                        conditionOffset = conditionCount;
+
+                        if (k < numConditions)
+                            continue;
+
+                        for (k = 0; k < numConditions; ++k)
+                            stageConditionStates.ElementAt(conditionOffset - k - 1) = default;
+                    }
+                    
+                    stage.value = nextStageIndex;
+
+                    break;
                 }
+                
+                if(j == numNextStageIndices)
+                    continue;
 
                 numResults = stageDefinition.results.Length;
                 if (numResults > 0)
@@ -132,8 +146,6 @@ public partial struct LevelSystem : ISystem
 
                     isResultChanged = true;
                 }
-
-                stage.value = stageDefinition.nextStageIndex;
             }
 
             if (isResultChanged)

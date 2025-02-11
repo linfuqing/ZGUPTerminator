@@ -94,8 +94,8 @@ public class LevelAuthoring : MonoBehaviour
     {
         public string name;
         
-        [Tooltip("下一阶段，不填则没有")]
-        public string nextStageName;
+        //[Tooltip("下一阶段，不填则没有")]
+        //public string nextStageName;
         
         //[Tooltip("阶段经验值满足后，激活刷怪标签并跳到下一阶段（如有）")]
         //public int exp;
@@ -111,6 +111,9 @@ public class LevelAuthoring : MonoBehaviour
         [Tooltip("完成该阶段执行的结果")]
         public LevelStageOption[] results;
         
+        [Tooltip("下一阶段，不填则没有")]
+        public string[] nextStageNames;
+
         #region CSV
 
         [CSVField]
@@ -127,7 +130,14 @@ public class LevelAuthoring : MonoBehaviour
         {
             set
             {
-                nextStageName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    nextStageNames = null;
+                    
+                    return;
+                }
+                
+                nextStageNames = value.Split('/');
             }
         }
 
@@ -238,7 +248,8 @@ public class LevelAuthoring : MonoBehaviour
                     destination.layerMaskExclude = 0;
                 }
 
-                int numOptions;
+                int numNextStageNames, numOptions;
+                BlobBuilderArray<int> nextStageIndices;
                 BlobBuilderArray<LevelStageOption> options;
                 var stages = builder.Allocate(ref root.stages, numStages);
                 for (i = 0; i < numStages; ++i)
@@ -263,22 +274,25 @@ public class LevelAuthoring : MonoBehaviour
                     for (j = 0; j < numOptions; ++j)
                         options[j] = source.results[j];
 
-                    destination.nextStageIndex = -1;
-                    if (!string.IsNullOrEmpty(source.nextStageName))
+                    numNextStageNames = source.nextStageNames == null ? 0 : source.nextStageNames.Length;
+                    nextStageIndices = builder.Allocate(ref destination.nextStageIndies, numNextStageNames);
+                    for (j = 0; j < numNextStageNames; ++j)
                     {
+                        nextStageIndices[j] = -1;
+                        ref var nextStageName = ref source.nextStageNames[j];
                         for (j = 0; j < numStages; ++j)
                         {
-                            if (source.nextStageName == authoring._stages[j].name)
+                            if (nextStageName == authoring._stages[j].name)
                             {
-                                destination.nextStageIndex = j;
+                                nextStageIndices[j] = j;
 
                                 break;
                             }
                         }
-                        
-                        if (destination.nextStageIndex == -1)
+
+                        if (nextStageIndices[j] == -1)
                             Debug.LogError(
-                                $"The next stage name {source.nextStageName} of stage {source.name} can not been found!");
+                                $"The next stage name {nextStageName} of stage {source.name} can not been found!");
                     }
                 }
 
