@@ -99,6 +99,9 @@ public class EffectAuthoring : MonoBehaviour
         //public string[] messageNames;
 
         public DamageData[] damages;
+        
+        [Tooltip("结算掉落")]
+        public PrefabData[] prefabs;
     }
 
     class Baker : Baker<EffectAuthoring>
@@ -179,6 +182,24 @@ public class EffectAuthoring : MonoBehaviour
                         }
 
                         damageIndices[j] = damageIndex;
+                    }
+                    
+                    numPrefabs = source.prefabs == null ? 0 : source.prefabs.Length;
+                    prefabs = builder.Allocate(ref destination.prefabs, numPrefabs);
+                    for(j = 0; j < numPrefabs; ++j)
+                    {
+                        ref var sourcePrefab = ref source.prefabs[j];
+                        ref var destinationPrefab = ref prefabs[j];
+                        destinationPrefab.space = sourcePrefab.space;
+                        
+                        if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
+                        {
+                            destinationPrefab.index = prefabIndices.Count;
+                            
+                            prefabIndices[sourcePrefab.gameObject] = destinationPrefab.index;
+                        }
+
+                        destinationPrefab.chance = sourcePrefab.chance;
                     }
                 }
 

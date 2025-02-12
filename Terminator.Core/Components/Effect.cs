@@ -15,9 +15,8 @@ public enum EffectAttributeID
 
 public enum EffectSpace
 {
-    Source, 
-    Destination, 
-    Target
+    World, 
+    Local
 }
 
 public struct EffectTargetInvulnerabilityDefinition
@@ -72,6 +71,8 @@ public struct EffectDefinition
         public float startTime;
 
         public BlobArray<int> damageIndices;
+        
+        public BlobArray<Prefab> prefabs;
     }
 
     public BlobArray<Damage> damages;

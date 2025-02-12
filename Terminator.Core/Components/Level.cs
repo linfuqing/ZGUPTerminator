@@ -1,4 +1,5 @@
 using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
@@ -347,4 +348,19 @@ public struct LevelStageResultStatus : IBufferElementData
 public struct LevelObject : IComponentData
 {
     
+}
+
+public static class LevelShared
+{
+    private struct StartStage
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<StartStage>();
+    }
+    
+    public static int startStage
+    {
+        get => StartStage.Value.Data;
+        
+        set => StartStage.Value.Data = value;
+    }
 }

@@ -336,37 +336,32 @@ public partial struct EffectSystem : ISystem
                     result = math.min(count, effect.count - status.count) > (int)math.ceil((time - deltaTime - status.time) / effect.time);
                 }
 
+                var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
                 Entity entity = entityArray[index];
+                LocalToWorld source = localToWorlds[entity];
+                EffectDamage instanceDamage;
+                instanceDamage.scale = EffectDamage.Compute(
+                    entity,
+                    parents,
+                    followTargetParents,
+                    damages);
+
                 var statusTargets = this.statusTargets[index];
                 if (result)
                 {
-                    EffectDamage instanceDamage;
-                    instanceDamage.scale = EffectDamage.Compute(
-                            entity,
-                            parents,
-                            followTargetParents,
-                            damages);
-
-                    //ref var levelStatus = ref this.levelStatus.ValueRW;
-                    var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
                     var inputMessages = index < this.inputMessages.Length ? this.inputMessages[index] : default;
                     var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
                     var simulationEvents = this.simulationEvents[index];
                     EffectStatusTarget statusTarget;
                     PhysicsCollider physicsCollider;
                     RefRW<KinematicCharacterBody> characterBody;
-                    ColliderCastHit closestHit;
-                    DamageInstance damageInstance;
                     EffectMessage inputMessage;
                     Message outputMessage;
                     MessageParameter messageParameter;
-                    Parent parent;
                     Entity instance;
-                    LocalToWorld source = localToWorlds[entity], destination;
+                    LocalToWorld destination;
                     float3 forceResult, force;
-                    float chance,
-                        totalChance,
-                        delayDestroyTime,
+                    float delayDestroyTime,
                         mass,
                         lengthSQ;
                     int totalDamageValue = 0, 
@@ -374,7 +369,6 @@ public partial struct EffectSystem : ISystem
                         dropDamageValue, 
                         layerMask,
                         belongsTo,
-                        numPrefabs, 
                         numMessageIndices,
                         numDamageIndices,
                         damageIndex,
@@ -525,89 +519,12 @@ public partial struct EffectSystem : ISystem
                             }
                         }
 
-                        isContains = false;
-                        numPrefabs = damage.prefabs.Length;
-                        chance = random.NextFloat();
-                        totalChance = 0.0f;
-                        for (i = 0; i < numPrefabs; ++i)
-                        {
-                            ref var prefab = ref damage.prefabs[i];
-                            totalChance += prefab.chance;
-                            if (totalChance > 1.0f)
-                            {
-                                totalChance -= 1.0f;
-
-                                chance = random.NextFloat();
-
-                                isContains = false;
-                            }
-
-                            if (isContains || totalChance < chance)
-                                continue;
-
-                            damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
-                            if (prefabLoader.TryGetOrLoadPrefabRoot(
-                                    damageInstance.entityPrefabReference, out instance))
-                            {
-                                instance = entityManager.Instantiate(0, instance);
-                                entityManager.AddComponent(1, instance, instanceDamage);
-
-                                switch (prefab.space)
-                                {
-                                    case EffectSpace.Source:
-                                        if (index < simulationCollisions.Length)
-                                        {
-                                            closestHit = simulationCollisions[index].closestHit;
-                                            if (closestHit.Entity != Entity.Null)
-                                            {
-                                                entityManager.SetComponent(2, instance,
-                                                    LocalTransform.FromPositionRotation(closestHit.Position,
-                                                        Math.FromToRotation(math.up(), closestHit.SurfaceNormal)));
-
-                                                isContains = true;
-                                            }
-                                        }
-                                        
-                                        if(!isContains)
-                                            entityManager.SetComponent(2, instance,
-                                                LocalTransform.FromPositionRotation(source.Position,
-                                                    source.Rotation));
-                                        break;
-                                    case EffectSpace.Destination:
-                                        entityManager.SetComponent(2, instance,
-                                            LocalTransform.FromPositionRotation(destination.Position,
-                                                destination.Rotation));
-                                        break;
-                                    case EffectSpace.Target:
-                                        parent.Value = simulationEvent.entity;
-                                        entityManager.AddComponent(2, instance, parent);
-                                        break;
-                                }
-                            }
-                            else
-                            {
-                                damageInstance.scale = instanceDamage.scale;
-                                switch (prefab.space)
-                                {
-                                    case EffectSpace.Source:
-                                        damageInstance.parent = Entity.Null;
-                                        damageInstance.transform = math.RigidTransform(source.Value);
-                                        break;
-                                    case EffectSpace.Destination:
-                                        damageInstance.parent = Entity.Null;
-                                        damageInstance.transform = math.RigidTransform(destination.Value);
-                                        break;
-                                    default:
-                                        damageInstance.parent = simulationEvent.entity;
-                                        damageInstance.transform = RigidTransform.identity;
-                                        break;
-                                }
-                                
-                                damageInstances.Enqueue(damageInstance);
-                            }
-
-                            isContains = true;
-                        }
+                        __Drop(
+                            math.RigidTransform(destination.Value),
+                            simulationEvent.entity,
+                            instanceDamage,
+                            prefabs,
+                            ref damage.prefabs);
 
                         if (isResult)
                         {
@@ -671,6 +588,8 @@ public partial struct EffectSystem : ISystem
                 count = count > 0 ? count - 1 : entityCount;
                 if (count > 0)
                 {
+                    var transform = math.RigidTransform(source.Value);
+                    
                     count += status.count;
                     if (count < effect.count || effect.count < 1)
                     {
@@ -692,7 +611,7 @@ public partial struct EffectSystem : ISystem
                                 var closestHit = simulationCollisions[index].closestHit;
                                 if (closestHit.Entity != Entity.Null)
                                 {
-                                    var transform = math.RigidTransform(
+                                    transform = math.RigidTransform(
                                         Math.FromToRotation(math.up(), closestHit.SurfaceNormal),
                                         closestHit.Position);
                                     
@@ -713,6 +632,13 @@ public partial struct EffectSystem : ISystem
                             status.time += definition.effects[status.index].startTime;
                         }
                     }
+                    
+                    __Drop(
+                        transform,
+                        entity,
+                        instanceDamage,
+                        prefabs,
+                        ref effect.prefabs);
                 }
             }
             else
@@ -721,6 +647,84 @@ public partial struct EffectSystem : ISystem
             states[index] = status;
 
             return enabledFlags;
+        }
+
+        public void __Drop(
+            in RigidTransform transform, 
+            in Entity entity, 
+            in EffectDamage instanceDamage, 
+            in DynamicBuffer<EffectPrefab> prefabs, 
+            ref BlobArray<EffectDefinition.Prefab> prefabsDefinition)
+        {
+            bool isContains = false;
+            int numPrefabs = prefabsDefinition.Length;
+            float chance = random.NextFloat(), totalChance = 0.0f;
+            Entity instance;
+            Parent parent;
+            DamageInstance damageInstance;
+            for (int i = 0; i < numPrefabs; ++i)
+            {
+                ref var prefab = ref prefabsDefinition[i];
+                totalChance += prefab.chance;
+                if (totalChance > 1.0f)
+                {
+                    totalChance -= 1.0f;
+
+                    chance = random.NextFloat();
+
+                    isContains = false;
+                }
+
+                if (isContains || totalChance < chance)
+                    continue;
+
+                damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
+                if (prefabLoader.TryGetOrLoadPrefabRoot(
+                        damageInstance.entityPrefabReference, out instance))
+                {
+                    instance = entityManager.Instantiate(0, instance);
+                    entityManager.AddComponent(1, instance, instanceDamage);
+
+                    switch (prefab.space)
+                    {
+                        case EffectSpace.World:
+                            entityManager.SetComponent(2, instance,
+                                LocalTransform.FromPositionRotation(transform.pos,
+                                    transform.rot));
+
+                            break;
+                        case EffectSpace.Local:
+                            parent.Value = entity;
+                            entityManager.AddComponent(2, instance, parent);
+
+                            break;
+                    }
+                }
+                else
+                {
+                    damageInstance.scale = instanceDamage.scale;
+                    switch (prefab.space)
+                    {
+                        case EffectSpace.World:
+                            damageInstance.parent = Entity.Null;
+                            damageInstance.transform = transform;
+
+                            damageInstances.Enqueue(damageInstance);
+
+                            break;
+                        case EffectSpace.Local:
+                            damageInstance.parent = entity;
+                            damageInstance.transform = RigidTransform.identity;
+
+                            damageInstances.Enqueue(damageInstance);
+
+                            break;
+                    }
+                }
+
+                isContains = true;
+            }
+
         }
     }
 
@@ -1353,9 +1357,10 @@ public partial struct EffectSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToCollect = builder
-                .WithAll<SimulationEvent, EffectDefinitionData>()
+                .WithAll<EffectDefinitionData>()
                 .WithAllRW<EffectStatus>()
                 .WithPresentRW<EffectStatusTarget>()
+                .WithAny<EffectPrefab, SimulationEvent>()
                 .Build(ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))

@@ -248,7 +248,7 @@ public class LevelAuthoring : MonoBehaviour
                     destination.layerMaskExclude = 0;
                 }
 
-                int numNextStageNames, numOptions;
+                int numNextStageNames, numOptions, k;
                 BlobBuilderArray<int> nextStageIndices;
                 BlobBuilderArray<LevelStageOption> options;
                 var stages = builder.Allocate(ref root.stages, numStages);
@@ -280,9 +280,9 @@ public class LevelAuthoring : MonoBehaviour
                     {
                         nextStageIndices[j] = -1;
                         ref var nextStageName = ref source.nextStageNames[j];
-                        for (j = 0; j < numStages; ++j)
+                        for (k = 0; k < numStages; ++k)
                         {
-                            if (nextStageName == authoring._stages[j].name)
+                            if (nextStageName == authoring._stages[k].name)
                             {
                                 nextStageIndices[j] = j;
 

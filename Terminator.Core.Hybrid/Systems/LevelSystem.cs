@@ -157,10 +157,10 @@ public partial class LevelSystemManaged : SystemBase
                 
                 EntityManager.DestroyEntity(player);
             }
-            else
-                status.gold = 0;
+            /*else
+                status.gold = 0;*/
 
-            status.stage = 0;
+            status.stage = LevelShared.startStage;
             SystemAPI.SetSingleton(status);
             
             if(thirdPersonPlayerEntity != Entity.Null)
