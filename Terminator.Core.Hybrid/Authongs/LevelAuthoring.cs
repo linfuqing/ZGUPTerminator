@@ -284,7 +284,7 @@ public class LevelAuthoring : MonoBehaviour
                         {
                             if (nextStageName == authoring._stages[k].name)
                             {
-                                nextStageIndices[j] = j;
+                                nextStageIndices[j] = k;
 
                                 break;
                             }
