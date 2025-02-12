@@ -8,29 +8,27 @@ public partial class LevelSystemManaged
 {
     private struct SkillActive
     {
-        //private NativeHashMap<WeakObjectReference<Sprite>, int> __loadedIndices;
         private int __instanceID;
         private NativeHashMap<int, int> __indices;
 
         public SkillActive(in AllocatorManager.AllocatorHandle allocator)
         {
             __instanceID = 0;
-            //__loadedIndices = new NativeHashMap<WeakObjectReference<Sprite>, int>(1, allocator);
             __indices = new NativeHashMap<int, int>(1, allocator);
         }
 
         public void Dispose()
         {
-            //__loadedIndices.Dispose();
             __indices.Dispose();
         }
 
         public void Update(
             double time,
             ref SkillDefinition definition,
+            ref BlobArray<FixedString32Bytes> skillNames, 
             in DynamicBuffer<SkillActiveIndex> activeIndices,
             in DynamicBuffer<SkillStatus> states,
-            in DynamicBuffer<LevelSkillDesc> descs,
+            //in DynamicBuffer<LevelSkillDesc> descs,
             LevelManager manager)
         {
             int instanceID = manager.GetInstanceID();
@@ -47,7 +45,7 @@ public partial class LevelSystemManaged
                 }
             }
 
-            LevelSkillDesc desc;
+            //LevelSkillDesc desc;
             SkillStatus status;
             int i, level, originIndex, index, numActiveIndices = activeIndices.Length;
             bool isComplete;
@@ -75,43 +73,21 @@ public partial class LevelSystemManaged
 
                         if (!isComplete)
                         {
-                            isComplete = __Set(i, index, descs, ref definition, manager);
+                            isComplete = __Set(i, index, /*descs, */ref definition, ref skillNames, manager);
                             if (isComplete)
                                 originIndex = __indices[index];
                         }
-                        //__indices[index] = i;
-
-                        //manager.SetActiveSkill(i, descs[index].ToAsset(false));
                     }
                 }
                 else
                 {
                     __indices[index] = -1;
 
-                    desc = descs[index];
-                    desc.Retain();
-                    isComplete = __Set(i, index, descs, ref definition, manager);
+                    //desc = descs[index];
+                    //desc.Retain();
+                    isComplete = __Set(i, index, /*descs, */ref definition, ref skillNames, manager);
                     if (isComplete)
                         originIndex = __indices[index];
-                    /*switch (icon.LoadingStatus)
-                    {
-                        case ObjectLoadingStatus.None:
-                            break;
-                        case ObjectLoadingStatus.Loading:
-                        case ObjectLoadingStatus.Queued:
-                            //isLoading = true;
-                            break;
-                        case ObjectLoadingStatus.Error:
-                            Debug.LogError($"Skill desc {descs[index].name} can not been found!");
-                            break;
-                        case ObjectLoadingStatus.Completed:
-                            isComplete = true;
-
-                            __indices[index] = i;
-
-                            manager.SetActiveSkill(i, descs[index].ToAsset(false));
-                            break;
-                    }*/
                 }
 
                 if (isComplete)
@@ -170,7 +146,7 @@ public partial class LevelSystemManaged
                     value = __indices[keyToRemove];
 
                     __indices.Remove(keyToRemove);
-                    __Unset(value, keyToRemove, descs, ref definition, manager);
+                    __Unset(value, keyToRemove, /*descs, */ref definition, manager);
                 }
 
                 keysToRemove.Dispose();
@@ -180,7 +156,7 @@ public partial class LevelSystemManaged
         private void __Unset(
             int index, 
             int value, 
-            in DynamicBuffer<LevelSkillDesc> descs, 
+            //in DynamicBuffer<LevelSkillDesc> descs, 
             ref SkillDefinition definition, 
             LevelManager manager)
         {
@@ -197,7 +173,7 @@ public partial class LevelSystemManaged
                     if(level == -1)
                         continue;
 
-                    descs[key].Release();
+                    //descs[key].Release();
                     
                     __indices[key] = -1;
                     
@@ -209,15 +185,17 @@ public partial class LevelSystemManaged
         private bool __Set(
             int index, 
             int value, 
-            in DynamicBuffer<LevelSkillDesc> descs, 
+            //in DynamicBuffer<LevelSkillDesc> descs, 
             ref SkillDefinition definition, 
+            ref BlobArray<FixedString32Bytes> skillNames, 
             LevelManager manager)
         {
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
             {
                 bool result = false, isCompleted = true;
                 int temp, level;
-                LevelSkillDesc desc;
+                SkillAsset asset;
+                //LevelSkillDesc desc;
                 foreach (var key in keys)
                 {
                     temp = __indices[key];
@@ -228,19 +206,25 @@ public partial class LevelSystemManaged
                     if(level == -1)
                         continue;
 
-                    desc = descs[key];
-                    if (LevelSkillDesc.LoadingStatus.Completed != desc.loadingStatus)
+                    if (!SkillManager.TryGetAsset(skillNames[key].ToString(), out asset))
                     {
                         isCompleted = false;
                         
                         continue;
                     }
+                    /*desc = descs[key];
+                    if (LevelSkillDesc.LoadingStatus.Completed != desc.loadingStatus)
+                    {
+                        isCompleted = false;
+
+                        continue;
+                    }*/
                     
                     if (level == 0 || manager.HasActiveSkill(index, level - 1))
                     {
                         __indices[key] = index;
 
-                        manager.SetActiveSkill(index, level, desc.ToAsset());
+                        manager.SetActiveSkill(index, level, asset/*desc.ToAsset()*/);
                     }
 
                     result = true;
@@ -321,12 +305,19 @@ public partial class LevelSystemManaged
     
     private void __UpdateSkillActive(
         in BlobAssetReference<SkillDefinition> definition, 
+        in BlobAssetReference<LevelSkillNameDefinition> nameDefinition, 
         in DynamicBuffer<SkillActiveIndex> activeIndices, 
         in DynamicBuffer<SkillStatus> states, 
-        in DynamicBuffer<LevelSkillDesc> descs, 
+        //in DynamicBuffer<LevelSkillDesc> descs, 
         LevelManager manager)
     {
         if(definition.IsCreated)
-            __skillActive.Update(SystemAPI.Time.ElapsedTime, ref definition.Value, activeIndices, states, descs, manager);
+            __skillActive.Update(
+                SystemAPI.Time.ElapsedTime, 
+                ref definition.Value, 
+                ref nameDefinition.Value.skills, 
+                activeIndices, 
+                states, 
+                /*descs, */manager);
     }
 }

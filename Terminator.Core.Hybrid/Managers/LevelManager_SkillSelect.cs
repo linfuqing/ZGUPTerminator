@@ -8,6 +8,7 @@ using ZG;
 
 public struct LevelSkillData
 {
+    public string name;
     public string parentName;
 
     public int selectIndex;
@@ -200,13 +201,13 @@ public partial class LevelManager
 
             style.SetAsset(source.value);
 
-            key = NAME_SPACE_SKILL_SELECTION_TIMES + source.value.name;
+            key = NAME_SPACE_SKILL_SELECTION_TIMES + source./*value.*/name;
             times = PlayerPrefs.GetInt(key);
 
             if (times == 0 &&
                 _skillSelectionGuides != null)
             {
-                skillSelectionGuideIndex = Array.IndexOf(_skillSelectionGuides, source.value.name);
+                skillSelectionGuideIndex = Array.IndexOf(_skillSelectionGuides, source./*value.*/name);
                 if (skillSelectionGuideIndex != -1)
                 {
                     if(style.onGuide != null)
@@ -222,7 +223,7 @@ public partial class LevelManager
             if (__skillStyles == null)
                 __skillStyles = new Dictionary<string, LevelSkillStyle>();
 
-            __skillStyles.Add(source.value.name, style);
+            __skillStyles.Add(source./*value.*/name, style);
 
             if (destination.delayTime > 0.0f)
                 yield return new WaitForSecondsRealtime(destination.delayTime);

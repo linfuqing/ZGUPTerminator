@@ -188,17 +188,19 @@ public partial class LevelSystemManaged : SystemBase
         
         __GetSkill(player, 
             out var skillDefinition, 
+            out var skillNameDefinition, 
             out var activeIndices, 
-            out var skillStates,
-            out var skillDescs);
+            out var skillStates/*,
+            out var skillDescs*/);
 
-        __UpdateSkillActive(skillDefinition, activeIndices, skillStates, skillDescs, manager);
+        __UpdateSkillActive(skillDefinition, skillNameDefinition, activeIndices, skillStates, /*skillDescs, */manager);
 
         __UpdateSkillSelection(
             ref activeIndices, 
             skillStates, 
-            skillDescs, 
+            //skillDescs, 
             skillDefinition, 
+            skillNameDefinition, 
             player, 
             status.stage, 
             manager);
@@ -250,16 +252,17 @@ public partial class LevelSystemManaged : SystemBase
     private void __GetSkill(
         in Entity player, 
         out BlobAssetReference<SkillDefinition> definition, 
+        out BlobAssetReference<LevelSkillNameDefinition> nameDefinition, 
         out DynamicBuffer<SkillActiveIndex> activeIndices, 
-        out DynamicBuffer<SkillStatus> states, 
-        out DynamicBuffer<LevelSkillDesc> descs)
+        out DynamicBuffer<SkillStatus> states/*, 
+        out DynamicBuffer<LevelSkillDesc> descs*/)
     {
-        //player = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
         definition = SystemAPI.HasComponent<SkillDefinitionData>(player) ? SystemAPI.GetComponent<SkillDefinitionData>(player).definition : default;
+        nameDefinition = SystemAPI.HasComponent<LevelSkillNameDefinitionData>(player) ? SystemAPI.GetComponent<LevelSkillNameDefinitionData>(player).definition : default;
         activeIndices = SystemAPI.HasBuffer<SkillActiveIndex>(player) ? SystemAPI.GetBuffer<SkillActiveIndex>(player) : default;
         states = SystemAPI.HasBuffer<SkillStatus>(player) ? SystemAPI.GetBuffer<SkillStatus> (player) : default;
         
-        SystemAPI.TryGetSingletonBuffer(out descs, true);
+        //SystemAPI.TryGetSingletonBuffer(out descs, true);
     }
 
 }
