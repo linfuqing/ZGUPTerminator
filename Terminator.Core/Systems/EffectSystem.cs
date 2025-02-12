@@ -326,14 +326,15 @@ public partial struct EffectSystem : ISystem
             if (status.time > math.DBL_MIN_NORMAL)
             {
                 bool result = true;
-                int count = 0, entityCount = 0;
+                int resultCount = 0, entityCount = 0;
                 if (effect.time > math.FLT_MIN_NORMAL)
                 {
-                    count = (int)math.ceil((time - status.time) / effect.time);
-                    if (count < 1)
+                    resultCount = (int)math.ceil((time - status.time) / effect.time);
+                    if (resultCount < 1)
                         return 0;
-                    
-                    result = math.min(count, effect.count - status.count) > (int)math.ceil((time - deltaTime - status.time) / effect.time);
+
+                    result = math.min(resultCount, effect.count - status.count) >
+                             (int)math.ceil((time - deltaTime - status.time) / effect.time);
                 }
 
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
@@ -585,12 +586,12 @@ public partial struct EffectSystem : ISystem
                             ref damageStatistics);
                 }
 
-                count = count > 0 ? count - 1 : entityCount;
-                if (count > 0)
+                resultCount = resultCount > 0 ? resultCount - 1 : entityCount;
+                if (resultCount > 0)
                 {
                     var transform = math.RigidTransform(source.Value);
                     
-                    count += status.count;
+                    int count = resultCount + status.count;
                     if (count < effect.count || effect.count < 1)
                     {
                         if(effect.time > math.FLT_MIN_NORMAL)
@@ -633,12 +634,13 @@ public partial struct EffectSystem : ISystem
                         }
                     }
                     
-                    __Drop(
-                        transform,
-                        entity,
-                        instanceDamage,
-                        prefabs,
-                        ref effect.prefabs);
+                    for(int i = 0; i < resultCount; ++i)
+                        __Drop(
+                            transform,
+                            entity,
+                            instanceDamage,
+                            prefabs,
+                            ref effect.prefabs);
                 }
             }
             else

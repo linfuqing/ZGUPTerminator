@@ -5,7 +5,6 @@ using Unity.Entities.Serialization;
 using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Physics;
-using Unity.Scenes;
 using Random = Unity.Mathematics.Random;
 
 public enum SpawnerSpace

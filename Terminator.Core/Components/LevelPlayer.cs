@@ -20,13 +20,13 @@ public static class LevelPlayerShared
 {
     private class Value<T>
     {
-        private static readonly SharedStatic<float> __value = SharedStatic<float>.GetOrCreate<T>();
+        private static readonly SharedStatic<float> Result = SharedStatic<float>.GetOrCreate<T>();
 
         public static float value
         {
-            get => __value.Data;
+            get => Result.Data;
 
-            set => __value.Data = value;
+            set => Result.Data = value;
         }
     }
     
@@ -44,18 +44,18 @@ public static class LevelPlayerShared
 
     private struct ActiveSkills
     {
-        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>> __values =
+        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>> Values =
             SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>>.GetOrCreate<ActiveSkills>();
 
-        public static ref FixedList512Bytes<LevelPlayerActiveSkill> values => ref __values.Data;
+        public static ref FixedList512Bytes<LevelPlayerActiveSkill> values => ref Values.Data;
     }
     
     private struct SkillGroup
     {
-        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>> __values =
+        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>> Values =
             SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
 
-        public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref __values.Data;
+        public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
     }
 
     public static float bulletDamageScale

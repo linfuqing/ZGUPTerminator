@@ -145,6 +145,8 @@ public partial class LevelSystemManaged : SystemBase
             //manager.Pause();
             __DestroyEntities(__group);
 
+            status.exp = LevelShared.exp;
+            status.expMax = LevelShared.expMax;
             status.count = 0;
             if (SystemAPI.Exists(player))
             {
@@ -160,7 +162,7 @@ public partial class LevelSystemManaged : SystemBase
             /*else
                 status.gold = 0;*/
 
-            status.stage = LevelShared.startStage;
+            status.stage = LevelShared.stage;
             SystemAPI.SetSingleton(status);
             
             if(thirdPersonPlayerEntity != Entity.Null)

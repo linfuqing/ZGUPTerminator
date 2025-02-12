@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public struct User
@@ -194,7 +193,7 @@ public partial class UserData : MonoBehaviour, IUserData
             return $"{id},{stage},{gold}";
         }
     }
-    
+
     private const string NAME_SPACE_USER_ID = "UserLevelID";
     
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";

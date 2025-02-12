@@ -55,9 +55,9 @@ public struct LevelStageOption
             case Type.Value:
                 return value <= status.value;
             case Type.Max:
-                return value < status.max;
+                return value <= status.max;
             case Type.ExpMax:
-                return value < status.expMax;
+                return value <= status.expMax;
             case Type.Exp:
                 return value <= status.exp;
             case Type.Stage:
@@ -352,15 +352,39 @@ public struct LevelObject : IComponentData
 
 public static class LevelShared
 {
-    private struct StartStage
+    private struct Stage
     {
-        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<StartStage>();
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Stage>();
     }
     
-    public static int startStage
+    private struct Exp
     {
-        get => StartStage.Value.Data;
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Exp>();
+    }
+    
+    private struct ExpMax
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ExpMax>();
+    }
+    
+    public static int stage
+    {
+        get => Stage.Value.Data;
         
-        set => StartStage.Value.Data = value;
+        set => Stage.Value.Data = value;
+    }
+    
+    public static int exp
+    {
+        get => Exp.Value.Data;
+        
+        set => Exp.Value.Data = value;
+    }
+    
+    public static int expMax
+    {
+        get => ExpMax.Value.Data;
+        
+        set => ExpMax.Value.Data = value;
     }
 }

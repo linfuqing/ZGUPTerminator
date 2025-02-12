@@ -3,7 +3,6 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Scenes;
 using Unity.Transforms;
 using Random = Unity.Mathematics.Random;
 

@@ -6,7 +6,6 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.Systems;
-using Unity.Scenes;
 using Unity.Transforms;
 
 public struct SpawnerSingleton : IComponentData

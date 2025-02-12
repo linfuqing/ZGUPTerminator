@@ -181,18 +181,6 @@ public class LevelSkillDescAuthoring : MonoBehaviour
 }
 #endif
 
-public struct SkillAsset
-{
-    public string name;
-    public string detail;
-    
-    public Sprite sprite;
-    public Sprite icon;
-
-    public int level;
-    public int rarity;
-}
-
 public struct LevelSkillDesc : IBufferElementData
 {
     public enum LoadingStatus
