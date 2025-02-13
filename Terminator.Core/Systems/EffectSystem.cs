@@ -28,8 +28,8 @@ public partial struct EffectSystem : ISystem
     
     private struct DamageInstance
     {
-        public float scale;
         public RigidTransform transform;
+        public Entity entity;
         public Entity parent;
         public EntityPrefabReference entityPrefabReference;
     }
@@ -45,8 +45,10 @@ public partial struct EffectSystem : ISystem
 
         public void Execute()
         {
+            EffectDamageParent damageParent;
+            damageParent.index = -1;
+            
             DamageInstance damageInstance;
-            EffectDamage damage;
             Parent parent;
             Entity entity;
             int count = damageInstances.Count;
@@ -57,9 +59,6 @@ public partial struct EffectSystem : ISystem
                 {
                     entity = entityManager.Instantiate(entity);
 
-                    damage.scale = damageInstance.scale;
-                    entityManager.AddComponent(entity, damage);
-
                     entityManager.SetComponent(entity,
                         LocalTransform.FromPositionRotation(damageInstance.transform.pos,
                             damageInstance.transform.rot));
@@ -68,6 +67,12 @@ public partial struct EffectSystem : ISystem
                     {
                         parent.Value = damageInstance.parent;
                         entityManager.AddComponent(entity, parent);
+                    }
+
+                    if (damageInstance.entity != Entity.Null)
+                    {
+                        damageParent.entity = damageInstance.entity;
+                        entityManager.AddComponent(entity, damageParent);
                     }
                 }
                 else
@@ -245,12 +250,6 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<EffectDamageParent> damageParents;
-
-        [ReadOnly]
-        public ComponentLookup<FollowTargetParent> followTargetParents;
-
-        [ReadOnly] 
-        public ComponentLookup<Parent> parents;
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
@@ -528,8 +527,8 @@ public partial struct EffectSystem : ISystem
 
                         __Drop(
                             math.RigidTransform(destination.Value),
+                            entity, 
                             simulationEvent.entity,
-                            instanceDamage,
                             prefabs,
                             ref damage.prefabs);
 
@@ -629,7 +628,7 @@ public partial struct EffectSystem : ISystem
                                 }
                             }
 
-                            entityManager.DestroyEntity(0, entity);
+                            entityManager.DestroyEntity(int.MaxValue, entity);
 
                             enabledFlags |= EnabledFlags.Destroyed;
                         }
@@ -644,8 +643,8 @@ public partial struct EffectSystem : ISystem
                     for(int i = 0; i < resultCount; ++i)
                         __Drop(
                             transform,
+                            entity, 
                             entity,
-                            instanceDamage,
                             prefabs,
                             ref effect.prefabs);
                 }
@@ -661,16 +660,24 @@ public partial struct EffectSystem : ISystem
         public void __Drop(
             in RigidTransform transform, 
             in Entity entity, 
-            in EffectDamage instanceDamage, 
+            in Entity parent, 
             in DynamicBuffer<EffectPrefab> prefabs, 
             ref BlobArray<EffectDefinition.Prefab> prefabsDefinition)
         {
+            EffectDamageParent damageParent;
+            damageParent.index = -1;
+            damageParent.entity = entity;
+            
+            Parent instanceParent;
+            instanceParent.Value = parent;
+            
+            DamageInstance damageInstance;
+            damageInstance.entity = entity;
+            
             bool isContains = false;
             int numPrefabs = prefabsDefinition.Length;
             float chance = random.NextFloat(), totalChance = 0.0f;
             Entity instance;
-            Parent parent;
-            DamageInstance damageInstance;
             for (int i = 0; i < numPrefabs; ++i)
             {
                 ref var prefab = ref prefabsDefinition[i];
@@ -692,7 +699,8 @@ public partial struct EffectSystem : ISystem
                         damageInstance.entityPrefabReference, out instance))
                 {
                     instance = entityManager.Instantiate(0, instance);
-                    entityManager.AddComponent(1, instance, instanceDamage);
+                    if(entity != Entity.Null)
+                        entityManager.AddComponent(1, instance, damageParent);
 
                     switch (prefab.space)
                     {
@@ -703,15 +711,13 @@ public partial struct EffectSystem : ISystem
 
                             break;
                         case EffectSpace.Local:
-                            parent.Value = entity;
-                            entityManager.AddComponent(2, instance, parent);
+                            entityManager.AddComponent(2, instance, instanceParent);
 
                             break;
                     }
                 }
                 else
                 {
-                    damageInstance.scale = instanceDamage.scale;
                     switch (prefab.space)
                     {
                         case EffectSpace.World:
@@ -747,12 +753,6 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<EffectDamageParent> damageParents;
-
-        [ReadOnly]
-        public ComponentLookup<FollowTargetParent> followTargetParents;
-
-        [ReadOnly] 
-        public ComponentLookup<Parent> parents;
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
@@ -821,8 +821,6 @@ public partial struct EffectSystem : ISystem
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
             collect.damageParents = damageParents;
-            collect.followTargetParents = followTargetParents;
-            collect.parents = parents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
             collect.damages = damages;
@@ -1243,10 +1241,6 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectDamageParent> __damageParents;
 
-    private ComponentLookup<Parent> __parents;
-
-    private ComponentLookup<FollowTargetParent> __followTargetParents;
-
     private EntityTypeHandle __entityType;
     
     private BufferTypeHandle<Child> __childType;
@@ -1322,8 +1316,6 @@ public partial struct EffectSystem : ISystem
         __levelStates = state.GetComponentLookup<LevelStatus>();
         __damages = state.GetComponentLookup<EffectDamage>(true);
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
-        __parents = state.GetComponentLookup<Parent>(true);
-        __followTargetParents = state.GetComponentLookup<FollowTargetParent>(true);
         __entityType = state.GetEntityTypeHandle();
         __childType = state.GetBufferTypeHandle<Child>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
@@ -1432,8 +1424,6 @@ public partial struct EffectSystem : ISystem
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
 
         __damageParents.Update(ref state);
-        __followTargetParents.Update(ref state);
-        __parents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
         __damages.Update(ref state);
@@ -1458,8 +1448,6 @@ public partial struct EffectSystem : ISystem
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
         collect.damageParents = __damageParents;
-        collect.followTargetParents = __followTargetParents;
-        collect.parents = __parents;
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
         collect.damages = __damages;
