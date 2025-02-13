@@ -122,6 +122,7 @@ public struct EffectDamageStatistic : IBufferElementData
     public static void Add(
         int count, 
         int value,
+        int index, 
         in Entity entity,
         //in ComponentLookup<Parent> parents,
         //陀螺
@@ -129,19 +130,22 @@ public struct EffectDamageStatistic : IBufferElementData
         in ComponentLookup<EffectDamageParent> damageParents,
         ref BufferLookup<EffectDamageStatistic> instances)
     {
+        if (index >= 0 &&
+         instances.TryGetBuffer(entity, out var buffer) &&
+         buffer.Length > index)
+        {
+            ref var result = ref buffer.ElementAt(index);
+            Interlocked.Add(ref result.count, count);
+            Interlocked.Add(ref result.value, value);
+        }
+
         if (damageParents.TryGetComponent(entity, out var damageParent))
         {
-            if (damageParent.index >= 0 &&
-                instances.TryGetBuffer(damageParent.entity, out var buffer) &&
-                buffer.Length > damageParent.index)
-            {
-                ref var result = ref buffer.ElementAt(damageParent.index);
-                Interlocked.Add(ref result.count, count);
-                Interlocked.Add(ref result.value, value);
-            }
             
-            Add(count,
+            Add(
+                count,
                 value, 
+                damageParent.index, 
                 damageParent.entity, 
                 //parents, 
                 //followTargetParents, 

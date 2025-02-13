@@ -249,7 +249,7 @@ public partial struct EffectSystem : ISystem
         public Random random;
 
         [ReadOnly]
-        public ComponentLookup<EffectDamageParent> damageParents;
+        public ComponentLookup<EffectDamageParent> damageParentMap;
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
@@ -262,6 +262,9 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly]
         public NativeArray<Entity> entityArray;
+
+        [ReadOnly]
+        public NativeArray<EffectDamageParent> damageParents;
 
         [ReadOnly]
         public NativeArray<EffectDefinitionData> instances;
@@ -336,16 +339,27 @@ public partial struct EffectSystem : ISystem
                 }
 
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
-                Entity entity = entityArray[index];
-                LocalToWorld source = localToWorlds[entity];
+                Entity entity = entityArray[index], parent;
+                int parentIndex;
+                if (index < damageParents.Length)
+                {
+                    var damageParent = damageParents[index];
+                    parentIndex = damageParent.index;
+                    parent = damageParent.entity;
+                }
+                else
+                {
+                    parentIndex = -1;
+                    parent = entity;
+                }
+                
                 EffectDamage instanceDamage;
                 instanceDamage.scale = EffectDamage.Compute(
-                    entity,
-                    damageParents, 
-                    //parents,
-                    //followTargetParents,
+                    parent,
+                    damageParentMap, 
                     damages);
-
+                
+                LocalToWorld source = localToWorlds[entity];
                 var statusTargets = this.statusTargets[index];
                 if (result)
                 {
@@ -585,10 +599,11 @@ public partial struct EffectSystem : ISystem
                         EffectDamageStatistic.Add(
                             totalCount, 
                             totalDamageValue, 
-                            entity, 
+                            parentIndex, 
+                            parent, 
                             //parents, 
                             //followTargetParents, 
-                            damageParents, 
+                            damageParentMap, 
                             ref damageStatistics);
                 }
 
@@ -728,7 +743,7 @@ public partial struct EffectSystem : ISystem
 
                             break;
                         case EffectSpace.Local:
-                            damageInstance.parent = entity;
+                            damageInstance.parent = parent;
                             damageInstance.transform = RigidTransform.identity;
 
                             damageInstances.Enqueue(damageInstance);
@@ -765,6 +780,9 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
+
+        [ReadOnly]
+        public ComponentTypeHandle<EffectDamageParent> damageParentType;
 
         [ReadOnly]
         public ComponentTypeHandle<EffectDefinitionData> instanceType;
@@ -820,11 +838,12 @@ public partial struct EffectSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
-            collect.damageParents = damageParents;
+            collect.damageParentMap = damageParents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
             collect.damages = damages;
             collect.entityArray = chunk.GetNativeArray(entityType);
+            collect.damageParents = chunk.GetNativeArray(ref damageParentType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.simulationCollisions = chunk.GetNativeArray(ref simulationCollisionType);
             collect.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
@@ -1249,6 +1268,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
+    private ComponentTypeHandle<EffectDamageParent> __damageParentType;
+
     private ComponentTypeHandle<EffectDefinitionData> __instanceType;
 
     private ComponentTypeHandle<SimulationCollision> __simulationCollisionType;
@@ -1320,6 +1341,7 @@ public partial struct EffectSystem : ISystem
         __childType = state.GetBufferTypeHandle<Child>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
+        __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
         __instanceType = state.GetComponentTypeHandle<EffectDefinitionData>(true);
         __simulationCollisionType = state.GetComponentTypeHandle<SimulationCollision>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
@@ -1427,6 +1449,7 @@ public partial struct EffectSystem : ISystem
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
         __damages.Update(ref state);
+        __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
         __prefabType.Update(ref state);
         __outputMessageType.Update(ref state);
@@ -1452,6 +1475,7 @@ public partial struct EffectSystem : ISystem
         collect.characterProperties = __characterProperties;
         collect.damages = __damages;
         collect.entityType = __entityType;
+        collect.damageParentType = __damageParentType;
         collect.instanceType = __instanceType;
         collect.simulationCollisionType = __simulationCollisionType;
         collect.simulationEventType = __simulationEventType;
