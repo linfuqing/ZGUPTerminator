@@ -721,9 +721,6 @@ public class BulletAuthoring : MonoBehaviour
             
             AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);
 
-            EffectDamageParent parent;
-            parent.index = -1;
-            
             GameObject rootGameObject = authoring.gameObject, parentGameObject = rootGameObject;
             while (parentGameObject != null)
             {
@@ -734,8 +731,10 @@ public class BulletAuthoring : MonoBehaviour
                 parentGameObject = GetParent(parentGameObject);
             }
 
-            if (rootGameObject != null && rootGameObject != authoring.gameObject)
+            if (rootGameObject != authoring.gameObject)
             {
+                EffectDamageParent parent;
+                parent.index = -1;
                 parent.entity = GetEntity(rootGameObject, TransformUsageFlags.None);
                 AddComponent(entity, parent);
             }

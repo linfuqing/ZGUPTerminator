@@ -281,9 +281,6 @@ public class EffectAuthoring : MonoBehaviour
             AddComponent<EffectStatusTarget>(entity);
             //AddComponent<SimulationEvent>(entity);
 
-            EffectDamageParent parent;
-            parent.index = -1;
-            
             GameObject rootGameObject = GetParent(), parentGameObject = rootGameObject;
             while (parentGameObject != null)
             {
@@ -296,6 +293,8 @@ public class EffectAuthoring : MonoBehaviour
 
             if (rootGameObject != null)
             {
+                EffectDamageParent parent;
+                parent.index = -1;
                 parent.entity = GetEntity(rootGameObject, TransformUsageFlags.None);
                 AddComponent(entity, parent);
             }
