@@ -84,6 +84,29 @@ public struct EffectDefinitionData : IComponentData
     public BlobAssetReference<EffectDefinition> definition;
 }
 
+public struct EffectDamageParent : IComponentData
+{
+    public int index;
+    public Entity entity;
+
+    public EffectDamageParent GetRoot(
+        in ComponentLookup<EffectDamageParent> damageParents,
+        in ComponentLookup<EffectDamage> damages,
+        in BufferLookup<EffectDamageStatistic> instances)
+    {
+        if (damages.HasComponent(entity) || instances.HasBuffer(entity))
+            return this;
+        
+        if(damageParents.TryGetComponent(entity, out EffectDamageParent parent))
+            return parent.GetRoot(damageParents, damages, instances);
+
+        parent.index = index;
+        parent.entity = Entity.Null;
+        
+        return parent;
+    }
+}
+
 public struct EffectDamage : IComponentData
 {
     public float scale;
@@ -106,12 +129,6 @@ public struct EffectDamage : IComponentData
 
         return result;
     }
-}
-
-public struct EffectDamageParent : IComponentData
-{
-    public int index;
-    public Entity entity;
 }
 
 public struct EffectDamageStatistic : IBufferElementData
@@ -140,8 +157,6 @@ public struct EffectDamageStatistic : IBufferElementData
         }
 
         if (damageParents.TryGetComponent(entity, out var damageParent))
-        {
-            
             Add(
                 count,
                 value, 
@@ -151,7 +166,6 @@ public struct EffectDamageStatistic : IBufferElementData
                 //followTargetParents, 
                 damageParents, 
                 ref instances);
-        }
         /*else if (parents.TryGetComponent(entity, out var parent))
             Add(count,
                 value, 

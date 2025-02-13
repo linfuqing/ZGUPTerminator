@@ -343,7 +343,7 @@ public partial struct EffectSystem : ISystem
                 int parentIndex;
                 if (index < damageParents.Length)
                 {
-                    var damageParent = damageParents[index];
+                    var damageParent = damageParents[index].GetRoot(damageParentMap, damages, damageStatistics);
                     parentIndex = damageParent.index;
                     parent = damageParent.entity;
                 }
