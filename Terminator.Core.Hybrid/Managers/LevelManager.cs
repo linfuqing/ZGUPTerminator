@@ -134,7 +134,7 @@ public partial class LevelManager : MonoBehaviour
                 if(__coroutine != null)
                     StopCoroutine(__coroutine);
                 
-                __coroutine = StartCoroutine(ILevelData.instance.SubmitLevel(
+                __coroutine = StartCoroutine(ILevelData.instance?.SubmitLevel(
                     stage,
                     gold,
                     exp,

@@ -522,8 +522,6 @@ public class BulletAuthoring : MonoBehaviour
 
             int numBullets = authoring._bullets.Length;
 
-            AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);
-
             var prefabIndices = new Dictionary<GameObject, int>();
             var prefabs = AddBuffer<BulletPrefab>(entity);
             BulletDefinitionData instance;
@@ -719,6 +717,27 @@ public class BulletAuthoring : MonoBehaviour
                 
                 if(destination.value == -1)
                     Debug.LogError($"Bullet active name {source.name} can not been found!");
+            }
+            
+            AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);
+
+            EffectDamageParent parent;
+            parent.index = -1;
+            
+            GameObject rootGameObject = authoring.gameObject, parentGameObject = rootGameObject;
+            while (parentGameObject != null)
+            {
+                rootGameObject = parentGameObject;
+                if (rootGameObject.GetComponent<EffectAuthoring>() != null)
+                    break;
+
+                parentGameObject = GetParent(parentGameObject);
+            }
+
+            if (rootGameObject != null && rootGameObject != authoring.gameObject)
+            {
+                parent.entity = GetEntity(rootGameObject, TransformUsageFlags.None);
+                AddComponent(entity, parent);
             }
         }
     }
