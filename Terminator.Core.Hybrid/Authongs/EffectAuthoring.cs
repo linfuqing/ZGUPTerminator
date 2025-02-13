@@ -284,19 +284,20 @@ public class EffectAuthoring : MonoBehaviour
             EffectDamageParent parent;
             parent.index = -1;
             
-            Entity child = entity;
-            var parentGameObject = GetParent();
+            GameObject rootGameObject = GetParent(), parentGameObject = rootGameObject;
             while (parentGameObject != null)
             {
-                parent.entity = GetEntity(parentGameObject, TransformUsageFlags.None);
-                AddComponent(child, parent);
-                
-                if (parentGameObject.GetComponent<EffectAuthoring>() != null)
+                rootGameObject = parentGameObject;
+                if (rootGameObject.GetComponent<EffectAuthoring>() != null)
                     break;
-                
-                parentGameObject = GetParent(parentGameObject);
 
-                child = parent.entity;
+                parentGameObject = GetParent(parentGameObject);
+            }
+
+            if (rootGameObject != null)
+            {
+                parent.entity = GetEntity(rootGameObject, TransformUsageFlags.None);
+                AddComponent(entity, parent);
             }
         }
     }
