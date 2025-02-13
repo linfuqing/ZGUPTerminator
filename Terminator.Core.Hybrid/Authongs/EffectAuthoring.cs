@@ -288,7 +288,7 @@ public class EffectAuthoring : MonoBehaviour
             var parentGameObject = GetParent();
             while (parentGameObject != null)
             {
-                parent.entity = GetEntity(parentGameObject);
+                parent.entity = GetEntity(parentGameObject, TransformUsageFlags.None);
                 AddComponent(child, parent);
                 
                 if (parentGameObject.GetComponent<EffectAuthoring>() != null)
