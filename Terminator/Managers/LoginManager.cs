@@ -13,9 +13,19 @@ public sealed class LoginManager : MonoBehaviour
         public IEnumerator SubmitLevel(
             int stage,
             int gold,
+            int exp, 
+            int expMax, 
+            string[] skills,
             Action<bool> onComplete)
         {
-            return IUserData.instance.SubmitLevel(userID.Value, stage, gold, onComplete);
+            return IUserData.instance.SubmitLevel(
+                userID.Value, 
+                stage, 
+                gold, 
+                exp, 
+                expMax,
+                skills, 
+                onComplete);
         }
     }
     

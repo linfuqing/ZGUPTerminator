@@ -123,12 +123,19 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
 
         var timeUnix = DateTime.UtcNow - Utc1970;
-        
+        int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
+        if (time == 0)
+        {
+            time = (int)timeUnix.TotalSeconds;
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
+        }
+
         UserTip userTip;
         userTip.value = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
         userTip.max = _tip.max;
         userTip.unitTime = (uint)Mathf.RoundToInt(_tip.uintTime * 1000);
-        userTip.tick = (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds) * TimeSpan.TicksPerSecond + Utc1970.Ticks;
+        userTip.tick = (uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks;
         
         onComplete(userTip);
     }

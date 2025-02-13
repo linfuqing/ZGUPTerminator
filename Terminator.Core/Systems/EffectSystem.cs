@@ -365,7 +365,8 @@ public partial struct EffectSystem : ISystem
                     float delayDestroyTime,
                         mass,
                         lengthSQ;
-                    int totalDamageValue = 0, 
+                    int totalCount = 0, 
+                        totalDamageValue = 0, 
                         damageValue,
                         dropDamageValue, 
                         layerMask,
@@ -448,7 +449,10 @@ public partial struct EffectSystem : ISystem
                             ref var targetDamage = ref targetDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
                             if (isResult)
+                            {
                                 targetDamage.Add(damageValue, damage.messageLayerMask);
+                                targetDamages.SetComponentEnabled(simulationEvent.entity, true);
+                            }
 
                             if (characterBody.IsValid)
                             {
@@ -456,6 +460,8 @@ public partial struct EffectSystem : ISystem
 
                                 if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
+                                    isResult = true;
+                                    
                                     totalDamageValue += dropDamageValue;
 
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
@@ -468,8 +474,8 @@ public partial struct EffectSystem : ISystem
                                 }
                             }
 
-                            if (isResult)
-                                targetDamages.SetComponentEnabled(simulationEvent.entity, true);
+                            if (result)
+                                ++totalCount;
                         }
                         else
                             damageValue = 0;
@@ -578,6 +584,7 @@ public partial struct EffectSystem : ISystem
 
                     if(totalDamageValue != 0)
                         EffectDamageStatistic.Add(
+                            totalCount, 
                             totalDamageValue, 
                             entity, 
                             parents, 

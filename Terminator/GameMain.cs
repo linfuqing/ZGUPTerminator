@@ -38,9 +38,19 @@ public class GameMain : GameUser
         public IEnumerator SubmitLevel(
             int stage,
             int gold,
+            int exp, 
+            int expMax, 
+            string[] skills,
             Action<bool> onComplete)
         {
-            return IUserData.instance.SubmitLevel(__id, stage, gold, onComplete);
+            return IUserData.instance.SubmitLevel(
+                __id, 
+                stage, 
+                gold, 
+                exp, 
+                expMax,
+                skills, 
+                onComplete);
         }
     }
 

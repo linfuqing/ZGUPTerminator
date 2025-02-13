@@ -8,5 +8,8 @@ public interface ILevelData
     IEnumerator SubmitLevel(
         int stage, 
         int gold, 
+        int exp, 
+        int expMax, 
+        string[] skills,
         Action<bool> onComplete);
 }

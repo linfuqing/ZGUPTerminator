@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-public partial class LevelManager : MonoBehaviour
+public sealed partial class LevelManager : MonoBehaviour
 {
     [Serializable]
     internal struct Stage
@@ -54,8 +54,12 @@ public partial class LevelManager : MonoBehaviour
     private int __stage;
 
     private float __startTime;
+    
+    private Coroutine __coroutine;
 
     private List<GameObject> __gameObjectsToDestroy;
+
+    private HashSet<string> __activeSkillNames;
 
     private HashSet<int> __stages;
 
@@ -118,7 +122,29 @@ public partial class LevelManager : MonoBehaviour
             __gold = gold;
         }
 
-        __stage = stage;
+        if (stage != __stage)
+        {
+            if (!isRestart && stage > __stage)
+            {
+                int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
+                string[] activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
+                if(numActiveSkillNames > 0)
+                    __activeSkillNames.CopyTo(activeSkillNames, 0);
+                
+                if(__coroutine != null)
+                    StopCoroutine(__coroutine);
+                
+                __coroutine = StartCoroutine(ILevelData.instance.SubmitLevel(
+                    stage,
+                    gold,
+                    exp,
+                    maxExp,
+                    activeSkillNames, 
+                    __SubmitComplete));
+            }
+
+            __stage = stage;
+        }
     }
 
     public bool EnableStage(string name)
@@ -201,14 +227,12 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Quit()
     {
-        var levelData = ILevelData.instance;
-        if (levelData == null)
-            __OnQuit(true);
-        else
-            StartCoroutine(ILevelData.instance.SubmitLevel(__stage, __gold, __OnQuit));
+        IAnalytics.instance?.Quit();
+        
+        StartCoroutine(__Quit());
     }
 
-    private void __OnQuit(bool result)
+    /*private void __OnQuit(bool result)
     {
         Time.timeScale = 1.0f;
         
@@ -216,9 +240,25 @@ public partial class LevelManager : MonoBehaviour
             _onQuit.Invoke();
         
         IAnalytics.instance?.Quit();
+    }*/
+
+    private IEnumerator __Quit()
+    {
+        if (__coroutine != null)
+            yield return __coroutine;
+        
+        Time.timeScale = 1.0f;
+        
+        if (_onQuit != null)
+            _onQuit.Invoke();
+    }
+
+    private void __SubmitComplete(bool result)
+    {
+        __coroutine = null;
     }
     
-    protected void Start()
+    void Start()
     {
         __startTime = Time.time;
         

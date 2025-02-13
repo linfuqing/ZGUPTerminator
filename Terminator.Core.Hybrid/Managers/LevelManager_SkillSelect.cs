@@ -374,7 +374,7 @@ public partial class LevelManager
         __skillSelectionStatus |= SkillSelectionStatus.Start;
     }
     
-    protected void OnDestroy()
+    void OnDestroy()
     {
         if (__skillStyles != null)
         {

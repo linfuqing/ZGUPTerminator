@@ -146,6 +146,9 @@ public partial interface IUserData : IGameUserData
         uint userID,
         int stage, 
         int gold, 
+        int exp, 
+        int expMax, 
+        string[] skills,
         Action<bool> onComplete);
 
     IEnumerator CollectLevel(
@@ -182,7 +185,7 @@ public partial class UserData : MonoBehaviour, IUserData
 
         public LevelCache(string value)
         {
-            var values = value.Split(',');
+            var values = value.Split(SEPARATOR);
             id = uint.Parse(values[0]);
             stage = int.Parse(values[1]);
             gold = int.Parse(values[2]);
@@ -190,7 +193,33 @@ public partial class UserData : MonoBehaviour, IUserData
 
         public override string ToString()
         {
-            return $"{id},{stage},{gold}";
+            return $"{id}{SEPARATOR}{stage}{SEPARATOR}{gold}";
+        }
+    }
+
+    private struct Stage
+    {
+        public int exp;
+        public int expMax;
+        public string[] skills;
+
+        public Stage(string value)
+        {
+            skills = value.Split(SEPARATOR);
+            
+            int length = skills.Length;
+            exp = int.Parse(skills[--length]);
+            expMax = int.Parse(skills[--length]);
+            
+            Array.Resize(ref skills, length);
+        }
+
+        public override string ToString()
+        {
+            string result = $"{expMax}{SEPARATOR}{exp}";
+            return skills == null || skills.Length < 1
+                ? result
+                : $"{string.Join(SEPARATOR, skills)}{SEPARATOR}{result}";
         }
     }
 
@@ -198,7 +227,10 @@ public partial class UserData : MonoBehaviour, IUserData
     
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
     private const string NAME_SPACE_USER_LEVEL = "UserLevel";
+    private const string NAME_SPACE_USER_STAGE = "UserStage";
 
+    private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
+    
     public const char SEPARATOR = ',';
     
     public static uint id
@@ -268,6 +300,9 @@ public partial class UserData : MonoBehaviour, IUserData
         uint userID,
         int stage,
         int gold,
+        int exp, 
+        int expMax, 
+        string[] skills,
         Action<bool> onComplete)
     {
         var levelCache = UserData.levelCache;
@@ -282,6 +317,13 @@ public partial class UserData : MonoBehaviour, IUserData
         temp.stage = stage;
         temp.gold = gold;
         UserData.levelCache = temp;
+
+        Stage stageToSave;
+        stageToSave.exp = exp;
+        stageToSave.expMax = expMax;
+        stageToSave.skills = skills;
+        PlayerPrefs.SetString($"{NAME_SPACE_USER_STAGE}{temp.id}-{stage}", stageToSave.ToString());
+        
         onComplete(true);
     }
 

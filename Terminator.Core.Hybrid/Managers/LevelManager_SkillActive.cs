@@ -151,15 +151,32 @@ public partial class LevelManager
                activeSkill.Contains(level);
     }
     
-    public void SetActiveSkill(int index, int level, in SkillAsset? value)
+    public void SetActiveSkill(int index, int level, string name, in SkillAsset? value)
     {
         if (value == null)
         {
+            if (!__activeSkillNames.Remove(name))
+            {
+                Debug.LogError($"Skill {name} has not been active in the level {level} of {index}");
+
+                return;
+            }
+
             if (__skillActives != null && __skillActives.TryGetValue(index, out var origin) && origin.Dispose(level))
                 __skillActives.RemoveAt(index);
         }
         else
         {
+            if (__activeSkillNames == null)
+                __activeSkillNames = new HashSet<string>();
+            
+            if (!__activeSkillNames.Add(name))
+            {
+                Debug.LogError($"Skill {name} has already been active in the level {level} of {index}");
+
+                return;
+            }
+
             IAnalytics.instance?.SetActiveSkill(value.Value.name);
             
             if (__skillActives == null)
