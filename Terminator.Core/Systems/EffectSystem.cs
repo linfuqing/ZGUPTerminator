@@ -9,7 +9,6 @@ using Unity.Entities.Serialization;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
-using Unity.Scenes;
 using Unity.Transforms;
 using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
@@ -343,8 +342,9 @@ public partial struct EffectSystem : ISystem
                 EffectDamage instanceDamage;
                 instanceDamage.scale = EffectDamage.Compute(
                     entity,
-                    parents,
-                    followTargetParents,
+                    damageParents, 
+                    //parents,
+                    //followTargetParents,
                     damages);
 
                 var statusTargets = this.statusTargets[index];
@@ -587,8 +587,8 @@ public partial struct EffectSystem : ISystem
                             totalCount, 
                             totalDamageValue, 
                             entity, 
-                            parents, 
-                            followTargetParents, 
+                            //parents, 
+                            //followTargetParents, 
                             damageParents, 
                             ref damageStatistics);
                 }

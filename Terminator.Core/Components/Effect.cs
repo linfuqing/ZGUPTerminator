@@ -90,16 +90,19 @@ public struct EffectDamage : IComponentData
 
     public static float Compute(
         in Entity entity, 
-        in ComponentLookup<Parent> parents,
+        in ComponentLookup<EffectDamageParent> damageParents,
+        //in ComponentLookup<Parent> parents,
         //陀螺
-        in ComponentLookup<FollowTargetParent> followTargetParents,
+        //in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamage> damages)
     {
         float result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
-        if (parents.TryGetComponent(entity, out var parent))
+        if (damageParents.TryGetComponent(entity, out var damageParent))
+            result *= Compute(damageParent.entity, damageParents, damages);
+        /*if (parents.TryGetComponent(entity, out var parent))
             result *= Compute(parent.Value, parents, followTargetParents, damages);
         else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
-            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);
+            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);*/
 
         return result;
     }
@@ -120,23 +123,32 @@ public struct EffectDamageStatistic : IBufferElementData
         int count, 
         int value,
         in Entity entity,
-        in ComponentLookup<Parent> parents,
+        //in ComponentLookup<Parent> parents,
         //陀螺
-        in ComponentLookup<FollowTargetParent> followTargetParents,
+        //in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamageParent> damageParents,
         ref BufferLookup<EffectDamageStatistic> instances)
     {
-        if (damageParents.TryGetComponent(entity, out var damageParent) &&
-            //damageParent.index >= 0 && 
-            instances.TryGetBuffer(damageParent.entity, out var buffer) &&
-            buffer.Length > damageParent.index)
+        if (damageParents.TryGetComponent(entity, out var damageParent))
         {
-            ref var result = ref buffer.ElementAt(damageParent.index);
-            Interlocked.Add(ref result.count, count);
-            Interlocked.Add(ref result.value, value);
+            if (damageParent.index >= 0 &&
+                instances.TryGetBuffer(damageParent.entity, out var buffer) &&
+                buffer.Length > damageParent.index)
+            {
+                ref var result = ref buffer.ElementAt(damageParent.index);
+                Interlocked.Add(ref result.count, count);
+                Interlocked.Add(ref result.value, value);
+            }
+            
+            Add(count,
+                value, 
+                damageParent.entity, 
+                //parents, 
+                //followTargetParents, 
+                damageParents, 
+                ref instances);
         }
-
-        if (parents.TryGetComponent(entity, out var parent))
+        /*else if (parents.TryGetComponent(entity, out var parent))
             Add(count,
                 value, 
                 parent.Value, 
@@ -151,7 +163,7 @@ public struct EffectDamageStatistic : IBufferElementData
                 parents, 
                 followTargetParents, 
                 damageParents, 
-                ref instances);
+                ref instances);*/
     }
 }
 

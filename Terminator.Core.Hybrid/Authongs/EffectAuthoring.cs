@@ -280,6 +280,24 @@ public class EffectAuthoring : MonoBehaviour
             AddComponent<EffectStatus>(entity);
             AddComponent<EffectStatusTarget>(entity);
             //AddComponent<SimulationEvent>(entity);
+
+            EffectDamageParent parent;
+            parent.index = -1;
+            
+            Entity child = entity;
+            var parentGameObject = GetParent();
+            while (parentGameObject != null)
+            {
+                parent.entity = GetEntity(parentGameObject);
+                AddComponent(child, parent);
+                
+                if (parentGameObject.GetComponent<EffectAuthoring>() != null)
+                    break;
+                
+                parentGameObject = GetParent(parentGameObject);
+
+                child = parent.entity;
+            }
         }
     }
 

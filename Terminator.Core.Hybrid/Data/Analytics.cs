@@ -33,8 +33,3 @@ public interface IAnalytics
 
     void Quit();
 }
-
-public class Analytics : MonoBehaviour
-{
-    
-}
