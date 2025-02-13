@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-public sealed partial class LevelManager : MonoBehaviour
+public partial class LevelManager : MonoBehaviour
 {
     [Serializable]
     internal struct Stage
