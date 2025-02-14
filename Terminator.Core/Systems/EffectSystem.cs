@@ -28,6 +28,7 @@ public partial struct EffectSystem : ISystem
     
     private struct DamageInstance
     {
+        public int index;
         public float scale;
         public RigidTransform transform;
         public Entity entity;
@@ -344,27 +345,24 @@ public partial struct EffectSystem : ISystem
                 }
 
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
-                Entity entity = entityArray[index], parent;
-                int parentIndex;
-                if (index < damageParents.Length)
-                {
-                    var damageParent = damageParents[index].GetRoot(damageParentMap, damages);
-                    parentIndex = damageParent.index;
-                    parent = damageParent.entity;
-                }
-                else
-                {
-                    parentIndex = -1;
-                    parent = entity;
-                }
-                
+                Entity entity = entityArray[index];
+
                 if (!EffectDamageParent.TryGetComponent(
-                        parent,
+                        entity,
                         damageParentMap,
                         damages,
                         out EffectDamage instanceDamage))
                     instanceDamage.scale = 1.0f;
                 
+                EffectDamageParent instanceDamageParent;
+                if (index < damageParents.Length)
+                    instanceDamageParent = damageParents[index].GetRoot(damageParentMap, damages);
+                else
+                {
+                    instanceDamageParent.index = -1;
+                    instanceDamageParent.entity = entity;
+                }
+
                 LocalToWorld source = localToWorlds[entity];
                 var statusTargets = this.statusTargets[index];
                 if (result)
@@ -547,9 +545,9 @@ public partial struct EffectSystem : ISystem
 
                         __Drop(
                             math.RigidTransform(destination.Value),
-                            entity, 
                             simulationEvent.entity,
                             instanceDamage, 
+                            instanceDamageParent, 
                             prefabs,
                             ref damage.prefabs);
 
@@ -606,8 +604,7 @@ public partial struct EffectSystem : ISystem
                         EffectDamageStatistic.Add(
                             totalCount, 
                             totalDamageValue, 
-                            parentIndex, 
-                            parent, 
+                            instanceDamageParent, 
                             damageParentMap, 
                             ref damageStatistics);
                 }
@@ -664,8 +661,8 @@ public partial struct EffectSystem : ISystem
                         __Drop(
                             transform,
                             entity, 
-                            entity,
                             instanceDamage, 
+                            instanceDamageParent, 
                             prefabs,
                             ref effect.prefabs);
                 }
@@ -680,22 +677,19 @@ public partial struct EffectSystem : ISystem
 
         public void __Drop(
             in RigidTransform transform, 
-            in Entity entity, 
             in Entity parent, 
             in EffectDamage instanceDamage, 
+            in EffectDamageParent instanceDamageParent, 
             in DynamicBuffer<EffectPrefab> prefabs, 
             ref BlobArray<EffectDefinition.Prefab> prefabsDefinition)
         {
-            EffectDamageParent damageParent;
-            damageParent.index = -1;
-            damageParent.entity = entity;
-            
             Parent instanceParent;
             instanceParent.Value = parent;
             
             DamageInstance damageInstance;
+            damageInstance.index = instanceDamageParent.index;
             damageInstance.scale = instanceDamage.scale;
-            damageInstance.entity = entity;
+            damageInstance.entity = instanceDamageParent.entity;
             
             bool isContains = false;
             int numPrefabs = prefabsDefinition.Length;
@@ -737,8 +731,8 @@ public partial struct EffectSystem : ISystem
                             break;
                     }
                     
-                    if(entity != Entity.Null)
-                        entityManager.AddComponent(2, instance, damageParent);
+                    if(instanceDamageParent.entity != Entity.Null)
+                        entityManager.AddComponent(2, instance, instanceDamageParent);
                     
                     entityManager.AddComponent(2, instance, instanceDamage);
                 }

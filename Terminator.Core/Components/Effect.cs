@@ -133,26 +133,24 @@ public struct EffectDamageStatistic : IBufferElementData
     public static void Add(
         int count, 
         int value,
-        int index, 
-        in Entity entity,
+        in EffectDamageParent damageParent,
         in ComponentLookup<EffectDamageParent> damageParents,
         ref BufferLookup<EffectDamageStatistic> instances)
     {
-        if (index >= 0 &&
-         instances.TryGetBuffer(entity, out var buffer) &&
-         buffer.Length > index)
+        if (damageParent.index >= 0 &&
+            instances.TryGetBuffer(damageParent.entity, out var buffer) &&
+            buffer.Length > damageParent.index)
         {
-            ref var result = ref buffer.ElementAt(index);
+            ref var result = ref buffer.ElementAt(damageParent.index);
             Interlocked.Add(ref result.count, count);
             Interlocked.Add(ref result.value, value);
         }
 
-        if (damageParents.TryGetComponent(entity, out var damageParent))
+        if (damageParents.TryGetComponent(damageParent.entity, out var temp))
             Add(
                 count,
                 value, 
-                damageParent.index, 
-                damageParent.entity, 
+                temp, 
                 damageParents, 
                 ref instances);
     }
