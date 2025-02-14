@@ -18,7 +18,7 @@ using Random = Unity.Mathematics.Random;
 #if UNITY_EDITOR
 using UnityEditor;
 using ZG;
-public class BulletAuthoring : MonoBehaviour
+public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 {
     [Serializable]
     public struct MessageData
@@ -721,23 +721,7 @@ public class BulletAuthoring : MonoBehaviour
             
             AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);
 
-            GameObject rootGameObject = authoring.gameObject, parentGameObject = rootGameObject;
-            while (parentGameObject != null)
-            {
-                rootGameObject = parentGameObject;
-                if (rootGameObject.GetComponent<EffectAuthoring>() != null)
-                    break;
-
-                parentGameObject = GetParent(parentGameObject);
-            }
-
-            if (rootGameObject != authoring.gameObject)
-            {
-                EffectDamageParent parent;
-                parent.index = -1;
-                parent.entity = GetEntity(rootGameObject, TransformUsageFlags.None);
-                AddComponent(entity, parent);
-            }
+            IEffectAuthoring.Bake(entity, this);
         }
     }
 

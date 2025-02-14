@@ -240,7 +240,7 @@ public sealed class LoginManager : MonoBehaviour
             }
         }
 
-        LevelPlayerShared.bulletDamageScale = bulletDamageScale;
+        LevelPlayerShared.effectDamageScale = bulletDamageScale;
         LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
     }

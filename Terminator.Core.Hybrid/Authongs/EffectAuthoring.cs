@@ -10,8 +10,32 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
+public interface IEffectAuthoring
+{
+    public static void Bake(in Entity entity, IBaker baker)
+    {
+        GameObject rootGameObject = baker.GetParent(), parentGameObject = rootGameObject;
+        while (parentGameObject != null)
+        {
+            rootGameObject = parentGameObject;
+            if (rootGameObject.GetComponent<IEffectAuthoring>() != null)
+                break;
+
+            parentGameObject = baker.GetParent(parentGameObject);
+        }
+
+        if (rootGameObject != null)
+        {
+            EffectDamageParent parent;
+            parent.index = -1;
+            parent.entity = baker.GetEntity(rootGameObject, TransformUsageFlags.None);
+            baker.AddComponent(entity, parent);
+        }
+    }
+}
+
 //[RequireComponent(typeof(SimulationEventAuthoring))]
-public class EffectAuthoring : MonoBehaviour
+public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 {
     [Serializable]
     internal struct PrefabData
@@ -281,23 +305,7 @@ public class EffectAuthoring : MonoBehaviour
             AddComponent<EffectStatusTarget>(entity);
             //AddComponent<SimulationEvent>(entity);
 
-            GameObject rootGameObject = GetParent(), parentGameObject = rootGameObject;
-            while (parentGameObject != null)
-            {
-                rootGameObject = parentGameObject;
-                if (rootGameObject.GetComponent<EffectAuthoring>() != null)
-                    break;
-
-                parentGameObject = GetParent(parentGameObject);
-            }
-
-            if (rootGameObject != null)
-            {
-                EffectDamageParent parent;
-                parent.index = -1;
-                parent.entity = GetEntity(rootGameObject, TransformUsageFlags.None);
-                AddComponent(entity, parent);
-            }
+            IEffectAuthoring.Bake(entity, this);
         }
     }
 

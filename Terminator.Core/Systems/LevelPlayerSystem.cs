@@ -11,7 +11,7 @@ public partial struct LevelPlayerSystem : ISystem
     [BurstCompile]
     private struct Apply : IJobParallelFor
     {
-        public float bulletDamageScale;
+        public float effectDamageScale;
         public float effectTargetDamageScale;
         public float effectTargetHPScale;
 
@@ -46,7 +46,7 @@ public partial struct LevelPlayerSystem : ISystem
         public ComponentLookup<EffectTargetDamageScale> effectTargetDamageScales;
 
         [NativeDisableParallelForRestriction]
-        public ComponentLookup<BulletDamageScale> bulletDamageScales;
+        public ComponentLookup<EffectDamage> effectDamages;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersonPlayer> instances;
@@ -155,11 +155,11 @@ public partial struct LevelPlayerSystem : ISystem
                 effectTargetDamageScales[player] = effectTargetDamageScale;
             }
             
-            if (bulletDamageScales.TryGetComponent(player, out var bulletDamageScale))
+            if (effectDamages.TryGetComponent(player, out var effectDamage))
             {
-                bulletDamageScale.value = 1.0f + this.bulletDamageScale;
+                effectDamage.scale = 1.0f + this.effectDamageScale;
 
-                bulletDamageScales[player] = bulletDamageScale;
+                effectDamages[player] = effectDamage;
             }
 
             ThirdPersonPlayer instance;
@@ -183,7 +183,7 @@ public partial struct LevelPlayerSystem : ISystem
 
     private ComponentLookup<EffectTargetDamageScale> __effectTargetDamageScales;
 
-    private ComponentLookup<BulletDamageScale> __bulletDamageScales;
+    private ComponentLookup<EffectDamage> __effectDamages;
 
     private ComponentLookup<ThirdPersonPlayer> __instances;
     
@@ -199,7 +199,7 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargetDatas = state.GetComponentLookup<EffectTargetData>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
-        __bulletDamageScales = state.GetComponentLookup<BulletDamageScale>();
+        __effectDamages = state.GetComponentLookup<EffectDamage>();
         __instances = state.GetComponentLookup<ThirdPersonPlayer>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -227,7 +227,7 @@ public partial struct LevelPlayerSystem : ISystem
             for(int i = 0; i < count; ++i)
                 players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
 
-            entityManager.AddComponent<BulletDamageScale>(players);
+            entityManager.AddComponent<EffectDamage>(players);
         }
         
         __levelSkillNameDefinitions.Update(ref state);
@@ -237,11 +237,11 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargetDatas.Update(ref state);
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
-        __bulletDamageScales.Update(ref state);
+        __effectDamages.Update(ref state);
         __instances.Update(ref state);
             
         Apply apply;
-        apply.bulletDamageScale = LevelPlayerShared.bulletDamageScale;
+        apply.effectDamageScale = LevelPlayerShared.effectDamageScale;
         apply.effectTargetDamageScale = LevelPlayerShared.effectTargetDamageScale;
         apply.effectTargetHPScale = LevelPlayerShared.effectTargetHPScale;
         apply.activeSkills = LevelPlayerShared.activeSkills;
@@ -255,7 +255,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.effectTargetDatas = __effectTargetDatas;
         apply.effectTargets = __effectTargets;
         apply.effectTargetDamageScales = __effectTargetDamageScales;
-        apply.bulletDamageScales = __bulletDamageScales;
+        apply.effectDamages = __effectDamages;
         apply.instances = __instances;
         state.Dependency = apply.ScheduleByRef(entityArray.Length, 1, state.Dependency);
     }

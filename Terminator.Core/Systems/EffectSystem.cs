@@ -351,7 +351,8 @@ public partial struct EffectSystem : ISystem
                         entity,
                         damageParentMap,
                         damages,
-                        out EffectDamage instanceDamage))
+                        out EffectDamage instanceDamage, 
+                        out _))
                     instanceDamage.scale = 1.0f;
                 
                 EffectDamageParent instanceDamageParent;

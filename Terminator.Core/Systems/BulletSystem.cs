@@ -7,7 +7,6 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.Systems;
 using Unity.Transforms;
-using Unity.Scenes;
 
 [BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial struct BulletEntitySystem : ISystem
@@ -141,43 +140,31 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<PhysicsCollider> physicsColliders;
 
         [ReadOnly] 
-        public ComponentLookup<KinematicCharacterBody> characterBodyMap;
+        public ComponentLookup<KinematicCharacterBody> characterBodies;
 
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
-        [ReadOnly] 
-        public ComponentLookup<FollowTarget> followTargetMap;
-
         [ReadOnly]
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
-        [ReadOnly]
-        public ComponentLookup<BulletLayerMask> layerMaskMap;
+        [ReadOnly] 
+        public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
-        public ComponentLookup<BulletDamageScale> damageScaleMap;
+        public ComponentLookup<EffectDamage> effectDamages;
+
+        [ReadOnly]
+        public ComponentLookup<BulletLayerMask> bulletLayerMasks;
 
         [ReadOnly] 
         public NativeArray<Entity> entityArray;
 
         [ReadOnly] 
-        public NativeArray<KinematicCharacterBody> characterBodies;
-
-        [ReadOnly] 
         public NativeArray<LookAtTarget> lookAtTargets;
-
-        [ReadOnly] 
-        public NativeArray<FollowTarget> followTargets;
 
         [ReadOnly]
         public NativeArray<BulletDefinitionData> instances;
-
-        [ReadOnly] 
-        public NativeArray<BulletLayerMask> layerMasks;
-
-        [ReadOnly] 
-        public NativeArray<BulletDamageScale> damageScales;
 
         [ReadOnly]
         public BufferAccessor<BulletPrefab> prefabs;
@@ -202,63 +189,14 @@ public partial struct BulletSystem : ISystem
         
         public bool Execute(int index)
         {
-            int layerMask = index < layerMasks.Length ? layerMasks[index].value : -1;
-            float damageScale = index < damageScales.Length ? damageScales[index].value : 1.0f;
-            Entity entity = entityArray[index], 
-                character = index < characterBodies.Length ? entityArray[index] : Entity.Null;
-            KinematicCharacterBody characterBody = default;
-            if (character == Entity.Null)
-            {
-                int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
-                bool isStatic = rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies;
-                BulletLayerMask layerMaskComponent;
-                BulletDamageScale damageScaleComponent;
-                character = isStatic && 
-                            index < followTargets.Length && 
-                            characterBodyMap.TryGetComponent(followTargets[index].entity, out characterBody) ? followTargets[index].entity : Entity.Null;
-                if (character == Entity.Null)
-                {
-                    Entity temp = entity;
-                    FollowTarget followTarget;
-                    while (parents.TryGetComponent(temp, out var parent))
-                    {
-                        if (layerMaskMap.TryGetComponent(temp, out layerMaskComponent))
-                            layerMask &= layerMaskComponent.value == 0 ? -1 : layerMaskComponent.value;
-                        
-                        if (damageScaleMap.TryGetComponent(temp, out damageScaleComponent))
-                            damageScale *= damageScaleComponent.value;
-                        
-                        if (characterBodyMap.TryGetComponent(parent.Value, out characterBody))
-                        {
-                            character = parent.Value;
-
-                            break;
-                        }
-
-                        if (isStatic &&
-                            followTargetMap.TryGetComponent(parent.Value, out followTarget))
-                        {
-                            if (layerMaskMap.TryGetComponent(followTarget.entity, out layerMaskComponent))
-                                layerMask &= layerMaskComponent.value == 0 ? -1 : layerMaskComponent.value;
-
-                            if (damageScaleMap.TryGetComponent(followTarget.entity, out damageScaleComponent))
-                                damageScale *= damageScaleComponent.value;
-
-                            if(characterBodyMap.TryGetComponent(followTarget.entity, out characterBody))
-                            {
-                                character = followTarget.entity;
-
-                                break;
-                            }
-                        }
-
-                        temp = parent.Value;
-                    }
-                }
-            }
-            else
-                characterBody = characterBodies[index];
-
+            Entity entity = entityArray[index];
+            EffectDamageParent.TryGetComponent(
+                entity,
+                effectDamageParents,
+                characterBodies,
+                out var characterBody,
+                out var character);
+    
             BulletLocation location = 0;
             float3 up = math.up();
             ref var definition = ref instances[index].definition.Value;
@@ -275,6 +213,19 @@ public partial struct BulletSystem : ISystem
                         location = BulletLocation.Air;
                 }
             }
+            
+            int layerMask = EffectDamageParent.TryGetComponent(
+                entity,
+                effectDamageParents,
+                bulletLayerMasks,
+                out var bulletLayerMask, 
+                out _) ? bulletLayerMask.value : -1;
+            float damageScale = EffectDamageParent.TryGetComponent(
+                entity,
+                effectDamageParents,
+                effectDamages,
+                out var effectDamage, 
+                out _) ? effectDamage.scale : 1.0f;
 
             var localToWorld = GetLocalToWorld(entity);
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
@@ -294,7 +245,7 @@ public partial struct BulletSystem : ISystem
                 collisionWorld, 
                 parents, 
                 physicsColliders,
-                characterBodyMap, 
+                characterBodies, 
                 characterControls,
                 animationCurveDeltas, 
                 prefabs[index],
@@ -351,38 +302,26 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
-        [ReadOnly] 
-        public ComponentLookup<FollowTarget> followTargets;
-
         [ReadOnly]
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
         [ReadOnly] 
-        public ComponentLookup<BulletLayerMask> layerMasks;
+        public ComponentLookup<BulletLayerMask> bulletLayerMasks;
 
         [ReadOnly] 
-        public ComponentLookup<BulletDamageScale> damageScales;
+        public ComponentLookup<EffectDamage> effectDamages;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
 
         [ReadOnly] 
-        public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
-
-        [ReadOnly] 
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
-
-        [ReadOnly] 
-        public ComponentTypeHandle<FollowTarget> followTargetType;
 
         [ReadOnly]
         public ComponentTypeHandle<BulletDefinitionData> instanceType;
-
-        [ReadOnly]
-        public ComponentTypeHandle<BulletLayerMask> layerMaskType;
-
-        [ReadOnly] 
-        public ComponentTypeHandle<BulletDamageScale> damageScaleType;
 
         [ReadOnly]
         public BufferTypeHandle<BulletPrefab> prefabType;
@@ -417,19 +356,15 @@ public partial struct BulletSystem : ISystem
             collect.parents = parents;
             collect.localTransforms = localTransforms;
             collect.physicsColliders = physicsColliders;
-            collect.characterBodyMap = characterBodies;
+            collect.characterBodies = characterBodies;
             collect.characterControls = characterControls;
-            collect.followTargetMap = followTargets;
             collect.animationCurveDeltas = animationCurveDeltas;
-            collect.layerMaskMap = layerMasks;
-            collect.damageScaleMap = damageScales;
+            collect.bulletLayerMasks = bulletLayerMasks;
+            collect.effectDamages = effectDamages;
+            collect.effectDamageParents = effectDamageParents;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
-            collect.followTargets = chunk.GetNativeArray(ref followTargetType);
-            collect.characterBodies = chunk.GetNativeArray(ref characterBodyType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
-            collect.layerMasks = chunk.GetNativeArray(ref layerMaskType);
-            collect.damageScales = chunk.GetNativeArray(ref damageScaleType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
@@ -459,27 +394,19 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
 
-    private ComponentLookup<FollowTarget> __followTargets;
-
     private ComponentLookup<AnimationCurveDelta> __animationCurveDeltas;
 
-    private ComponentLookup<BulletLayerMask> __layerMasks;
+    private ComponentLookup<BulletLayerMask> __bulletLayerMasks;
 
-    private ComponentLookup<BulletDamageScale> __damageScales;
+    private ComponentLookup<EffectDamage> __effectDamages;
+
+    private ComponentLookup<EffectDamageParent> __effectDamageParents;
 
     private EntityTypeHandle __entityType;
 
-    private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
-
     private ComponentTypeHandle<LookAtTarget> __lookAtType;
 
-    private ComponentTypeHandle<FollowTarget> __followTargetType;
-
     private ComponentTypeHandle<BulletDefinitionData> __instanceType;
-
-    private ComponentTypeHandle<BulletLayerMask> __layerMaskType;
-
-    private ComponentTypeHandle<BulletDamageScale> __damageScaleType;
 
     private BufferTypeHandle<BulletPrefab> __prefabType;
 
@@ -497,7 +424,7 @@ public partial struct BulletSystem : ISystem
 
     private EntityQuery __group;
 
-    public PrefabLoader __prefabLoader;
+    private PrefabLoader __prefabLoader;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -507,17 +434,13 @@ public partial struct BulletSystem : ISystem
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
-        __followTargets = state.GetComponentLookup<FollowTarget>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
-        __layerMasks = state.GetComponentLookup<BulletLayerMask>(true);
-        __damageScales = state.GetComponentLookup<BulletDamageScale>(true);
+        __bulletLayerMasks = state.GetComponentLookup<BulletLayerMask>(true);
+        __effectDamages = state.GetComponentLookup<EffectDamage>(true);
+        __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
-        __followTargetType = state.GetComponentTypeHandle<FollowTarget>(true);
-        __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __instanceType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
-        __layerMaskType = state.GetComponentTypeHandle<BulletLayerMask>(true);
-        __damageScaleType = state.GetComponentTypeHandle<BulletDamageScale>(true);
         __prefabType = state.GetBufferTypeHandle<BulletPrefab>(true);
         __activeIndexType = state.GetBufferTypeHandle<BulletActiveIndex>(true);
         __statusType = state.GetBufferTypeHandle<BulletStatus>();
@@ -555,17 +478,13 @@ public partial struct BulletSystem : ISystem
         __physicsColliders.Update(ref state);
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
-        __followTargets.Update(ref state);
         __animationCurveDeltas.Update(ref state);
-        __layerMasks.Update(ref state);
-        __damageScales.Update(ref state);
+        __bulletLayerMasks.Update(ref state);
+        __effectDamages.Update(ref state);
+        __effectDamageParents.Update(ref state);
         __entityType.Update(ref state);
-        __characterBodyType.Update(ref state);
         __lookAtType.Update(ref state);
-        __followTargetType.Update(ref state);
         __instanceType.Update(ref state);
-        __layerMaskType.Update(ref state);
-        __damageScaleType.Update(ref state);
         __prefabType.Update(ref state);
         __activeIndexType.Update(ref state);
         __statusType.Update(ref state);
@@ -584,17 +503,13 @@ public partial struct BulletSystem : ISystem
         collect.physicsColliders = __physicsColliders;
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
-        collect.followTargets = __followTargets;
         collect.animationCurveDeltas = __animationCurveDeltas;
-        collect.layerMasks = __layerMasks;
-        collect.damageScales = __damageScales;
+        collect.bulletLayerMasks = __bulletLayerMasks;
+        collect.effectDamages = __effectDamages;
+        collect.effectDamageParents = __effectDamageParents;
         collect.entityType = __entityType;
-        collect.characterBodyType = __characterBodyType;
         collect.lookAtTargetType = __lookAtType;
-        collect.followTargetType = __followTargetType;
         collect.instanceType = __instanceType;
-        collect.layerMaskType = __layerMaskType;
-        collect.damageScaleType = __damageScaleType;
         collect.prefabType = __prefabType;
         collect.activeIndexType = __activeIndexType;
         collect.statusType = __statusType;

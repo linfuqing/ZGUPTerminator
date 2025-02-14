@@ -30,7 +30,7 @@ public static class LevelPlayerShared
         }
     }
     
-    private class BulletDamageScale : Value<BulletDamageScale>
+    private class EffectDamageScale : Value<EffectDamageScale>
     {
     }
     
@@ -58,11 +58,11 @@ public static class LevelPlayerShared
         public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
     }
 
-    public static float bulletDamageScale
+    public static float effectDamageScale
     {
-        get => BulletDamageScale.value;
+        get => EffectDamageScale.value;
 
-        set => BulletDamageScale.value = value;
+        set => EffectDamageScale.value = value;
     }
     
     public static float effectTargetDamageScale

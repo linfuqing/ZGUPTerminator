@@ -1057,10 +1057,6 @@ public struct BulletDefinition
             EffectDamage effectDamage;
             effectDamage.scale = damageScale;
             entityManager.AddComponent(1, entity, effectDamage);
-
-            BulletDamageScale bulletDamageScale;
-            bulletDamageScale.value = damageScale;
-            entityManager.AddComponent(1, entity, bulletDamageScale);
         }
 
         EffectDamageParent damageParent;
@@ -1078,11 +1074,6 @@ public struct BulletDefinitionData : IComponentData
 public struct BulletLayerMask : IComponentData
 {
     public int value;
-}
-
-public struct BulletDamageScale : IComponentData
-{
-    public float value;
 }
 
 public struct BulletStatus : IBufferElementData

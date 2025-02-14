@@ -108,13 +108,20 @@ public struct EffectDamageParent : IComponentData
         in Entity entity, 
         in ComponentLookup<EffectDamageParent> damageParents,
         in ComponentLookup<T> damages, 
-        out T damage) where T : unmanaged, IComponentData
+        out T damage, 
+        out Entity result) where T : unmanaged, IComponentData
     {
-        if(damages.TryGetComponent(entity, out damage))
+        if (damages.TryGetComponent(entity, out damage))
+        {
+            result = entity;
+            
             return true;
-        
+        }
+
         if (damageParents.TryGetComponent(entity, out var damageParent))
-            return TryGetComponent(damageParent.entity, damageParents, damages, out damage);
+            return TryGetComponent(damageParent.entity, damageParents, damages, out damage, out result);
+
+        result = Entity.Null;
         
         return false;
     }
