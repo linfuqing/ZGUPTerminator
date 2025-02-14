@@ -53,6 +53,10 @@ public partial class LevelManager : MonoBehaviour
     private int __gold;
     private int __stage;
 
+    private int __stageExp;
+    private int __stageExpMax;
+    private string[] __stageActiveSkillNames;
+    
     private float __startTime;
     
     private Coroutine __coroutine;
@@ -126,29 +130,14 @@ public partial class LevelManager : MonoBehaviour
         {
             if (!isRestart && stage > __stage)
             {
-                if (__coroutine != null)
-                {
-                    StopCoroutine(__coroutine);
+                __stageExp = exp;
+                __stageExpMax = maxExp;
+                int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
+                __stageActiveSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
+                if(numActiveSkillNames > 0)
+                    __activeSkillNames.CopyTo(__stageActiveSkillNames, 0);
 
-                    __coroutine = null;
-                }
-
-                var levelData = ILevelData.instance;
-                if (levelData != null)
-                {
-                    int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
-                    string[] activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
-                    if(numActiveSkillNames > 0)
-                        __activeSkillNames.CopyTo(activeSkillNames, 0);
-
-                    __coroutine = StartCoroutine(levelData.SubmitLevel(
-                        stage,
-                        gold,
-                        exp,
-                        maxExp,
-                        activeSkillNames,
-                        __SubmitComplete));
-                }
+                __Submit(__OnStageChanged);
             }
 
             __stage = stage;
@@ -235,37 +224,58 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Quit()
     {
-        IAnalytics.instance?.Quit();
+        //IAnalytics.instance?.Quit();
         
-        StartCoroutine(__Quit());
+        __Submit(__OnQuit);
     }
 
-    /*private void __OnQuit(bool result)
-    {
-        Time.timeScale = 1.0f;
-        
-        if (_onQuit != null)
-            _onQuit.Invoke();
-        
-        IAnalytics.instance?.Quit();
-    }*/
-
-    private IEnumerator __Quit()
+    private void __Submit(Action<bool> onComplete)
     {
         if (__coroutine != null)
-            yield return __coroutine;
-        
-        Time.timeScale = 1.0f;
-        
-        if (_onQuit != null)
-            _onQuit.Invoke();
+        {
+            StopCoroutine(__coroutine);
+
+            __coroutine = null;
+        }
+
+        var levelData = ILevelData.instance;
+        if (levelData == null)
+            onComplete(false);
+        else
+        {
+            int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
+            string[] activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
+            if(numActiveSkillNames > 0)
+                __activeSkillNames.CopyTo(activeSkillNames, 0);
+            
+            if(__coroutine != null)
+                StopCoroutine(__coroutine);
+
+            __coroutine = StartCoroutine(levelData.SubmitLevel(
+                __stage,
+                __gold,
+                __stageExp,
+                __stageExpMax,
+                __stageActiveSkillNames,
+                onComplete));
+        }
     }
 
-    private void __SubmitComplete(bool result)
+    private void __OnStageChanged(bool result)
     {
         __coroutine = null;
     }
     
+    private void __OnQuit(bool result)
+    {
+        Time.timeScale = 1.0f;
+        
+        if (_onQuit != null)
+            _onQuit.Invoke();
+        
+        IAnalytics.instance?.Quit();
+    }
+
     void Start()
     {
         __startTime = Time.time;

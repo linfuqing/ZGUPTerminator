@@ -6,12 +6,17 @@ using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Jobs;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateBefore(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class MessageSystem : SystemBase
 {
     private struct Collect
     {
+        public float maxTime;
+        
+        public double time;
+        
         [ReadOnly]
         public NativeArray<Entity> entityArray;
         
@@ -19,6 +24,8 @@ public partial class MessageSystem : SystemBase
         
         public BufferAccessor<Message> inputMessages;
         
+        public NativeHashMap<WeakObjectReference<UnityEngine.Object>, double> times;
+
         public NativeParallelMultiHashMap<Entity, Message> outputMessages;
         
         public NativeParallelMultiHashMap<int, MessageParameter> outputParameters;
@@ -37,19 +44,17 @@ public partial class MessageSystem : SystemBase
                 for (i = 0; i < numMessages; ++i)
                 {
                     ref var message = ref messages.ElementAt(i);
+                    if(message.value.GetHashCode() != 0 && times.TryAdd(message.value, time))
+                        message.value.LoadAsync();
+                    
                     switch (message.value.LoadingStatus)
                     {
                         case ObjectLoadingStatus.None:
-                            if (message.value.GetHashCode() == 0)
-                            {
-                                __Collect(entity, message, ref parameters);
+                            __Collect(entity, message, ref parameters);
 
-                                messages.RemoveAtSwapBack(i--);
+                            messages.RemoveAtSwapBack(i--);
 
-                                --numMessages;
-                            }
-                            else
-                                message.value.LoadAsync();
+                            --numMessages;
 
                             break;
                         case ObjectLoadingStatus.Completed:
@@ -59,7 +64,12 @@ public partial class MessageSystem : SystemBase
 
                             --numMessages;
                             break;
-                        case ObjectLoadingStatus.Error:
+                        default:
+                            if (ObjectLoadingStatus.Error != message.value.LoadingStatus && 
+                                times.TryGetValue(message.value, out var oldTime) && 
+                                (float)(time - oldTime) < maxTime)
+                                break;
+                            
                             Debug.LogError($"Message {message.name} Error!");
 
                             if (message.key != 0)
@@ -115,6 +125,8 @@ public partial class MessageSystem : SystemBase
     [BurstCompile]
     private struct CollectEx : IJobChunk
     {
+        public float maxTime;
+
         [ReadOnly]
         public EntityTypeHandle entityType;
         
@@ -122,6 +134,8 @@ public partial class MessageSystem : SystemBase
         
         public BufferTypeHandle<Message> inputMessageType;
         
+        public NativeHashMap<WeakObjectReference<UnityEngine.Object>, double> times;
+
         public NativeParallelMultiHashMap<Entity, Message> outputMessages;
         
         public NativeParallelMultiHashMap<int, MessageParameter> outputParameters;
@@ -135,9 +149,11 @@ public partial class MessageSystem : SystemBase
             in v128 chunkEnabledMask)
         {
             Collect collect;
+            collect.maxTime = maxTime;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.inputParameters = chunk.GetBufferAccessor(ref inputParameterType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
+            collect.times = times;
             collect.outputMessages = outputMessages;
             collect.outputParameters = outputParameters;
             collect.entitiesToDisable = entitiesToDisable;
@@ -162,6 +178,8 @@ public partial class MessageSystem : SystemBase
             messages.SetBufferEnabled(entities[index], false);
         }
     }
+
+    public const float MAX_TIME = 3.0f;
     
     private EntityTypeHandle __entityType;
     
@@ -178,6 +196,8 @@ public partial class MessageSystem : SystemBase
     private EntityQuery __group;
 
     private NativeList<Entity> __entitiesToDisable;
+    
+    private NativeHashMap<WeakObjectReference<UnityEngine.Object>, double> __times;
 
     private NativeParallelMultiHashMap<Entity, Message> __instances;
         
@@ -201,6 +221,7 @@ public partial class MessageSystem : SystemBase
         //RequireForUpdate(__group);
 
         __entitiesToDisable = new NativeList<Entity>(Allocator.Persistent);
+        __times = new NativeHashMap<WeakObjectReference<Object>, double>(1, Allocator.Persistent);
         __instances = new NativeParallelMultiHashMap<Entity, Message>(1, Allocator.Persistent);
         __parameters = new NativeParallelMultiHashMap<int, MessageParameter>(1, Allocator.Persistent);
     }
@@ -210,6 +231,7 @@ public partial class MessageSystem : SystemBase
         base.OnDestroy();
 
         __entitiesToDisable.Dispose();
+        __times.Dispose();
         __instances.Dispose();
         __parameters.Dispose();
     }
@@ -227,9 +249,11 @@ public partial class MessageSystem : SystemBase
         __parameterType.Update(this);
         
         CollectEx collect;
+        collect.maxTime = MAX_TIME;
         collect.entityType = __entityType;
         collect.inputMessageType = __instanceType;
         collect.inputParameterType = __parameterType;
+        collect.times = __times;
         collect.outputMessages = __instances;
         collect.outputParameters = __parameters;
         collect.entitiesToDisable = __entitiesToDisable;

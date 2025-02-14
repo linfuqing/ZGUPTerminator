@@ -77,6 +77,27 @@ public struct SkillDefinition
             if (status.cooldown > time)
                 continue;
             
+            numPreIndices = skill.preIndices.Length;
+            isSelected = numPreIndices < 1;
+            for (j = 0; j < numPreIndices; ++j)
+            {
+                preIndex = skill.preIndices[j];
+                for (k = 0; k < numActiveIndices; ++k)
+                {
+                    if (skillActiveIndices[k].value == preIndex)
+                        break;
+                }
+
+                if (k < numActiveIndices)
+                {
+                    isSelected = true;
+                    break;
+                }
+            }
+
+            if (!isSelected)
+                continue;
+            
             isCooldown = status.cooldown + skill.duration > time;
             if (isCooldown)
             {
@@ -101,46 +122,25 @@ public struct SkillDefinition
             }
             else
             {
-                numPreIndices = skill.preIndices.Length;
-                isSelected = numPreIndices < 1;
-                for (j = 0; j < numPreIndices; ++j)
+                status.cooldown = time + skill.cooldown * cooldownScale;
+                //status.cooldown = cooldown + skill.duration;
+
+                if (status.cooldown > time)
                 {
-                    preIndex = skill.preIndices[j];
-                    for (k = 0; k < numActiveIndices; ++k)
+                    for (j = 0; j < numBulletIndices; ++j)
                     {
-                        if (skillActiveIndices[k].value == preIndex)
-                            break;
-                    }
-
-                    if (k < numActiveIndices)
-                    {
-                        isSelected = true;
-                        break;
-                    }
-                }
-
-                if (isSelected)
-                {
-                    status.cooldown = time + skill.cooldown * cooldownScale;
-                    //status.cooldown = cooldown + skill.duration;
-
-                    if (status.cooldown > time)
-                    {
-                        for (j = 0; j < numBulletIndices; ++j)
+                        ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                        if (bullet.index < bulletStates.Length)
                         {
-                            ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                            if (bullet.index < bulletStates.Length)
-                            {
-                                ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                                bulletStatus.cooldown = status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
-                                bulletStatus.count = 0;
-                                bulletStatus.version = 0;
-                            }
+                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                            bulletStatus.cooldown = status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
+                            bulletStatus.count = 0;
+                            bulletStatus.version = 0;
                         }
                     }
-                    else
-                        isCooldown = true;
                 }
+                else
+                    isCooldown = true;
             }
 
             if (isCooldown == (SkillMessageType.Cooldown != status.messageType))

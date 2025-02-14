@@ -299,7 +299,6 @@ public sealed class InstanceManager : MonoBehaviour
 
     private void __Destroy(GameObject gameObject, GameObject prefab)
     {
-        
         if (__gameObjects == null)
             __gameObjects = new Dictionary<GameObject, List<GameObject>>();
 
