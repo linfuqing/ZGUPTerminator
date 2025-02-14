@@ -126,6 +126,8 @@ public partial class MessageSystem : SystemBase
     private struct CollectEx : IJobChunk
     {
         public float maxTime;
+        
+        public double time;
 
         [ReadOnly]
         public EntityTypeHandle entityType;
@@ -150,6 +152,7 @@ public partial class MessageSystem : SystemBase
         {
             Collect collect;
             collect.maxTime = maxTime;
+            collect.time = time;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.inputParameters = chunk.GetBufferAccessor(ref inputParameterType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
@@ -250,6 +253,7 @@ public partial class MessageSystem : SystemBase
         
         CollectEx collect;
         collect.maxTime = MAX_TIME;
+        collect.time = SystemAPI.Time.ElapsedTime;
         collect.entityType = __entityType;
         collect.inputMessageType = __instanceType;
         collect.inputParameterType = __parameterType;
