@@ -19,6 +19,11 @@ public enum EffectSpace
     Local
 }
 
+public interface IEffectDamage
+{
+    public int value { get; }
+}
+
 public struct EffectTargetInvulnerabilityDefinition
 {
     public struct Invulnerability
@@ -91,44 +96,33 @@ public struct EffectDamageParent : IComponentData
 
     public EffectDamageParent GetRoot(
         in ComponentLookup<EffectDamageParent> damageParents,
-        in ComponentLookup<EffectDamage> damages,
-        in BufferLookup<EffectDamageStatistic> instances)
+        in ComponentLookup<EffectDamage> damages)
     {
-        if (damages.HasComponent(entity) || instances.HasBuffer(entity))
-            return this;
-        
         if(damageParents.TryGetComponent(entity, out EffectDamageParent parent))
-            return parent.GetRoot(damageParents, damages, instances);
+            return parent.GetRoot(damageParents, damages);
 
-        parent.index = index;
-        parent.entity = Entity.Null;
+        return this;
+    }
+    
+    public static bool TryGetComponent<T>(
+        in Entity entity, 
+        in ComponentLookup<EffectDamageParent> damageParents,
+        in ComponentLookup<T> damages, 
+        out T damage) where T : unmanaged, IComponentData
+    {
+        if(damages.TryGetComponent(entity, out damage))
+            return true;
         
-        return parent;
+        if (damageParents.TryGetComponent(entity, out var damageParent))
+            return TryGetComponent(damageParent.entity, damageParents, damages, out damage);
+        
+        return false;
     }
 }
 
 public struct EffectDamage : IComponentData
 {
     public float scale;
-
-    public static float Compute(
-        in Entity entity, 
-        in ComponentLookup<EffectDamageParent> damageParents,
-        //in ComponentLookup<Parent> parents,
-        //陀螺
-        //in ComponentLookup<FollowTargetParent> followTargetParents,
-        in ComponentLookup<EffectDamage> damages)
-    {
-        float result = damages.TryGetComponent(entity, out var damage) ? damage.scale : 1;
-        if (damageParents.TryGetComponent(entity, out var damageParent))
-            result *= Compute(damageParent.entity, damageParents, damages);
-        /*if (parents.TryGetComponent(entity, out var parent))
-            result *= Compute(parent.Value, parents, followTargetParents, damages);
-        else if(followTargetParents.TryGetComponent(entity, out var followTargetParent))
-            result *= Compute(followTargetParent.entity, parents, followTargetParents, damages);*/
-
-        return result;
-    }
 }
 
 public struct EffectDamageStatistic : IBufferElementData
@@ -141,9 +135,6 @@ public struct EffectDamageStatistic : IBufferElementData
         int value,
         int index, 
         in Entity entity,
-        //in ComponentLookup<Parent> parents,
-        //陀螺
-        //in ComponentLookup<FollowTargetParent> followTargetParents,
         in ComponentLookup<EffectDamageParent> damageParents,
         ref BufferLookup<EffectDamageStatistic> instances)
     {
@@ -162,26 +153,8 @@ public struct EffectDamageStatistic : IBufferElementData
                 value, 
                 damageParent.index, 
                 damageParent.entity, 
-                //parents, 
-                //followTargetParents, 
                 damageParents, 
                 ref instances);
-        /*else if (parents.TryGetComponent(entity, out var parent))
-            Add(count,
-                value, 
-                parent.Value, 
-                parents, 
-                followTargetParents, 
-                damageParents, 
-                ref instances);
-        else if (followTargetParents.TryGetComponent(entity, out var followTargetParent))
-            Add(count, 
-                value, 
-                followTargetParent.entity, 
-                parents, 
-                followTargetParents, 
-                damageParents, 
-                ref instances);*/
     }
 }
 
