@@ -721,7 +721,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             
             AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);
 
-            IEffectAuthoring.Bake(entity, this);
+            if(authoring.GetComponent<EffectAuthoring>() == null)
+                IEffectAuthoring.Bake(entity, this);
         }
     }
 
