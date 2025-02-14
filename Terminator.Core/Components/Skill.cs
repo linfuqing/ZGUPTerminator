@@ -55,7 +55,6 @@ public struct SkillDefinition
         SkillActiveIndex skillActiveIndex;
         BulletActiveIndex bulletActiveIndex;
         Random random;
-        double cooldown;
         float chance, value;
         long hash;
         int numActiveIndices = skillActiveIndices.Length,
@@ -75,105 +74,104 @@ public struct SkillDefinition
             ref var status = ref states.ElementAt(skillActiveIndex.value);
             
             numBulletIndices = skill.bulletIndices.Length;
-            cooldown = status.cooldown - time;
-            if (cooldown > math.DBL_MIN_NORMAL)
+            if (status.cooldown > time)
+                continue;
+            
+            isCooldown = status.cooldown + skill.duration > time;
+            if (isCooldown)
             {
-                isCooldown = cooldown < skill.duration;
-                if (isCooldown == (SkillMessageType.Cooldown != status.messageType))
+                isSelected = false;
+                for (j = 0; j < numBulletIndices; ++j)
                 {
-                    status.messageType = isCooldown ? SkillMessageType.Running : SkillMessageType.Cooldown;
-                    
-                    if (messageOffset >= 0)
+                    ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                    if (bullet.index < bulletStates.Length)
                     {
-                        numMessageIndices = skill.messageIndices.Length;
-                        if (numMessageIndices > 0)
-                        {
-                            result = true;
-
-                            outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
-                            for (j = 0; j < numMessageIndices; ++j)
-                            {
-                                ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
-                                inputMessage = inputMessages[skill.messageIndices[j]];
-                                if(inputMessage.type != status.messageType)
-                                    continue;
-                                
-                                outputMessage.key = 0;
-                                outputMessage.name = inputMessage.name;
-                                outputMessage.value = inputMessage.value;
-                            }
-
-                            messageOffset += numMessageIndices;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                isCooldown = status.cooldown > math.DBL_MIN_NORMAL;
-                if (isCooldown)
-                {
-                    for (j = 0; j < numBulletIndices; ++j)
-                    {
-                        ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                        if (bullet.index < bulletStates.Length)
-                        {
-                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                            if (bulletStatus.version != 0)//cooldown > status.time + bulletDefinition.bullets[bullet.index].startTime)
-                            {
-                                isCooldown = false;
-
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!isCooldown)
-                {
-                    numPreIndices = skill.preIndices.Length;
-                    isSelected = numPreIndices < 1;
-                    for (j = 0; j < numPreIndices; ++j)
-                    {
-                        preIndex = skill.preIndices[j];
-                        for (k = 0; k < numActiveIndices; ++k)
-                        {
-                            if (skillActiveIndices[k].value == preIndex)
-                                break;
-                        }
-
-                        if (k < numActiveIndices)
+                        ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                        if (bulletStatus.cooldown > time || bulletStatus.version != 0)
                         {
                             isSelected = true;
+
                             break;
                         }
                     }
+                }
 
-                    if (isSelected)
+                if (!isSelected)
+                    status.cooldown = time;
+            }
+            else
+            {
+                numPreIndices = skill.preIndices.Length;
+                isSelected = numPreIndices < 1;
+                for (j = 0; j < numPreIndices; ++j)
+                {
+                    preIndex = skill.preIndices[j];
+                    for (k = 0; k < numActiveIndices; ++k)
                     {
-                        cooldown = time + skill.cooldown * cooldownScale;
-                        status.cooldown = cooldown + skill.duration;
+                        if (skillActiveIndices[k].value == preIndex)
+                            break;
+                    }
 
-                        if (status.cooldown > time)
+                    if (k < numActiveIndices)
+                    {
+                        isSelected = true;
+                        break;
+                    }
+                }
+
+                if (isSelected)
+                {
+                    status.cooldown = time + skill.cooldown * cooldownScale;
+                    //status.cooldown = cooldown + skill.duration;
+
+                    if (status.cooldown > time)
+                    {
+                        for (j = 0; j < numBulletIndices; ++j)
                         {
-                            for (j = 0; j < numBulletIndices; ++j)
+                            ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                            if (bullet.index < bulletStates.Length)
                             {
-                                ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                                if (bullet.index < bulletStates.Length)
-                                {
-                                    ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                                    bulletStatus.cooldown = cooldown + bulletDefinition.bullets[bullet.index].startTime;
-                                    bulletStatus.count = 0;
-                                    bulletStatus.version = 0;
-                                }
+                                ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                                bulletStatus.cooldown = status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
+                                bulletStatus.count = 0;
+                                bulletStatus.version = 0;
                             }
                         }
-                        else
-                            isCooldown = true;
                     }
+                    else
+                        isCooldown = true;
                 }
             }
 
+            if (isCooldown == (SkillMessageType.Cooldown != status.messageType))
+            {
+                status.messageType = isCooldown ? SkillMessageType.Running : SkillMessageType.Cooldown;
+                
+                if (messageOffset >= 0)
+                {
+                    numMessageIndices = skill.messageIndices.Length;
+                    if (numMessageIndices > 0)
+                    {
+                        result = true;
+
+                        outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
+                        for (j = 0; j < numMessageIndices; ++j)
+                        {
+                            ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
+                            inputMessage = inputMessages[skill.messageIndices[j]];
+                            if(inputMessage.type != status.messageType)
+                                continue;
+                                
+                            outputMessage.key = 0;
+                            outputMessage.name = inputMessage.name;
+                            outputMessage.value = inputMessage.value;
+                        }
+
+                        messageOffset += numMessageIndices;
+                    }
+                }
+            }
+            
             if (isCooldown)
             {
                 layerMaskInclude |= skill.layerMaskInclude;
