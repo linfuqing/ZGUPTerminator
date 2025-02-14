@@ -126,21 +126,29 @@ public partial class LevelManager : MonoBehaviour
         {
             if (!isRestart && stage > __stage)
             {
-                int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
-                string[] activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
-                if(numActiveSkillNames > 0)
-                    __activeSkillNames.CopyTo(activeSkillNames, 0);
-                
-                if(__coroutine != null)
+                if (__coroutine != null)
+                {
                     StopCoroutine(__coroutine);
-                
-                __coroutine = StartCoroutine(ILevelData.instance?.SubmitLevel(
-                    stage,
-                    gold,
-                    exp,
-                    maxExp,
-                    activeSkillNames, 
-                    __SubmitComplete));
+
+                    __coroutine = null;
+                }
+
+                var levelData = ILevelData.instance;
+                if (levelData != null)
+                {
+                    int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
+                    string[] activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
+                    if(numActiveSkillNames > 0)
+                        __activeSkillNames.CopyTo(activeSkillNames, 0);
+
+                    __coroutine = StartCoroutine(levelData.SubmitLevel(
+                        stage,
+                        gold,
+                        exp,
+                        maxExp,
+                        activeSkillNames,
+                        __SubmitComplete));
+                }
             }
 
             __stage = stage;
