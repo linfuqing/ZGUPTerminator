@@ -310,7 +310,7 @@ public partial interface IUserData
     /// <summary>
     /// 升级卡牌
     /// </summary>
-    IEnumerator UpgradeCard(uint userID, Action<bool> onComplete);
+    IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete);
 
     /// <summary>
     /// 角色
@@ -387,7 +387,7 @@ public partial class UserData
         return null;
     }
 
-    public IEnumerator UpgradeCard(uint userID, Action<bool> onComplete)
+    public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
     {
         return null;
     }
