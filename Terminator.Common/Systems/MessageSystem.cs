@@ -44,25 +44,19 @@ public partial class MessageSystem : SystemBase
                 for (i = 0; i < numMessages; ++i)
                 {
                     ref var message = ref messages.ElementAt(i);
-                    if(message.value.GetHashCode() != 0 && times.TryAdd(message.value, time))
+                    if (message.value.GetHashCode() != 0 && times.TryAdd(message.value, time))
                         message.value.LoadAsync();
-                    
+
                     switch (message.value.LoadingStatus)
                     {
                         case ObjectLoadingStatus.None:
-                            __Collect(entity, message, ref parameters);
-
-                            messages.RemoveAtSwapBack(i--);
-
-                            --numMessages;
-
-                            break;
                         case ObjectLoadingStatus.Completed:
                             __Collect(entity, message, ref parameters);
 
                             messages.RemoveAtSwapBack(i--);
 
                             --numMessages;
+
                             break;
                         default:
                             if (ObjectLoadingStatus.Error != message.value.LoadingStatus && 
@@ -326,7 +320,7 @@ public partial class MessageSystem : SystemBase
 
     private void __Send(in Message message, Transform transform)
     {
-        var messageValue = message.value.IsReferenceValid ? message.value.Result : null;
+        var messageValue = message.value.Result;
         if (message.key != 0)
         {
             if (messageValue is IMessage temp)
@@ -344,6 +338,7 @@ public partial class MessageSystem : SystemBase
         {
             try
             {
+                //UnityEngine.Debug.LogError($"BroadcastMessage {message.name} : {messageValue}");
                 transform.BroadcastMessage(message.name.ToString(), messageValue);
             }
             catch (Exception e)

@@ -248,6 +248,7 @@ public class AnimatedSkinController : MonoBehaviour
         _database = database;
     }
 
+    [UnityEngine.Scripting.Preserve]
     public void Play(UnityEngine.Object transition)
     {
         /*if (__coroutine != null)
