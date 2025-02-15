@@ -564,11 +564,7 @@ public partial struct EffectSystem : ISystem
                                 outputMessage.name = inputMessage.name;
                                 outputMessage.value = inputMessage.value;
 
-#if UNITY_EDITOR
                                 if (inputMessage.entityPrefabReference.Equals(default))
-#else
-                                if (!inputMessage.entityPrefabReference.IsReferenceValid)
-#endif
                                 {
                                     enabledFlags |= EnabledFlags.Message;
 
@@ -1101,11 +1097,7 @@ public partial struct EffectSystem : ISystem
                             message.name = targetMessage.messageName;
                             message.value = targetMessage.messageValue;
 
-#if UNITY_EDITOR
                             if (!targetMessage.entityPrefabReference.Equals(default))
-#else
-                            if (!targetMessage.entityPrefabReference.IsReferenceValid)
-#endif
                             {
                                 if (prefabLoader.TryGetOrLoadPrefabRoot(
                                         targetMessage.entityPrefabReference, out messageReceiver))
