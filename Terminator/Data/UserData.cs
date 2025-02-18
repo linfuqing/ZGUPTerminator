@@ -25,7 +25,7 @@ public struct UserEnergy
     public long tick;
 }
 
-public struct UserStage
+public struct UserStage_v0
 {
     [Flags]
     public enum Flag
@@ -131,7 +131,7 @@ public partial interface IUserData : IGameUserData
 
     IEnumerator QueryStages(
         uint userID,
-        Action<Memory<UserStage>> onComplete);
+        Action<Memory<UserStage_v0>> onComplete);
     
     IEnumerator QueryLevels(
         uint userID, 
@@ -197,37 +197,11 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
-    private struct Stage
-    {
-        public int exp;
-        public int expMax;
-        public string[] skills;
-
-        public Stage(string value)
-        {
-            skills = value.Split(SEPARATOR);
-            
-            int length = skills.Length;
-            exp = int.Parse(skills[--length]);
-            expMax = int.Parse(skills[--length]);
-            
-            Array.Resize(ref skills, length);
-        }
-
-        public override string ToString()
-        {
-            string result = $"{expMax}{SEPARATOR}{exp}";
-            return skills == null || skills.Length < 1
-                ? result
-                : $"{string.Join(SEPARATOR, skills)}{SEPARATOR}{result}";
-        }
-    }
-
     private const string NAME_SPACE_USER_ID = "UserLevelID";
     
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
     private const string NAME_SPACE_USER_LEVEL = "UserLevel";
-    private const string NAME_SPACE_USER_STAGE = "UserStage";
+    private const string NAME_SPACE_USER_STAGE_CACHE = "UserStageCache";
 
     private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
     
@@ -276,6 +250,11 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
+    public static IUserData.StageCache GetStageCache(uint levelID, int stage)
+    {
+        return new IUserData.StageCache(PlayerPrefs.GetString($"{NAME_SPACE_USER_STAGE_CACHE}-{levelID}-{stage}"));
+    }
+
     public IEnumerator QueryUser(
         string channelName,
         string channelUser,
@@ -318,11 +297,11 @@ public partial class UserData : MonoBehaviour, IUserData
         temp.gold = gold;
         UserData.levelCache = temp;
 
-        Stage stageToSave;
-        stageToSave.exp = exp;
-        stageToSave.expMax = expMax;
-        stageToSave.skills = skills;
-        PlayerPrefs.SetString($"{NAME_SPACE_USER_STAGE}{temp.id}-{stage}", stageToSave.ToString());
+        IUserData.StageCache stageCache;
+        stageCache.exp = exp;
+        stageCache.expMax = expMax;
+        stageCache.skills = skills;
+        PlayerPrefs.SetString($"{NAME_SPACE_USER_STAGE_CACHE}{temp.id}-{stage}", stageCache.ToString());
         
         onComplete(true);
     }

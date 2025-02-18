@@ -1,6 +1,36 @@
 using System;
 using System.Collections;
 
+public struct UserStageReward
+{
+    [Flags]
+    public enum Flag
+    {
+        Unlock = 0x01, 
+        Collected = 0x02
+    }
+
+    public enum Condition
+    {
+        None, 
+        Once, 
+        NoDamage
+    }
+    
+    public struct PoolKey
+    {
+        public uint poolID;
+        public int count;
+    }
+
+    public string name;
+    public uint id;
+    public Flag flag;
+    public Condition condition;
+    public int gold;
+    public PoolKey[] poolKeys;
+}
+
 public struct UserGroup
 {
     public string name;
@@ -24,39 +54,6 @@ public struct UserPurchasePool
     public uint id;
 }
 
-public struct UserPurchases
-{
-    [Flags]
-    public enum Flag
-    {
-        FirstUnlock = 0x01
-    }
-
-    public struct PoolKey
-    {
-        public uint poolID;
-        public int count;
-    }
-
-    /// <summary>
-    /// 用来判定首次解锁并播放动画
-    /// </summary>
-    public Flag flag;
-    /// <summary>
-    /// 钻石数量
-    /// </summary>
-    public int diamond;
-    /// <summary>
-    /// 卡池
-    /// </summary>
-    public UserPurchasePool[] pools;
-    /// <summary>
-    /// 钥匙
-    /// </summary>
-    public PoolKey[] poolKeys;
-}
-
-[Serializable]
 public struct UserCardStyle
 {
     [Serializable]
@@ -116,40 +113,6 @@ public struct UserCard
     /// 装备卡组
     /// </summary>
     public Group[] groups;
-}
-
-public struct UserCards
-{
-    [Flags]
-    public enum Flag
-    {
-        FirstUnlock = 0x01
-    }
-
-    /// <summary>
-    /// 用来判定首次解锁完整卡槽并播放动画
-    /// </summary>
-    public Flag flag;
-
-    /// <summary>
-    /// 卡牌容量
-    /// </summary>
-    public int capacity;
-
-    /// <summary>
-    /// 卡牌品质
-    /// </summary>
-    public UserCardStyle[] cardStyles;
-
-    /// <summary>
-    /// 卡牌
-    /// </summary>
-    public UserCard[] cards;
-
-    /// <summary>
-    /// 卡组
-    /// </summary>
-    public UserGroup[] groups;
 }
 
 [Serializable]
@@ -241,50 +204,160 @@ public struct UserAccessory
     public int[] groupIDs;
 }
 
-public struct UserRoles
-{
-    [Flags]
-    public enum Flag
-    {
-        FirstUnlock = 0x01
-    }
-
-    public Flag flag;
-
-    /// <summary>
-    /// 角色
-    /// </summary>
-    public UserRole[] roles;
-
-    /// <summary>
-    /// 装备类型
-    /// </summary>
-    public UserAccessoryStyle[] accessoryStyles;
-
-    /// <summary>
-    /// 装备
-    /// </summary>
-    public UserAccessory[] accessories;
-
-    /// <summary>
-    /// 卷轴
-    /// </summary>
-    public UserItem[] items;
-
-    /// <summary>
-    /// 套装
-    /// </summary>
-    public UserGroup[] groups;
-}
-
 public partial interface IUserData
 {
+    public struct Purchases
+    {
+        [Flags]
+        public enum Flag
+        {
+            FirstUnlock = 0x01
+        }
+
+        public struct PoolKey
+        {
+            public uint poolID;
+            public int count;
+        }
+
+        /// <summary>
+        /// 用来判定首次解锁并播放动画
+        /// </summary>
+        public Flag flag;
+        /// <summary>
+        /// 钻石数量
+        /// </summary>
+        public int diamond;
+        /// <summary>
+        /// 卡池
+        /// </summary>
+        public UserPurchasePool[] pools;
+        /// <summary>
+        /// 钥匙
+        /// </summary>
+        public PoolKey[] poolKeys;
+    }
+
+    public struct Cards
+    {
+        [Flags]
+        public enum Flag
+        {
+            FirstUnlock = 0x01
+        }
+
+        /// <summary>
+        /// 用来判定首次解锁完整卡槽并播放动画
+        /// </summary>
+        public Flag flag;
+
+        /// <summary>
+        /// 卡牌容量
+        /// </summary>
+        public int capacity;
+
+        /// <summary>
+        /// 卡牌品质
+        /// </summary>
+        public UserCardStyle[] cardStyles;
+
+        /// <summary>
+        /// 卡牌
+        /// </summary>
+        public UserCard[] cards;
+
+        /// <summary>
+        /// 卡组
+        /// </summary>
+        public UserGroup[] groups;
+    }
+
+    public struct Roles
+    {
+        [Flags]
+        public enum Flag
+        {
+            FirstUnlock = 0x01
+        }
+
+        public Flag flag;
+
+        /// <summary>
+        /// 角色
+        /// </summary>
+        public UserRole[] roles;
+
+        /// <summary>
+        /// 装备类型
+        /// </summary>
+        public UserAccessoryStyle[] accessoryStyles;
+
+        /// <summary>
+        /// 装备
+        /// </summary>
+        public UserAccessory[] accessories;
+
+        /// <summary>
+        /// 卷轴
+        /// </summary>
+        public UserItem[] items;
+
+        /// <summary>
+        /// 套装
+        /// </summary>
+        public UserGroup[] groups;
+    }
+
+    
+    public struct StageCache
+    {
+        public int exp;
+        public int expMax;
+        public string[] skills;
+
+        public StageCache(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                exp = 0;
+                expMax = 0;
+
+                skills = null;
+
+                return;
+            }
+            
+            skills = value.Split(UserData.SEPARATOR);
+            
+            int length = skills.Length;
+            exp = int.Parse(skills[--length]);
+            expMax = int.Parse(skills[--length]);
+            
+            Array.Resize(ref skills, length);
+        }
+
+        public override string ToString()
+        {
+            string result = $"{expMax}{UserData.SEPARATOR}{exp}";
+            return skills == null || skills.Length < 1
+                ? result
+                : $"{string.Join(UserData.SEPARATOR, skills)}{UserData.SEPARATOR}{result}";
+        }
+    }
+
+    public struct Stage
+    {
+        public int energy;
+        public StageCache cache;
+        public UserStageReward[] rewards;
+    }
+
     /// <summary>
     /// 商店
     /// </summary>
     IEnumerator QueryPurchases(
         uint userID,
-        Action<UserPurchases> onComplete);
+        Action<Purchases> onComplete);
 
     /// <summary>
     /// 抽卡
@@ -300,7 +373,7 @@ public partial interface IUserData
     /// </summary>
     IEnumerator QueryCards(
         uint userID,
-        Action<UserCards> onComplete);
+        Action<Cards> onComplete);
 
     /// <summary>
     /// 装备卡组或卸下卡组(position为-1）
@@ -317,7 +390,7 @@ public partial interface IUserData
     /// </summary>
     IEnumerator QueryRoles(
         uint userID,
-        Action<UserRoles> onComplete);
+        Action<Roles> onComplete);
 
     /// <summary>
     /// 装备角色
@@ -355,15 +428,33 @@ public partial interface IUserData
     /// 升阶装备
     /// </summary>
     IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete);
+    
+    /// <summary>
+    /// 查询关卡
+    /// </summary>
+    IEnumerator QueryStage(
+        uint userID,
+        uint stageID,
+        Action<Stage> onComplete);
+
+    IEnumerator ApplyStage(
+        uint userID,
+        uint stageID,
+        Action<bool> onComplete);
+    
+    /// <summary>
+    /// 收集关卡奖励
+    /// </summary>
+    IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete);
 }
 
 public partial class UserData
 {
     public IEnumerator QueryPurchases(
         uint userID,
-        Action<UserPurchases> onComplete)
+        Action<IUserData.Purchases> onComplete)
     {
-        return null;
+        return UserDataMain.instance.QueryPurchases(userID, onComplete);
     }
 
     public IEnumerator Purchase(
@@ -372,29 +463,29 @@ public partial class UserData
         int times,
         Action<Memory<UserItem>> onComplete)
     {
-        return null;
+        return UserDataMain.instance.Purchase(userID, purchasePoolID, times, onComplete);
     }
 
     public IEnumerator QueryCards(
         uint userID,
-        Action<UserCards> onComplete)
+        Action<IUserData.Cards> onComplete)
     {
-        return null;
+        return UserDataMain.instance.QueryCards(userID, onComplete);
     }
 
     public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
     {
-        return null;
+        return UserDataMain.instance.SetCard(userID, cardID, groupID, position, onComplete);
     }
 
     public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
     {
-        return null;
+        return UserDataMain.instance.UpgradeCard(userID, cardID, onComplete);
     }
 
     public IEnumerator QueryRoles(
         uint userID,
-        Action<UserRoles> onComplete)
+        Action<IUserData.Roles> onComplete)
     {
         return null;
     }
@@ -434,5 +525,26 @@ public partial class UserData
     public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete)
     {
         return null;
+    }
+
+    public IEnumerator QueryStage(
+        uint userID,
+        uint stageID,
+        Action<IUserData.Stage> onComplete)
+    {
+        return UserDataMain.instance.QueryStage(userID, stageID, onComplete);
+    }
+
+    public IEnumerator ApplyStage(
+        uint userID,
+        uint stageID,
+        Action<bool> onComplete)
+    {
+        return UserDataMain.instance.ApplyStage(userID, stageID, onComplete);
+    }
+    
+    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.CollectStageReward(userID, stageRewardID, onComplete);
     }
 }

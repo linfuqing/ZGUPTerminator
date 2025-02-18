@@ -280,10 +280,11 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
 
     [Serializable]
-    internal struct Stage
+    internal partial struct Stage
     {
         public string name;
-        public UserStage.RewardType rewardType;
+        
+        public UserStage_v0.RewardType rewardType;
         public int rewardCount;
     }
     
@@ -331,7 +332,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     
     public IEnumerator QueryStages(
         uint userID,
-        Action<Memory<UserStage>> onComplete)
+        Action<Memory<UserStage_v0>> onComplete)
     {
         yield return null;
 
@@ -339,7 +340,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             numLevels = Mathf.Min(UserData.level + 1, _levels.Length), 
             levelEnd = numLevels - 1;
         Level level;
-        UserStage userStage;
+        UserStage_v0 userStage;
         Stage stage;
         for (i = 0; i < numLevels; ++i)
         {
@@ -348,21 +349,21 @@ public sealed partial class UserDataMain : MonoBehaviour
             numStages = level.stages == null ? 0 : level.stages.Length;
             for (j = 0; j < numStages; ++j)
             {
-                if (((UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + j)}") &
-                    UserStage.Flag.Collected) != UserStage.Flag.Collected)
+                if (((UserStage_v0.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + j)}") &
+                     UserStage_v0.Flag.Collected) != UserStage_v0.Flag.Collected)
                     break;
             }
 
             if (j < numStages || i == levelEnd)
             {
-                var userStages = new UserStage[numStages];
+                var userStages = new UserStage_v0[numStages];
                 for (j = 0; j < numStages; ++j)
                 {
                     stage = level.stages[j];
 
                     userStage.name = stage.name;
                     userStage.id = __ToID(stageIndex);
-                    userStage.flag = (UserStage.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{userStage.id}");
+                    userStage.flag = (UserStage_v0.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{userStage.id}");
                     userStage.rewardType = stage.rewardType;
                     userStage.rewardCount = stage.rewardCount;
 
@@ -395,37 +396,14 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
         
-        var timeUnix = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        uint now = (uint)timeUnix.TotalSeconds, time = now;
-        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
-        if (_energy.uintTime > Mathf.Epsilon)
-        {
-            float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) / _energy.uintTime;
-            int energyInt =  Mathf.FloorToInt(energyFloat);
-            energy += energyInt;
-
-            time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
-        }
-
-        if (energy >= _energy.max)
-        {
-            energy = _energy.max;
-
-            time = now;
-        }
-
         var level = _levels[levelIndex];
-        energy -= level.energy;
-        if (energy < 0)
+        if (!__ApplyEnergy(level.energy))
         {
             onComplete(false);
 
             yield break;
         }
         
-        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time);
-
         UserData.LevelCache levelCache;
         levelCache.id = levelID;
         levelCache.stage = 0;
@@ -490,14 +468,14 @@ public sealed partial class UserDataMain : MonoBehaviour
             stageIndex += _levels[i].stages.Length;
 
         string key;
-        UserStage.Flag flag;
+        UserStage_v0.Flag flag;
         for (int i = 0; i < levelCache.stage; ++i)
         {
             key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + i)}";
-            flag = (UserStage.Flag)PlayerPrefs.GetInt(key);
-            if ((flag & UserStage.Flag.Unlock) != UserStage.Flag.Unlock)
+            flag = (UserStage_v0.Flag)PlayerPrefs.GetInt(key);
+            if ((flag & UserStage_v0.Flag.Unlock) != UserStage_v0.Flag.Unlock)
             {
-                flag |= UserStage.Flag.Unlock;
+                flag |= UserStage_v0.Flag.Unlock;
                 
                 PlayerPrefs.SetInt(key, (int)flag);
             }
@@ -514,9 +492,9 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return null;
         
         string key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stageID}";
-        var flag = (UserStage.Flag)PlayerPrefs.GetInt(key);
-        if ((flag & UserStage.Flag.Unlock) != UserStage.Flag.Unlock ||
-            (flag & UserStage.Flag.Collected) == UserStage.Flag.Collected)
+        var flag = (UserStage_v0.Flag)PlayerPrefs.GetInt(key);
+        if ((flag & UserStage_v0.Flag.Unlock) != UserStage_v0.Flag.Unlock ||
+            (flag & UserStage_v0.Flag.Collected) == UserStage_v0.Flag.Collected)
         {
             onComplete(false);
             
@@ -535,10 +513,10 @@ public sealed partial class UserDataMain : MonoBehaviour
                 stage = level.stages[stageIndex];
                 switch (stage.rewardType)
                 {
-                    case UserStage.RewardType.Gold:
+                    case UserStage_v0.RewardType.Gold:
                         gold += stage.rewardCount;
                         break;
-                    case UserStage.RewardType.Weapon:
+                    case UserStage_v0.RewardType.Weapon:
                         string source = PlayerPrefs.GetString(NAME_SPACE_USER_WEAPONS), destination = stage.name;
                         if (string.IsNullOrEmpty(source))
                             source = destination;
@@ -549,7 +527,7 @@ public sealed partial class UserDataMain : MonoBehaviour
                         break;
                 }
 
-                flag |= UserStage.Flag.Collected;
+                flag |= UserStage_v0.Flag.Collected;
 
                 PlayerPrefs.SetInt(key, (int)flag);
 
@@ -640,6 +618,39 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(true);
     }
 
+    private bool __ApplyEnergy(int value)
+    {
+        var timeUnix = DateTime.UtcNow - new DateTime(
+            1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        uint now = (uint)timeUnix.TotalSeconds, time = now;
+        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
+        if (_energy.uintTime > Mathf.Epsilon)
+        {
+            float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) /
+                                _energy.uintTime;
+            int energyInt =  Mathf.FloorToInt(energyFloat);
+            energy += energyInt;
+
+            time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+        }
+
+        if (energy >= _energy.max)
+        {
+            energy = _energy.max;
+
+            time = now;
+        }
+        
+        energy -= value;
+        if (energy < 0)
+            return false;
+        
+        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time);
+
+        return true;
+    }
+
     private uint __ToID(int index) => (uint)(index + 1);
     
     private int __ToIndex(uint id) => (int)(id - 1);
@@ -712,7 +723,7 @@ public partial class UserData
 
     public IEnumerator QueryStages(
         uint userID,
-        Action<Memory<UserStage>> onComplete)
+        Action<Memory<UserStage_v0>> onComplete)
     {
         return UserDataMain.instance.QueryStages(userID, onComplete);
     }
