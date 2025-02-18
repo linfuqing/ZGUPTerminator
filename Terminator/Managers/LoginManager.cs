@@ -47,6 +47,8 @@ public sealed class LoginManager : MonoBehaviour
     public delegate void Awake(string[] rewardSkills);
 
     public static event Awake onAwake;
+    
+    public static event Action<uint> onStageChanged;
 
     [SerializeField]
     internal float _rewardStyleDestroyTime;
