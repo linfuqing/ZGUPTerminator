@@ -15,6 +15,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     public Button button;
 
     public Progressbar progressbar;
+    
+    public StageStyle stageStyle;
 
     public RewardStyle rewardStyle;
 

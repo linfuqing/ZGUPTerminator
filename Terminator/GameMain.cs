@@ -24,36 +24,61 @@ public class GameSceneActivation : IEnumerator
     object IEnumerator.Current => null;
 }
 
-public class GameMain : GameUser
+public class GameLevelData : ILevelData
 {
-    private class LevelData : ILevelData
+    private uint __userID;
+    
+    public GameLevelData(uint userID)
     {
-        private uint __id;
-
-        public LevelData(uint id)
-        {
-            __id = id;
-        }
+        __userID = userID;
+    }
+    
+    public IEnumerator SubmitStage(
+        ILevelData.Flag flag, 
+        int stage, 
+        int gold, 
+        int exp, 
+        int expMax, 
+        string[] skills,
+        Action<bool> onComplete)
+    {
+        return IUserData.instance.SubmitStage(
+            __userID, 
+            ToStageFlag(flag),
+            stage, 
+            gold, 
+            exp, 
+            expMax,
+            skills, 
+            onComplete);
+    }
         
-        public IEnumerator SubmitLevel(
-            int stage,
-            int gold,
-            int exp, 
-            int expMax, 
-            string[] skills,
-            Action<bool> onComplete)
-        {
-            return IUserData.instance.SubmitLevel(
-                __id, 
-                stage, 
-                gold, 
-                exp, 
-                expMax,
-                skills, 
-                onComplete);
-        }
+    public IEnumerator SubmitLevel(
+        ILevelData.Flag flag, 
+        int stage,
+        int gold,
+        Action<bool> onComplete)
+    {
+        return IUserData.instance.SubmitLevel(
+            __userID, 
+            ToStageFlag(flag),
+            stage, 
+            gold, 
+            onComplete);
     }
 
+    private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)
+    {
+        IUserData.StageFlag stageFlag = 0;
+        if((flag | ILevelData.Flag.NoDamage) == ILevelData.Flag.NoDamage)
+            stageFlag |= IUserData.StageFlag.NoDamage;
+
+        return stageFlag;
+    }
+}
+
+public class GameMain : GameUser
+{
     public event Func<IEnumerator> onStart;
 
     public static readonly string LanguagePackageResourcePath = "LanguagePackageResourcePath";
@@ -231,7 +256,7 @@ public class GameMain : GameUser
         (IAnalytics.instance as IAnalyticsEx)?.Login(id);
 
         //__id = id;
-        ILevelData.instance = new LevelData(id);
+        ILevelData.instance = new GameLevelData(id);
     }
 
     /*private void __OnApplySkills(Memory<UserSkill> skills)

@@ -17,9 +17,10 @@ public struct UserStageReward
         NoDamage
     }
     
+    [Serializable]
     public struct PoolKey
     {
-        public uint poolID;
+        public string name;
         public int count;
     }
 
@@ -204,6 +205,25 @@ public struct UserAccessory
     public int[] groupIDs;
 }
 
+public struct UserStage
+{
+    /*[Flags]
+    public enum Flag
+    {
+        Unlock = 0x01,
+        Collected = 0x02
+    }*/
+    
+    public string name;
+    public uint id;
+    public UserStageReward.Flag[] rewardFlags;
+}
+
+public partial struct UserLevel
+{
+    public UserStage[] stages;
+}
+
 public partial interface IUserData
 {
     public struct Purchases
@@ -308,7 +328,6 @@ public partial interface IUserData
         public UserGroup[] groups;
     }
 
-    
     public struct StageCache
     {
         public int exp;
@@ -350,6 +369,12 @@ public partial interface IUserData
         public int energy;
         public StageCache cache;
         public UserStageReward[] rewards;
+    }
+
+    public struct StageRewards
+    {
+        public int gold;
+        public UserStageReward.PoolKey[] poolKeys;
     }
 
     /// <summary>
@@ -441,11 +466,23 @@ public partial interface IUserData
         uint userID,
         uint stageID,
         Action<bool> onComplete);
+
+    IEnumerator SubmitStage(
+        uint userID,
+        StageFlag flag,
+        int stage,
+        int gold,
+        int exp,
+        int expMax,
+        string[] skills,
+        Action<bool> onComplete);
     
     /// <summary>
     /// 收集关卡奖励
     /// </summary>
     IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete);
+
+    IEnumerator CollectStageRewards(uint userID, Action<StageRewards> onComplete);
 }
 
 public partial class UserData
@@ -543,8 +580,48 @@ public partial class UserData
         return UserDataMain.instance.ApplyStage(userID, stageID, onComplete);
     }
     
+    public IEnumerator SubmitStage(
+        uint userID,
+        IUserData.StageFlag flag,
+        int stage,
+        int gold, 
+        int exp, 
+        int expMax, 
+        string[] skills,
+        Action<bool> onComplete)
+    {
+        var levelCache = UserData.levelCache;
+        if (levelCache == null)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        var temp = levelCache.Value;
+
+        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+
+        IUserData.StageCache stageCache;
+        stageCache.exp = exp;
+        stageCache.expMax = expMax;
+        stageCache.skills = skills;
+        PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage), stageCache.ToString());
+        
+        temp.stage = stage;
+        temp.gold = gold;
+        UserData.levelCache = temp;
+        
+        onComplete(true);
+    }
+    
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete)
     {
         return UserDataMain.instance.CollectStageReward(userID, stageRewardID, onComplete);
+    }
+
+    public IEnumerator CollectStageRewards(uint userID, Action<IUserData.StageRewards> onComplete)
+    {
+        return UserDataMain.instance.CollectStageRewards(userID, onComplete);
     }
 }

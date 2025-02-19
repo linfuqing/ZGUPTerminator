@@ -8,27 +8,6 @@ using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
 {
-    private class LevelData : ILevelData
-    {
-        public IEnumerator SubmitLevel(
-            int stage,
-            int gold,
-            int exp, 
-            int expMax, 
-            string[] skills,
-            Action<bool> onComplete)
-        {
-            return IUserData.instance.SubmitLevel(
-                userID.Value, 
-                stage, 
-                gold, 
-                exp, 
-                expMax,
-                skills, 
-                onComplete);
-        }
-    }
-    
     [Serializable]
     internal struct Level
     {
@@ -51,6 +30,9 @@ public sealed class LoginManager : MonoBehaviour
     public static event Action<uint> onStageChanged;
 
     [SerializeField]
+    internal float _stageStyleDestroyTime;
+    
+    [SerializeField]
     internal float _rewardStyleDestroyTime;
 
     [SerializeField] 
@@ -58,6 +40,9 @@ public sealed class LoginManager : MonoBehaviour
 
     [SerializeField]
     internal UnityEvent _onStart;
+
+    [SerializeField]
+    internal ActiveEvent _onHot;
 
     [SerializeField]
     internal StringEvent _onGold;
@@ -84,6 +69,7 @@ public sealed class LoginManager : MonoBehaviour
     internal Skill[] _skills;
 
     private List<RewardStyle> __rewardStyles;
+    private List<StageStyle> __stageStyles;
     private Dictionary<int, LevelStyle> __styles;
     private Dictionary<string, int> __skillIndices;
 
@@ -254,11 +240,32 @@ public sealed class LoginManager : MonoBehaviour
         for (int i = 0; i < numLevels; ++i)
             levelIndices[_levels[i].name] = i;
 
+        bool isHot = false;
         Level level;
         Transform parent = _style.transform.parent;
         __styles = new Dictionary<int, LevelStyle>(userLevels.Length);
         foreach (var userLevel in userLevels.Span)
         {
+            if (!isHot && userLevel.stages != null)
+            {
+                foreach (var stage in userLevel.stages)
+                {
+                    if (stage.rewardFlags == null)
+                        break;
+
+                    foreach (var rewardFlag in stage.rewardFlags)
+                    {
+                        if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock &&
+                            (rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
+                        {
+                            isHot = true;
+
+                            break;
+                        }
+                    }
+                }
+            }
+
             var style = Instantiate(_style, parent);
             
             var selectedLevel = userLevel;
@@ -316,6 +323,86 @@ public sealed class LoginManager : MonoBehaviour
                             __rewardStyles.Add(rewardStyle);
                         }
                     }
+                    
+                    int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
+                    if (numStages > 0 && style.stageStyle != null)
+                    {
+                        if (__stageStyles == null)
+                            __stageStyles = new List<StageStyle>();
+
+                        bool isHot;
+                        int i, j, numRanks, numRewardFlags, stageStyleStartIndex = __stageStyles.Count, selectedStageIndex = -1;
+                        UserStageReward.Flag rewardFlag;
+                        StageStyle stageStyle;
+                        GameObject rank;
+                        for(i = 0; i < numStages; ++i)
+                        {
+                            var stage = selectedLevel.stages[i];
+                            
+                            stageStyle = style.stageStyle;
+                            stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
+
+                            if(stageStyle.onTitle != null)
+                                stageStyle.onTitle.Invoke(i.ToString());
+
+                            if (stage.rewardFlags == null)
+                            {
+                                if (stageStyle.onHot != null)
+                                    stageStyle.onHot.Invoke(false);
+
+                                if (stageStyle.toggle != null)
+                                {
+                                    stageStyle.toggle.interactable = false;
+
+                                    stageStyle.toggle.isOn = false;
+                                }
+                            }
+                            else
+                            {
+                                isHot = false;
+                                numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
+                                numRewardFlags = stage.rewardFlags.Length;
+                                for(j = 0; j < numRewardFlags; ++j)
+                                {
+                                    rewardFlag = stage.rewardFlags[j];
+                                    if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock)
+                                    {
+                                        rank = numRanks > j ? stageStyle.ranks[j] : null;
+                                        if (rank != null)
+                                            rank.SetActive(true);
+                                        
+                                        if((rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
+                                            isHot = true;
+                                    }
+                                }
+                                
+                                if (stageStyle.onHot != null)
+                                    stageStyle.onHot.Invoke(isHot);
+                                
+                                if (stageStyle.toggle != null)
+                                {
+                                    stageStyle.toggle.isOn = false;
+                                    stageStyle.toggle.interactable = true;
+                                    stageStyle.toggle.onValueChanged.AddListener(x =>
+                                    {
+                                        if (x && onStageChanged != null)
+                                            onStageChanged.Invoke(stage.id);
+                                    });
+                                }
+
+                                selectedStageIndex = __stageStyles.Count;
+                            }
+                            //stageStyle.gameObject.SetActive(true);
+
+                            __stageStyles.Add(stageStyle);
+                        }
+
+                        __stageStyles[selectedStageIndex].toggle.isOn = true;
+                        
+                        int numStageStyles = __stageStyles.Count;
+                        for (i = stageStyleStartIndex; i < numStageStyles; ++i)
+                            __stageStyles[selectedStageIndex].gameObject.SetActive(true);
+                    }
                 }
                 else
                 {
@@ -330,6 +417,19 @@ public sealed class LoginManager : MonoBehaviour
                         }
                         
                         __rewardStyles.Clear();
+                    }
+
+                    if (__stageStyles != null)
+                    {
+                        foreach (var stageStyle in __stageStyles)
+                        {
+                            if (stageStyle.onDestroy != null)
+                                stageStyle.onDestroy.Invoke();
+                            
+                            Destroy(stageStyle.gameObject, _stageStyleDestroyTime);
+                        }
+                        
+                        __stageStyles.Clear();
                     }
                 }
             });
@@ -348,6 +448,9 @@ public sealed class LoginManager : MonoBehaviour
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>();
         if(scrollRect != null)
             scrollRect.MoveTo(userLevels.Length - 1);
+        
+        if(_onHot != null)
+            _onHot.Invoke(isHot);
     }
 
     private void __ApplyLevel(int gold, string[] rewardSkills)
@@ -421,7 +524,7 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
-        ILevelData.instance = new LevelData();
+        ILevelData.instance = new GameLevelData(userID);
 
         _onStart.Invoke();
         

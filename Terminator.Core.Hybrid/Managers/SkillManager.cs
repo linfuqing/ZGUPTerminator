@@ -14,6 +14,8 @@ public struct SkillAsset
 
     public int level;
     public int rarity;
+
+    public int flag;
     
 #if UNITY_EDITOR
     [CSVField]
@@ -69,6 +71,15 @@ public struct SkillAsset
             rarity = value;
         }
     }
+    
+    [CSVField]
+    public int 关卡技能描述标签
+    {
+        set
+        {
+            flag = value;
+        }
+    }
 #endif
 }
 
@@ -88,6 +99,8 @@ public class SkillManager : MonoBehaviour
         public int level;
         public int rarity;
         
+        public int flag;
+        
         public SkillAsset ToAsset()
         {
             SkillAsset asset;
@@ -97,6 +110,8 @@ public class SkillManager : MonoBehaviour
             asset.icon = icon;
             asset.level = level;
             asset.rarity = rarity;
+            asset.flag = flag;
+            
             return asset;
         }
 

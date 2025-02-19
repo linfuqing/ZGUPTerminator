@@ -310,8 +310,17 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         yield return null;
 
-        int i, levelIndex = UserData.level, numLevels = Mathf.Clamp(levelIndex + 1, 1, _levels.Length);
+        bool isUnlock = true;
+        int i, j, k, 
+            numStageRewards, 
+            numStages, 
+            stageIndex = 0, 
+            levelIndex = UserData.level, 
+            numLevels = Mathf.Clamp(levelIndex + 1, 1, _levels.Length);
+        StageReward stageReward;
         Level level;
+        Stage stage;
+        UserStage userStage;
         UserLevel userLevel;
         var userLevels = new UserLevel[numLevels];
         for (i = 0; i < numLevels; ++i)
@@ -321,6 +330,37 @@ public sealed partial class UserDataMain : MonoBehaviour
             userLevel.id = __ToID(i);
             userLevel.energy = level.energy;
             userLevel.rewardSkills = levelIndex > i ? null : level.rewardSkills;
+            
+            numStages = level.stages.Length;
+            userLevel.stages = new UserStage[numStages];
+            for (j = 0; j < numStages; ++j)
+            {
+                stage = level.stages[j];
+                userStage.name = stage.name;
+                userStage.id = __ToID(stageIndex++);
+                
+                if (isUnlock)
+                {
+                    numStageRewards = stage.rewards.Length;
+                    userStage.rewardFlags = new UserStageReward.Flag[numStageRewards];
+                    for (k = 0; k < numStageRewards; ++k)
+                    {
+                        stageReward = stage.rewards[k];
+                        userStage.rewardFlags[k] = __GetStageRewardFlag(
+                            stageReward.name,
+                            level.name,
+                            j,
+                            stageReward.condition,
+                            out _);
+                    }
+                    
+                    isUnlock = (UserData.GetStageFlag(level.name, j) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;
+                }
+                else
+                    userStage.rewardFlags = null;
+
+                userLevel.stages[j] = userStage;
+            }
 
             userLevels[i] = userLevel;
         }
@@ -405,6 +445,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
         
         UserData.LevelCache levelCache;
+        levelCache.name = level.name;
         levelCache.id = levelID;
         levelCache.stage = 0;
         levelCache.gold = 0;
@@ -440,10 +481,12 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
 
         string[] rewardSkills = Array.Empty<string>();
-        if (userLevel == levelIndex)
+        var level = _levels[levelIndex];
+        if ((level.stages == null ? 0 : level.stages.Length) == levelCache.stage)
         {
-            var level = _levels[levelIndex];
-            if ((level.stages == null ? 0 : level.stages.Length) == levelCache.stage)
+            UserData.SubmitStageFlag(level.name, levelCache.stage);
+            
+            if (userLevel == levelIndex)
             {
                 UserData.level = ++userLevel;
 

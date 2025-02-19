@@ -3,13 +3,26 @@ using System.Collections;
 
 public interface ILevelData
 {
+    [Flags]
+    public enum Flag
+    {
+        NoDamage = 0x01
+    }
+    
     public static ILevelData instance;
     
-    IEnumerator SubmitLevel(
+    IEnumerator SubmitStage(
+        Flag flag, 
         int stage, 
         int gold, 
         int exp, 
         int expMax, 
         string[] skills,
+        Action<bool> onComplete);
+    
+    IEnumerator SubmitLevel(
+        Flag flag, 
+        int stage, 
+        int gold, 
         Action<bool> onComplete);
 }

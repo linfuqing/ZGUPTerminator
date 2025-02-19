@@ -53,9 +53,11 @@ public partial class LevelManager : MonoBehaviour
     private int __gold;
     private int __stage;
 
-    private int __stageExp;
-    private int __stageExpMax;
-    private string[] __stageActiveSkillNames;
+    //private int __stageExp;
+    //private int __stageExpMax;
+    //private string[] __stageActiveSkillNames;
+
+    private ILevelData.Flag __dataFlag;
     
     private float __startTime;
     
@@ -130,18 +132,35 @@ public partial class LevelManager : MonoBehaviour
         {
             if (!isRestart && stage > __stage)
             {
-                __stageExp = exp;
-                __stageExpMax = maxExp;
                 int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
-                __stageActiveSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
+                var activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
                 if(numActiveSkillNames > 0)
-                    __activeSkillNames.CopyTo(__stageActiveSkillNames, 0);
+                    __activeSkillNames.CopyTo(activeSkillNames, 0);
 
-                __Submit(__OnStageChanged);
+                var levelData = ILevelData.instance;
+                if (levelData != null)
+                {
+                    if(__coroutine != null)
+                        StopCoroutine(__coroutine);
+
+                    __coroutine = StartCoroutine(levelData.SubmitStage(
+                        __dataFlag, 
+                        stage,
+                        gold,
+                        exp,
+                        maxExp,
+                        activeSkillNames,
+                        __OnStageChanged));
+                }
             }
+
+            __dataFlag = 0;
 
             __stage = stage;
         }
+
+        if (isRestart)
+            __dataFlag = 0;
     }
 
     public bool EnableStage(string name)
@@ -252,11 +271,9 @@ public partial class LevelManager : MonoBehaviour
                 StopCoroutine(__coroutine);
 
             __coroutine = StartCoroutine(levelData.SubmitLevel(
+                __dataFlag, 
                 __stage,
                 __gold,
-                __stageExp,
-                __stageExpMax,
-                __stageActiveSkillNames,
                 onComplete));
         }
     }

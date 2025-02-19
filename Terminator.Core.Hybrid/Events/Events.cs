@@ -3,6 +3,12 @@ using UnityEngine;
 using UnityEngine.Events;
 
 [Serializable]
+public class ActiveEvent : UnityEvent<bool>
+{
+        
+}
+
+[Serializable]
 public class StringEvent : UnityEvent<string>
 {
         
