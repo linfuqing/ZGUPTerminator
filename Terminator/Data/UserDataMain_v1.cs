@@ -163,6 +163,7 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_PURCHASE_POOL_TIMES = "UserPurchasePoolTimes";
     private const string NAME_SPACE_USER_CARDS = "UserCards";
+    private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
     
     public IEnumerator Purchase(
         uint userID,
@@ -176,9 +177,10 @@ public partial class UserDataMain
         var results = new List<UserItem>();
         var cardNames = PlayerPrefs.GetString(NAME_SPACE_USER_CARDS)?.Split(UserData.SEPARATOR);
         string purchasePoolName = __GetPurchasePoolNames()[__ToIndex(purchasePoolID)], 
-            timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePoolName}";
+            timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePoolName}", 
+            key;
         float chance, total;
-        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, cardIndex;
+        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, cardIndex, count;
         for (int i = 0; i < times; ++i)
         {
             cardIndex = -1;
@@ -217,6 +219,11 @@ public partial class UserDataMain
                 result.name = purchasePoolOption.name;
                 result.id = __ToID(cardIndex);
                 result.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount);
+
+                key = $"{NAME_SPACE_USER_CARD_COUNT}{purchasePoolOption.name}";
+                count = PlayerPrefs.GetInt(key);
+                count += result.count;
+                PlayerPrefs.SetInt(key, count);
                 
                 results.Add(result);
             }
@@ -264,7 +271,6 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
-    private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
     private const string NAME_SPACE_USER_CARD_GROUP_POSITION = "UserCardGroupPosition";
     
     public IEnumerator QueryCards(
