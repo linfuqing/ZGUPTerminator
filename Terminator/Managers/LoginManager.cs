@@ -28,6 +28,8 @@ public sealed class LoginManager : MonoBehaviour
     public static event Awake onAwake;
     
     public static event Action<uint> onStageChanged;
+    
+    public event Action<int> onEnergyChanged;
 
     [SerializeField]
     internal float _stageStyleDestroyTime;
@@ -128,6 +130,9 @@ public sealed class LoginManager : MonoBehaviour
             
             if(_onEnergy != null)
                 _onEnergy.Invoke(value.ToString());
+
+            if(onEnergyChanged != null)
+                onEnergyChanged(value);
         }
     }
 

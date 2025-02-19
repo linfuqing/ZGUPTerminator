@@ -462,6 +462,9 @@ public partial interface IUserData
         uint stageID,
         Action<Stage> onComplete);
 
+    /// <summary>
+    /// 继续游戏
+    /// </summary>
     IEnumerator ApplyStage(
         uint userID,
         uint stageID,
@@ -482,6 +485,9 @@ public partial interface IUserData
     /// </summary>
     IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete);
 
+    /// <summary>
+    /// 一键收集全部关卡奖励
+    /// </summary>
     IEnumerator CollectStageRewards(uint userID, Action<StageRewards> onComplete);
 }
 

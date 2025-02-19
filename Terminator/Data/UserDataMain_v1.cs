@@ -263,10 +263,8 @@ public partial class UserDataMain
     
     private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
-    private const string NAME_SPACE_USER_CARD_STYLE = "UserCardStyle";
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
     private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
-    private const string NAME_SPACE_USER_CARD_GROUP_NAMES = "UserCardGroupNames";
     private const string NAME_SPACE_USER_CARD_GROUP_POSITION = "UserCardGroupPosition";
     
     public IEnumerator QueryCards(
@@ -299,11 +297,11 @@ public partial class UserDataMain
         int numCardNames = cardNames == null ? 0 : cardNames.Length;
         cards.cards = numCardNames > 0 ? new UserCard[numCardNames] : null;
 
-        string[] userCardGroupNames;
-        string userCardGroupName, userCardStyleName;
+        var userCardGroups = new List<UserCard.Group>();
+        string userCardStyleName;
         UserCard userCard;
         UserCard.Group userCardGroup;
-        int j, k, numUserCardGroupNames, numCardGroup = _cardGroups.Length, numCards = _cards.Length;
+        int j, numCardGroup = _cardGroups.Length, numCards = _cards.Length;
         for (i = 0; i < numCardNames; ++i)
         {
             userCard.name = cardNames[i];
@@ -315,8 +313,8 @@ public partial class UserDataMain
             }
             
             userCard.id = __ToID(i);
-            
-            userCardStyleName = PlayerPrefs.GetString($"{NAME_SPACE_USER_CARD_STYLE}{userCard.name}", _cards[j].styleName);
+
+            userCardStyleName = _cards[j].styleName;
             
             for (j = 0; j < numCardStyles; ++j)
             {
@@ -328,27 +326,29 @@ public partial class UserDataMain
             userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{userCard.name}");
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{userCard.name}");
 
-            userCardGroupNames = PlayerPrefs.GetString($"{NAME_SPACE_USER_CARD_GROUP_NAMES}{userCard.name}")
-                ?.Split(UserData.SEPARATOR);
+            //userCardGroupNames = PlayerPrefs.GetString($"{NAME_SPACE_USER_CARD_GROUP_NAMES}{userCard.name}")
+            //    ?.Split(UserData.SEPARATOR);
             
-            numUserCardGroupNames = userCardGroupNames == null ? 0 : userCardGroupNames.Length;
-            userCard.groups = numUserCardGroupNames > 0 ? new UserCard.Group[numUserCardGroupNames] : null;
+            //numUserCardGroupNames = userCardGroupNames == null ? 0 : userCardGroupNames.Length;
+            //userCard.groups = numUserCardGroupNames > 0 ? new UserCard.Group[numUserCardGroupNames] : null;
 
-            for (j = 0; j < numUserCardGroupNames; ++j)
+            userCardGroups.Clear();
+            for (j = 0; j < numCardGroup; ++j)
             {
-                userCardGroupName = userCardGroupNames[j];
-                for (k = 0; k < numCardGroup; ++k)
-                {
-                    if (userCardGroupName == _cardGroups[k].name)
-                        break;
-                }
-
-                userCardGroup.groupID = __ToID(k);
                 userCardGroup.position =
-                    PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_GROUP_POSITION}{userCard.name}-{userCardGroupName}", -1);
+                    PlayerPrefs.GetInt(
+                        $"{NAME_SPACE_USER_CARD_GROUP_POSITION}{userCard.name}{UserData.SEPARATOR}{_cardGroups[j].name}",
+                        -1);
                 
-                userCard.groups[k] = userCardGroup;
+                if(userCardGroup.position == -1)
+                    continue;
+
+                userCardGroup.groupID = __ToID(j);
+                
+                userCardGroups.Add(userCardGroup);
             }
+            
+            userCard.groups = userCardGroups.Count > 0 ? userCardGroups.ToArray() : null;
             
             cards.cards[i] = userCard;
         }
@@ -370,7 +370,7 @@ public partial class UserDataMain
         yield return null;
 
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
-        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP_POSITION}{cardName}-{cardGroupName}", position);
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP_POSITION}{cardName}{UserData.SEPARATOR}{cardGroupName}", position);
         
         onComplete(true);
     }
@@ -403,10 +403,21 @@ public partial class UserDataMain
         }
 
         PlayerPrefs.SetInt(levelKey, ++level);
-        PlayerPrefs.SetInt(countKey, count -= levelData.count);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold -= levelData.gold);
+        PlayerPrefs.SetInt(countKey, count - levelData.count);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold - levelData.gold);
         
         onComplete(true);
+    }
+
+    //private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
+    
+    public IEnumerator QueryRoles(
+        uint userID,
+        Action<IUserData.Roles> onComplete)
+    {
+        yield return null;
+
+        
     }
 
     [Serializable]
@@ -425,8 +436,6 @@ public partial class UserDataMain
         public StageReward[] rewards;
     }
 
-    //private const string NAME_SPACE_USER_STAGE_REWARD_FLAG = "UserStageRewardFlag";
-    
     public IEnumerator QueryStage(
         uint userID,
         uint stageID, 
