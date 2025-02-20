@@ -341,11 +341,12 @@ public sealed partial class UserDataMain : MonoBehaviour
                 
                 if (isUnlock)
                 {
-                    numStageRewards = stage.rewards.Length;
+                    userStage.rewards = null;
+                    numStageRewards = stage.indirectRewards.Length;
                     userStage.rewardFlags = new UserStageReward.Flag[numStageRewards];
                     for (k = 0; k < numStageRewards; ++k)
                     {
-                        stageReward = stage.rewards[k];
+                        stageReward = stage.indirectRewards[k];
                         userStage.rewardFlags[k] = __GetStageRewardFlag(
                             stageReward.name,
                             level.name,
@@ -357,7 +358,10 @@ public sealed partial class UserDataMain : MonoBehaviour
                     isUnlock = (UserData.GetStageFlag(level.name, j) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;
                 }
                 else
+                {
+                    userStage.rewards = stage.directRewards;
                     userStage.rewardFlags = null;
+                }
 
                 userLevel.stages[j] = userStage;
             }

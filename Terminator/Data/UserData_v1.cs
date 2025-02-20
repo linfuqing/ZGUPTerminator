@@ -228,15 +228,28 @@ public struct UserAccessoryStyle
 
 public struct UserStage
 {
-    /*[Flags]
-    public enum Flag
+    public enum RewardType
     {
-        Unlock = 0x01,
-        Collected = 0x02
-    }*/
+        PurchasePoolKey, 
+        Card, 
+        Role, 
+        Accessory, 
+        Item
+    }
     
+    [Serializable]
+    public struct Reward
+    {
+        public string name;
+        
+        public RewardType type;
+
+        public int count;
+    }
+
     public string name;
     public uint id;
+    public Reward[] rewards;
     public UserStageReward.Flag[] rewardFlags;
 }
 

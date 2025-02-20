@@ -455,7 +455,7 @@ public partial class UserDataMain
 
         public UserAccessoryStyle.Stage[] stages;
     }
-    
+
     [SerializeField, Tooltip("卷轴")] 
     internal Item[] _items;
     [SerializeField, Tooltip("套装")] 
@@ -525,8 +525,17 @@ public partial class UserDataMain
         {
             userRole.name = _roles[i].name;
             roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}");
-            if(roleCount < 1)
-                continue;
+            if (roleCount < 1)
+            {
+                if (0 == i)
+                {
+                    PlayerPrefs.SetInt($"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}", 1);
+
+                    roleCount = 1;
+                }
+                else
+                    continue;
+            }
             
             userRole.id = __ToID(i);
             userRole.hp = 0;
@@ -883,7 +892,9 @@ public partial class UserDataMain
     {
         public int energy;
         
-        public StageReward[] rewards;
+        public UserStage.Reward[] directRewards;
+        
+        public StageReward[] indirectRewards;
     }
 
     public IEnumerator QueryStage(
@@ -903,7 +914,7 @@ public partial class UserDataMain
             result.energy = stage.energy;
             result.cache = UserData.GetStageCache(level.name, targetStage);
 
-            int numStageRewards = stage.rewards.Length;
+            int numStageRewards = stage.indirectRewards.Length;
             result.rewards = new UserStageReward[numStageRewards];
 
             int i;
@@ -911,7 +922,7 @@ public partial class UserDataMain
             UserStageReward userStageReward;
             for (i = 0; i < numStageRewards; ++i)
             {
-                stageReward = stage.rewards[i];
+                stageReward = stage.indirectRewards[i];
                 userStageReward.name = stageReward.name;
                 userStageReward.id = __ToID(rewardIndex + i);
                 userStageReward.flag =
@@ -1000,14 +1011,14 @@ public partial class UserDataMain
             {
                 stage = level.stages[j];
 
-                numStageRewards = stage.rewards.Length;
+                numStageRewards = stage.indirectRewards.Length;
                 if (stageRewardIndex < numStageRewards)
                 {
                     gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
                     poolKeyCounts = new Dictionary<string, int>();
                     if (__ApplyStageRewards(level.name, 
                             j, 
-                            stage.rewards[stageRewardIndex], 
+                            stage.indirectRewards[stageRewardIndex], 
                             poolKeyCounts, 
                             ref gold))
                     {
@@ -1054,9 +1065,9 @@ public partial class UserDataMain
             {
                 stage = level.stages[j];
 
-                numStageRewards = stage.rewards.Length;
+                numStageRewards = stage.indirectRewards.Length;
                 for(k = 0; k < numStageRewards; ++k)
-                    result |= __ApplyStageRewards(level.name, j, stage.rewards[k], poolKeyCounts, ref gold);
+                    result |= __ApplyStageRewards(level.name, j, stage.indirectRewards[k], poolKeyCounts, ref gold);
             }
         }
 
@@ -1185,7 +1196,7 @@ public partial class UserDataMain
             numStages = level.stages.Length;
             numTargetStages = Mathf.Min(stageIndex + numStages, targetStageIndex) - stageIndex;
             for (j = 0; j < numTargetStages; ++j)
-                rewardIndex += level.stages[stageIndex + j].rewards.Length;
+                rewardIndex += level.stages[stageIndex + j].indirectRewards.Length;
             
             if (numTargetStages < numStages)
             {
