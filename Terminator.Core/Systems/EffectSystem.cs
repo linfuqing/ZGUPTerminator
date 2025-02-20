@@ -978,14 +978,23 @@ public partial struct EffectSystem : ISystem
                         {
                             ref var invulnerablilitity =
                                 ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
+                            
+                            if (isInvulnerability)
+                                ++targetInvulnerabilityStatus.count;
+
                             if (invulnerablilitity.count == 0 ||
                                 invulnerablilitity.count > targetInvulnerabilityStatus.count)
                             {
-                                if (!isInvulnerability)
-                                {
-                                    targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
-                                    targetInvulnerabilityStatus.times = invulnerablilitity.times;
+                                targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
+                                targetInvulnerabilityStatus.times = invulnerablilitity.times;
 
+                                if (isInvulnerability)
+                                {
+                                    if (target.invincibleTime > time)
+                                        break;
+                                }
+                                else
+                                {
                                     if (targetInvulnerabilityStatus.damage > damage)
                                         targetInvulnerabilityStatus.damage -= damage;
                                     else
@@ -1005,8 +1014,6 @@ public partial struct EffectSystem : ISystem
                                 if (isInvulnerability)
                                 {
                                     target.invincibleTime = time + invulnerablilitity.time;
-
-                                    ++targetInvulnerabilityStatus.count;
 
                                     continue;
                                 }
