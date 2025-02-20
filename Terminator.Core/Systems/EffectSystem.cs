@@ -954,7 +954,7 @@ public partial struct EffectSystem : ISystem
                     {
                         if (targetInvulnerabilityStatus.damage > damage)
                             targetInvulnerabilityStatus.damage -= damage;
-                        else
+                        else if (targetInvulnerabilityStatus.damage > 0)
                         {
                             damage = targetInvulnerabilityStatus.damage;
 
@@ -978,9 +978,13 @@ public partial struct EffectSystem : ISystem
                         {
                             ref var invulnerablilitity =
                                 ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
-                            
+
                             if (isInvulnerability)
+                            {
+                                target.invincibleTime = time + invulnerablilitity.time;
+                                
                                 ++targetInvulnerabilityStatus.count;
+                            }
 
                             if (invulnerablilitity.count == 0 ||
                                 invulnerablilitity.count > targetInvulnerabilityStatus.count)
@@ -988,16 +992,11 @@ public partial struct EffectSystem : ISystem
                                 targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
                                 targetInvulnerabilityStatus.times = invulnerablilitity.times;
 
-                                if (isInvulnerability)
-                                {
-                                    if (target.invincibleTime > time)
-                                        break;
-                                }
-                                else
+                                if (!isInvulnerability)
                                 {
                                     if (targetInvulnerabilityStatus.damage > damage)
                                         targetInvulnerabilityStatus.damage -= damage;
-                                    else
+                                    else if (targetInvulnerabilityStatus.damage > 0)
                                     {
                                         damage = targetInvulnerabilityStatus.damage;
 
@@ -1009,15 +1008,11 @@ public partial struct EffectSystem : ISystem
 
                                     isInvulnerability = targetInvulnerabilityStatus.damage == 0 &&
                                                         targetInvulnerabilityStatus.times == 0;
+                                    
+                                    if (isInvulnerability)
+                                        continue;
                                 }
                                 
-                                if (isInvulnerability)
-                                {
-                                    target.invincibleTime = time + invulnerablilitity.time;
-
-                                    continue;
-                                }
-
                                 break;
                             }
 
