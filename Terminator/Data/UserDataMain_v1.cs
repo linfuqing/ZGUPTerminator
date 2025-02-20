@@ -161,8 +161,18 @@ public partial class UserDataMain
         onComplete(purchases);
     }
 
+    [Serializable]
+    internal struct Card
+    {
+        public string name;
+
+        public string styleName;
+    }
+
+    [SerializeField] 
+    internal Card[] _cards;
+
     private const string NAME_SPACE_USER_PURCHASE_POOL_TIMES = "UserPurchasePoolTimes";
-    private const string NAME_SPACE_USER_CARDS = "UserCards";
     private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
     
     public IEnumerator Purchase(
@@ -175,15 +185,15 @@ public partial class UserDataMain
 
         UserItem result;
         var results = new List<UserItem>();
-        var cardNames = PlayerPrefs.GetString(NAME_SPACE_USER_CARDS)?.Split(UserData.SEPARATOR);
         string purchasePoolName = __GetPurchasePoolNames()[__ToIndex(purchasePoolID)], 
             timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePoolName}", 
             key;
         float chance, total;
-        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, cardIndex, count;
-        for (int i = 0; i < times; ++i)
+        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, numCards = _cards.Length, count, i, j;
+        bool isSelected;
+        for (i = 0; i < times; ++i)
         {
-            cardIndex = -1;
+            isSelected = false;
             total = 0.0f;
             chance = UnityEngine.Random.value;
             foreach (var purchasePoolOption in _purchasePoolOptions)
@@ -202,22 +212,26 @@ public partial class UserDataMain
                 {
                     total -= 1.0f;
 
-                    cardIndex = -1;
+                    isSelected = false;
                 }
 
-                if (cardIndex != -1 || total < chance)
+                if (isSelected || total < chance)
                     continue;
 
-                cardIndex = cardNames == null ? -1 : Array.IndexOf(cardNames, purchasePoolOption.name);
-                if (cardIndex == -1)
-                {
-                    cardIndex = cardNames == null ? 0 : cardNames.Length;
-                    Array.Resize(ref cardNames, cardIndex + 1);
-                    cardNames[cardIndex] = purchasePoolOption.name;
-                }
+                isSelected = true;
                 
                 result.name = purchasePoolOption.name;
-                result.id = __ToID(cardIndex);
+                result.id = 0;
+                for (j = 0; j < numCards; ++j)
+                {
+                    if (result.name == _cards[j].name)
+                    {
+                        result.id = __ToID(j);
+                        
+                        break;
+                    }
+                }
+                
                 result.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount);
 
                 key = $"{NAME_SPACE_USER_CARD_COUNT}{purchasePoolOption.name}";
@@ -232,7 +246,6 @@ public partial class UserDataMain
         }
         
         PlayerPrefs.SetInt(timeKey, purchasePoolTimes);
-        PlayerPrefs.SetString(NAME_SPACE_USER_CARDS, string.Join(UserData.SEPARATOR, cardNames));
 
         onComplete(results.ToArray());
     }
@@ -243,14 +256,6 @@ public partial class UserDataMain
         public string name;
     }
 
-    [Serializable]
-    internal struct Card
-    {
-        public string name;
-
-        public string styleName;
-    }
-    
     [Serializable]
     internal struct CardStyle
     {
@@ -263,15 +268,12 @@ public partial class UserDataMain
     internal Group[] _cardGroups;
     
     [SerializeField] 
-    internal Card[] _cards;
-    
-    [SerializeField] 
     internal CardStyle[] _cardStyles;
     
     private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
-    private const string NAME_SPACE_USER_CARD_GROUP_POSITION = "UserCardGroupPosition";
+    private const string NAME_SPACE_USER_CARD_GROUP = "UserCardGroup";
     
     public IEnumerator QueryCards(
         uint userID,
@@ -299,51 +301,40 @@ public partial class UserDataMain
             cards.cardStyles[i] = userCardStyle;
         }
         
-        var cardNames = PlayerPrefs.GetString(NAME_SPACE_USER_CARDS)?.Split(UserData.SEPARATOR);
-        int numCardNames = cardNames == null ? 0 : cardNames.Length;
-        cards.cards = numCardNames > 0 ? new UserCard[numCardNames] : null;
-
-        var userCardGroups = new List<UserCard.Group>();
-        string userCardStyleName;
+        Card card;
         UserCard userCard;
         UserCard.Group userCardGroup;
+        var userCards = new List<UserCard>();
+        var userCardGroups = new List<UserCard.Group>();
         int j, numCardGroup = _cardGroups.Length, numCards = _cards.Length;
-        for (i = 0; i < numCardNames; ++i)
+        for (i = 0; i < numCards; ++i)
         {
-            userCard.name = cardNames[i];
+            card = _cards[i];
+            userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
+            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+            if(userCard.level < 1 && userCard.count < 1)
+                continue;
 
-            for (j = 0; j < numCards; ++j)
-            {
-                if (userCard.name == _cards[j].name)
-                    break;
-            }
-            
+            userCard.name = card.name;
             userCard.id = __ToID(i);
 
-            userCardStyleName = _cards[j].styleName;
-            
+            userCard.styleID = 0;
             for (j = 0; j < numCardStyles; ++j)
             {
-                if (userCardStyleName == _cardStyles[j].name)
+                if (card.styleName == _cardStyles[j].name)
+                {
+                    userCard.styleID = __ToID(j);
+                    
                     break;
+                }
             }
-
-            userCard.styleID = __ToID(j);
-            userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{userCard.name}");
-            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{userCard.name}");
-
-            //userCardGroupNames = PlayerPrefs.GetString($"{NAME_SPACE_USER_CARD_GROUP_NAMES}{userCard.name}")
-            //    ?.Split(UserData.SEPARATOR);
-            
-            //numUserCardGroupNames = userCardGroupNames == null ? 0 : userCardGroupNames.Length;
-            //userCard.groups = numUserCardGroupNames > 0 ? new UserCard.Group[numUserCardGroupNames] : null;
 
             userCardGroups.Clear();
             for (j = 0; j < numCardGroup; ++j)
             {
                 userCardGroup.position =
                     PlayerPrefs.GetInt(
-                        $"{NAME_SPACE_USER_CARD_GROUP_POSITION}{userCard.name}{UserData.SEPARATOR}{_cardGroups[j].name}",
+                        $"{NAME_SPACE_USER_CARD_GROUP}{userCard.name}{UserData.SEPARATOR}{_cardGroups[j].name}",
                         -1);
                 
                 if(userCardGroup.position == -1)
@@ -356,8 +347,10 @@ public partial class UserDataMain
             
             userCard.groups = userCardGroups.Count > 0 ? userCardGroups.ToArray() : null;
             
-            cards.cards[i] = userCard;
+            userCards.Add(userCard);
         }
+        
+        cards.cards = userCards.ToArray();
         
         cards.groups = numCardGroup > 0 ? new UserGroup[numCardGroup] : null;
         UserGroup userGroup;
@@ -376,7 +369,7 @@ public partial class UserDataMain
         yield return null;
 
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
-        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP_POSITION}{cardName}{UserData.SEPARATOR}{cardGroupName}", position);
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardName}{UserData.SEPARATOR}{cardGroupName}", position);
         
         onComplete(true);
     }
@@ -431,26 +424,26 @@ public partial class UserDataMain
     internal struct Accessory
     {
         public string name;
+
+        public string styleName;
+    }
+
+    [Serializable]
+    internal struct AccessoryStyleLevel
+    {
+        public string name;
+
+        public string itemName;
+
+        public int count;
     }
 
     [Serializable]
     internal struct AccessoryStyle
     {
-        [Serializable]
-        public struct Level
-        {
-            public string name;
-
-            public string itemName;
-
-            public int count;
-        }
-
         public string name;
 
-        public int level;
-
-        public Level levelDesc;
+        public string[] levelNames;
 
         public UserAccessoryStyle.Stage[] stages;
     }
@@ -462,14 +455,20 @@ public partial class UserDataMain
     [SerializeField, Tooltip("角色")] 
     internal Role[] _roles;
     [SerializeField, Tooltip("装备")] 
-    internal Accessory[] __accessories;
-    [SerializeField, Tooltip("装备品质")] 
+    internal Accessory[] _accessories;
+    [SerializeField, Tooltip("装备类型")] 
     internal AccessoryStyle[] _accessoryStyles;
+    [SerializeField, Tooltip("装备等级")]
+    internal AccessoryStyleLevel[] _accessoryStyleLevels;
 
     private const string NAME_SPACE_USER_ROLES_FLAG = "UserRolesFlag";
-    private const string NAME_SPACE_USER_ITEMS = "UserItems";
-    private const string NAME_SPACE_USER_ROLES = "UserRoles";
+    private const string NAME_SPACE_USER_ITEM_COUNT = "UserItemCount";
+    private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
+    private const string NAME_SPACE_USER_ACCESSORY_COUNT = "UserAccessoryCount";
+    private const string NAME_SPACE_USER_ACCESSORY_STAGE = "UserAccessoryStage";
+    private const string NAME_SPACE_USER_ACCESSORY_GROUP = "UserAccessoryGroup";
+    private const string NAME_SPACE_USER_ACCESSORY_STYLE_LEVEL = "UserAccessoryStyleLevel";
     
     public IEnumerator QueryRoles(
         uint userID,
@@ -477,51 +476,373 @@ public partial class UserDataMain
     {
         yield return null;
 
-        IUserData.Roles roles;
-        roles.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
-        var itemNames = PlayerPrefs.GetString(NAME_SPACE_USER_ITEMS)?.Split(UserData.SEPARATOR);
-        int numItemNames = itemNames == null ? 0 : itemNames.Length, i;
-        roles.items = new UserItem[numItemNames];
-        //for (i = 0; i < numItemNames; ++i)
-        //    roles.items
+        IUserData.Roles result;
+        result.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
         
-        var roleNames = PlayerPrefs.GetString(NAME_SPACE_USER_ROLES)?.Split(UserData.SEPARATOR);
-        int numRoleNames = roleNames == null ? 0 : roleNames.Length;
-        roles.roles = numRoleNames > 0 ? new UserRole[numRoleNames] : null;
-
-        var roleGroupIDs = new List<uint>();
-        int j, roleGroupIndex, numRoleGroups = _roleGroups.Length;
-        string[] roleGroupNames;
-        UserRole userRole;
-        for (i = 0; i < numRoleNames; ++i)
+        List<UserItem> items = new List<UserItem>();
+        UserItem userItem;
+        int i, numItems = _items.Length;
+        for (i = 0; i < numItems; ++i)
         {
-            userRole.name = roleNames[i];
+            userItem.name = _items[i].name;
+            userItem.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ITEM_COUNT}{userItem.name}");
+            if(userItem.count < 1)
+                continue;
+            
+            userItem.id = __ToID(i);
+
+            items.Add(userItem);
+        }
+        
+        result.items = items.ToArray();
+
+        int numRoleGroups = _roleGroups.Length;
+        result.groups = new UserGroup[numRoleGroups];
+        UserGroup userGroup;
+        for (i = 0; i < numRoleGroups; ++i)
+        {
+            userGroup.id = __ToID(i);
+            userGroup.name = _roleGroups[i].name;
+
+            result.groups[i] = userGroup;
+        }
+
+        int j, roleCount, numRoles = _roles.Length;
+        UserRole userRole;
+        var userRoles = new List<UserRole>();
+        var userRoleGroupIDs = new List<uint>();
+        for (i = 0; i < numRoles; ++i)
+        {
+            userRole.name = _roles[i].name;
+            roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}");
+            if(roleCount < 1)
+                continue;
+            
             userRole.id = __ToID(i);
             userRole.hp = 0;
             userRole.attack = 0;
             userRole.defence = 0;
 
-            roleGroupNames = PlayerPrefs.GetString($"{NAME_SPACE_USER_ROLE_GROUP}{userRole.name}")
-                ?.Split(UserData.SEPARATOR);
-            
-            roleGroupIDs.Clear();
-            for (j = 0; j < numRoleGroups; ++j)
+            foreach (var talent in _talents)
             {
-                roleGroupIndex = Array.IndexOf(roleGroupNames, _roleGroups[j].name);
-                if(roleGroupIndex == -1)
+                if(talent.roleName != userRole.name)
                     continue;
                 
-                roleGroupIDs.Add(__ToID(roleGroupIndex));
+                if (((UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}") &
+                     UserTalent.Flag.Collected) != UserTalent.Flag.Collected)
+                    continue;
+
+                switch (talent.rewardType)
+                {
+                    case UserTalent.RewardType.Hp:
+                        userRole.hp += talent.rewardCount;
+                        break;
+                    case UserTalent.RewardType.Attack:
+                        userRole.attack += talent.rewardCount;
+                        break;
+                    case UserTalent.RewardType.Defence:
+                        userRole.defence += talent.rewardCount;
+                        break;
+                }
             }
 
-            userRole.groupIDs = roleGroupIDs.ToArray();
+            userRoleGroupIDs.Clear();
+            for (j = 0; j < numRoleGroups; ++j)
+            {
+                if (PlayerPrefs.GetString(
+                        $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}") != userRole.name)
+                    continue;
 
-            roles.roles[i] = userRole;
+                userRoleGroupIDs.Add(__ToID(j));
+            }
+
+            userRole.groupIDs = userRoleGroupIDs.ToArray();
+
+            userRoles.Add(userRole);
         }
         
-        //roles.accessoryStyles
+        result.roles = userRoles.ToArray();
+        
+        int k, numAccessories = _accessories.Length, numAccessoryStyles = _accessoryStyles.Length;
+        string userAccessoryGroupKey;
+        Accessory accessory;
+        UserAccessory.Group userAccessoryGroup;
+        UserAccessory userAccessory;
+        var userAccessories = new List<UserAccessory>();
+        var userAccessoryGroups = new List<UserAccessory.Group>();
+        for (i = 0; i < numAccessories; ++i)
+        {
+            accessory = _accessories[i];
+            
+            userAccessory.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}");
+            if(userAccessory.count < 1)
+                continue;
+            
+            userAccessory.id = __ToID(i);
+            userAccessory.name = accessory.name;
 
-        //onComplete(roles);
+            userAccessory.styleID = 0;
+            for (j = 0; j < numAccessoryStyles; ++j)
+            {
+                if (_accessoryStyles[j].name == accessory.styleName)
+                {
+                    userAccessory.styleID = __ToID(j);
+                    
+                    break;
+                }
+            }
+            
+            userAccessory.stage = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_STAGE}{accessory.name}");
+
+            userAccessoryGroups.Clear();
+            for (j = 0; j < numRoleGroups; ++j)
+            {
+                userAccessoryGroupKey = $"{NAME_SPACE_USER_ACCESSORY_GROUP}{_roleGroups[j].name}{UserData.SEPARATOR}";
+                for (k = 0; k < numAccessoryStyles; ++k)
+                {
+                    if (PlayerPrefs.GetString(
+                            $"{userAccessoryGroupKey}{_accessoryStyles[k].name}") ==
+                        userAccessory.name)
+                        break;
+                }
+                
+                if(k == numAccessoryStyles)
+                    continue;
+                
+                userAccessoryGroup.styleID = __ToID(k);
+                userAccessoryGroup.groupID = __ToID(j);
+                userAccessoryGroups.Add(userAccessoryGroup);
+            }
+
+            userAccessory.groups = userAccessoryGroups.ToArray();
+
+            userAccessories.Add(userAccessory);
+        }
+        
+        result.accessories = userAccessories.ToArray();
+
+        result.accessoryStyles = new UserAccessoryStyle[numAccessoryStyles];
+        
+        UserAccessoryStyle userAccessoryStyle;
+        AccessoryStyle accessoryStyle;
+        AccessoryStyleLevel accessoryStyleLevel;
+        for (i = 0; i < numAccessoryStyles; ++i)
+        {
+            accessoryStyle = _accessoryStyles[i];
+            userAccessoryStyle.name = accessoryStyle.name;
+            userAccessoryStyle.id = __ToID(i);
+            userAccessoryStyle.level =
+                PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_STYLE_LEVEL}{accessoryStyle.name}");
+            accessoryStyleLevel = _accessoryStyleLevels[userAccessoryStyle.level];
+            
+            userAccessoryStyle.levelDesc.name = accessoryStyleLevel.name;
+            userAccessoryStyle.levelDesc.itemID = 0;
+            for (j = 0; j < numItems; ++j)
+            {
+                if (accessoryStyleLevel.itemName == _items[j].name)
+                {
+                    userAccessoryStyle.levelDesc.itemID = __ToID(j);
+                    
+                    break;
+                }
+            }
+            
+            userAccessoryStyle.levelDesc.count = accessoryStyleLevel.count;
+            
+            userAccessoryStyle.stages = accessoryStyle.stages;
+            
+            result.accessoryStyles[i] = userAccessoryStyle;
+        }
+
+        onComplete(result);
+    }
+
+    public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
+    {
+        yield return null;
+        
+        string key =
+                $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[__ToIndex(groupID)].name}",
+            roleName = _roles[__ToIndex(roleID)].name;
+        if (PlayerPrefs.GetString(key) == roleName)
+            PlayerPrefs.DeleteKey(key);
+        else
+            PlayerPrefs.SetString(key, roleName);
+
+        onComplete(true);
+    }
+
+    public IEnumerator QueryRoleTalents(
+        uint userID,
+        uint roleID,
+        Action<Memory<UserTalent>> onComplete)
+    {
+        yield return null;
+
+        int numTalents = _talents.Length;
+        string roleName = _roles[__ToIndex(roleID)].name;
+        Talent talent;
+        UserTalent userTalent;
+        var userTalents = new UserTalent[numTalents];
+        for (int i = 0; i < numTalents; ++i)
+        {
+            talent = _talents[i];
+            if(talent.name != roleName)
+                continue;
+            
+            userTalent.name = talent.name;
+            userTalent.id = __ToID(i);
+            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
+            userTalent.rewardType = talent.rewardType;
+            userTalent.rewardCount = talent.rewardCount;
+            userTalent.gold = talent.gold;
+            userTalents[i] = userTalent;
+        }
+
+        onComplete(userTalents);
+    }
+
+    public IEnumerator UpgradeRoleTalent(
+        uint userID,
+        uint talentID,
+        Action<bool> onComplete)
+    {
+        yield return null;
+
+        var talent = _talents[__ToIndex(talentID)];
+        string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}";
+        var flag = (UserTalent.Flag)PlayerPrefs.GetInt(key);
+        if ((flag & UserTalent.Flag.Collected) == UserTalent.Flag.Collected)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        int gold = UserDataMain.gold;
+        
+        if (talent.gold > gold)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        UserDataMain.gold = gold - talent.gold;
+
+        flag |= UserTalent.Flag.Collected;
+        PlayerPrefs.SetInt(key, (int)flag);
+
+        onComplete(true);
+    }
+
+    public IEnumerator SetAccessory(
+        uint userID, 
+        uint accessoryID, 
+        uint groupID, 
+        uint styleID, 
+        Action<bool> onComplete)
+    {
+        yield return null;
+
+        string roleGroupName = _roleGroups[__ToIndex(groupID)].name, 
+            accessoryStyleName = _accessoryStyles[__ToIndex(styleID)].name, 
+            key =
+            $"{NAME_SPACE_USER_ACCESSORY_GROUP}{roleGroupName}{UserData.SEPARATOR}{accessoryStyleName}", 
+            accessoryName = _accessories[__ToIndex(accessoryID)].name;
+        
+        if(PlayerPrefs.GetString(key) == accessoryName)
+            PlayerPrefs.DeleteKey(key);
+        else
+            PlayerPrefs.SetString(key, accessoryName);
+        
+        onComplete(true);
+    }
+
+    public IEnumerator UpgradeAccessory(uint userID, uint accessoryStyleID,
+        Action<UserAccessoryStyle.Level?> onComplete)
+    {
+        yield return null;
+
+        var accessoryStyle = _accessoryStyles[__ToIndex(accessoryStyleID)];
+        string levelKey = $"{NAME_SPACE_USER_ACCESSORY_STYLE_LEVEL}{accessoryStyle.name}";
+        int levelIndex = PlayerPrefs.GetInt(levelKey);
+        if (levelIndex < _accessoryStyleLevels.Length)
+        {
+            var accessoryStyleLevel = _accessoryStyleLevels[levelIndex];
+            string itemCountKey = $"{NAME_SPACE_USER_ITEM_COUNT}{accessoryStyleLevel.itemName}";
+            int itemCount = PlayerPrefs.GetInt(itemCountKey);
+            if (itemCount >= accessoryStyleLevel.count)
+            {
+                PlayerPrefs.SetInt(itemCountKey, itemCount - accessoryStyleLevel.count);
+                
+                PlayerPrefs.SetInt(levelKey, ++levelIndex);
+
+                UserAccessoryStyle.Level level;
+                if (levelIndex < _accessoryStyleLevels.Length)
+                {
+                    accessoryStyleLevel = _accessoryStyleLevels[levelIndex];
+
+                    level.name = accessoryStyleLevel.name;
+
+                    level.itemID = 0;
+                    int numItems = _items.Length;
+                    for (int i = 0; i < numItems; ++i)
+                    {
+                        if (accessoryStyleLevel.itemName == _items[i].name)
+                        {
+                            level.itemID = __ToID(i);
+
+                            break;
+                        }
+                    }
+
+                    level.count = accessoryStyleLevel.count;
+                }
+                else
+                    level = default;
+
+                onComplete(level);
+            }
+        }
+
+        onComplete(null);
+    }
+
+    public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete)
+    {
+        yield return null;
+
+        UserAccessoryStyle.Stage accessoryStyleStage;
+        var accessory = _accessories[__ToIndex(accessoryID)];
+        string stageKey = $"{NAME_SPACE_USER_ACCESSORY_STAGE}{accessory.name}",
+            countKey = $"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}";
+        int count = PlayerPrefs.GetInt(countKey), stageIndex = PlayerPrefs.GetInt(stageKey), numStages;
+        foreach (var accessoryStyle in _accessoryStyles)
+        {
+            if(accessoryStyle.name != accessory.styleName)
+                continue;
+
+            numStages = accessoryStyle.stages == null ? 0 : accessoryStyle.stages.Length;
+            if (stageIndex < numStages)
+            {
+                accessoryStyleStage = accessoryStyle.stages[stageIndex];
+                if (accessoryStyleStage.count <= count)
+                {
+                    PlayerPrefs.SetInt(countKey, count - accessoryStyleStage.count);
+                    
+                    PlayerPrefs.SetInt(stageKey, ++stageIndex);
+
+                    onComplete(true);
+                    
+                    yield break;
+                }
+            }
+            
+            break;
+        }
+        
+        onComplete(false);
     }
 
     [Serializable]

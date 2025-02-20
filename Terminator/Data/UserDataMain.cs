@@ -589,6 +589,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     internal struct Talent
     {
         public string name;
+        public string roleName;
         public UserTalent.RewardType rewardType;
         public int rewardCount;
         public int gold;

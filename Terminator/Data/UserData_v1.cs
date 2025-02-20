@@ -83,6 +83,9 @@ public struct UserCard
 {
     public struct Group
     {
+        /// <summary>
+        /// 被装备到的套装ID
+        /// </summary>
         public uint groupID;
 
         /// <summary>
@@ -116,12 +119,13 @@ public struct UserCard
     public Group[] groups;
 }
 
-[Serializable]
 public struct UserRole
 {
     public string name;
 
     public uint id;
+
+    //public int count;
 
     public int hp;
     public int attack;
@@ -131,6 +135,40 @@ public struct UserRole
     /// 被装备到的套装ID
     /// </summary>
     public uint[] groupIDs;
+}
+
+public struct UserAccessory
+{
+    public struct Group
+    {
+        public uint groupID;
+        
+        public uint styleID;
+    }
+
+    public string name;
+
+    public uint id;
+
+    /// <summary>
+    /// 属于什么类型<see cref="UserAccessoryStyle"/>：头、手、脚、背包、超能武器
+    /// </summary>
+    public uint styleID;
+
+    /// <summary>
+    /// 数量，在UI上要分开展示
+    /// </summary>
+    public int count;
+
+    /// <summary>
+    /// 阶
+    /// </summary>
+    public int stage;
+
+    /// <summary>
+    /// 被装备到的套装
+    /// </summary>
+    public Group[] groups;
 }
 
 public struct UserAccessoryStyle
@@ -179,28 +217,6 @@ public struct UserAccessoryStyle
     /// 阶
     /// </summary>
     public Stage[] stages;
-}
-
-public struct UserAccessory
-{
-    public string name;
-
-    public uint id;
-
-    /// <summary>
-    /// 属于什么类型<see cref="UserAccessoryStyle"/>：头、手、脚、背包、超能武器
-    /// </summary>
-    public uint styleID;
-
-    /// <summary>
-    /// 阶
-    /// </summary>
-    public int stage;
-
-    /// <summary>
-    /// 被装备到的套装ID
-    /// </summary>
-    public int[] groupIDs;
 }
 
 public struct UserStage
@@ -433,14 +449,13 @@ public partial interface IUserData
     /// </summary>
     IEnumerator UpgradeRoleTalent(
         uint userID,
-        uint roleID,
         uint talentID,
         Action<bool> onComplete);
 
     /// <summary>
     /// 装备或卸下装备
     /// </summary>
-    IEnumerator SetAccessory(uint userID, uint accessoryID, int groupID, Action<bool> onComplete);
+    IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint styleID, Action<bool> onComplete);
 
     /// <summary>
     /// 升级装备，返回下一级描述
@@ -528,12 +543,12 @@ public partial class UserData
         uint userID,
         Action<IUserData.Roles> onComplete)
     {
-        return null;
+        return UserDataMain.instance.QueryRoles(userID, onComplete);
     }
 
     public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
     {
-        return null;
+        return UserDataMain.instance.SetRole(userID, roleID, groupID, onComplete);
     }
 
     public IEnumerator QueryRoleTalents(
@@ -541,31 +556,30 @@ public partial class UserData
         uint roleID,
         Action<Memory<UserTalent>> onComplete)
     {
-        return null;
+        return UserDataMain.instance.QueryRoleTalents(userID, roleID, onComplete);
     }
 
     public IEnumerator UpgradeRoleTalent(
         uint userID,
-        uint roleID,
         uint talentID,
         Action<bool> onComplete)
     {
-        return null;
+        return UserDataMain.instance.UpgradeRoleTalent(userID, talentID, onComplete);
     }
 
-    public IEnumerator SetAccessory(uint userID, uint accessoryID, int groupID, Action<bool> onComplete)
+    public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint styleID, Action<bool> onComplete)
     {
-        return null;
+        return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, styleID, onComplete);
     }
 
     public IEnumerator UpgradeAccessory(uint userID, uint accessoryStyleID, Action<UserAccessoryStyle.Level?> onComplete)
     {
-        return null;
+        return UserDataMain.instance.UpgradeAccessory(userID, accessoryStyleID, onComplete);
     }
 
     public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete)
     {
-        return null;
+        return UserDataMain.instance.UprankAccessory(userID, accessoryID, onComplete);
     }
 
     public IEnumerator QueryStage(

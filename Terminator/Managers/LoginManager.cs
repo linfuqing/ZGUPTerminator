@@ -204,9 +204,14 @@ public sealed class LoginManager : MonoBehaviour
         assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
     }
 
-    public void ApplyStart()
+    public void ApplyStart(bool isRestart)
     {
-        StartCoroutine(__Start());
+        StartCoroutine(__Start(isRestart));
+    }
+    
+    private void __ApplyStart()
+    {
+        ApplyStart(true);
     }
 
     private void __ApplySkills(Memory<UserSkill> skills)
@@ -453,7 +458,7 @@ public sealed class LoginManager : MonoBehaviour
             if (style.button != null)
             {
                 style.button.onClick.RemoveAllListeners();
-                style.button.onClick.AddListener(ApplyStart);
+                style.button.onClick.AddListener(__ApplyStart);
             }
 
             style.gameObject.SetActive(true);
@@ -516,7 +521,7 @@ public sealed class LoginManager : MonoBehaviour
             style.button.interactable = true;
     }
 
-    private IEnumerator __Start()
+    private IEnumerator __Start(bool isRestart)
     {
         __isStart = true;
         
@@ -532,7 +537,7 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QuerySkills(userID, __ApplySkills);
 
         bool result = false;
-        if (__selectedUserStageID == 0)
+        if (isRestart)
             yield return userData.ApplyLevel(userID, __selectedUserLevelID, x => result = x);
         else
             yield return userData.ApplyStage(userID, __selectedUserStageID, x => result = x);
