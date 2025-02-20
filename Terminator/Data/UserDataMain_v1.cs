@@ -415,16 +415,53 @@ public partial class UserDataMain
         onComplete(true);
     }
 
-    //private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
+    [Serializable]
+    internal struct RoleGroup
+    {
+        public string name;
+    }
+
+    [SerializeField] 
+    internal RoleGroup[] _roleGroups;
+
+    private const string NAME_SPACE_USER_ROLES_FLAG = "UserRolesFlag";
+    private const string NAME_SPACE_USER_ROLES = "UserRoles";
+    private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
     
-    public IEnumerator QueryRoles(
+    /*public IEnumerator QueryRoles(
         uint userID,
         Action<IUserData.Roles> onComplete)
     {
         yield return null;
 
+        IUserData.Roles roles;
+        roles.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
         
-    }
+        var roleNames = PlayerPrefs.GetString(NAME_SPACE_USER_ROLES)?.Split(UserData.SEPARATOR);
+        int numRoleNames = roleNames == null ? 0 : roleNames.Length;
+        roles.roles = numRoleNames > 0 ? new UserRole[numRoleNames] : null;
+
+        var groupIDs = new List<uint>();
+        int numGroups = 
+        string[] groupNames;
+        UserRole userRole;
+        for (int i = 0; i < numRoleNames; ++i)
+        {
+            userRole.name = roleNames[i];
+            userRole.id = __ToID(i);
+            userRole.hp = 0;
+            userRole.attack = 0;
+            userRole.defence = 0;
+
+            groupNames = PlayerPrefs.GetString($"{NAME_SPACE_USER_ROLE_GROUP}{userRole.name}")
+                ?.Split(UserData.SEPARATOR);
+            
+            groupIDs.Clear();
+            
+            
+            userRole.groupIDs = 
+        }
+    }*/
 
     [Serializable]
     internal struct StageReward

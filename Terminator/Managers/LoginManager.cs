@@ -336,7 +336,12 @@ public sealed class LoginManager : MonoBehaviour
                             __stageStyles = new List<StageStyle>();
 
                         bool isHot;
-                        int i, j, numRanks, numRewardFlags, stageStyleStartIndex = __stageStyles.Count, selectedStageIndex = -1;
+                        int i,
+                            j,
+                            numRanks,
+                            numRewardFlags,
+                            stageStyleStartIndex = __stageStyles.Count,
+                            selectedStageIndex = 0;
                         UserStageReward.Flag rewardFlag;
                         StageStyle stageStyle;
                         GameObject rank;
@@ -406,7 +411,7 @@ public sealed class LoginManager : MonoBehaviour
                         
                         int numStageStyles = __stageStyles.Count;
                         for (i = stageStyleStartIndex; i < numStageStyles; ++i)
-                            __stageStyles[selectedStageIndex].gameObject.SetActive(true);
+                            __stageStyles[i].gameObject.SetActive(true);
                     }
                 }
                 else

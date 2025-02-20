@@ -340,7 +340,7 @@ public partial struct EffectSystem : ISystem
                     if (resultCount < 1)
                         return 0;
 
-                    result = math.min(resultCount, effect.count - status.count) >
+                    result = (effect.count > 0 ? math.min(resultCount, effect.count - status.count) : resultCount) >
                              (int)math.ceil((time - deltaTime - status.time) / effect.time);
                 }
 
@@ -948,87 +948,77 @@ public partial struct EffectSystem : ISystem
                                                 : 1.0f));
                 if (damage > 0 && index < targetInvulnerabilityStates.Length)
                 {
+                    bool isInvulnerability;
                     var targetInvulnerabilityStatus = targetInvulnerabilityStates[index];
                     if (targetInvulnerabilityStatus.damage > damage || targetInvulnerabilityStatus.times > 0)
                     {
                         if (targetInvulnerabilityStatus.damage > damage)
                             targetInvulnerabilityStatus.damage -= damage;
                         else
+                        {
+                            damage = targetInvulnerabilityStatus.damage;
+
                             targetInvulnerabilityStatus.damage = 0;
+                        }
 
                         if (targetInvulnerabilityStatus.times > 0)
                             --targetInvulnerabilityStatus.times;
+
+                        isInvulnerability = true;
                     }
                     else
+                        isInvulnerability = false;
+
+                    if (targetInvulnerabilityStatus.damage == 0 &&
+                        targetInvulnerabilityStatus.times == 0 &&
+                        index < targetInvulnerabilities.Length)
                     {
-                        bool isInvulnerability = targetInvulnerabilityStatus.damage > 0 ||
-                                                 targetInvulnerabilityStatus.times > 0;
-                        if (isInvulnerability)
+                        ref var definition = ref targetInvulnerabilities[index].definition.Value;
+                        while (definition.invulnerabilities.Length > targetInvulnerabilityStatus.index)
                         {
-                            if (targetInvulnerabilityStatus.damage > 0)
+                            ref var invulnerablilitity =
+                                ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
+                            if (invulnerablilitity.count == 0 ||
+                                invulnerablilitity.count > targetInvulnerabilityStatus.count)
                             {
-                                damage = targetInvulnerabilityStatus.damage;
-
-                                targetInvulnerabilityStatus.damage = 0;
-                            }
-
-                            ++targetInvulnerabilityStatus.count;
-                        }
-
-                        if (index < targetInvulnerabilities.Length)
-                        {
-                            ref var definition = ref targetInvulnerabilities[index].definition.Value;
-                            while (definition.invulnerabilities.Length > targetInvulnerabilityStatus.index)
-                            {
-                                ref var invulnerablilitity =
-                                    ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
-                                if (invulnerablilitity.count == 0 ||
-                                    invulnerablilitity.count >= targetInvulnerabilityStatus.count)
+                                if (!isInvulnerability)
                                 {
                                     targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
                                     targetInvulnerabilityStatus.times = invulnerablilitity.times;
 
-                                    if (!isInvulnerability)
+                                    if (targetInvulnerabilityStatus.damage > damage)
+                                        targetInvulnerabilityStatus.damage -= damage;
+                                    else
                                     {
-                                        if (targetInvulnerabilityStatus.damage > damage ||
-                                            targetInvulnerabilityStatus.times > 0)
-                                        {
-                                            if (targetInvulnerabilityStatus.damage > damage)
-                                                targetInvulnerabilityStatus.damage -= damage;
-                                            else
-                                                targetInvulnerabilityStatus.damage = 0;
+                                        damage = targetInvulnerabilityStatus.damage;
 
-                                            if (targetInvulnerabilityStatus.times > 0)
-                                                --targetInvulnerabilityStatus.times;
-                                        }
-                                        else
-                                        {
-                                            if (targetInvulnerabilityStatus.damage > 0)
-                                            {
-                                                damage = targetInvulnerabilityStatus.damage;
-
-                                                targetInvulnerabilityStatus.damage = 0;
-                                            }
-
-                                            ++targetInvulnerabilityStatus.count;
-
-                                            isInvulnerability = true;
-
-                                            continue;
-                                        }
+                                        targetInvulnerabilityStatus.damage = 0;
                                     }
 
-                                    if (isInvulnerability)
-                                        target.invincibleTime = time + invulnerablilitity.time;
+                                    if (targetInvulnerabilityStatus.times > 0)
+                                        --targetInvulnerabilityStatus.times;
 
-                                    break;
+                                    isInvulnerability = targetInvulnerabilityStatus.damage == 0 &&
+                                                        targetInvulnerabilityStatus.times == 0;
+                                }
+                                
+                                if (isInvulnerability)
+                                {
+                                    target.invincibleTime = time + invulnerablilitity.time;
+
+                                    ++targetInvulnerabilityStatus.count;
+
+                                    continue;
                                 }
 
-                                targetInvulnerabilityStatus.count = 0;
-                                ++targetInvulnerabilityStatus.index;
+                                break;
                             }
+
+                            targetInvulnerabilityStatus.count = 0;
+                            ++targetInvulnerabilityStatus.index;
                         }
                     }
+
 
                     targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
                 }
