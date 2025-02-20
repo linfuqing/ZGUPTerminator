@@ -133,10 +133,8 @@ public struct UserRole
     public uint[] groupIDs;
 }
 
-[Serializable]
 public struct UserAccessoryStyle
 {
-    [Serializable]
     public struct Level
     {
         public string name;
@@ -277,19 +275,19 @@ public partial interface IUserData
         public int capacity;
 
         /// <summary>
-        /// 卡牌品质
+        /// 卡组
         /// </summary>
-        public UserCardStyle[] cardStyles;
-
+        public UserGroup[] groups;
+        
         /// <summary>
         /// 卡牌
         /// </summary>
         public UserCard[] cards;
 
         /// <summary>
-        /// 卡组
+        /// 卡牌品质
         /// </summary>
-        public UserGroup[] groups;
+        public UserCardStyle[] cardStyles;
     }
 
     public struct Roles
@@ -303,21 +301,6 @@ public partial interface IUserData
         public Flag flag;
 
         /// <summary>
-        /// 角色
-        /// </summary>
-        public UserRole[] roles;
-
-        /// <summary>
-        /// 装备类型
-        /// </summary>
-        public UserAccessoryStyle[] accessoryStyles;
-
-        /// <summary>
-        /// 装备
-        /// </summary>
-        public UserAccessory[] accessories;
-
-        /// <summary>
         /// 卷轴
         /// </summary>
         public UserItem[] items;
@@ -326,6 +309,21 @@ public partial interface IUserData
         /// 套装
         /// </summary>
         public UserGroup[] groups;
+        
+        /// <summary>
+        /// 角色
+        /// </summary>
+        public UserRole[] roles;
+
+        /// <summary>
+        /// 装备
+        /// </summary>
+        public UserAccessory[] accessories;
+        
+        /// <summary>
+        /// 装备类型
+        /// </summary>
+        public UserAccessoryStyle[] accessoryStyles;
     }
 
     public struct StageCache

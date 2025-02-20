@@ -87,6 +87,7 @@ public sealed class LoginManager : MonoBehaviour
     private int __selectedLevelEnergy;
     private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
+    private uint __selectedUserStageID;
 
     private bool __isStart;
 
@@ -203,7 +204,7 @@ public sealed class LoginManager : MonoBehaviour
         assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
     }
 
-    private void __ApplyStart()
+    public void ApplyStart()
     {
         StartCoroutine(__Start());
     }
@@ -395,8 +396,13 @@ public sealed class LoginManager : MonoBehaviour
                                     stageStyle.toggle.interactable = true;
                                     stageStyle.toggle.onValueChanged.AddListener(x =>
                                     {
-                                        if (x && onStageChanged != null)
-                                            onStageChanged.Invoke(stage.id);
+                                        if (x)
+                                        {
+                                            __selectedUserStageID = stage.id;
+                                            
+                                            if (onStageChanged != null)
+                                                onStageChanged.Invoke(stage.id);
+                                        }
                                     });
                                 }
 
@@ -447,7 +453,7 @@ public sealed class LoginManager : MonoBehaviour
             if (style.button != null)
             {
                 style.button.onClick.RemoveAllListeners();
-                style.button.onClick.AddListener(__ApplyStart);
+                style.button.onClick.AddListener(ApplyStart);
             }
 
             style.gameObject.SetActive(true);
@@ -526,7 +532,11 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QuerySkills(userID, __ApplySkills);
 
         bool result = false;
-        yield return userData.ApplyLevel(userID, __selectedUserLevelID, x => result = x);
+        if (__selectedUserStageID == 0)
+            yield return userData.ApplyLevel(userID, __selectedUserLevelID, x => result = x);
+        else
+            yield return userData.ApplyStage(userID, __selectedUserStageID, x => result = x);
+            
         if (!result)
         {
             __isStart = false;
