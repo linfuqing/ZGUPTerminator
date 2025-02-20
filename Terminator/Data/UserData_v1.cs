@@ -143,7 +143,7 @@ public struct UserAccessory
     {
         public uint groupID;
         
-        public uint styleID;
+        public uint slotID;
     }
 
     public string name;
@@ -171,7 +171,7 @@ public struct UserAccessory
     public Group[] groups;
 }
 
-public struct UserAccessoryStyle
+public struct UserAccessorySlot
 {
     public struct Level
     {
@@ -184,17 +184,6 @@ public struct UserAccessoryStyle
 
         /// <summary>
         /// 升级需要的卷轴数量
-        /// </summary>
-        public int count;
-    }
-
-    [Serializable]
-    public struct Stage
-    {
-        public string name;
-
-        /// <summary>
-        /// 升阶需要的相同装备数量
         /// </summary>
         public int count;
     }
@@ -212,6 +201,24 @@ public struct UserAccessoryStyle
     /// 当前等级描述
     /// </summary>
     public Level levelDesc;
+}
+
+public struct UserAccessoryStyle
+{
+    [Serializable]
+    public struct Stage
+    {
+        public string name;
+
+        /// <summary>
+        /// 升阶需要的相同装备数量
+        /// </summary>
+        public int count;
+    }
+
+    public string name;
+
+    public uint id;
 
     /// <summary>
     /// 阶
@@ -335,6 +342,11 @@ public partial interface IUserData
         /// 装备
         /// </summary>
         public UserAccessory[] accessories;
+
+        /// <summary>
+        /// 装备槽
+        /// </summary>
+        public UserAccessorySlot[] accessorySlots;
         
         /// <summary>
         /// 装备类型
@@ -455,12 +467,12 @@ public partial interface IUserData
     /// <summary>
     /// 装备或卸下装备
     /// </summary>
-    IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint styleID, Action<bool> onComplete);
+    IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete);
 
     /// <summary>
     /// 升级装备，返回下一级描述
     /// </summary>
-    IEnumerator UpgradeAccessory(uint userID, uint accessoryStyleID, Action<UserAccessoryStyle.Level?> onComplete);
+    IEnumerator UpgradeAccessory(uint userID, uint accessorySlotID, Action<UserAccessorySlot.Level?> onComplete);
 
     /// <summary>
     /// 升阶装备
@@ -567,14 +579,14 @@ public partial class UserData
         return UserDataMain.instance.UpgradeRoleTalent(userID, talentID, onComplete);
     }
 
-    public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint styleID, Action<bool> onComplete)
+    public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete)
     {
-        return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, styleID, onComplete);
+        return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, slotID, onComplete);
     }
 
-    public IEnumerator UpgradeAccessory(uint userID, uint accessoryStyleID, Action<UserAccessoryStyle.Level?> onComplete)
+    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, Action<UserAccessorySlot.Level?> onComplete)
     {
-        return UserDataMain.instance.UpgradeAccessory(userID, accessoryStyleID, onComplete);
+        return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, onComplete);
     }
 
     public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete)
