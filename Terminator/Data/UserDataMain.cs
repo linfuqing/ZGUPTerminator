@@ -68,7 +68,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
 
     [Serializable]
-    internal partial struct Level
+    internal struct Level
     {
         public string name;
         public int energy;
@@ -178,15 +178,19 @@ public sealed partial class UserDataMain : MonoBehaviour
         levelCache.stage = 0;
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
+
+        UserPropertyData result;
+        result.skills = Array.Empty<UserPropertyData.Skill>();
+        result.attributes = Array.Empty<UserAttributeData>();
         
-        onComplete(default);
+        onComplete(result);
     }
 
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
 
     public IEnumerator CollectLevel(
         uint userID,
-        Action<Memory<UserRewardData>> onComplete)
+        Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
@@ -227,9 +231,24 @@ public sealed partial class UserDataMain : MonoBehaviour
         int gold = levelCache.gold;
         UserDataMain.gold += gold;
 
+        string key;
+        Stage stage;
+        var rewards = new List<UserReward>();
+        for(int i = 0; i < levelCache.stage; ++i)
+        {
+            stage = level.stages[i];
+            key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stage.name}";
+            if(PlayerPrefs.GetInt(key) != 0)
+                continue;
+            
+            PlayerPrefs.SetInt(key, 1);
+            
+            __ApplyRewards(stage.directRewards, rewards);
+        }
+
         __CollectLevelLegacy(isNextLevel, levelIndex, levelCache.stage);
         
-        onComplete(null);
+        onComplete(rewards.ToArray());
     }
 
     private bool __ApplyEnergy(int value)
@@ -317,7 +336,7 @@ public partial class UserData
 
     public IEnumerator CollectLevel(
         uint userID,
-        Action<Memory<UserRewardData>> onComplete)
+        Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectLevel(userID, onComplete);
     }

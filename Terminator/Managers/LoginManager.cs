@@ -450,12 +450,34 @@ public sealed class LoginManager : MonoBehaviour
             _onHot.Invoke(isHot);
     }
 
-    private void __ApplyLevel(Memory<UserRewardData> rewards)
+    private void __ApplyLevel(Memory<UserReward> rewards)
     {
-        this.gold += gold;
+        int numRewards = rewards.Length;
+        UserRewardData result;
+        var results = new UserRewardData[numRewards];
+        for(int i = 0; i < numRewards; ++i)
+        {
+            ref var reward = ref rewards.Span[i];
+
+            switch (reward.type)
+            {
+                case UserRewardType.Gold:
+                    gold += reward.count;
+                    break;
+                case UserRewardType.Energy:
+                    energy += reward.count;
+                    break;
+            }
+            
+            result.name = reward.name;
+            result.count = reward.count;
+            result.type = reward.type;
+            
+            results[i] = result;
+        }
 
         if(onAwake != null)
-            onAwake(rewards);
+            onAwake(results);
     }
 
     private void __ApplyLevel(UserPropertyData property)

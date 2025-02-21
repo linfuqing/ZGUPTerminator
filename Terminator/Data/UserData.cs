@@ -5,6 +5,7 @@ using UnityEngine;
 public enum UserRewardType
 {
     PurchasePoolKey, 
+    CardsCapacity, 
     Card, 
     Role, 
     Accessory, 
@@ -33,6 +34,17 @@ public struct UserAttributeData
 public struct UserRewardData
 {
     public string name;
+    
+    public UserRewardType type;
+
+    public int count;
+}
+
+public struct UserReward
+{
+    public string name;
+
+    public uint id;
     
     public UserRewardType type;
 
@@ -124,7 +136,7 @@ public partial interface IUserData : IGameUserData
 
     IEnumerator CollectLevel(
         uint userID,
-        Action<Memory<UserRewardData>> onComplete);
+        Action<Memory<UserReward>> onComplete);
 }
 
 public partial class UserData : MonoBehaviour, IUserData

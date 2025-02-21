@@ -430,12 +430,6 @@ public partial interface IUserData
         public UserStageReward[] rewards;
     }
 
-    public struct StageRewards
-    {
-        public int gold;
-        public UserStageReward.PoolKey[] poolKeys;
-    }
-
     public struct StageProperty
     {
         public UserPropertyData value;
@@ -548,12 +542,12 @@ public partial interface IUserData
     /// <summary>
     /// 收集关卡奖励
     /// </summary>
-    IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete);
+    IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete);
 
     /// <summary>
     /// 一键收集全部关卡奖励
     /// </summary>
-    IEnumerator CollectStageRewards(uint userID, Action<StageRewards> onComplete);
+    IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete);
 }
 
 public partial class UserData
@@ -685,12 +679,12 @@ public partial class UserData
         onComplete(true);
     }
     
-    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete)
+    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectStageReward(userID, stageRewardID, onComplete);
     }
 
-    public IEnumerator CollectStageRewards(uint userID, Action<IUserData.StageRewards> onComplete)
+    public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectStageRewards(userID, onComplete);
     }

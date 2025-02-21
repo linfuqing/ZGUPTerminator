@@ -1030,6 +1030,7 @@ public partial class UserDataMain
         public UserRewardData[] values;
     }
 
+    [Serializable]
     internal struct Stage
     {
         public string name;
@@ -1134,21 +1135,18 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_STAGE_REWARD_FLAG = "userStageRewardFlag";
 
-    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<bool> onComplete)
+    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
         int i, j, 
-            gold, 
-            poolKeyCount, 
             stageRewardIndex = __ToIndex(stageRewardID), 
             numStages, 
             numStageRewards, 
             numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
-        string key;
         Level level;
         Stage stage;
-        Dictionary<string, int> poolKeyCounts = null;
+        List<UserReward> rewards = null;
         for (i = 0; i < numLevels; ++i)
         {
             level = _levels[i];
@@ -1160,24 +1158,15 @@ public partial class UserDataMain
                 numStageRewards = stage.indirectRewards.Length;
                 if (stageRewardIndex < numStageRewards)
                 {
-                    gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
-                    poolKeyCounts = new Dictionary<string, int>();
+                    if (rewards == null)
+                        rewards = new List<UserReward>();
+                    
                     if (__ApplyStageRewards(level.name, 
                             j, 
                             stage.indirectRewards[stageRewardIndex], 
-                            poolKeyCounts, 
-                            ref gold))
+                            rewards))
                     {
-                        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold);
-                        foreach (var pair in poolKeyCounts)
-                        {
-                            key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{pair.Key}";
-                            poolKeyCount = PlayerPrefs.GetInt(key);
-                            poolKeyCount += pair.Value;
-                            PlayerPrefs.SetInt(key, poolKeyCount);
-                        }
-                        
-                        onComplete(true);
+                        onComplete(rewards.ToArray());
 
                         yield break;
                     }
@@ -1187,22 +1176,24 @@ public partial class UserDataMain
             }
         }
         
-        onComplete(false);
+        onComplete(null);
     }
 
-    public IEnumerator CollectStageRewards(uint userID, Action<IUserData.StageRewards> onComplete)
+    public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
         bool result = false;
-        int i, j, k, 
-            numStages, 
-            numStageRewards, 
-            numLevels = Mathf.Min(_levels.Length, UserData.level + 1), 
-            gold = 0;
+        int i,
+            j,
+            k,
+            numStages,
+            numStageRewards,
+            numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
         Level level;
         Stage stage;
-        var poolKeyCounts = new Dictionary<string, int>();
+        StageReward stageReward;
+        List<UserReward> rewards = null;
         for (i = 0; i < numLevels; ++i)
         {
             level = _levels[i];
@@ -1212,39 +1203,19 @@ public partial class UserDataMain
                 stage = level.stages[j];
 
                 numStageRewards = stage.indirectRewards.Length;
-                for(k = 0; k < numStageRewards; ++k)
-                    result |= __ApplyStageRewards(level.name, j, stage.indirectRewards[k], poolKeyCounts, ref gold);
+                for (k = 0; k < numStageRewards; ++k)
+                {
+                    stageReward = stage.indirectRewards[k];
+
+                    if (rewards == null)
+                        rewards = new List<UserReward>();
+                    
+                    result |= __ApplyStageRewards(level.name, j, stageReward, rewards);
+                }
             }
         }
 
-        if (result)
-        {
-            PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold + PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD));
-
-            int index = 0, poolKeyCount;
-            string key;
-            UserStageReward.PoolKey poolKey;
-            var poolKeys = new UserStageReward.PoolKey[poolKeyCounts.Count];
-            foreach (var pair in poolKeyCounts)
-            {
-                poolKey.name = pair.Key;
-                poolKey.count = pair.Value;
-
-                key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{poolKey.name}";
-                poolKeyCount = PlayerPrefs.GetInt(key);
-                poolKeyCount += poolKey.count;
-                PlayerPrefs.SetInt(key, poolKeyCount);
-
-                poolKeys[index++] = poolKey;
-            }
-
-            IUserData.StageRewards stageRewards;
-            stageRewards.gold = gold;
-            stageRewards.poolKeys = poolKeys;
-            onComplete(stageRewards);
-        }
-        else
-            onComplete(default);
+        onComplete(result ? rewards.ToArray() : null);
     }
 
     private UserStageReward.Flag __GetStageRewardFlag(
@@ -1281,8 +1252,7 @@ public partial class UserDataMain
         string levelName, 
         int stage, 
         in StageReward stageReward, 
-        Dictionary<string, int> poolKeyCounts, 
-        ref int gold)
+        List<UserReward> outRewards)
     {
         var flag = __GetStageRewardFlag(
             stageReward.name,
@@ -1298,24 +1268,117 @@ public partial class UserDataMain
 
         PlayerPrefs.SetInt(key, (int)flag);
 
-        /*gold += stageReward.gold;
-        int numPoolKeys = stageReward.poolKeys.Length, poolKeyCount;
-        for (int i = 0; i < numPoolKeys; ++i)
-        {
-            ref var poolKey = ref stageReward.poolKeys[i];
-
-            if (poolKeyCounts != null)
-            {
-                if (poolKeyCounts.TryGetValue(poolKey.name, out poolKeyCount))
-                    poolKeyCount += poolKey.count;
-                else
-                    poolKeyCount = poolKey.count;
-
-                poolKeyCounts[poolKey.name] = poolKeyCount;
-            }
-        }*/
+        __ApplyRewards(stageReward.values, outRewards);
 
         return true;
+    }
+
+    private uint __ApplyReward(in UserRewardData reward)
+    {
+        uint id = 0;
+        string key;
+        switch (reward.type)
+        {
+            case UserRewardType.PurchasePoolKey:
+                id = 1;
+                key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
+                break;
+            case UserRewardType.CardsCapacity:
+                id = 1;
+                key = NAME_SPACE_USER_CARDS_CAPACITY;
+                break;
+            case UserRewardType.Card:
+                int numCards = _cards.Length;
+                for (int i = 0; i < numCards; ++i)
+                {
+                    if (_cards[i].name == reward.name)
+                    {
+                        id = __ToID(i);
+                        
+                        break;
+                    }
+                }
+                key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
+                break;
+            case UserRewardType.Role:
+                int numRoles = _roles.Length;
+                for (int i = 0; i < numRoles; ++i)
+                {
+                    if (_roles[i].name == reward.name)
+                    {
+                        id = __ToID(i);
+                        
+                        break;
+                    }
+                }
+                key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
+                break;
+            case UserRewardType.Accessory:
+                int numAccessories = _accessories.Length;
+                for (int i = 0; i < numAccessories; ++i)
+                {
+                    if (_accessories[i].name == reward.name)
+                    {
+                        id = __ToID(i);
+                        
+                        break;
+                    }
+                }
+                key = $"{NAME_SPACE_USER_ACCESSORY_COUNT}{reward.name}";
+                break; 
+            case UserRewardType.Item:
+                int numItems = _items.Length;
+                for (int i = 0; i < numItems; ++i)
+                {
+                    if (_items[i].name == reward.name)
+                    {
+                        id = __ToID(i);
+                        
+                        break;
+                    }
+                }
+                key = $"{NAME_SPACE_USER_ITEM_COUNT}{reward.name}";
+                break; 
+            case UserRewardType.Diamond:
+                id = 1;
+                key = $"{NAME_SPACE_USER_DIAMOND}{reward.name}";
+                break;
+            case UserRewardType.Gold:
+                id = 1;
+                key = $"{NAME_SPACE_USER_GOLD}{reward.name}";
+                break;
+            case UserRewardType.Energy:
+                id = 1;
+                key = $"{NAME_SPACE_USER_ENERGY}{reward.name}";
+                break;
+            default:
+                return 0;
+        }
+        
+        int count = PlayerPrefs.GetInt(key);
+        count += reward.count;
+        PlayerPrefs.SetInt(key, count);
+
+        return id;
+    }
+
+    private void __ApplyRewards(
+        UserRewardData[] rewards, 
+        List<UserReward> outRewards)
+    {
+        UserReward outReward;
+        foreach (var reward in rewards)
+        {
+            outReward.id = __ApplyReward(reward);
+            if(outReward.id == 0)
+                continue;
+
+            outReward.name = reward.name;
+            outReward.count = reward.count;
+            outReward.type = reward.type;
+            
+            outRewards.Add(outReward);
+        }
     }
     
     private bool __TryGetStage(uint stageID, out int stage, out int levelIndex, out int rewardIndex)
