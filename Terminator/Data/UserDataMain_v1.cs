@@ -676,8 +676,10 @@ public partial class UserDataMain
             result.groups[i] = userGroup;
         }
 
+        bool isNew;
         int j, roleCount, numRoles = _roles.Length;
         UserRole userRole;
+        string userRoleGroupName;
         var attributes = new List<UserAttributeData>();
         var userRoles = new List<UserRole>();
         var userRoleGroupIDs = new List<uint>();
@@ -685,12 +687,15 @@ public partial class UserDataMain
         {
             userRole.name = _roles[i].name;
 
+            isNew = false;
             key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";
             roleCount = PlayerPrefs.GetInt(key);
             if (roleCount < 1)
             {
                 if (_defaultRoles != null && Array.IndexOf(_defaultRoles, userRole.name) != -1)
                 {
+                    isNew = true;
+                    
                     roleCount = 1;
                     
                     PlayerPrefs.SetInt(key, 1);
@@ -719,9 +724,15 @@ public partial class UserDataMain
             userRoleGroupIDs.Clear();
             for (j = 0; j < numRoleGroups; ++j)
             {
-                if (PlayerPrefs.GetString(
-                        $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}") != userRole.name)
-                    continue;
+                key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}";
+                userRoleGroupName = PlayerPrefs.GetString(key);
+                if (userRoleGroupName != userRole.name)
+                {
+                    if (isNew && string.IsNullOrEmpty(userRoleGroupName))
+                        PlayerPrefs.SetString(key, userRoleGroupName);
+                    else
+                        continue;
+                }
 
                 userRoleGroupIDs.Add(__ToID(j));
             }
