@@ -218,6 +218,8 @@ public partial class UserDataMain
                 if (total > 1.0f)
                 {
                     total -= 1.0f;
+                    
+                    chance = UnityEngine.Random.value;
 
                     isSelected = false;
                 }
@@ -729,7 +731,7 @@ public partial class UserDataMain
                 if (userRoleGroupName != userRole.name)
                 {
                     if (isNew && string.IsNullOrEmpty(userRoleGroupName))
-                        PlayerPrefs.SetString(key, userRoleGroupName);
+                        PlayerPrefs.SetString(key, userRole.name);
                     else
                         continue;
                 }
