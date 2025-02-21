@@ -61,7 +61,7 @@ public struct LevelStageOption
             case Type.Exp:
                 return value <= status.exp;
             case Type.Stage:
-                return value <= status.stage;
+                return value == status.stage;
             case Type.SpawnerLayerMaskInclude:
                 return (value & spawnerLayerMaskOverride.value) == value;
             case Type.SpawnerLayerMaskExclude:
