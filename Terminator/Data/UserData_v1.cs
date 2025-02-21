@@ -104,8 +104,6 @@ public struct UserCardStyle
 
     public string name;
 
-    public string skillName;
-
     public uint id;
 
     public Level[] levels;
@@ -127,6 +125,8 @@ public struct UserCard
     }
 
     public string name;
+
+    public string skillName;
 
     public uint id;
 

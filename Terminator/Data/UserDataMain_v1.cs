@@ -167,6 +167,8 @@ public partial class UserDataMain
         public string name;
 
         public string styleName;
+        
+        public string skillName;
     }
 
     [SerializeField] 
@@ -260,8 +262,6 @@ public partial class UserDataMain
     internal struct CardStyle
     {
         public string name;
-        
-        public string skillName;
     }
 
     [Serializable]
@@ -394,7 +394,6 @@ public partial class UserDataMain
 
             userCardStyle.id = __ToID(i);
             userCardStyle.name = cardStyle.name;
-            userCardStyle.skillName = cardStyle.skillName;
 
             userCardStyle.levels = __cardLevels[i];
             
@@ -416,6 +415,7 @@ public partial class UserDataMain
                 continue;
 
             userCard.name = card.name;
+            userCard.skillName = card.skillName;
             userCard.id = __ToID(i);
 
             userCard.styleID = 0;
