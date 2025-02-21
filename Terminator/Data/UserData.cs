@@ -2,6 +2,18 @@ using System;
 using System.Collections;
 using UnityEngine;
 
+public enum UserRewardType
+{
+    PurchasePoolKey, 
+    Card, 
+    Role, 
+    Accessory, 
+    Item, 
+    Diamond, 
+    Gold, 
+    Energy
+}
+
 public enum UserAttributeType
 {
     Hp, 
@@ -15,6 +27,16 @@ public struct UserAttributeData
     public UserAttributeType type;
     public UserVariableType variableType;
     public float value;
+}
+
+[Serializable]
+public struct UserRewardData
+{
+    public string name;
+    
+    public UserRewardType type;
+
+    public int count;
 }
 
 public struct User
@@ -45,22 +67,6 @@ public partial struct UserLevel
     public string name;
     public uint id;
     public int energy;
-    //public int userStage;
-    
-    public string[] rewardSkills;
-}
-
-public struct UserWeapon
-{
-    [Flags]
-    public enum Flag
-    {
-        Selected = 0x01
-    }
-    
-    public string name;
-    public uint id;
-    public Flag flag;
 }
 
 public struct UserTalent
@@ -76,11 +82,6 @@ public struct UserTalent
     public Flag flag;
     public UserAttributeData attribute;
     public int gold;
-}
-
-public struct UserSkill
-{
-    public string name;
 }
 
 public partial interface IUserData : IGameUserData
@@ -105,26 +106,6 @@ public partial interface IUserData : IGameUserData
         string channelUser, 
         Action<User, UserEnergy> onComplete);
     
-    IEnumerator QueryTip(
-        uint userID, 
-        Action<UserTip> onComplete);
-
-    IEnumerator QuerySkills(
-        uint userID, 
-        Action<Memory<UserSkill>> onComplete);
-
-    IEnumerator QueryWeapons(
-        uint userID, 
-        Action<Memory<UserWeapon>> onComplete);
-    
-    IEnumerator QueryTalents(
-        uint userID, 
-        Action<Memory<UserTalent>> onComplete);
-
-    IEnumerator QueryStages(
-        uint userID,
-        Action<Memory<UserStage_v0>> onComplete);
-    
     IEnumerator QueryLevels(
         uint userID, 
         Action<Memory<UserLevel>> onComplete);
@@ -143,26 +124,7 @@ public partial interface IUserData : IGameUserData
 
     IEnumerator CollectLevel(
         uint userID,
-        Action<int, string[]> onComplete);
-
-    IEnumerator CollectStage(
-        uint userID,
-        uint stageID, 
-        Action<bool> onComplete);
-    
-    IEnumerator CollectTalent(
-        uint userID,
-        uint talentID, 
-        Action<bool> onComplete);
-    
-    IEnumerator CollectTip(
-        uint userID,
-        Action<int> onComplete);
-
-    IEnumerator SelectWeapon(
-        uint userID,
-        uint weaponID, 
-        Action<bool> onComplete);
+        Action<Memory<UserRewardData>> onComplete);
 }
 
 public partial class UserData : MonoBehaviour, IUserData

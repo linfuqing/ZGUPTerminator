@@ -17,15 +17,13 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     [Serializable]
-    internal struct Skill
+    internal struct Reward
     {
         public string name;
         public Sprite sprite;
     }
 
-    public delegate void Awake(string[] rewardSkills);
-
-    public static event Awake onAwake;
+    public static event Action<Memory<UserRewardData>> onAwake;
     
     public static event Action<uint> onStageChanged;
     
@@ -67,13 +65,13 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal Level[] _levels;
 
-    [SerializeField] 
-    internal Skill[] _skills;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_skills")] 
+    internal Reward[] _rewards;
 
     private List<RewardStyle> __rewardStyles;
     private List<StageStyle> __stageStyles;
     private Dictionary<int, LevelStyle> __styles;
-    private Dictionary<string, int> __skillIndices;
+    private Dictionary<string, int> __rewardIndices;
 
     private float __energyNextTime;
     private float __energyUnitTime;
@@ -246,8 +244,8 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevels(Memory<UserLevel> userLevels)
     {
-        var levelIndices = new Dictionary<string, int>();
         int numLevels = _levels.Length;
+        var levelIndices = new Dictionary<string, int>(numLevels);
         for (int i = 0; i < numLevels; ++i)
             levelIndices[_levels[i].name] = i;
 
@@ -257,6 +255,9 @@ public sealed class LoginManager : MonoBehaviour
         __styles = new Dictionary<int, LevelStyle>(userLevels.Length);
         foreach (var userLevel in userLevels.Span)
         {
+            if(!levelIndices.TryGetValue(userLevel.name, out int index))
+                continue;
+            
             if (!isHot && userLevel.stages != null)
             {
                 foreach (var stage in userLevel.stages)
@@ -284,7 +285,6 @@ public sealed class LoginManager : MonoBehaviour
             if(style.onEnergy != null)
                 style.onEnergy.Invoke(selectedLevel.energy.ToString());
 
-            int index = levelIndices[selectedLevel.name];
             level = _levels[index];
             
             if(style.onTitle != null)
@@ -305,144 +305,116 @@ public sealed class LoginManager : MonoBehaviour
                     __selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
 
-                    if (style.rewardStyle != null && selectedLevel.rewardSkills != null &&
-                        selectedLevel.rewardSkills.Length > 0)
-                    {
-                        if (__skillIndices == null)
-                        {
-                            __skillIndices = new Dictionary<string, int>();
-                            int numSkills = _skills == null ? 0 : _skills.Length;
-                            for (int i = 0; i < numSkills; ++i)
-                                __skillIndices[_skills[i].name] = i;
-                        }
-
-                        if (__rewardStyles == null)
-                            __rewardStyles = new List<RewardStyle>();
-
-                        RewardStyle rewardStyle;
-                        foreach (var rewardSkill in selectedLevel.rewardSkills)
-                        {
-                            ref var skill = ref _skills[__skillIndices[rewardSkill]];
-                            rewardStyle = style.rewardStyle;
-                            rewardStyle = Instantiate(rewardStyle, rewardStyle.transform.parent);
-                            
-                            if(rewardStyle.onSprite != null)
-                                rewardStyle.onSprite.Invoke(skill.sprite);
-                            
-                            rewardStyle.gameObject.SetActive(true);
-                            
-                            __rewardStyles.Add(rewardStyle);
-                        }
-                    }
-                    
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
-                    if (numStages > 0 && style.stageStyle != null)
+                    if (numStages > 0)
                     {
-                        if (__stageStyles == null)
-                            __stageStyles = new List<StageStyle>();
-
-                        bool isHot;
-                        int i,
-                            j,
-                            numRanks,
-                            numRewardFlags,
-                            stageStyleStartIndex = __stageStyles.Count,
-                            selectedStageIndex = 0;
-                        UserStageReward.Flag rewardFlag;
-                        StageStyle stageStyle;
-                        GameObject rank;
-                        for(i = 0; i < numStages; ++i)
+                        if (style.stageStyle == null)
                         {
-                            var stage = selectedLevel.stages[i];
-                            
-                            stageStyle = style.stageStyle;
-                            stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
+                            foreach (var stage in selectedLevel.stages)
+                                __CreateRewards(style.rewardStyle, stage.rewards);
+                        }
+                        else
+                        {
+                            if (__stageStyles == null)
+                                __stageStyles = new List<StageStyle>();
 
-                            if(stageStyle.onTitle != null)
-                                stageStyle.onTitle.Invoke(i.ToString());
-
-                            if (stage.rewardFlags == null)
+                            bool isHot;
+                            int i,
+                                j,
+                                numRanks,
+                                numRewardFlags,
+                                stageStyleStartIndex = __stageStyles.Count,
+                                selectedStageIndex = 0;
+                            UserStageReward.Flag rewardFlag;
+                            StageStyle stageStyle;
+                            GameObject rank;
+                            for (i = 0; i < numStages; ++i)
                             {
-                                if (stageStyle.onHot != null)
-                                    stageStyle.onHot.Invoke(false);
+                                var stage = selectedLevel.stages[i];
 
-                                if (stageStyle.toggle != null)
-                                {
-                                    stageStyle.toggle.interactable = false;
+                                stageStyle = style.stageStyle;
+                                stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
-                                    stageStyle.toggle.isOn = false;
-                                }
-                            }
-                            else
-                            {
-                                isHot = false;
-                                numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
-                                numRewardFlags = stage.rewardFlags.Length;
-                                for(j = 0; j < numRewardFlags; ++j)
+                                if (stageStyle.onTitle != null)
+                                    stageStyle.onTitle.Invoke(i.ToString());
+
+                                if (stage.rewardFlags == null)
                                 {
-                                    rewardFlag = stage.rewardFlags[j];
-                                    if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock)
+                                    if (stageStyle.onHot != null)
+                                        stageStyle.onHot.Invoke(false);
+
+                                    if (stageStyle.toggle != null)
                                     {
-                                        rank = numRanks > j ? stageStyle.ranks[j] : null;
-                                        if (rank != null)
-                                            rank.SetActive(true);
-                                        
-                                        if((rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
-                                            isHot = true;
+                                        stageStyle.toggle.interactable = false;
+
+                                        stageStyle.toggle.isOn = false;
                                     }
                                 }
-                                
-                                if (stageStyle.onHot != null)
-                                    stageStyle.onHot.Invoke(isHot);
-                                
-                                if (stageStyle.toggle != null)
+                                else
                                 {
-                                    int stageIndex = i;
-                                    
-                                    stageStyle.toggle.isOn = false;
-                                    stageStyle.toggle.interactable = true;
-                                    stageStyle.toggle.onValueChanged.AddListener(x =>
+                                    isHot = false;
+                                    numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
+                                    numRewardFlags = stage.rewardFlags.Length;
+                                    for (j = 0; j < numRewardFlags; ++j)
                                     {
-                                        if (x)
+                                        rewardFlag = stage.rewardFlags[j];
+                                        if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock)
                                         {
-                                            __selectedUserStageID = stage.id;
+                                            rank = numRanks > j ? stageStyle.ranks[j] : null;
+                                            if (rank != null)
+                                                rank.SetActive(true);
 
-                                            LevelShared.stage = stageIndex;
-                                            
-                                            if (onStageChanged != null)
-                                                onStageChanged.Invoke(stage.id);
+                                            if ((rewardFlag & UserStageReward.Flag.Collected) !=
+                                                UserStageReward.Flag.Collected)
+                                                isHot = true;
                                         }
-                                    });
+                                    }
+
+                                    if (stageStyle.onHot != null)
+                                        stageStyle.onHot.Invoke(isHot);
+
+                                    if (stageStyle.toggle != null)
+                                    {
+                                        int stageIndex = i;
+
+                                        stageStyle.toggle.isOn = false;
+                                        stageStyle.toggle.interactable = true;
+                                        stageStyle.toggle.onValueChanged.AddListener(x =>
+                                        {
+                                            if (x)
+                                            {
+                                                __selectedUserStageID = stage.id;
+
+                                                LevelShared.stage = stageIndex;
+
+                                                __CreateRewards(style.rewardStyle, stage.rewards);
+
+                                                if (onStageChanged != null)
+                                                    onStageChanged.Invoke(stage.id);
+                                            }
+                                            else
+                                                __DestroyRewards();
+                                        });
+                                    }
+
+                                    selectedStageIndex = __stageStyles.Count;
                                 }
+                                //stageStyle.gameObject.SetActive(true);
 
-                                selectedStageIndex = __stageStyles.Count;
+                                __stageStyles.Add(stageStyle);
                             }
-                            //stageStyle.gameObject.SetActive(true);
 
-                            __stageStyles.Add(stageStyle);
+                            __stageStyles[selectedStageIndex].toggle.isOn = true;
+
+                            int numStageStyles = __stageStyles.Count;
+                            for (i = stageStyleStartIndex; i < numStageStyles; ++i)
+                                __stageStyles[i].gameObject.SetActive(true);
                         }
-
-                        __stageStyles[selectedStageIndex].toggle.isOn = true;
-                        
-                        int numStageStyles = __stageStyles.Count;
-                        for (i = stageStyleStartIndex; i < numStageStyles; ++i)
-                            __stageStyles[i].gameObject.SetActive(true);
                     }
                 }
                 else
                 {
-                    if (__rewardStyles != null)
-                    {
-                        foreach (var rewardStyle in __rewardStyles)
-                        {
-                            if (rewardStyle.onDestroy != null)
-                                rewardStyle.onDestroy.Invoke();
-                            
-                            Destroy(rewardStyle.gameObject, _rewardStyleDestroyTime);
-                        }
-                        
-                        __rewardStyles.Clear();
-                    }
+                    __DestroyRewards();
 
                     if (__stageStyles != null)
                     {
@@ -478,15 +450,12 @@ public sealed class LoginManager : MonoBehaviour
             _onHot.Invoke(isHot);
     }
 
-    private void __ApplyLevel(int gold, string[] rewardSkills)
+    private void __ApplyLevel(Memory<UserRewardData> rewards)
     {
-        if (rewardSkills == null)
-            return;
-
         this.gold += gold;
 
         if(onAwake != null)
-            onAwake(rewardSkills);
+            onAwake(rewards);
     }
 
     private void __ApplyLevel(UserPropertyData property)
@@ -548,6 +517,54 @@ public sealed class LoginManager : MonoBehaviour
             style.button.interactable = true;
     }
     
+    private void __CreateRewards(RewardStyle style, UserRewardData[] values)
+    {
+        if (style != null && values != null &&
+            values.Length > 0)
+        {
+            if (__rewardIndices == null)
+            {
+                __rewardIndices = new Dictionary<string, int>();
+                int numSkills = _rewards == null ? 0 : _rewards.Length;
+                for (int i = 0; i < numSkills; ++i)
+                    __rewardIndices[_rewards[i].name] = i;
+            }
+
+            if (__rewardStyles == null)
+                __rewardStyles = new List<RewardStyle>();
+
+            RewardStyle rewardStyle;
+            foreach (var value in values)
+            {
+                ref var reward = ref _rewards[__rewardIndices[value.name]];
+                rewardStyle = Instantiate(style, style.transform.parent);
+
+                if (rewardStyle.onSprite != null)
+                    rewardStyle.onSprite.Invoke(reward.sprite);
+
+                rewardStyle.gameObject.SetActive(true);
+
+                __rewardStyles.Add(rewardStyle);
+            }
+        }
+    }
+
+    private void __DestroyRewards()
+    {
+        if (__rewardStyles != null)
+        {
+            foreach (var rewardStyle in __rewardStyles)
+            {
+                if (rewardStyle.onDestroy != null)
+                    rewardStyle.onDestroy.Invoke();
+                            
+                Destroy(rewardStyle.gameObject, _rewardStyleDestroyTime);
+            }
+                        
+            __rewardStyles.Clear();
+        }
+    }
+
     private IEnumerator __Start(bool isRestart)
     {
         __isStart = true;

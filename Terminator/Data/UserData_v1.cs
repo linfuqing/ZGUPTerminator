@@ -7,15 +7,6 @@ public enum UserVariableType
     Ratio
 }
 
-public enum UserRewardType
-{
-    PurchasePoolKey, 
-    Card, 
-    Role, 
-    Accessory, 
-    Item
-}
-
 [Serializable]
 public struct UserPropertyData
 {
@@ -31,16 +22,6 @@ public struct UserPropertyData
     
     public UserAttributeData[] attributes;
     public Skill[] skills;
-}
-
-[Serializable]
-public struct UserRewardData
-{
-    public string name;
-    
-    public UserRewardType type;
-
-    public int count;
 }
 
 public struct UserStageReward
@@ -70,8 +51,7 @@ public struct UserStageReward
     public uint id;
     public Flag flag;
     public Condition condition;
-    public int gold;
-    public PoolKey[] poolKeys;
+    public UserRewardData[] values;
 }
 
 public struct UserGroup
@@ -95,6 +75,9 @@ public struct UserPurchasePool
     public string name;
 
     public uint id;
+
+    //花费的钻石数量
+    public int diamond;
 }
 
 public struct UserCardStyle
