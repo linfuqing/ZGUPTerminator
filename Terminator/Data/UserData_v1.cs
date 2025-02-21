@@ -351,7 +351,8 @@ public partial interface IUserData
         [Flags]
         public enum Flag
         {
-            FirstUnlock = 0x01
+            Created = 0x01, 
+            FirstUnlock = 0x02
         }
 
         public Flag flag;

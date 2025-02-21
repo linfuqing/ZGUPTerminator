@@ -653,6 +653,10 @@ public partial class UserDataMain
 
         IUserData.Roles result;
         result.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
+        bool isCreated = (result.flag & IUserData.Roles.Flag.Created) != IUserData.Roles.Flag.Created;
+        if(isCreated)
+            PlayerPrefs.SetInt(NAME_SPACE_USER_ROLES_FLAG, (int)IUserData.Roles.Flag.Created);
+        
         List<UserItem> items = new List<UserItem>();
         string key;
         UserItem userItem;
@@ -667,7 +671,7 @@ public partial class UserDataMain
             userItem.count = PlayerPrefs.GetInt(key);
             if (userItem.count < 1)
             {
-                if (_itemDefaults != null)
+                if (isCreated && _itemDefaults != null)
                 {
                     foreach (var itemDefault in _itemDefaults)
                     {
@@ -721,7 +725,9 @@ public partial class UserDataMain
             roleCount = PlayerPrefs.GetInt(key);
             if (roleCount < 1)
             {
-                if (_roleDefaults != null && Array.IndexOf(_roleDefaults, userRole.name) != -1)
+                if (isCreated && 
+                    _roleDefaults != null && 
+                    Array.IndexOf(_roleDefaults, userRole.name) != -1)
                 {
                     isNew = true;
                     
@@ -792,7 +798,8 @@ public partial class UserDataMain
             userAccessory.count = PlayerPrefs.GetInt(key);
             if (userAccessory.count < 1)
             {
-                if (_accessoryDefaults != null)
+                if (isCreated && 
+                    _accessoryDefaults != null)
                 {
                     foreach (var accessoryDefault in _accessoryDefaults)
                     {
