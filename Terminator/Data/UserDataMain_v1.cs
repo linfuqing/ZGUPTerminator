@@ -358,7 +358,7 @@ public partial class UserDataMain
         yield return null;
 
         IUserData.Cards cards;
-        cards.flag = (IUserData.Cards.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_FLAG);;
+        cards.flag = (IUserData.Cards.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_FLAG);
         cards.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
         
         CardStyle cardStyle;
@@ -789,7 +789,7 @@ public partial class UserDataMain
                         break;
                 }
                 
-                if(k == numAccessoryStyles)
+                if(k == numAccessorySlots)
                     continue;
                 
                 userAccessoryGroup.slotID = __ToID(k);
