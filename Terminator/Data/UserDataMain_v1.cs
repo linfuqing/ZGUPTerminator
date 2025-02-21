@@ -104,6 +104,7 @@ public partial class UserDataMain
 #endif
     }
 
+    [Header("Purchases")]
     [SerializeField] 
     internal PurchasePool[] _purchasePools;
     
@@ -170,6 +171,10 @@ public partial class UserDataMain
         
         public string skillName;
     }
+
+    [Header("Cards")]
+    [SerializeField] 
+    internal string[] _defaultCards;
 
     [SerializeField] 
     internal Card[] _cards;
@@ -324,9 +329,6 @@ public partial class UserDataMain
         }
 #endif
     }
-
-    [SerializeField] 
-    internal string[] _defaultCards;
 
     [SerializeField] 
     internal Group[] _cardGroups;
@@ -584,19 +586,23 @@ public partial class UserDataMain
         public UserPropertyData property;
     }
 
+    [Header("Items")]
     [SerializeField] 
     internal string[] _defaultItems;
-    [SerializeField] 
-    internal string[] _defaultRoles;
-    [SerializeField] 
-    internal string[] _defaultAccessories;
-    
     [SerializeField, Tooltip("卷轴")] 
     internal Item[] _items;
+    
+    [Header("Roles")]
+    [SerializeField] 
+    internal string[] _defaultRoles;
     [SerializeField, Tooltip("套装")] 
     internal Group[] _roleGroups;
     [SerializeField, Tooltip("角色")] 
     internal Role[] _roles;
+    
+    [Header("Accessories")]
+    [SerializeField] 
+    internal string[] _defaultAccessories;
     [SerializeField, Tooltip("装备")] 
     internal Accessory[] _accessories;
     [SerializeField, Tooltip("装备槽")] 
@@ -932,6 +938,7 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_TALENT_FLAG = "UserTalentFlag";
 
+    [Header("Talents")]
     [SerializeField]
     internal Talent[] _talents;
 
@@ -1509,6 +1516,8 @@ public partial class UserDataMain
                 styleIndex = i;
                 
                 result = __accessorySlotLevels[styleIndex][level];
+
+                return true;
             }
         }
 
