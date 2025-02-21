@@ -512,7 +512,7 @@ public partial interface IUserData
     /// <summary>
     /// 升阶装备
     /// </summary>
-    IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete);
+    IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<uint> onComplete);
     
     /// <summary>
     /// 查询关卡
@@ -624,7 +624,7 @@ public partial class UserData
         return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, onComplete);
     }
 
-    public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<bool> onComplete)
+    public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<uint> onComplete)
     {
         return UserDataMain.instance.UprankAccessory(userID, accessoryID, onComplete);
     }
