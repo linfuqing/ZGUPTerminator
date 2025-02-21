@@ -326,6 +326,9 @@ public partial class UserDataMain
     }
 
     [SerializeField] 
+    internal string[] _defaultCards;
+
+    [SerializeField] 
     internal Group[] _cardGroups;
     
     [SerializeField] 
@@ -399,7 +402,8 @@ public partial class UserDataMain
             
             cards.cardStyles[i] = userCardStyle;
         }
-        
+
+        string key;
         Card card;
         UserCard userCard;
         UserCard.Group userCardGroup;
@@ -409,10 +413,21 @@ public partial class UserDataMain
         for (i = 0; i < numCards; ++i)
         {
             card = _cards[i];
+            
             userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
-            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
-            if(userCard.level < 1 && userCard.count < 1)
-                continue;
+            
+            key = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
+            userCard.count = PlayerPrefs.GetInt(key);
+            if (userCard.level < 1 && userCard.count < 1)
+            {
+                if (_defaultCards != null && Array.IndexOf(_defaultCards, card.name) != -1)
+                {
+                    userCard.count = 1;
+                    PlayerPrefs.SetInt(key, 1);
+                }
+                else
+                    continue;
+            }
 
             userCard.name = card.name;
             userCard.skillName = card.skillName;
@@ -568,6 +583,13 @@ public partial class UserDataMain
 
         public UserPropertyData property;
     }
+
+    [SerializeField] 
+    internal string[] _defaultItems;
+    [SerializeField] 
+    internal string[] _defaultRoles;
+    [SerializeField] 
+    internal string[] _defaultAccessories;
     
     [SerializeField, Tooltip("卷轴")] 
     internal Item[] _items;
@@ -609,15 +631,27 @@ public partial class UserDataMain
         result.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
         
         List<UserItem> items = new List<UserItem>();
+        string key;
         UserItem userItem;
         int i, numItems = _items.Length;
         for (i = 0; i < numItems; ++i)
         {
             userItem.name = _items[i].name;
-            userItem.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ITEM_COUNT}{userItem.name}");
-            if(userItem.count < 1)
-                continue;
-            
+
+            key = $"{NAME_SPACE_USER_ITEM_COUNT}{userItem.name}";
+            userItem.count = PlayerPrefs.GetInt(key);
+            if (userItem.count < 1)
+            {
+                if (_defaultItems != null && Array.IndexOf(_defaultItems, userItem.name) != -1)
+                {
+                    userItem.count = 1;
+                    
+                    PlayerPrefs.SetInt(key, 1);
+                }
+                else
+                    continue;
+            }
+
             userItem.id = __ToID(i);
 
             items.Add(userItem);
@@ -644,14 +678,16 @@ public partial class UserDataMain
         for (i = 0; i < numRoles; ++i)
         {
             userRole.name = _roles[i].name;
-            roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}");
+
+            key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";
+            roleCount = PlayerPrefs.GetInt(key);
             if (roleCount < 1)
             {
-                if (0 == i)
+                if (_defaultRoles != null && Array.IndexOf(_defaultRoles, userRole.name) != -1)
                 {
-                    PlayerPrefs.SetInt($"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}", 1);
-
                     roleCount = 1;
+                    
+                    PlayerPrefs.SetInt(key, 1);
                 }
                 else
                     continue;
@@ -704,11 +740,21 @@ public partial class UserDataMain
         for (i = 0; i < numAccessories; ++i)
         {
             accessory = _accessories[i];
-            
-            userAccessory.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}");
-            if(userAccessory.count < 1)
-                continue;
-            
+
+            key = $"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}";
+            userAccessory.count = PlayerPrefs.GetInt(key);
+            if (userAccessory.count < 1)
+            {
+                if (_defaultAccessories != null && Array.IndexOf(_defaultAccessories, accessory.name) != -1)
+                {
+                    userAccessory.count = 1;
+                    
+                    PlayerPrefs.SetInt(key, 1);
+                }
+                else
+                    continue;
+            }
+
             userAccessory.id = __ToID(i);
             userAccessory.name = accessory.name;
 
