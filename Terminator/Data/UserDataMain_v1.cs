@@ -533,6 +533,14 @@ public partial class UserDataMain
     }
 
     [Serializable]
+    internal struct ItemDefault
+    {
+        public string name;
+
+        public int count;
+    }
+
+    [Serializable]
     internal struct Role
     {
         public string name;
@@ -544,6 +552,14 @@ public partial class UserDataMain
         public string name;
 
         public string styleName;
+    }
+
+    [Serializable]
+    internal struct AccessoryDefault
+    {
+        public string name;
+
+        public int count;
     }
 
     [Serializable]
@@ -590,13 +606,13 @@ public partial class UserDataMain
 
     [Header("Items")]
     [SerializeField] 
-    internal string[] _defaultItems;
+    internal ItemDefault[] _itemDefaults;
     [SerializeField, Tooltip("卷轴")] 
     internal Item[] _items;
     
     [Header("Roles")]
-    [SerializeField] 
-    internal string[] _defaultRoles;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_defaultRoles")] 
+    internal string[] _roleDefaults;
     [SerializeField, Tooltip("套装")] 
     internal Group[] _roleGroups;
     [SerializeField, Tooltip("角色")] 
@@ -604,7 +620,7 @@ public partial class UserDataMain
     
     [Header("Accessories")]
     [SerializeField] 
-    internal string[] _defaultAccessories;
+    internal AccessoryDefault[] _accessoryDefaults;
     [SerializeField, Tooltip("装备")] 
     internal Accessory[] _accessories;
     [SerializeField, Tooltip("装备槽")] 
@@ -637,26 +653,38 @@ public partial class UserDataMain
 
         IUserData.Roles result;
         result.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
-        
         List<UserItem> items = new List<UserItem>();
         string key;
         UserItem userItem;
         int i, numItems = _items.Length;
+        bool isNew;
         for (i = 0; i < numItems; ++i)
         {
             userItem.name = _items[i].name;
 
+            isNew = false;
             key = $"{NAME_SPACE_USER_ITEM_COUNT}{userItem.name}";
             userItem.count = PlayerPrefs.GetInt(key);
             if (userItem.count < 1)
             {
-                if (_defaultItems != null && Array.IndexOf(_defaultItems, userItem.name) != -1)
+                if (_itemDefaults != null)
                 {
-                    userItem.count = 1;
-                    
-                    PlayerPrefs.SetInt(key, 1);
+                    foreach (var itemDefault in _itemDefaults)
+                    {
+                        if (itemDefault.name == userItem.name)
+                        {
+                            userItem.count = itemDefault.count;
+
+                            PlayerPrefs.SetInt(key, itemDefault.count);
+
+                            isNew = true;
+                            
+                            break;
+                        }
+                    }
                 }
-                else
+                
+                if(!isNew)
                     continue;
             }
 
@@ -678,7 +706,6 @@ public partial class UserDataMain
             result.groups[i] = userGroup;
         }
 
-        bool isNew;
         int j, roleCount, numRoles = _roles.Length;
         UserRole userRole;
         string userRoleGroupName;
@@ -694,7 +721,7 @@ public partial class UserDataMain
             roleCount = PlayerPrefs.GetInt(key);
             if (roleCount < 1)
             {
-                if (_defaultRoles != null && Array.IndexOf(_defaultRoles, userRole.name) != -1)
+                if (_roleDefaults != null && Array.IndexOf(_roleDefaults, userRole.name) != -1)
                 {
                     isNew = true;
                     
@@ -760,17 +787,29 @@ public partial class UserDataMain
         {
             accessory = _accessories[i];
 
+            isNew = false;
             key = $"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}";
             userAccessory.count = PlayerPrefs.GetInt(key);
             if (userAccessory.count < 1)
             {
-                if (_defaultAccessories != null && Array.IndexOf(_defaultAccessories, accessory.name) != -1)
+                if (_accessoryDefaults != null)
                 {
-                    userAccessory.count = 1;
-                    
-                    PlayerPrefs.SetInt(key, 1);
+                    foreach (var accessoryDefault in _accessoryDefaults)
+                    {
+                        if (accessoryDefault.name == accessory.name)
+                        {
+                            userAccessory.count = accessoryDefault.count;
+
+                            PlayerPrefs.SetInt(key, accessoryDefault.count);
+
+                            isNew = true;
+                            
+                            break;
+                        }
+                    }
                 }
-                else
+                
+                if(!isNew)
                     continue;
             }
 
