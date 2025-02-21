@@ -2,6 +2,21 @@ using System;
 using System.Collections;
 using UnityEngine;
 
+public enum UserAttributeType
+{
+    Hp, 
+    Attack, 
+    Defence
+}
+
+[Serializable]
+public struct UserAttributeData
+{
+    public UserAttributeType type;
+    public UserVariableType variableType;
+    public float value;
+}
+
 public struct User
 {
     public uint id;
@@ -23,29 +38,6 @@ public struct UserEnergy
     public int max;
     public uint unitTime;
     public long tick;
-}
-
-public struct UserStage_v0
-{
-    [Flags]
-    public enum Flag
-    {
-        Unlock = 0x01, 
-        Collected = 0x02
-    }
-
-    public enum RewardType
-    {
-        Gold, 
-        Weapon
-    }
-        
-    public string name;
-    public uint id;
-    //public int levelID;
-    public Flag flag;
-    public RewardType rewardType;
-    public int rewardCount;
 }
 
 public partial struct UserLevel
@@ -73,13 +65,6 @@ public struct UserWeapon
 
 public struct UserTalent
 {
-    public enum RewardType
-    {
-        Hp, 
-        Attack, 
-        Defence
-    }
-    
     [Flags]
     public enum Flag
     {
@@ -89,8 +74,7 @@ public struct UserTalent
     public string name;
     public uint id;
     public Flag flag;
-    public RewardType rewardType;
-    public int rewardCount;
+    public UserAttributeData attribute;
     public int gold;
 }
 
@@ -148,7 +132,7 @@ public partial interface IUserData : IGameUserData
     IEnumerator ApplyLevel(
         uint userID,
         uint levelID, 
-        Action<bool> onComplete);
+        Action<UserPropertyData> onComplete);
 
     IEnumerator SubmitLevel(
         uint userID,

@@ -397,6 +397,8 @@ public sealed class LoginManager : MonoBehaviour
                                 
                                 if (stageStyle.toggle != null)
                                 {
+                                    int stageIndex = i;
+                                    
                                     stageStyle.toggle.isOn = false;
                                     stageStyle.toggle.interactable = true;
                                     stageStyle.toggle.onValueChanged.AddListener(x =>
@@ -404,6 +406,8 @@ public sealed class LoginManager : MonoBehaviour
                                         if (x)
                                         {
                                             __selectedUserStageID = stage.id;
+
+                                            LevelShared.stage = stageIndex;
                                             
                                             if (onStageChanged != null)
                                                 onStageChanged.Invoke(stage.id);
@@ -485,6 +489,29 @@ public sealed class LoginManager : MonoBehaviour
             onAwake(rewardSkills);
     }
 
+    private void __ApplyLevel(UserPropertyData property)
+    {
+        if (property.skills == null)
+        {
+            __isStart = false;
+
+            return;
+        }
+    }
+    
+    private void __ApplyStage(IUserData.StageProperty property)
+    {
+        if (property.cache.skills == null)
+        {
+            __isStart = false;
+            
+            return;
+        }
+        
+        LevelShared.exp = property.cache.exp;
+        LevelShared.expMax = property.cache.expMax;
+    }
+
     private void __ApplyEnergy(User user, UserEnergy userEnergy)
     {
         userID = user.id;
@@ -520,7 +547,7 @@ public sealed class LoginManager : MonoBehaviour
            style.button != null)
             style.button.interactable = true;
     }
-
+    
     private IEnumerator __Start(bool isRestart)
     {
         __isStart = true;
@@ -536,13 +563,12 @@ public sealed class LoginManager : MonoBehaviour
         uint userID = LoginManager.userID.Value;
         yield return userData.QuerySkills(userID, __ApplySkills);
 
-        bool result = false;
         if (isRestart)
-            yield return userData.ApplyLevel(userID, __selectedUserLevelID, x => result = x);
+            yield return userData.ApplyLevel(userID, __selectedUserLevelID, __ApplyLevel);
         else
-            yield return userData.ApplyStage(userID, __selectedUserStageID, x => result = x);
+            yield return userData.ApplyStage(userID, __selectedUserStageID, __ApplyStage);
             
-        if (!result)
+        if (!__isStart)
         {
             __isStart = false;
             

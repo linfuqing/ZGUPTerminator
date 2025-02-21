@@ -1,6 +1,48 @@
 using System;
 using System.Collections;
 
+public enum UserVariableType
+{
+    Value, 
+    Ratio
+}
+
+public enum UserRewardType
+{
+    PurchasePoolKey, 
+    Card, 
+    Role, 
+    Accessory, 
+    Item
+}
+
+[Serializable]
+public struct UserPropertyData
+{
+    [Serializable]
+    public struct Skill
+    {
+        public string name;
+        
+        public UserVariableType variableType;
+
+        public float damage;
+    }
+    
+    public UserAttributeData[] attributes;
+    public Skill[] skills;
+}
+
+[Serializable]
+public struct UserRewardData
+{
+    public string name;
+    
+    public UserRewardType type;
+
+    public int count;
+}
+
 public struct UserStageReward
 {
     [Flags]
@@ -70,9 +112,16 @@ public struct UserCardStyle
         /// 升级需要的金币数量
         /// </summary>
         public int gold;
+
+        /// <summary>
+        /// 技能伤害
+        /// </summary>
+        public float damage;
     }
 
     public string name;
+
+    public string skillName;
 
     public uint id;
 
@@ -125,11 +174,10 @@ public struct UserRole
 
     public uint id;
 
-    //public int count;
-
-    public int hp;
-    public int attack;
-    public int defence;
+    /// <summary>
+    /// 角色总属性
+    /// </summary>
+    public UserAttributeData[] attributes;
 
     /// <summary>
     /// 被装备到的套装ID
@@ -186,12 +234,18 @@ public struct UserAccessorySlot
         /// 升级需要的卷轴数量
         /// </summary>
         public int count;
+        
+        public float attributeValue;
     }
 
     public string name;
 
     public uint id;
 
+    public uint styleID;
+
+    public UserAttributeType attributeType;
+    
     /// <summary>
     /// 当前等级
     /// </summary>
@@ -214,6 +268,8 @@ public struct UserAccessoryStyle
         /// 升阶需要的相同装备数量
         /// </summary>
         public int count;
+
+        public UserPropertyData property;
     }
 
     public string name;
@@ -228,28 +284,9 @@ public struct UserAccessoryStyle
 
 public struct UserStage
 {
-    public enum RewardType
-    {
-        PurchasePoolKey, 
-        Card, 
-        Role, 
-        Accessory, 
-        Item
-    }
-    
-    [Serializable]
-    public struct Reward
-    {
-        public string name;
-        
-        public RewardType type;
-
-        public int count;
-    }
-
     public string name;
     public uint id;
-    public Reward[] rewards;
+    public UserRewardData[] rewards;
     public UserStageReward.Flag[] rewardFlags;
 }
 
@@ -416,6 +453,13 @@ public partial interface IUserData
         public UserStageReward.PoolKey[] poolKeys;
     }
 
+    public struct StageProperty
+    {
+        public UserPropertyData value;
+
+        public StageCache cache;
+    }
+
     /// <summary>
     /// 商店
     /// </summary>
@@ -506,7 +550,7 @@ public partial interface IUserData
     IEnumerator ApplyStage(
         uint userID,
         uint stageID,
-        Action<bool> onComplete);
+        Action<StageProperty> onComplete);
 
     IEnumerator SubmitStage(
         uint userID,
@@ -618,7 +662,7 @@ public partial class UserData
     public IEnumerator ApplyStage(
         uint userID,
         uint stageID,
-        Action<bool> onComplete)
+        Action<IUserData.StageProperty> onComplete)
     {
         return UserDataMain.instance.ApplyStage(userID, stageID, onComplete);
     }

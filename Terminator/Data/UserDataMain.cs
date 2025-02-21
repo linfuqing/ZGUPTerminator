@@ -428,14 +428,14 @@ public sealed partial class UserDataMain : MonoBehaviour
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID,
-        Action<bool> onComplete)
+        Action<UserPropertyData> onComplete)
     {
         yield return null;
         
         int userLevel = UserData.level, levelIndex = __ToIndex(levelID);
         if (userLevel < levelIndex)
         {
-            onComplete(false);
+            onComplete(default);
             
             yield break;
         }
@@ -443,7 +443,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         var level = _levels[levelIndex];
         if (!__ApplyEnergy(level.energy))
         {
-            onComplete(false);
+            onComplete(default);
 
             yield break;
         }
@@ -455,7 +455,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
         
-        onComplete(true);
+        onComplete(default);
     }
 
     public IEnumerator CollectLevel(
@@ -594,8 +594,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         public string name;
         public string roleName;
-        public UserTalent.RewardType rewardType;
-        public int rewardCount;
+        public UserAttributeData attribute;
         public int gold;
     }
 
@@ -623,8 +622,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             userTalent.name = talent.name;
             userTalent.id = __ToID(i);
             userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
-            userTalent.rewardType = talent.rewardType;
-            userTalent.rewardCount = talent.rewardCount;
+            userTalent.attribute = talent.attribute;
             userTalent.gold = talent.gold;
             userTalents[i] = userTalent;
         }
@@ -779,7 +777,7 @@ public partial class UserData
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID,
-        Action<bool> onComplete)
+        Action<UserPropertyData> onComplete)
     {
         return UserDataMain.instance.ApplyLevel(userID, levelID, onComplete);
     }
