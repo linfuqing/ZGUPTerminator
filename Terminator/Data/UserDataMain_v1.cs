@@ -335,7 +335,7 @@ public partial class UserDataMain
     internal CardLevel[] _cardLevels;
 
 #if UNITY_EDITOR
-    [SerializeField, CSV("_cardLevels", guidIndex = -1, nameIndex = -1)] 
+    [SerializeField, CSV("_cardLevels", guidIndex = -1, nameIndex = 0)] 
     internal string _cardLevelsPath;
 #endif
 
@@ -974,12 +974,7 @@ public partial class UserDataMain
                 PlayerPrefs.SetInt(levelKey, ++levelIndex);
 
                 var accessorySlotLevels = __accessorySlotLevels[accessoryStyleIndex];
-                if (levelIndex < accessorySlotLevels.Length)
-                    accessorySlotLevel = accessorySlotLevels[levelIndex];
-                else
-                    accessorySlotLevel = default;
-
-                onComplete(accessorySlotLevel);
+                onComplete(levelIndex < accessorySlotLevels.Length ? accessorySlotLevels[levelIndex] : default);
             }
         }
 
