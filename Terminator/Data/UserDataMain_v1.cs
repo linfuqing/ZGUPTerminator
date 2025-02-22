@@ -664,40 +664,32 @@ public partial class UserDataMain
             result.groups[i] = userGroup;
         }
 
+        if (isCreated && _itemDefaults != null)
+        {
+            UserRewardData reward;
+            reward.type = UserRewardType.Item;
+
+            foreach (var itemDefault in _itemDefaults)
+            {
+                reward.name = itemDefault.name;
+                reward.count = itemDefault.count;
+
+                __ApplyReward(reward);
+            }
+        }
+
         List<UserItem> items = new List<UserItem>();
         string key;
         UserItem userItem;
         int numItems = _items.Length;
-        bool isNew;
         for (i = 0; i < numItems; ++i)
         {
             userItem.name = _items[i].name;
 
-            isNew = false;
             key = $"{NAME_SPACE_USER_ITEM_COUNT}{userItem.name}";
             userItem.count = PlayerPrefs.GetInt(key);
             if (userItem.count < 1)
-            {
-                if (isCreated && _itemDefaults != null)
-                {
-                    foreach (var itemDefault in _itemDefaults)
-                    {
-                        if (itemDefault.name == userItem.name)
-                        {
-                            userItem.count = itemDefault.count;
-
-                            PlayerPrefs.SetInt(key, itemDefault.count);
-
-                            isNew = true;
-                            
-                            break;
-                        }
-                    }
-                }
-                
-                if(!isNew)
-                    continue;
-            }
+                continue;
 
             userItem.id = __ToID(i);
 
@@ -706,6 +698,7 @@ public partial class UserDataMain
         
         result.items = items.ToArray();
 
+        bool isNew;
         int j, roleCount, numRoles = _roles.Length;
         UserRole userRole;
         string userRoleGroupName;
@@ -775,6 +768,20 @@ public partial class UserDataMain
         
         result.roles = userRoles.ToArray();
 
+        if (isCreated && _accessoryDefaults != null)
+        {
+            UserRewardData reward;
+            reward.type = UserRewardType.Accessory;
+
+            foreach (var accessoryDefault in _accessoryDefaults)
+            {
+                reward.name = accessoryDefault.name;
+                reward.count = accessoryDefault.stage;
+
+                __ApplyReward(reward);
+            }
+        }
+
         int k, l, 
             numAccessoryStages, 
             numAccessories = _accessories.Length, 
@@ -806,7 +813,7 @@ public partial class UserDataMain
                 ids = string.IsNullOrEmpty(key) ? null : key.Split(UserData.SEPARATOR);
                 if (ids == null || ids.Length < 1)
                     continue;
-                
+
                 userAccessory.stage = j;
                 
                 accessoryStage = _accessoryStages[accessoryStageIndices[j]];
