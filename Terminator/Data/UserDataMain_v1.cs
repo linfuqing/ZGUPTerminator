@@ -867,7 +867,7 @@ public partial class UserDataMain
             userAccessorySlot.level =
                 PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
 
-            userAccessorySlot.styleID = __ToID(__GetAccessoryIndex(accessorySlot.styleName));
+            userAccessorySlot.styleID = __ToID(__GetAccessoryStyleIndex(accessorySlot.styleName));
             
             result.accessorySlots[i] = userAccessorySlot;
         }
