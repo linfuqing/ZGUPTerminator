@@ -170,6 +170,19 @@ public struct UserRole
 
 public struct UserAccessory
 {
+    [Serializable]
+    public struct Stage
+    {
+        public string name;
+
+        /// <summary>
+        /// 升阶需要的相同装备数量
+        /// </summary>
+        public int count;
+
+        public UserPropertyData property;
+    }
+
     public struct Group
     {
         public uint groupID;
@@ -187,14 +200,11 @@ public struct UserAccessory
     public uint styleID;
 
     /// <summary>
-    /// 数量，在UI上要分开展示
-    /// </summary>
-    public int count;
-
-    /// <summary>
     /// 阶
     /// </summary>
     public int stage;
+
+    public Stage stageDesc;
 
     /// <summary>
     /// 被装备到的套装
@@ -203,6 +213,20 @@ public struct UserAccessory
 }
 
 public struct UserAccessorySlot
+{
+    public string name;
+
+    public uint id;
+
+    public uint styleID;
+
+    /// <summary>
+    /// 当前等级
+    /// </summary>
+    public int level;
+}
+
+public struct UserAccessoryStyle
 {
     public struct Level
     {
@@ -225,44 +249,9 @@ public struct UserAccessorySlot
 
     public uint id;
 
-    public uint styleID;
-
     public UserAttributeType attributeType;
-    
-    /// <summary>
-    /// 当前等级
-    /// </summary>
-    public int level;
 
-    /// <summary>
-    /// 当前等级描述
-    /// </summary>
-    public Level levelDesc;
-}
-
-public struct UserAccessoryStyle
-{
-    [Serializable]
-    public struct Stage
-    {
-        public string name;
-
-        /// <summary>
-        /// 升阶需要的相同装备数量
-        /// </summary>
-        public int count;
-
-        public UserPropertyData property;
-    }
-
-    public string name;
-
-    public uint id;
-
-    /// <summary>
-    /// 阶
-    /// </summary>
-    public Stage[] stages;
+    public Level[] levels;
 }
 
 public struct UserStage
@@ -358,15 +347,15 @@ public partial interface IUserData
         public Flag flag;
 
         /// <summary>
-        /// 卷轴
-        /// </summary>
-        public UserItem[] items;
-
-        /// <summary>
         /// 套装
         /// </summary>
         public UserGroup[] groups;
         
+        /// <summary>
+        /// 卷轴
+        /// </summary>
+        public UserItem[] items;
+
         /// <summary>
         /// 角色
         /// </summary>
@@ -507,12 +496,16 @@ public partial interface IUserData
     /// <summary>
     /// 升级装备，返回下一级描述
     /// </summary>
-    IEnumerator UpgradeAccessory(uint userID, uint accessorySlotID, Action<UserAccessorySlot.Level?> onComplete);
+    IEnumerator UpgradeAccessory(uint userID, uint accessorySlotID, Action<bool> onComplete);
 
     /// <summary>
     /// 升阶装备
     /// </summary>
-    IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<uint> onComplete);
+    IEnumerator UprankAccessory(
+        uint userID, 
+        uint destinationAccessoryID, 
+        uint[] sourceAccessoryIDs, 
+        Action<UserAccessory.Stage?> onComplete);
     
     /// <summary>
     /// 查询关卡
@@ -619,14 +612,18 @@ public partial class UserData
         return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, slotID, onComplete);
     }
 
-    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, Action<UserAccessorySlot.Level?> onComplete)
+    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, Action<bool> onComplete)
     {
         return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, onComplete);
     }
 
-    public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<uint> onComplete)
+    public IEnumerator UprankAccessory(
+        uint userID, 
+        uint destinationAccessoryID, 
+        uint[] sourceAccessoryIDs, 
+        Action<UserAccessory.Stage?> onComplete)
     {
-        return UserDataMain.instance.UprankAccessory(userID, accessoryID, onComplete);
+        return UserDataMain.instance.UprankAccessory(userID, destinationAccessoryID, sourceAccessoryIDs, onComplete);
     }
 
     public IEnumerator QueryStage(

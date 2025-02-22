@@ -559,6 +559,8 @@ public partial class UserDataMain
     {
         public string name;
 
+        public int stage;
+
         public int count;
     }
 
@@ -568,18 +570,18 @@ public partial class UserDataMain
         public string name;
 
         public string styleName;
-        
-        public UserAttributeType attributeType;
     }
 
     [Serializable]
     internal struct AccessoryStyle
     {
         public string name;
+        
+        public UserAttributeType attributeType;
     }
 
     [Serializable]
-    internal struct AccessorySlotLevel
+    internal struct AccessoryLevel
     {
         public string name;
         
@@ -593,11 +595,11 @@ public partial class UserDataMain
     }
 
     [Serializable]
-    internal struct AccessoryStyleStage
+    internal struct AccessoryStage
     {
         public string name;
 
-        public string styleName;
+        public string accessoryName;
 
         public int count;
 
@@ -627,20 +629,16 @@ public partial class UserDataMain
     internal AccessorySlot[] _accessorySlots;
     [SerializeField, Tooltip("装备类型")] 
     internal AccessoryStyle[] _accessoryStyles;
-    [SerializeField, Tooltip("装备槽等级")] 
-    internal AccessorySlotLevel[] _accessorySlotLevels;
     [SerializeField, Tooltip("装备品阶")] 
-    internal AccessoryStyleStage[] _accessoryStyleStages;
-
-    private UserAccessorySlot.Level[][] __accessorySlotLevels;
-
-    private UserAccessoryStyle.Stage[][] __accessoryStyleStages;
+    internal AccessoryStage[] _accessoryStages;
+    [SerializeField, Tooltip("装备槽等级")] 
+    internal AccessoryLevel[] _accessoryLevels;
 
     private const string NAME_SPACE_USER_ROLES_FLAG = "UserRolesFlag";
     private const string NAME_SPACE_USER_ITEM_COUNT = "UserItemCount";
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
-    private const string NAME_SPACE_USER_ACCESSORY_COUNT = "UserAccessoryCount";
+    private const string NAME_SPACE_USER_ACCESSORY_IDS = "UserAccessoryIDs";
     private const string NAME_SPACE_USER_ACCESSORY_GROUP = "UserAccessoryGroup";
     private const string NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL = "UserAccessorySlotLevel";
     
@@ -655,11 +653,21 @@ public partial class UserDataMain
         bool isCreated = (result.flag & IUserData.Roles.Flag.Created) != IUserData.Roles.Flag.Created;
         if(isCreated)
             PlayerPrefs.SetInt(NAME_SPACE_USER_ROLES_FLAG, (int)IUserData.Roles.Flag.Created);
-        
+
+        int i, numRoleGroups = _roleGroups.Length;
+        result.groups = new UserGroup[numRoleGroups];
+        UserGroup userGroup;
+        for (i = 0; i < numRoleGroups; ++i)
+        {
+            userGroup.id = __ToID(i);
+            userGroup.name = _roleGroups[i].name;
+            result.groups[i] = userGroup;
+        }
+
         List<UserItem> items = new List<UserItem>();
         string key;
         UserItem userItem;
-        int i, numItems = _items.Length;
+        int numItems = _items.Length;
         bool isNew;
         for (i = 0; i < numItems; ++i)
         {
@@ -697,17 +705,6 @@ public partial class UserDataMain
         }
         
         result.items = items.ToArray();
-
-        int numRoleGroups = _roleGroups.Length;
-        result.groups = new UserGroup[numRoleGroups];
-        UserGroup userGroup;
-        for (i = 0; i < numRoleGroups; ++i)
-        {
-            userGroup.id = __ToID(i);
-            userGroup.name = _roleGroups[i].name;
-
-            result.groups[i] = userGroup;
-        }
 
         int j, roleCount, numRoles = _roles.Length;
         UserRole userRole;
@@ -778,176 +775,81 @@ public partial class UserDataMain
         
         result.roles = userRoles.ToArray();
 
-        int numAccessoryStyles = _accessoryStyles.Length;
-        AccessoryStyle accessoryStyle;
-        UserAccessoryStyle.Stage userAccessoryStyleStage;
-        if (__accessoryStyleStages == null)
-        {
-            __accessoryStyleStages = new UserAccessoryStyle.Stage[numAccessoryStyles][];
-            var userAccessoryStyleStageList = new List<UserAccessoryStyle.Stage>();
-            
-            for (i = 0; i < numAccessoryStyles; ++i)
-            {
-                accessoryStyle = _accessoryStyles[i];
-                
-                userAccessoryStyleStageList.Clear();
-                foreach (var accessoryStyleStage in _accessoryStyleStages)
-                {
-                    if (accessoryStyleStage.styleName == accessoryStyle.name)
-                    {
-                        userAccessoryStyleStage.name = accessoryStyleStage.name;
-                        
-                        userAccessoryStyleStage.count = accessoryStyleStage.count;
-
-                        userAccessoryStyleStage.property = accessoryStyleStage.property;
-                        userAccessoryStyleStageList.Add(userAccessoryStyleStage);
-                    }
-                }
-            
-                __accessoryStyleStages[i] = userAccessoryStyleStageList.ToArray();
-            }
-        }
-
         int k, l, 
-            numUserAccessoryStyleStages, 
-            numAccessories = _accessories.Length,
+            numAccessoryStages, 
+            numAccessories = _accessories.Length, 
             numAccessorySlots = _accessorySlots.Length;
         string userAccessoryGroupKey;
+        string[] ids;
         Accessory accessory;
+        AccessoryStage accessoryStage;
         UserAccessory.Group userAccessoryGroup;
         UserAccessory userAccessory;
-        UserAccessoryStyle.Stage[] userAccessoryStyleStages;
+        List<int> accessoryStageIndices;
         var userAccessories = new List<UserAccessory>();
         var userAccessoryGroups = new List<UserAccessory.Group>();
         for (i = 0; i < numAccessories; ++i)
         {
             accessory = _accessories[i];
 
-            userAccessoryStyleStages = null;
+            userAccessory.name = accessory.name;
+            userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
             
-            userAccessory.styleID = 0;
-            for (j = 0; j < numAccessoryStyles; ++j)
-            {
-                if (_accessoryStyles[j].name == accessory.styleName)
-                {
-                    userAccessory.styleID = __ToID(j);
+            accessoryStageIndices = __GetAccessoryStageIndices(i);
 
-                    userAccessoryStyleStages = __accessoryStyleStages[j];
-                    
-                    break;
-                }
-            }
-            
-            if(userAccessoryStyleStages == null)
-                continue;
-
-            numUserAccessoryStyleStages = userAccessoryStyleStages.Length;
-            for (j = 0; j < numUserAccessoryStyleStages; ++j)
+            numAccessoryStages = accessoryStageIndices.Count;
+            for (j = 0; j < numAccessoryStages; ++j)
             {
-                isNew = false;
                 key =
-                    $"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}{UserData.SEPARATOR}{j}";
-                userAccessory.count = PlayerPrefs.GetInt(key);
-                if (userAccessory.count < 1)
-                {
-                    if (isCreated &&
-                        _accessoryDefaults != null)
-                    {
-                        foreach (var accessoryDefault in _accessoryDefaults)
-                        {
-                            if (accessoryDefault.name == accessory.name)
-                            {
-                                userAccessory.count = accessoryDefault.count;
-
-                                PlayerPrefs.SetInt(key, accessoryDefault.count);
-
-                                isNew = true;
-
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!isNew)
-                        continue;
-                }
-
-                userAccessory.id = __ToAccessoryID(i, j);
+                    $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{_accessoryStages[accessoryStageIndices[j]].name}";
+                key = PlayerPrefs.GetString(key);
+                ids = string.IsNullOrEmpty(key) ? null : key.Split(UserData.SEPARATOR);
+                if (ids == null || ids.Length < 1)
+                    continue;
                 
-                userAccessory.name = accessory.name;
-
                 userAccessory.stage = j;
+                
+                accessoryStage = _accessoryStages[accessoryStageIndices[j]];
 
-                userAccessoryGroups.Clear();
-                for (k = 0; k < numRoleGroups; ++k)
+                userAccessory.stageDesc.name = accessoryStage.name;
+                userAccessory.stageDesc.count = accessoryStage.count;
+                userAccessory.stageDesc.property = accessoryStage.property;
+                
+                foreach (var id in ids)
                 {
-                    userAccessoryGroupKey =
-                        $"{NAME_SPACE_USER_ACCESSORY_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}";
-                    for (l = 0; l < numAccessorySlots; ++l)
+                    userAccessory.id = uint.Parse(id);
+                    
+                    userAccessoryGroups.Clear();
+                    for (k = 0; k < numRoleGroups; ++k)
                     {
-                        if (PlayerPrefs.GetString(
-                                $"{userAccessoryGroupKey}{_accessorySlots[l].name}") ==
-                            userAccessory.name)
-                            break;
+                        userAccessoryGroupKey =
+                            $"{NAME_SPACE_USER_ACCESSORY_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}";
+                        for (l = 0; l < numAccessorySlots; ++l)
+                        {
+                            if (PlayerPrefs.GetString(
+                                    $"{userAccessoryGroupKey}{_accessorySlots[l].name}") ==
+                                userAccessory.name)
+                                break;
+                        }
+
+                        if (l == numAccessorySlots)
+                            continue;
+
+                        userAccessoryGroup.slotID = __ToID(l);
+                        userAccessoryGroup.groupID = __ToID(k);
+                        userAccessoryGroups.Add(userAccessoryGroup);
                     }
 
-                    if (l == numAccessorySlots)
-                        continue;
-
-                    userAccessoryGroup.slotID = __ToID(l);
-                    userAccessoryGroup.groupID = __ToID(k);
-                    userAccessoryGroups.Add(userAccessoryGroup);
+                    userAccessory.groups = userAccessoryGroups.ToArray();
+                    userAccessories.Add(userAccessory);
                 }
-
-                userAccessory.groups = userAccessoryGroups.ToArray();
-
-                userAccessories.Add(userAccessory);
             }
         }
         
         result.accessories = userAccessories.ToArray();
         
-        UserAccessorySlot.Level userAccessorySlotLevel;
-        if (__accessorySlotLevels == null)
-        {
-            __accessorySlotLevels = new UserAccessorySlot.Level[numAccessoryStyles][];
-            var userAccessorySlotLevels = new List<UserAccessorySlot.Level>();
-            
-            for (i = 0; i < numAccessoryStyles; ++i)
-            {
-                accessoryStyle = _accessoryStyles[i];
-                
-                userAccessorySlotLevels.Clear();
-                foreach (var accessorySlotLevel in _accessorySlotLevels)
-                {
-                    if (accessorySlotLevel.styleName == accessoryStyle.name)
-                    {
-                        userAccessorySlotLevel.name = accessorySlotLevel.name;
-                        
-                        userAccessorySlotLevel.itemID = 0;
-                        for (j = 0; j < numItems; ++j)
-                        {
-                            if (accessorySlotLevel.itemName == _items[j].name)
-                            {
-                                userAccessorySlotLevel.itemID = __ToID(j);
-                    
-                                break;
-                            }
-                        }
-                        
-                        userAccessorySlotLevel.count = accessorySlotLevel.count;
-                        userAccessorySlotLevel.attributeValue = accessorySlotLevel.attributeValue;
-                        userAccessorySlotLevels.Add(userAccessorySlotLevel);
-                    }
-                }
-            
-                __accessorySlotLevels[i] = userAccessorySlotLevels.ToArray();
-            }
-        }
-
         result.accessorySlots = new UserAccessorySlot[numAccessorySlots];
 
-        int accessoryStyleIndex;
         UserAccessorySlot userAccessorySlot;
         AccessorySlot accessorySlot;
         for (i = 0; i < numAccessorySlots; ++i)
@@ -955,30 +857,45 @@ public partial class UserDataMain
             accessorySlot = _accessorySlots[i];
             userAccessorySlot.name = accessorySlot.name;
             userAccessorySlot.id = __ToID(i);
-            userAccessorySlot.attributeType = accessorySlot.attributeType;
             userAccessorySlot.level =
                 PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
 
-             __TryGetAccessoryLevel(accessorySlot.styleName, 
-                 userAccessorySlot.level,
-                out accessoryStyleIndex, 
-                out userAccessorySlot.levelDesc);
-
-            userAccessorySlot.styleID = __ToID(accessoryStyleIndex);
+            userAccessorySlot.styleID = __ToID(__GetAccessoryIndex(accessorySlot.styleName));
             
             result.accessorySlots[i] = userAccessorySlot;
         }
         
+        int numAccessoryStyles = _accessoryStyles.Length;
         result.accessoryStyles = new UserAccessoryStyle[numAccessoryStyles];
         
+        int numAccessoryLevelIndices;
+        AccessoryLevel accessoryLevel;
+        AccessoryStyle accessoryStyle;
         UserAccessoryStyle userAccessoryStyle;
+        UserAccessoryStyle.Level userAccessoryStyleLevel;
+        List<int> accessoryLevelIndices;
         for (i = 0; i < numAccessoryStyles; ++i)
         {
             accessoryStyle = _accessoryStyles[i];
             userAccessoryStyle.name = accessoryStyle.name;
             userAccessoryStyle.id = __ToID(i);
-            
-            userAccessoryStyle.stages = __accessoryStyleStages[i];
+            userAccessoryStyle.attributeType = accessoryStyle.attributeType;
+
+            accessoryLevelIndices = __GetAccessoryStyleLevelIndices(i);
+
+            numAccessoryLevelIndices = accessoryLevelIndices.Count;
+            userAccessoryStyle.levels = new UserAccessoryStyle.Level[numAccessoryLevelIndices];
+            for (j = 0; j < numAccessoryLevelIndices; ++j)
+            {
+                accessoryLevel = _accessoryLevels[accessoryLevelIndices[j]];
+                
+                userAccessoryStyleLevel.name = accessoryLevel.name;
+                userAccessoryStyleLevel.itemID = __ToID(__GetItemIndex(accessoryLevel.itemName));
+                userAccessoryStyleLevel.count = accessoryLevel.count;
+                userAccessoryStyleLevel.attributeValue = accessoryLevel.attributeValue;
+                
+                userAccessoryStyle.levels[j] = userAccessoryStyleLevel;
+            }
             
             result.accessoryStyles[i] = userAccessoryStyle;
         }
@@ -1106,84 +1023,87 @@ public partial class UserDataMain
     }
 
     public IEnumerator UpgradeAccessory(uint userID, uint accessorySlotID,
-        Action<UserAccessorySlot.Level?> onComplete)
+        Action<bool> onComplete)
     {
         yield return null;
 
         var accessorySlot = _accessorySlots[__ToIndex(accessorySlotID)];
-        string levelKey = $"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}";
-        int levelIndex = PlayerPrefs.GetInt(levelKey);
-        if (__TryGetAccessoryLevel(accessorySlot.styleName, levelIndex, out int accessoryStyleIndex,
-                out var accessorySlotLevel))
+        var levelIndices = __GetAccessoryStyleLevelIndices(__GetAccessoryStyleIndex(accessorySlot.styleName));
+
+        string accessoryLevelKey = $"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}";
+        int level = PlayerPrefs.GetInt(accessoryLevelKey);
+
+        if (level < levelIndices.Count)
         {
-            string itemCountKey = $"{NAME_SPACE_USER_ITEM_COUNT}{_items[__ToIndex(accessorySlotLevel.itemID)].name}";
+            var accessoryLevel = _accessoryLevels[levelIndices[level]];
+            string itemName = _items[__GetItemIndex(accessoryLevel.itemName)].name, 
+                itemCountKey = $"{NAME_SPACE_USER_ITEM_COUNT}{itemName}";
             int itemCount = PlayerPrefs.GetInt(itemCountKey);
-            if (itemCount >= accessorySlotLevel.count)
+            if (itemCount >= accessoryLevel.count)
             {
-                PlayerPrefs.SetInt(itemCountKey, itemCount - accessorySlotLevel.count);
+                PlayerPrefs.SetInt(itemCountKey, itemCount - accessoryLevel.count);
 
-                PlayerPrefs.SetInt(levelKey, ++levelIndex);
+                PlayerPrefs.SetInt(accessoryLevelKey, ++level);
 
-                var accessorySlotLevels = __accessorySlotLevels[accessoryStyleIndex];
-                onComplete(levelIndex < accessorySlotLevels.Length ? accessorySlotLevels[levelIndex] : default);
+                onComplete(true);
+                
+                yield break;
             }
         }
 
-        onComplete(null);
+        onComplete(false);
     }
 
-    public IEnumerator UprankAccessory(uint userID, uint accessoryID, Action<uint> onComplete)
+    public IEnumerator UprankAccessory(
+        uint userID, 
+        uint destinationAccessoryID, 
+        uint[] sourceAccessoryIDs, 
+        Action<UserAccessory.Stage?> onComplete)
     {
         yield return null;
 
-        int accessoryIndex = __ToAccessoryIndex(accessoryID, out int stage);
-
-        UserAccessoryStyle.Stage[] accessoryStyleStages;
-        UserAccessoryStyle.Stage accessoryStyleStage;
-        AccessoryStyle accessoryStyle;
-        var accessory = _accessories[accessoryIndex];
-        string key, keyPrefix;
-        int count, 
-            numStages, 
-            numAccessoryStyles = _accessoryStyles.Length;
-        for(int i = 0; i < numAccessoryStyles; ++i)
+        if (!__TryGetAccessory(destinationAccessoryID, out var info))
         {
-            accessoryStyle = _accessoryStyles[i];
-            if(accessoryStyle.name != accessory.styleName)
-                continue;
+            onComplete(null);
 
-            accessoryStyleStages = __accessoryStyleStages[i];
+            yield break;
+        }
 
-            numStages = accessoryStyleStages == null ? 0 : accessoryStyleStages.Length;
-            if (stage < numStages)
+        int index = info.index, stage = info.stage;
+        string styleName = _accessories[index].styleName;
+        foreach (var accessoryID in sourceAccessoryIDs)
+        {
+            if (!__TryGetAccessory(accessoryID, out info) || 
+                stage != -1 && stage != info.stage || 
+                styleName != null && styleName != _accessories[info.index].styleName)
             {
-                accessoryStyleStage = accessoryStyleStages[stage];
-                keyPrefix = $"{NAME_SPACE_USER_ACCESSORY_COUNT}{accessory.name}{UserData.SEPARATOR}";
-                key = $"{keyPrefix}{stage}";
-                count = PlayerPrefs.GetInt(key);
-                if (count >= accessoryStyleStage.count)
-                {
-                    if(count == accessoryStyleStage.count)
-                        PlayerPrefs.DeleteKey(key);
-                    else
-                        PlayerPrefs.SetInt(key, count - accessoryStyleStage.count);
-
-                    ++stage;
-                    
-                    key = $"{keyPrefix}{stage}";
-                    count = PlayerPrefs.GetInt(key);
-                    PlayerPrefs.SetInt(key, count + 1);
-                    
-                    onComplete(__ToAccessoryID(accessoryIndex, stage));
-                    
-                    yield break;
-                }
+                onComplete(null);
+                
+                yield break;
             }
-            
-            break;
         }
         
-        onComplete(0);
+        foreach (var accessoryID in sourceAccessoryIDs)
+            __DeleteAccessory(accessoryID);
+        
+        __DeleteAccessory(destinationAccessoryID);
+        
+        __CreateAccessory(destinationAccessoryID, index, ++stage);
+
+        UserAccessory.Stage userAccessoryStage;
+        var stageIndices = __GetAccessoryStageIndices(index);
+        if (stage < stageIndices.Count)
+        {
+            var accessoryStage = _accessoryStages[stageIndices[stage]];
+
+            userAccessoryStage.name = accessoryStage.name;
+            userAccessoryStage.count = accessoryStage.count;
+            userAccessoryStage.property = accessoryStage.property;
+        }
+        else
+            userAccessoryStage = default;
+        
+        onComplete(userAccessoryStage);
     }
 
     [Serializable]
@@ -1478,18 +1398,9 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
                 break;
             case UserRewardType.Accessory:
-                int numAccessories = _accessories.Length;
-                for (int i = 0; i < numAccessories; ++i)
-                {
-                    if (_accessories[i].name == reward.name)
-                    {
-                        id = __ToID(i);
-                        
-                        break;
-                    }
-                }
-                key = $"{NAME_SPACE_USER_ACCESSORY_COUNT}{reward.name}";
-                break; 
+                uint accessoryID = (uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                __CreateAccessory(accessoryID, __GetAccessoryIndex(reward.name), reward.count);
+                return accessoryID;
             case UserRewardType.Item:
                 int numItems = _items.Length;
                 for (int i = 0; i < numItems; ++i)
@@ -1580,45 +1491,5 @@ public partial class UserDataMain
         rewardIndex = -1;
         
         return false;
-    }
-
-    private bool __TryGetAccessoryLevel(
-        string styleName, 
-        int level, 
-        out int styleIndex, 
-        out UserAccessorySlot.Level result)
-    {
-        styleIndex = -1;
-
-        AccessoryStyle accessoryStyle;
-        int numAccessoryStyles = _accessoryStyles.Length;
-        for(int i = 0; i < numAccessoryStyles; ++i)
-        {
-            accessoryStyle = _accessoryStyles[i];
-            if (accessoryStyle.name == styleName)
-            {
-                styleIndex = i;
-                
-                result = __accessorySlotLevels[styleIndex][level];
-
-                return true;
-            }
-        }
-
-        result = default;
-        
-        return false;
-    }
-
-    private uint __ToAccessoryID(int index, int stage)
-    {
-        return (uint)(index | (stage << 24));
-    }
-
-    private int __ToAccessoryIndex(uint id, out int stage)
-    {
-        stage = (int)(id >> 24);
-
-        return (int)(id & 0xffffff);
     }
 }
