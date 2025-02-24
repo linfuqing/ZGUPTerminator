@@ -525,7 +525,9 @@ public partial class UserDataMain
         ref var role = ref _roles[roleIndex];
         
         var attributes = __CollectRoleAttributes(role.name, out skill.damage);
-
+        if (attributes == null)
+            attributes = new List<UserAttributeData>();
+        
         skill.damage = 1.0f;
         skill.name = role.skillGroupName;
         skills.Add(skill);

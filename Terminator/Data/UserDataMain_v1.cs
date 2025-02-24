@@ -749,7 +749,7 @@ public partial class UserDataMain
             
             userRole.id = __ToID(i);
 
-            userRole.attributes = __CollectRoleAttributes(role.name, out userRole.skillGroupDamage).ToArray();
+            userRole.attributes = __CollectRoleAttributes(role.name, out userRole.skillGroupDamage)?.ToArray();
 
             userRoleGroupIDs.Clear();
             for (j = 0; j < numRoleGroups; ++j)
