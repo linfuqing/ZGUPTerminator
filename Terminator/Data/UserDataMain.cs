@@ -155,7 +155,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID,
-        Action<UserPropertyData> onComplete)
+        Action<IUserData.Property> onComplete)
     {
         yield return null;
         
@@ -182,12 +182,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
 
-        UserPropertyData result;
-        result.skills = Array.Empty<UserPropertyData.Skill>();
-        result.skillVariables = Array.Empty<UserPropertyData.SkillVariable>();
-        result.attributes = Array.Empty<UserAttributeData>();
-        
-        onComplete(result);
+        onComplete(__ApplyProperty(userID));
     }
 
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
@@ -333,7 +328,7 @@ public partial class UserData
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID,
-        Action<UserPropertyData> onComplete)
+        Action<IUserData.Property> onComplete)
     {
         return UserDataMain.instance.ApplyLevel(userID, levelID, onComplete);
     }

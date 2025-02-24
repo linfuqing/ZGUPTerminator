@@ -2,44 +2,6 @@ using System;
 using System.Collections;
 using UnityEngine;
 
-public enum UserVariableType
-{
-    Value, 
-    Ratio
-}
-
-[Serializable]
-public struct UserPropertyData
-{
-    public enum SkillType
-    {
-        Individual, 
-        Group
-    }
-    
-    [Serializable]
-    public struct Skill
-    {
-        public string name;
-
-        public SkillType type;
-    }
-    
-    [Serializable]
-    public struct SkillVariable
-    {
-        public string name;
-        
-        public UserVariableType variableType;
-
-        public float damage;
-    }
-    
-    public Skill[] skills;
-    public SkillVariable[] skillVariables;
-    public UserAttributeData[] attributes;
-}
-
 public struct UserStageReward
 {
     [Flags]
@@ -198,6 +160,38 @@ public struct UserRole
 
 public struct UserAccessory
 {
+    public enum Opcode
+    {
+        Add, 
+        Mul
+    }
+
+    [Serializable]
+    public struct Skill
+    {
+        public string name;
+
+        public UserSkillType type;
+
+        public Opcode opcode;
+        
+        public float damage;
+    }
+
+    public struct Attribute
+    {
+        public UserAttributeType type;
+        public Opcode opcode;
+        public float value;
+    }
+
+    [Serializable]
+    public struct Property
+    {
+        public Skill[] skills;
+        public Attribute[] attributes;
+    }
+
     [Serializable]
     public struct Stage
     {
@@ -208,7 +202,7 @@ public struct UserAccessory
         /// </summary>
         public int count;
 
-        public UserPropertyData property;
+        public Property property;
     }
 
     public struct Group
@@ -219,6 +213,9 @@ public struct UserAccessory
     }
 
     public string name;
+    
+    public string skillName;
+    public string skillGroupName;
 
     public uint id;
 
@@ -231,6 +228,8 @@ public struct UserAccessory
     /// 阶
     /// </summary>
     public int stage;
+
+    public float attributeValue;
 
     public Stage stageDesc;
 
@@ -365,6 +364,8 @@ public partial interface IUserData
         /// </summary>
         public int capacity;
 
+        public uint selectedGroupID;
+
         /// <summary>
         /// 卡组
         /// </summary>
@@ -391,6 +392,8 @@ public partial interface IUserData
         }
 
         public Flag flag;
+
+        public uint selectedGroupID;
 
         /// <summary>
         /// 套装
@@ -468,7 +471,7 @@ public partial interface IUserData
 
     public struct StageProperty
     {
-        public UserPropertyData value;
+        public Property value;
 
         public StageCache cache;
     }

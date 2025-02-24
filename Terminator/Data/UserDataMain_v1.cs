@@ -280,7 +280,7 @@ public partial class UserDataMain
         
         public int gold;
 
-        [Tooltip("技能组伤害")]
+        [Tooltip("下一等级技能组伤害")]
         public float skillGroupDamage;
         
 #if UNITY_EDITOR
@@ -369,6 +369,8 @@ public partial class UserDataMain
         
         result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
 
+        result.selectedGroupID = __ToID(PlayerPrefs.GetInt(NAME_SPACE_USER_CARD_GROUP));
+
         int i, numCardGroup = _cardGroups.Length;
         result.groups = numCardGroup > 0 ? new UserGroup[numCardGroup] : null;
         
@@ -451,13 +453,13 @@ public partial class UserDataMain
             userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
             
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
-            
+
             userCardGroups.Clear();
             for (j = 0; j < numCardGroup; ++j)
             {
                 userCardGroup.position =
                     PlayerPrefs.GetInt(
-                        $"{NAME_SPACE_USER_CARD_GROUP}{userCard.name}{UserData.SEPARATOR}{_cardGroups[j].name}",
+                        $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{userCard.name}",
                         -1);
                 
                 if(userCardGroup.position == -1)
@@ -483,7 +485,7 @@ public partial class UserDataMain
         yield return null;
 
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
-        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardName}{UserData.SEPARATOR}{cardGroupName}", position);
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
         
         onComplete(true);
     }
@@ -554,6 +556,15 @@ public partial class UserDataMain
         public string name;
 
         public string styleName;
+        
+        [Tooltip("技能，可填空")]
+        public string skillName;
+        
+        [Tooltip("技能组，可填空")]
+        public string skillGroupName;
+        
+        [Tooltip("基础属性值")]
+        public float attributeValue;
     }
 
     [Serializable]
@@ -579,6 +590,7 @@ public partial class UserDataMain
     {
         public string name;
         
+        [Tooltip("该种类加什么属性")]
         public UserAttributeType attributeType;
     }
 
@@ -593,6 +605,7 @@ public partial class UserDataMain
 
         public int count;
 
+        [Tooltip("下一级属性加成")]
         public float attributeValue;
     }
 
@@ -605,7 +618,7 @@ public partial class UserDataMain
 
         public int count;
 
-        public UserPropertyData property;
+        public UserAccessory.Property property;
     }
 
     [Header("Items")]
@@ -641,7 +654,6 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
     private const string NAME_SPACE_USER_ACCESSORY_IDS = "UserAccessoryIDs";
-    private const string NAME_SPACE_USER_ACCESSORY_GROUP = "UserAccessoryGroup";
     private const string NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL = "UserAccessorySlotLevel";
     
     public IEnumerator QueryRoles(
@@ -655,6 +667,8 @@ public partial class UserDataMain
         bool isCreated = (result.flag & IUserData.Roles.Flag.Created) != IUserData.Roles.Flag.Created;
         if(isCreated)
             PlayerPrefs.SetInt(NAME_SPACE_USER_ROLES_FLAG, (int)IUserData.Roles.Flag.Created);
+
+        result.selectedGroupID = __ToID(PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_GROUP));
 
         int i, numRoleGroups = _roleGroups.Length;
         result.groups = new UserGroup[numRoleGroups];
@@ -705,7 +719,6 @@ public partial class UserDataMain
         Role role;
         UserRole userRole;
         string userRoleGroupName;
-        var attributes = new List<UserAttributeData>();
         var userRoles = new List<UserRole>();
         var userRoleGroupIDs = new List<uint>();
         for (i = 0; i < numRoles; ++i)
@@ -736,34 +749,17 @@ public partial class UserDataMain
             
             userRole.id = __ToID(i);
 
-            userRole.skillGroupDamage = 0.0f;
-            
-            attributes.Clear();
-            foreach (var talent in _talents)
-            {
-                if(talent.roleName != userRole.name)
-                    continue;
-                
-                if (((UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}") &
-                     UserTalent.Flag.Collected) != UserTalent.Flag.Collected)
-                    continue;
-
-                userRole.skillGroupDamage += talent.skillGroupDamage;
-                
-                attributes.Add(talent.attribute);
-            }
-
-            userRole.attributes = attributes.ToArray();
+            userRole.attributes = __CollectRoleAttributes(role.name, out userRole.skillGroupDamage).ToArray();
 
             userRoleGroupIDs.Clear();
             for (j = 0; j < numRoleGroups; ++j)
             {
                 key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}";
                 userRoleGroupName = PlayerPrefs.GetString(key);
-                if (userRoleGroupName != userRole.name)
+                if (userRoleGroupName != role.name)
                 {
                     if (isNew && string.IsNullOrEmpty(userRoleGroupName))
-                        PlayerPrefs.SetString(key, userRole.name);
+                        PlayerPrefs.SetString(key, role.name);
                     else
                         continue;
                 }
@@ -809,7 +805,12 @@ public partial class UserDataMain
             accessory = _accessories[i];
 
             userAccessory.name = accessory.name;
+            userAccessory.skillName = accessory.styleName;
+            userAccessory.skillGroupName = accessory.skillGroupName;
+            
             userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
+
+            userAccessory.attributeValue = accessory.attributeValue;
             
             accessoryStageIndices = __GetAccessoryStageIndices(i);
 
@@ -824,7 +825,7 @@ public partial class UserDataMain
                     continue;
 
                 userAccessory.stage = j;
-                
+
                 accessoryStage = _accessoryStages[accessoryStageIndices[j]];
 
                 userAccessory.stageDesc.name = accessoryStage.name;
@@ -839,12 +840,12 @@ public partial class UserDataMain
                     for (k = 0; k < numRoleGroups; ++k)
                     {
                         userAccessoryGroupKey =
-                            $"{NAME_SPACE_USER_ACCESSORY_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}";
+                            $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}";
                         for (l = 0; l < numAccessorySlots; ++l)
                         {
                             if (PlayerPrefs.GetString(
                                     $"{userAccessoryGroupKey}{_accessorySlots[l].name}") ==
-                                userAccessory.name)
+                                id)
                                 break;
                         }
 
@@ -1059,23 +1060,22 @@ public partial class UserDataMain
     {
         yield return null;
 
-        if (!__TryGetAccessory(accessoryID, out var accessoryInfo))
+        var accessorySlot = _accessorySlots[__ToIndex(slotID)];
+        string roleGroupName = _roleGroups[__ToIndex(groupID)].name, 
+            key =
+            $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroupName}{UserData.SEPARATOR}{accessorySlot.name}";
+        
+        if(PlayerPrefs.GetString(key) == accessoryID.ToString())
+            PlayerPrefs.DeleteKey(key);
+        else if(__TryGetAccessory(accessoryID, out var accessoryInfo) && 
+                _accessories[accessoryInfo.index].styleName == accessorySlot.styleName)
+            PlayerPrefs.SetString(key, accessoryID.ToString());
+        else
         {
-            onComplete(true);
+            onComplete(false);
             
             yield break;
         }
-
-        string roleGroupName = _roleGroups[__ToIndex(groupID)].name, 
-            accessorySlotName = _accessorySlots[__ToIndex(slotID)].name, 
-            key =
-            $"{NAME_SPACE_USER_ACCESSORY_GROUP}{roleGroupName}{UserData.SEPARATOR}{accessorySlotName}", 
-            accessoryName = _accessories[accessoryInfo.index].name;
-        
-        if(PlayerPrefs.GetString(key) == accessoryName)
-            PlayerPrefs.DeleteKey(key);
-        else
-            PlayerPrefs.SetString(key, accessoryName);
         
         onComplete(true);
     }
@@ -1270,7 +1270,7 @@ public partial class UserDataMain
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
-        stageProperty.value = default;
+        stageProperty.value = __ApplyProperty(userID);
         stageProperty.cache = UserData.GetStageCache(level.name, stage);
         
         onComplete(stageProperty);

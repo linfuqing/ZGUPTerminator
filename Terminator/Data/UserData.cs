@@ -15,8 +15,15 @@ public enum UserRewardType
     Energy
 }
 
+public enum UserSkillType
+{
+    Individual, 
+    Group
+}
+
 public enum UserAttributeType
 {
+    None, 
     Hp, 
     Attack, 
     Defence
@@ -26,7 +33,6 @@ public enum UserAttributeType
 public struct UserAttributeData
 {
     public UserAttributeType type;
-    public UserVariableType variableType;
     public float value;
 }
 
@@ -107,6 +113,19 @@ public partial interface IUserData : IGameUserData
         NoDamage = 0x03
     }
 
+    public struct Skill
+    {
+        public UserSkillType type;
+        public string name;
+        public float damage;
+    }
+
+    public struct Property
+    {
+        public Skill[] skills;
+        public UserAttributeData[] attributes;
+    }
+
     public static IUserData instance;
 
     IEnumerator QueryUser(
@@ -126,7 +145,7 @@ public partial interface IUserData : IGameUserData
     IEnumerator ApplyLevel(
         uint userID,
         uint levelID, 
-        Action<UserPropertyData> onComplete);
+        Action<Property> onComplete);
 
     IEnumerator SubmitLevel(
         uint userID,

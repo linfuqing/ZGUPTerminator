@@ -480,7 +480,7 @@ public sealed class LoginManager : MonoBehaviour
             onAwake(results);
     }
 
-    private void __ApplyLevel(UserPropertyData property)
+    private void __ApplyLevel(IUserData.Property property)
     {
         if (property.skills == null)
         {

@@ -458,4 +458,165 @@ public partial class UserDataMain
         
         return false;
     }
+
+    private List<UserAttributeData> __CollectRoleAttributes(
+        string roleName, 
+        out float skillGroupDamage)
+    {
+        skillGroupDamage = 0.0f;
+        List<UserAttributeData> attributes = null;
+        
+        foreach (var talent in _talents)
+        {
+            if(talent.roleName != roleName)
+                continue;
+                
+            if (((UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}") &
+                 UserTalent.Flag.Collected) != UserTalent.Flag.Collected)
+                continue;
+
+            skillGroupDamage += talent.skillGroupDamage;
+
+            if (attributes == null)
+                attributes = new List<UserAttributeData>();
+            
+            attributes.Add(talent.attribute);
+        }
+
+        return attributes;
+    }
+
+    private IUserData.Property __ApplyProperty(uint userID)
+    {
+        var skills = new List<IUserData.Skill>();
+        IUserData.Skill skill;
+        skill.type = UserSkillType.Group;
+        
+        int i, level, styleIndex, numCards = _cards.Length;
+        List<int> indices;
+        string groupName = _cardGroups[PlayerPrefs.GetInt(NAME_SPACE_USER_CARD_GROUP)].name, 
+         keyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{groupName}{UserData.SEPARATOR}";
+        for (i = 0; i < numCards; ++i)
+        {
+            ref var card = ref _cards[i];
+            if(PlayerPrefs.GetInt($"{keyPrefix}{card.name}") == -1)
+                continue;
+
+            skill.name = card.skillGroupName;
+
+            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
+            if (level > 0)
+            {
+                styleIndex = __GetCardStyleIndex(card.styleName);
+                indices = __GetCardLevelIndices(styleIndex);
+                skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
+            }
+            else
+                skill.damage = 1.0f;
+
+            skills.Add(skill);
+        }
+
+        groupName = _roleGroups[PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_GROUP)].name;
+        keyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}";
+
+        string roleName = PlayerPrefs.GetString(keyPrefix);
+        int roleIndex = __GetRoleIndex(roleName);
+        ref var role = ref _roles[roleIndex];
+        
+        var attributes = __CollectRoleAttributes(role.name, out skill.damage);
+
+        skill.damage = 1.0f;
+        skill.name = role.skillGroupName;
+        skills.Add(skill);
+
+        skill.name = role.skillName;
+        skill.type = UserSkillType.Individual;
+        skills.Add(skill);
+        
+        keyPrefix = $"{keyPrefix}{UserData.SEPARATOR}";
+        
+        int j, 
+            numSkills = skills.Count, 
+            numAttributes = attributes.Count, 
+            numAccessorySlots = _accessorySlots.Length;
+        uint accessoryID;
+        AccessoryInfo accessoryInfo;
+        UserAttributeData attribute;
+        string accessoryIDString;
+        for (i = 0; i < numAccessorySlots; ++i)
+        {
+            ref var accessorySlot = ref _accessorySlots[i];
+            accessoryIDString = PlayerPrefs.GetString(
+                $"{keyPrefix}{accessorySlot.name}");
+            
+            if(string.IsNullOrEmpty(accessoryIDString) || 
+               !uint.TryParse(accessoryIDString, out accessoryID) || 
+               !__TryGetAccessory(accessoryID, out accessoryInfo))
+                continue;
+
+            styleIndex = __GetAccessoryStyleIndex(accessorySlot.styleName);
+            ref var accessoryStyle = ref _accessoryStyles[styleIndex];
+            for(j = 0; j < numAttributes ; ++j)
+            {
+                if (attributes[j].type == accessoryStyle.attributeType)
+                    break;
+            }
+
+            if (j < numAttributes)
+                attribute = attributes[j];
+            else
+            {
+                ++numAttributes;
+                
+                attribute.type = accessoryStyle.attributeType;
+                attribute.value = 0.0f;
+            }
+            
+            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
+            if (level > 0)
+            {
+                indices = __GetAccessoryStyleLevelIndices(styleIndex);
+                attribute.value += _accessoryLevels[indices[level - 1]].attributeValue;
+            }
+            
+            ref var accessory = ref _accessories[accessoryInfo.index];
+            attribute.value += accessory.attributeValue;
+            
+            attributes[j] = attribute;
+
+            if (string.IsNullOrEmpty(accessory.skillName))
+            {
+                ++numSkills;
+                
+                skill.name = accessory.skillName;
+                skill.type = UserSkillType.Individual;
+                skill.damage = 1.0f;
+                skills.Add(skill);
+            }
+            
+            if (string.IsNullOrEmpty(accessory.skillGroupName))
+            {
+                ++numSkills;
+                
+                skill.name = accessory.skillGroupName;
+                skill.type = UserSkillType.Group;
+                skill.damage = 1.0f;
+                skills.Add(skill);
+            }
+
+            if (accessoryInfo.stage > 0)
+            {
+                indices = __GetAccessoryStageIndices(accessoryInfo.index);
+                
+                ref var accessoryStage = ref _accessoryStages[indices[accessoryInfo.stage - 1]];
+            }
+        }
+
+        IUserData.Property result;
+        result.skills = skills.ToArray();
+        result.attributes = attributes.ToArray();
+
+        return result;
+    }
 }
