@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using UnityEngine;
 
 public enum UserVariableType
 {
@@ -10,8 +11,22 @@ public enum UserVariableType
 [Serializable]
 public struct UserPropertyData
 {
+    public enum SkillType
+    {
+        Individual, 
+        Group
+    }
+    
     [Serializable]
     public struct Skill
+    {
+        public string name;
+
+        public SkillType type;
+    }
+    
+    [Serializable]
+    public struct SkillVariable
     {
         public string name;
         
@@ -20,8 +35,9 @@ public struct UserPropertyData
         public float damage;
     }
     
-    public UserAttributeData[] attributes;
     public Skill[] skills;
+    public SkillVariable[] skillVariables;
+    public UserAttributeData[] attributes;
 }
 
 public struct UserStageReward
@@ -126,7 +142,7 @@ public struct UserCard
 
     public string name;
 
-    public string skillName;
+    public string skillGroupName;
 
     public uint id;
 
@@ -154,6 +170,16 @@ public struct UserCard
 public struct UserRole
 {
     public string name;
+    
+    /// <summary>
+    /// 技能
+    /// </summary>
+    public string skillName;
+
+    /// <summary>
+    /// 技能组
+    /// </summary>
+    public string skillGroupName;
 
     public uint id;
 

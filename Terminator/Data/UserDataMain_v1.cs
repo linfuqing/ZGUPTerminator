@@ -169,7 +169,7 @@ public partial class UserDataMain
 
         public string styleName;
         
-        public string skillName;
+        public string skillGroupName;
     }
 
     [Header("Cards")]
@@ -434,7 +434,7 @@ public partial class UserDataMain
             }
 
             userCard.name = card.name;
-            userCard.skillName = card.skillName;
+            userCard.skillGroupName = card.skillGroupName;
             userCard.id = __ToID(i);
 
             userCard.styleID = 0;
@@ -544,6 +544,12 @@ public partial class UserDataMain
     internal struct Role
     {
         public string name;
+        
+        [Tooltip("技能")]
+        public string skillName;
+        
+        [Tooltip("技能组")]
+        public string skillGroupName;
     }
 
     [Serializable]
@@ -700,6 +706,7 @@ public partial class UserDataMain
 
         bool isNew;
         int j, roleCount, numRoles = _roles.Length;
+        Role role;
         UserRole userRole;
         string userRoleGroupName;
         var attributes = new List<UserAttributeData>();
@@ -707,7 +714,10 @@ public partial class UserDataMain
         var userRoleGroupIDs = new List<uint>();
         for (i = 0; i < numRoles; ++i)
         {
-            userRole.name = _roles[i].name;
+            role = _roles[i];
+            userRole.name = role.name;
+            userRole.skillName = role.skillName;
+            userRole.skillGroupName = role.skillGroupName;
 
             isNew = false;
             key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";

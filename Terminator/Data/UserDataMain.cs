@@ -181,6 +181,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         UserPropertyData result;
         result.skills = Array.Empty<UserPropertyData.Skill>();
+        result.skillVariables = Array.Empty<UserPropertyData.SkillVariable>();
         result.attributes = Array.Empty<UserAttributeData>();
         
         onComplete(result);
