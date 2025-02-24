@@ -369,8 +369,9 @@ public partial class UserDataMain
             userTalent.name = talent.name;
             userTalent.id = __ToID(i);
             userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
-            userTalent.attribute = talent.attribute;
             userTalent.gold = talent.gold;
+            userTalent.skillGroupDamage = talent.skillGroupDamage;
+            userTalent.attribute = talent.attribute;
             userTalents[i] = userTalent;
         }
 

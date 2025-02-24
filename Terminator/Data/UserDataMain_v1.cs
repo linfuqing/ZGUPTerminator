@@ -282,7 +282,8 @@ public partial class UserDataMain
         
         public int gold;
 
-        public float damage;
+        [Tooltip("技能组伤害")]
+        public float skillGroupDamage;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -326,7 +327,7 @@ public partial class UserDataMain
         {
             set
             {
-                damage = value;
+                skillGroupDamage = value;
             }
         }
 #endif
@@ -391,7 +392,7 @@ public partial class UserDataMain
                         userCardStyleLevel.name = cardLevel.name;
                         userCardStyleLevel.count = cardLevel.count;
                         userCardStyleLevel.gold = cardLevel.gold;
-                        userCardStyleLevel.damage = cardLevel.damage;
+                        userCardStyleLevel.skillGroupDamage = cardLevel.skillGroupDamage;
                         userCardStyleLevels.Add(userCardStyleLevel);
                     }
                 }
@@ -739,6 +740,8 @@ public partial class UserDataMain
             }
             
             userRole.id = __ToID(i);
+
+            userRole.skillGroupDamage = 0.0f;
             
             attributes.Clear();
             foreach (var talent in _talents)
@@ -750,6 +753,8 @@ public partial class UserDataMain
                      UserTalent.Flag.Collected) != UserTalent.Flag.Collected)
                     continue;
 
+                userRole.skillGroupDamage += talent.skillGroupDamage;
+                
                 attributes.Add(talent.attribute);
             }
 
@@ -940,8 +945,9 @@ public partial class UserDataMain
     {
         public string name;
         public string roleName;
-        public UserAttributeData attribute;
         public int gold;
+        public float skillGroupDamage;
+        public UserAttributeData attribute;
     }
 
     private const string NAME_SPACE_USER_TALENT_FLAG = "UserTalentFlag";
@@ -974,8 +980,9 @@ public partial class UserDataMain
             userTalent.name = talent.name;
             userTalent.id = __ToID(i);
             userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
-            userTalent.attribute = talent.attribute;
             userTalent.gold = talent.gold;
+            userTalent.skillGroupDamage = talent.skillGroupDamage;
+            userTalent.attribute = talent.attribute;
             userTalents[i] = userTalent;
         }
 
@@ -1025,11 +1032,18 @@ public partial class UserDataMain
     {
         yield return null;
 
+        if (!__TryGetAccessory(accessoryID, out var accessoryInfo))
+        {
+            onComplete(true);
+            
+            yield break;
+        }
+
         string roleGroupName = _roleGroups[__ToIndex(groupID)].name, 
             accessorySlotName = _accessorySlots[__ToIndex(slotID)].name, 
             key =
             $"{NAME_SPACE_USER_ACCESSORY_GROUP}{roleGroupName}{UserData.SEPARATOR}{accessorySlotName}", 
-            accessoryName = _accessories[__ToIndex(accessoryID)].name;
+            accessoryName = _accessories[accessoryInfo.index].name;
         
         if(PlayerPrefs.GetString(key) == accessoryName)
             PlayerPrefs.DeleteKey(key);
@@ -1171,9 +1185,8 @@ public partial class UserDataMain
                 stageReward = stage.indirectRewards[i];
                 userStageReward.name = stageReward.name;
                 userStageReward.id = __ToID(rewardIndex + i);
-                userStageReward.flag =
-                    (UserStageReward.Flag)PlayerPrefs.GetInt(
-                        $"{NAME_SPACE_USER_STAGE_REWARD_FLAG}-{level.name}-{stage.name}-{stageReward.name}");
+                userStageReward.flag = __GetStageRewardFlag(stageReward.name, level.name, targetStage,
+                    stageReward.condition, out _);
                 userStageReward.condition = stageReward.condition;
                 userStageReward.values = stageReward.values;
 
@@ -1271,6 +1284,8 @@ public partial class UserDataMain
 
                         yield break;
                     }
+
+                    break;
                 }
 
                 stageRewardIndex -= numStageRewards;
@@ -1317,36 +1332,6 @@ public partial class UserDataMain
         }
 
         onComplete(result ? rewards.ToArray() : null);
-    }
-
-    private UserStageReward.Flag __GetStageRewardFlag(
-        string stageRewardName,
-        string levelName, 
-        int stage, 
-        UserStageReward.Condition condition, 
-        out string key)
-    {
-        key = UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_REWARD_FLAG, levelName, stage);
-        key = $"{key}{UserData.SEPARATOR}{stageRewardName}";
-        
-        var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
-        if (flag == 0)
-        {
-            var stageFlag = UserData.GetStageFlag(levelName, stage);
-            switch (condition)
-            {
-                case UserStageReward.Condition.Once:
-                    if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
-                        flag |= UserStageReward.Flag.Unlock;
-                    break;
-                case UserStageReward.Condition.NoDamage:
-                    if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
-                        flag |= UserStageReward.Flag.Unlock;
-                    break;
-            }
-        }
-
-        return flag;
     }
 
     private bool __ApplyStageRewards(

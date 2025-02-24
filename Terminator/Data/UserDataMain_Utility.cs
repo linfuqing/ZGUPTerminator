@@ -200,4 +200,33 @@ public partial class UserDataMain
         PlayerPrefs.SetString(key, idsString);
     }
 
+    private UserStageReward.Flag __GetStageRewardFlag(
+        string stageRewardName,
+        string levelName, 
+        int stage, 
+        UserStageReward.Condition condition, 
+        out string key)
+    {
+        key = UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_REWARD_FLAG, levelName, stage);
+        key = $"{key}{UserData.SEPARATOR}{stageRewardName}";
+        
+        var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
+        if (flag == 0)
+        {
+            var stageFlag = UserData.GetStageFlag(levelName, stage);
+            switch (condition)
+            {
+                case UserStageReward.Condition.Once:
+                    if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
+                case UserStageReward.Condition.NoDamage:
+                    if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
+            }
+        }
+
+        return flag;
+    }
 }

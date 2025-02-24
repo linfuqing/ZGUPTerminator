@@ -113,9 +113,9 @@ public struct UserCardStyle
         public int gold;
 
         /// <summary>
-        /// 技能伤害
+        /// 技能组伤害
         /// </summary>
-        public float damage;
+        public float skillGroupDamage;
     }
 
     public string name;
@@ -183,6 +183,8 @@ public struct UserRole
 
     public uint id;
 
+    public float skillGroupDamage;
+    
     /// <summary>
     /// 角色总属性
     /// </summary>
