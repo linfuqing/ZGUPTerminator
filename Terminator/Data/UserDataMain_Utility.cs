@@ -1,7 +1,69 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 public partial class UserDataMain
 {
+    private Dictionary<string, int> __cardNameToIndices;
+    
+    private int __GetCardIndex(string name)
+    {
+        if (__cardNameToIndices == null)
+        {
+            int numCards = _cards.Length;
+            __cardNameToIndices = new Dictionary<string, int>(numCards);
+            for (int i = 0; i < numCards; ++i)
+                __cardNameToIndices.Add(_cards[i].name, i);
+        }
+
+        return __cardNameToIndices[name];
+    }
+
+    private Dictionary<string, int> __cardStyleNameToIndices;
+    
+    private int __GetCardStyleIndex(string name)
+    {
+        if (__cardStyleNameToIndices == null)
+        {
+            int numCardStyles = _cardStyles.Length;
+            __cardStyleNameToIndices = new Dictionary<string, int>(numCardStyles);
+            for (int i = 0; i < numCardStyles; ++i)
+                __cardStyleNameToIndices.Add(_cardStyles[i].name, i);
+        }
+
+        return __cardStyleNameToIndices[name];
+    }
+    
+    private List<int>[] __cardLevelIndices;
+
+    private List<int> __GetCardLevelIndices(int index)
+    {
+        if (__cardLevelIndices == null)
+        {
+            int numCardStyles = _cardStyles.Length;
+            
+            __cardLevelIndices = new List<int>[numCardStyles];
+
+            List<int> cardLevelIndices;
+            int cardStyleIndex, numCardLevels = _cardLevels.Length;
+            for (int i = 0; i < numCardLevels; ++i)
+            {
+                cardStyleIndex = __GetCardStyleIndex(_cardLevels[i].styleName);
+                cardLevelIndices = __cardLevelIndices[cardStyleIndex];
+                if (cardLevelIndices == null)
+                {
+                    cardLevelIndices = new List<int>();
+
+                    __cardLevelIndices[cardStyleIndex] = cardLevelIndices;
+                }
+                
+                cardLevelIndices.Add(i);
+            }
+        }
+        
+        return __cardLevelIndices[index];
+    }
+
+    
     private Dictionary<string, int> __itemNameToIndices;
 
     private int __GetItemIndex(string name)
@@ -15,6 +77,22 @@ public partial class UserDataMain
         }
 
         return __itemNameToIndices[name];
+    }
+
+    
+    private Dictionary<string, int> __roleToIndices;
+    
+    private int __GetRoleIndex(string name)
+    {
+        if (__roleToIndices == null)
+        {
+            int numRoles = _roles.Length;
+            __roleToIndices = new Dictionary<string, int>(numRoles);
+            for (int i = 0; i < numRoles; ++i)
+                __roleToIndices.Add(_roles[i].name, i);
+        }
+
+        return __roleToIndices[name];
     }
 
     private Dictionary<string, int> __accessoryNameToIndices;
@@ -232,5 +310,152 @@ public partial class UserDataMain
         }
 
         return flag;
+    }
+    
+    private bool __ApplyStageRewards(
+        string levelName, 
+        int stage, 
+        in StageReward stageReward, 
+        List<UserReward> outRewards)
+    {
+        var flag = __GetStageRewardFlag(
+            stageReward.name,
+            levelName,
+            stage,
+            stageReward.condition,
+            out var key);
+        if ((flag & UserStageReward.Flag.Unlock) != UserStageReward.Flag.Unlock ||
+            (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
+            return false;
+                    
+        flag |= UserStageReward.Flag.Collected;
+
+        PlayerPrefs.SetInt(key, (int)flag);
+
+        __ApplyRewards(stageReward.values, outRewards);
+
+        return true;
+    }
+
+    private uint __ApplyReward(in UserRewardData reward)
+    {
+        uint id = 0;
+        string key;
+        switch (reward.type)
+        {
+            case UserRewardType.PurchasePoolKey:
+                id = 1;
+                key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
+                break;
+            case UserRewardType.CardsCapacity:
+                id = 1;
+                key = NAME_SPACE_USER_CARDS_CAPACITY;
+                break;
+            case UserRewardType.Card:
+                id = __ToID(__GetCardIndex(reward.name));
+                key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
+                
+                string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{reward.name}";
+                int level = PlayerPrefs.GetInt(levelKey, -1);
+                if (level == -1)
+                {
+                    int cardCount = PlayerPrefs.GetInt(key) + reward.count;
+                    
+                    PlayerPrefs.SetInt(key, cardCount - 1);
+                    PlayerPrefs.SetInt(levelKey, 0);
+
+                    return id;
+                }
+
+                break;
+            case UserRewardType.Role:
+                id = __ToID(__GetRoleIndex(reward.name));
+                key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
+                break;
+            case UserRewardType.Accessory:
+                uint accessoryID = (uint)Random.Range(int.MinValue, int.MaxValue);
+                __CreateAccessory(accessoryID, __GetAccessoryIndex(reward.name), reward.count);
+                return accessoryID;
+            case UserRewardType.Item:
+                id = __ToID(__GetItemIndex(reward.name));
+                key = $"{NAME_SPACE_USER_ITEM_COUNT}{reward.name}";
+                break; 
+            case UserRewardType.Diamond:
+                id = 1;
+                key = $"{NAME_SPACE_USER_DIAMOND}{reward.name}";
+                break;
+            case UserRewardType.Gold:
+                id = 1;
+                key = $"{NAME_SPACE_USER_GOLD}{reward.name}";
+                break;
+            case UserRewardType.Energy:
+                id = 1;
+                key = $"{NAME_SPACE_USER_ENERGY}{reward.name}";
+                break;
+            default:
+                return 0;
+        }
+        
+        int count = PlayerPrefs.GetInt(key);
+        count += reward.count;
+        PlayerPrefs.SetInt(key, count);
+
+        return id;
+    }
+
+    private void __ApplyRewards(
+        UserRewardData[] rewards, 
+        List<UserReward> outRewards)
+    {
+        UserReward outReward;
+        foreach (var reward in rewards)
+        {
+            outReward.id = __ApplyReward(reward);
+            if(outReward.id == 0)
+                continue;
+
+            outReward.name = reward.name;
+            outReward.count = reward.count;
+            outReward.type = reward.type;
+            
+            outRewards.Add(outReward);
+        }
+    }
+    
+    private bool __TryGetStage(uint stageID, out int stage, out int levelIndex, out int rewardIndex)
+    {
+        stage = -1;
+        rewardIndex = 0;
+        Level level;
+        int i, j, 
+            stageIndex = 0, 
+            targetStageIndex = __ToIndex(stageID), 
+            numTargetStages,
+            numStages, 
+            numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
+        for (i = 0; i < numLevels; ++i)
+        {
+            level = _levels[i];
+            numStages = level.stages.Length;
+            numTargetStages = Mathf.Min(stageIndex + numStages, targetStageIndex) - stageIndex;
+            for (j = 0; j < numTargetStages; ++j)
+                rewardIndex += level.stages[stageIndex + j].indirectRewards.Length;
+            
+            if (numTargetStages < numStages)
+            {
+                levelIndex = i;
+                
+                stage = numTargetStages;
+
+                return true;
+            }
+
+            stageIndex += numStages;
+        }
+
+        levelIndex = -1;
+        rewardIndex = -1;
+        
+        return false;
     }
 }

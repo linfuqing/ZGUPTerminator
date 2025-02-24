@@ -51,6 +51,8 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
     private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    [Header("Legacy")]
+    
     [SerializeField]
     internal Tip _tip;
 
@@ -153,7 +155,7 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_WEAPON_SELECTED = "UserWeaponSelected";
     private const string NAME_SPACE_USER_WEAPONS = "UserWeapons";
-
+    
     [SerializeField] 
     internal Weapon[] _weapons;
 

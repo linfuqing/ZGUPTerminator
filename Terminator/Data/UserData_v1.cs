@@ -284,10 +284,27 @@ public struct UserAccessoryStyle
 
 public struct UserStage
 {
+    [Serializable]
+    public struct RewardPoolOption
+    {
+        public float chance;
+        
+        public UserRewardData value;
+    }
+    
+    [Serializable]
+    public struct RewardPool
+    {
+        public string name;
+        
+        public RewardPoolOption[] options;
+    }
+    
     public string name;
     public uint id;
     public UserRewardData[] rewards;
     public UserStageReward.Flag[] rewardFlags;
+    public RewardPool[] rewardPools;
 }
 
 public partial struct UserLevel
@@ -334,7 +351,8 @@ public partial interface IUserData
         [Flags]
         public enum Flag
         {
-            FirstUnlock = 0x01
+            Created = 0x01, 
+            FirstUnlock = 0x02
         }
 
         /// <summary>
@@ -517,6 +535,14 @@ public partial interface IUserData
         Action<bool> onComplete);
 
     /// <summary>
+    /// 查询装备所有品阶
+    /// </summary>
+    IEnumerator QueryAccessoryStages(
+        uint userID,
+        uint accessoryID, 
+        Action<Memory<UserAccessory.Stage>> onComplete);
+
+    /// <summary>
     /// 装备或卸下装备
     /// </summary>
     IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete);
@@ -633,6 +659,14 @@ public partial class UserData
         Action<bool> onComplete)
     {
         return UserDataMain.instance.UpgradeRoleTalent(userID, talentID, onComplete);
+    }
+
+    public IEnumerator QueryAccessoryStages(
+        uint userID,
+        uint accessoryID,
+        Action<Memory<UserAccessory.Stage>> onComplete)
+    {
+        return UserDataMain.instance.QueryAccessoryStages(userID, accessoryID, onComplete);
     }
 
     public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete)

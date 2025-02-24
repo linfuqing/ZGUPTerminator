@@ -32,6 +32,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
     private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
 
+    [Header("Main")]
     [SerializeField]
     internal Energy _energy;
 
@@ -139,6 +140,8 @@ public sealed partial class UserDataMain : MonoBehaviour
                     userStage.rewards = stage.directRewards;
                     userStage.rewardFlags = null;
                 }
+
+                userStage.rewardPools = stage.rewardPools;
 
                 userLevel.stages[j] = userStage;
             }

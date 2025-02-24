@@ -172,9 +172,17 @@ public partial class UserDataMain
         public string skillGroupName;
     }
 
+    [Serializable]
+    internal struct CardDefault
+    {
+        public string name;
+
+        public int count;
+    }
+
     [Header("Cards")]
     [SerializeField] 
-    internal string[] _defaultCards;
+    internal CardDefault[] _cardsDefaults;
 
     [SerializeField] 
     internal Card[] _cards;
@@ -190,13 +198,15 @@ public partial class UserDataMain
     {
         yield return null;
 
-        UserItem result;
+        UserRewardData reward;
+        reward.type = UserRewardType.Card;
+        
+        UserItem userItem;
         var results = new List<UserItem>();
         string purchasePoolName = _purchasePools[__ToIndex(purchasePoolID)].name, 
-            timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePoolName}", 
-            key;
+            timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePoolName}";
         float chance, total;
-        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, numCards = _cards.Length, count, i, j;
+        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, i;
         bool isSelected;
         for (i = 0; i < times; ++i)
         {
@@ -229,26 +239,14 @@ public partial class UserDataMain
 
                 isSelected = true;
                 
-                result.name = purchasePoolOption.name;
-                result.id = 0;
-                for (j = 0; j < numCards; ++j)
-                {
-                    if (result.name == _cards[j].name)
-                    {
-                        result.id = __ToID(j);
-                        
-                        break;
-                    }
-                }
-                
-                result.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount);
+                reward.name = purchasePoolOption.name;
+                reward.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount);
 
-                key = $"{NAME_SPACE_USER_CARD_COUNT}{purchasePoolOption.name}";
-                count = PlayerPrefs.GetInt(key);
-                count += result.count;
-                PlayerPrefs.SetInt(key, count);
-                
-                results.Add(result);
+                userItem.id = __ApplyReward(reward);
+                userItem.name = reward.name;
+                userItem.count = reward.count;
+
+                results.Add(userItem);
             }
 
             ++purchasePoolTimes;
@@ -347,8 +345,6 @@ public partial class UserDataMain
     internal string _cardLevelsPath;
 #endif
 
-    private UserCardStyle.Level[][] __cardLevels;
-    
     private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
@@ -360,95 +356,102 @@ public partial class UserDataMain
     {
         yield return null;
 
-        IUserData.Cards cards;
-        cards.flag = (IUserData.Cards.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_FLAG);
-        cards.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
-        
-        CardStyle cardStyle;
-        int numCardStyles = _cardStyles == null ? 0 : _cardStyles.Length;
-        cards.cardStyles = new UserCardStyle[numCardStyles];
+        IUserData.Cards result;
+        result.flag = (IUserData.Cards.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_FLAG);
 
-        List<UserCardStyle.Level> userCardStyleLevels = null;
-        if (__cardLevels == null)
+        bool isCreated = (result.flag & IUserData.Cards.Flag.Created) != IUserData.Cards.Flag.Created;
+        if (isCreated)
         {
-            __cardLevels = new UserCardStyle.Level[numCardStyles][];
-            userCardStyleLevels = new List<UserCardStyle.Level>();
+            result.flag |= IUserData.Cards.Flag.Created;
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_CARDS_FLAG, (int)result.flag);
+        }
+        
+        result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
+
+        int i, numCardGroup = _cardGroups.Length;
+        result.groups = numCardGroup > 0 ? new UserGroup[numCardGroup] : null;
+        
+        UserGroup userGroup;
+        for (i = 0; i < numCardGroup; ++i)
+        {
+            userGroup.id = __ToID(i);
+            userGroup.name = _cardGroups[i].name;
+            result.groups[i] = userGroup;
         }
 
-        int i;
+        CardStyle cardStyle;
+        int numCardStyles = _cardStyles == null ? 0 : _cardStyles.Length;
+        result.cardStyles = new UserCardStyle[numCardStyles];
+
+        int j, numCardLevelIndices;
+        CardLevel cardLevel;
         UserCardStyle userCardStyle;
         UserCardStyle.Level userCardStyleLevel;
+        List<int> cardLevelIndices;
         for (i = 0; i < numCardStyles; ++i)
         {
             cardStyle = _cardStyles[i];
 
-            if (userCardStyleLevels != null)
+            cardLevelIndices = __GetCardLevelIndices(i);
+            numCardLevelIndices = cardLevelIndices == null ? 0 : cardLevelIndices.Count;
+            if(numCardLevelIndices < 1)
+                continue;
+            
+            userCardStyle.levels = new UserCardStyle.Level[numCardLevelIndices];
+            for (j = 0; j < numCardLevelIndices; ++j)
             {
-                userCardStyleLevels.Clear();
-                foreach (var cardLevel in _cardLevels)
-                {
-                    if (cardLevel.styleName == cardStyle.name)
-                    {
-                        userCardStyleLevel.name = cardLevel.name;
-                        userCardStyleLevel.count = cardLevel.count;
-                        userCardStyleLevel.gold = cardLevel.gold;
-                        userCardStyleLevel.skillGroupDamage = cardLevel.skillGroupDamage;
-                        userCardStyleLevels.Add(userCardStyleLevel);
-                    }
-                }
+                cardLevel = _cardLevels[cardLevelIndices[j]];
                 
-                __cardLevels[i] = userCardStyleLevels.ToArray();
+                userCardStyleLevel.name = cardLevel.name;
+                userCardStyleLevel.count = cardLevel.count;
+                userCardStyleLevel.gold = cardLevel.gold;
+                userCardStyleLevel.skillGroupDamage = cardLevel.skillGroupDamage;
+
+                userCardStyle.levels[j] = userCardStyleLevel;
             }
 
             userCardStyle.id = __ToID(i);
             userCardStyle.name = cardStyle.name;
 
-            userCardStyle.levels = __cardLevels[i];
-            
-            cards.cardStyles[i] = userCardStyle;
+            result.cardStyles[i] = userCardStyle;
         }
 
-        string key;
+        if (isCreated && _cardsDefaults != null)
+        {
+            UserRewardData reward;
+            reward.type = UserRewardType.Card;
+            foreach (var cardsDefault in _cardsDefaults)
+            {
+                reward.name = cardsDefault.name;
+                reward.count = cardsDefault.count;
+                        
+                __ApplyReward(reward);
+            }
+        }
+
         Card card;
         UserCard userCard;
         UserCard.Group userCardGroup;
         var userCards = new List<UserCard>();
         var userCardGroups = new List<UserCard.Group>();
-        int j, numCardGroup = _cardGroups.Length, numCards = _cards.Length;
+        int numCards = _cards.Length;
         for (i = 0; i < numCards; ++i)
         {
             card = _cards[i];
-            
-            userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
-            
-            key = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
-            userCard.count = PlayerPrefs.GetInt(key);
-            if (userCard.level < 1 && userCard.count < 1)
-            {
-                if (_defaultCards != null && Array.IndexOf(_defaultCards, card.name) != -1)
-                {
-                    userCard.count = 1;
-                    PlayerPrefs.SetInt(key, 1);
-                }
-                else
-                    continue;
-            }
 
+            userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1);
+            if (userCard.level == -1)
+                continue;
+            
             userCard.name = card.name;
             userCard.skillGroupName = card.skillGroupName;
+            
             userCard.id = __ToID(i);
-
-            userCard.styleID = 0;
-            for (j = 0; j < numCardStyles; ++j)
-            {
-                if (card.styleName == _cardStyles[j].name)
-                {
-                    userCard.styleID = __ToID(j);
-                    
-                    break;
-                }
-            }
-
+            userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
+            
+            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+            
             userCardGroups.Clear();
             for (j = 0; j < numCardGroup; ++j)
             {
@@ -470,18 +473,9 @@ public partial class UserDataMain
             userCards.Add(userCard);
         }
         
-        cards.cards = userCards.ToArray();
+        result.cards = userCards.ToArray();
         
-        cards.groups = numCardGroup > 0 ? new UserGroup[numCardGroup] : null;
-        UserGroup userGroup;
-        for (i = 0; i < numCardGroup; ++i)
-        {
-            userGroup.id = __ToID(i);
-            userGroup.name = _cardGroups[i].name;
-            cards.groups[i] = userGroup;
-        }
-        
-        onComplete(cards);
+        onComplete(result);
     }
 
     public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
@@ -499,20 +493,21 @@ public partial class UserDataMain
         yield return null;
 
         var card = _cards[__ToIndex(cardID)];
-        int numStyles = _cardStyles.Length, i;
-        for (i = 0; i < numStyles; ++i)
+        var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(card.styleName));
+        string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{card.name}";
+        int level = PlayerPrefs.GetInt(levelKey);
+        if (level >= levelIndices.Count)
         {
-            if (card.styleName == _cardStyles[i].name)
-                break;
+            onComplete(false);
+            
+            yield break;
         }
-
-        string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{card.name}",
-            countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
-        int level = PlayerPrefs.GetInt(levelKey), 
-            count = PlayerPrefs.GetInt(countKey), 
+        
+        string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
+        int count = PlayerPrefs.GetInt(countKey), 
             gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
 
-        var cardLevel = _cardLevels[level];
+        var cardLevel = _cardLevels[levelIndices[level]];
         if (cardLevel.count > count || cardLevel.gold > gold)
         {
             onComplete(false);
@@ -787,7 +782,6 @@ public partial class UserDataMain
         {
             UserRewardData reward;
             reward.type = UserRewardType.Accessory;
-
             foreach (var accessoryDefault in _accessoryDefaults)
             {
                 reward.name = accessoryDefault.name;
@@ -1023,6 +1017,39 @@ public partial class UserDataMain
         onComplete(true);
     }
 
+    public IEnumerator QueryAccessoryStages(
+        uint userID,
+        uint accessoryID,
+        Action<Memory<UserAccessory.Stage>> onComplete)
+    {
+        yield return null;
+
+        if (!__TryGetAccessory(accessoryID, out var info))
+        {
+            onComplete(null);
+
+            yield break;
+        }
+
+        var stageIndices = __GetAccessoryStageIndices(info.index);
+        int numStageIndices = stageIndices.Count;
+        var userAccessoryStages = new UserAccessory.Stage[numStageIndices];
+        UserAccessory.Stage userAccessoryStage;
+        AccessoryStage accessoryStage;
+        for (int i = 0; i < numStageIndices; ++i)
+        {
+            accessoryStage = _accessoryStages[stageIndices[i]];
+
+            userAccessoryStage.name = accessoryStage.name;
+            userAccessoryStage.count = accessoryStage.count;
+            userAccessoryStage.property = accessoryStage.property;
+            
+            userAccessoryStages[i] = userAccessoryStage;
+        }
+        
+        onComplete(userAccessoryStages);
+    }
+    
     public IEnumerator SetAccessory(
         uint userID, 
         uint accessoryID, 
@@ -1155,6 +1182,8 @@ public partial class UserDataMain
         public UserRewardData[] directRewards;
         
         public StageReward[] indirectRewards;
+        
+        public UserStage.RewardPool[] rewardPools;
     }
 
     public IEnumerator QueryStage(
@@ -1334,164 +1363,4 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
-    private bool __ApplyStageRewards(
-        string levelName, 
-        int stage, 
-        in StageReward stageReward, 
-        List<UserReward> outRewards)
-    {
-        var flag = __GetStageRewardFlag(
-            stageReward.name,
-            levelName,
-            stage,
-            stageReward.condition,
-            out var key);
-        if ((flag & UserStageReward.Flag.Unlock) != UserStageReward.Flag.Unlock ||
-            (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
-            return false;
-                    
-        flag |= UserStageReward.Flag.Collected;
-
-        PlayerPrefs.SetInt(key, (int)flag);
-
-        __ApplyRewards(stageReward.values, outRewards);
-
-        return true;
-    }
-
-    private uint __ApplyReward(in UserRewardData reward)
-    {
-        uint id = 0;
-        string key;
-        switch (reward.type)
-        {
-            case UserRewardType.PurchasePoolKey:
-                id = 1;
-                key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
-                break;
-            case UserRewardType.CardsCapacity:
-                id = 1;
-                key = NAME_SPACE_USER_CARDS_CAPACITY;
-                break;
-            case UserRewardType.Card:
-                int numCards = _cards.Length;
-                for (int i = 0; i < numCards; ++i)
-                {
-                    if (_cards[i].name == reward.name)
-                    {
-                        id = __ToID(i);
-                        
-                        break;
-                    }
-                }
-                key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
-                break;
-            case UserRewardType.Role:
-                int numRoles = _roles.Length;
-                for (int i = 0; i < numRoles; ++i)
-                {
-                    if (_roles[i].name == reward.name)
-                    {
-                        id = __ToID(i);
-                        
-                        break;
-                    }
-                }
-                key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
-                break;
-            case UserRewardType.Accessory:
-                uint accessoryID = (uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-                __CreateAccessory(accessoryID, __GetAccessoryIndex(reward.name), reward.count);
-                return accessoryID;
-            case UserRewardType.Item:
-                int numItems = _items.Length;
-                for (int i = 0; i < numItems; ++i)
-                {
-                    if (_items[i].name == reward.name)
-                    {
-                        id = __ToID(i);
-                        
-                        break;
-                    }
-                }
-                key = $"{NAME_SPACE_USER_ITEM_COUNT}{reward.name}";
-                break; 
-            case UserRewardType.Diamond:
-                id = 1;
-                key = $"{NAME_SPACE_USER_DIAMOND}{reward.name}";
-                break;
-            case UserRewardType.Gold:
-                id = 1;
-                key = $"{NAME_SPACE_USER_GOLD}{reward.name}";
-                break;
-            case UserRewardType.Energy:
-                id = 1;
-                key = $"{NAME_SPACE_USER_ENERGY}{reward.name}";
-                break;
-            default:
-                return 0;
-        }
-        
-        int count = PlayerPrefs.GetInt(key);
-        count += reward.count;
-        PlayerPrefs.SetInt(key, count);
-
-        return id;
-    }
-
-    private void __ApplyRewards(
-        UserRewardData[] rewards, 
-        List<UserReward> outRewards)
-    {
-        UserReward outReward;
-        foreach (var reward in rewards)
-        {
-            outReward.id = __ApplyReward(reward);
-            if(outReward.id == 0)
-                continue;
-
-            outReward.name = reward.name;
-            outReward.count = reward.count;
-            outReward.type = reward.type;
-            
-            outRewards.Add(outReward);
-        }
-    }
-    
-    private bool __TryGetStage(uint stageID, out int stage, out int levelIndex, out int rewardIndex)
-    {
-        stage = -1;
-        rewardIndex = 0;
-        Level level;
-        int i, j, 
-            stageIndex = 0, 
-            targetStageIndex = __ToIndex(stageID), 
-            numTargetStages,
-            numStages, 
-            numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
-        for (i = 0; i < numLevels; ++i)
-        {
-            level = _levels[i];
-            numStages = level.stages.Length;
-            numTargetStages = Mathf.Min(stageIndex + numStages, targetStageIndex) - stageIndex;
-            for (j = 0; j < numTargetStages; ++j)
-                rewardIndex += level.stages[stageIndex + j].indirectRewards.Length;
-            
-            if (numTargetStages < numStages)
-            {
-                levelIndex = i;
-                
-                stage = numTargetStages;
-
-                return true;
-            }
-
-            stageIndex += numStages;
-        }
-
-        levelIndex = -1;
-        rewardIndex = -1;
-        
-        return false;
-    }
 }
