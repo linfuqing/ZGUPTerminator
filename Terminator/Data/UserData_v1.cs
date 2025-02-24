@@ -51,7 +51,7 @@ public struct UserStageReward
 
     public enum Condition
     {
-        None, 
+        Normal, 
         Once, 
         NoDamage
     }

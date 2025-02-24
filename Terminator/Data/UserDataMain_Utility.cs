@@ -216,6 +216,10 @@ public partial class UserDataMain
             var stageFlag = UserData.GetStageFlag(levelName, stage);
             switch (condition)
             {
+                case UserStageReward.Condition.Normal:
+                    if((stageFlag | IUserData.StageFlag.Normal) != IUserData.StageFlag.Normal)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
                 case UserStageReward.Condition.Once:
                     if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
                         flag |= UserStageReward.Flag.Unlock;
