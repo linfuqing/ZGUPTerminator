@@ -120,7 +120,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         get => __energy;
 
-        private set
+        set
         {
             __energy = value;
 
@@ -139,7 +139,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         get => __energyMax;
 
-        private set
+        set
         {
             __energyMax = value;
             
@@ -472,6 +472,9 @@ public sealed class LoginManager : MonoBehaviour
                     break;
                 case UserRewardType.Energy:
                     energy += reward.count;
+                    break;
+                case UserRewardType.EnergyMax:
+                    energyMax += reward.count;
                     break;
             }
             
