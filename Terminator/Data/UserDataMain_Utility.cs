@@ -629,6 +629,7 @@ public partial class UserDataMain
                 
                 attribute.type = accessoryStyle.attributeType;
                 attribute.value = 0.0f;
+                attributes.Add(attribute);
             }
             
             level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
@@ -658,7 +659,16 @@ public partial class UserDataMain
                 ++numSkills;
             }
             
-            if (!string.IsNullOrEmpty(accessory.skillGroupName))
+            skill.type = UserSkillType.Group;
+            skill.name = __GetSkillGroupName(accessory.skillName);
+            if (!string.IsNullOrEmpty(skill.name))
+            {
+                skills.Add(skill);
+                
+                ++numSkills;
+            }
+            
+            if (!string.IsNullOrEmpty(accessory.skillGroupName) && accessory.skillGroupName != skill.name)
             {
                 skill.name = accessory.skillGroupName;
                 skill.type = UserSkillType.Group;
@@ -859,32 +869,93 @@ public partial class UserDataMain
                     break;
                 case SkillInfo.BelongTo.Accessory:
                     
-                    skill.damage = 1.0f;
-                    skills.Add(skill);
-
                     ref var accessory = ref _accessories[skillInfo.index];
 
-                    int numAccessorySlots = _accessorySlots.Length;
-                    for (int i = 0; i < numAccessorySlots; ++i)
+                    level = 0;
+                    int numAccessorySlots = _accessorySlots.Length, i;
+                    for (i = 0; i < numAccessorySlots; ++i)
                     {
                         ref var accessorySlot = ref _accessorySlots[i];
                         if(accessorySlot.styleName != accessory.styleName)
                             continue;
                         
-                        level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
+                        level = Mathf.Max(level, PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
                     }
 
-                    indices = __GetAccessoryStyleLevelIndices(__GetAccessoryStyleIndex(accessory.styleName));
-                    
-                    indices = __GetAccessoryStageIndices(skillInfo.index);
+                    int numAttributes = attributes.Count, accessoryStyleIndex = __GetAccessoryStyleIndex(accessory.styleName);
+                    ref var accessoryStyle = ref _accessoryStyles[accessoryStyleIndex];
+                    for(i = 0; i < numAttributes ; ++i)
+                    {
+                        if (attributes[i].type == accessoryStyle.attributeType)
+                            break;
+                    }
 
-                    if (!string.IsNullOrEmpty(accessory.skillGroupName))
+                    UserAttributeData attribute;
+                    if (i < numAttributes)
+                        attribute = attributes[i];
+                    else
+                    {
+                        ++numAttributes;
+                
+                        attribute.type = accessoryStyle.attributeType;
+                        attribute.value = 0.0f;
+                        attributes.Add(attribute);
+                    }
+                    
+                    if (level > 0)
+                    {
+                        indices = __GetAccessoryStyleLevelIndices(accessoryStyleIndex);
+
+                        ref var accessoryLevel = ref _accessoryLevels[indices[level - 1]];
+                        attribute.value += accessoryLevel.attributeValue;
+                        attributes[i] = attribute;
+                        
+                        skill.damage = accessoryLevel.skillDamage;
+                    }
+                    else
+                        skill.damage = 1.0f;
+
+                    skills.Add(skill);
+
+                    skill.type = UserSkillType.Group;
+                    skill.name = __GetSkillGroupName(cacheSkill);
+                    if (!string.IsNullOrEmpty(skill.name))
+                        skills.Add(skill);
+
+                    if (!string.IsNullOrEmpty(accessory.skillGroupName) && 
+                        accessory.skillGroupName != skill.name)
                     {
                         skill.name = accessory.skillGroupName;
-                        skill.type = UserSkillType.Group;
                         skills.Add(skill);
                     }
                     
+                    indices = __GetAccessoryStageIndices(skillInfo.index);
+                    int numIndices = indices.Count;
+                    string userAccessoryIDs;
+                    for (i = numIndices - 1; i >= 0; --i)
+                    {
+                        ref var accessoryStage = ref _accessoryStages[indices[i]];
+                        userAccessoryIDs = PlayerPrefs.GetString(
+                            $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{accessoryStage.name}");
+                        
+                        if(string.IsNullOrEmpty(userAccessoryIDs))
+                            continue;
+
+                        break;
+                    }
+
+                    if (i > 0)
+                    {
+                        ref var accessoryStage = ref _accessoryStages[indices[i - 1]];
+                        if (accessoryStage.property.skills != null && accessoryStage.property.skills.Length > 0)
+                        {
+                            if (accessoryStageSkills == null)
+                                accessoryStageSkills = new List<UserAccessory.Skill>();
+                    
+                            accessoryStageSkills.AddRange(accessoryStage.property.skills);
+                        }
+                    }
+
                     break;
             }
         }

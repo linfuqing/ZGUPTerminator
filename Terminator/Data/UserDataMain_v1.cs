@@ -12,11 +12,34 @@ public partial class UserDataMain
         public string name;
 
         public string group;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 技能名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 技能组名字
+        {
+            set
+            {
+                group = value;
+            }
+        }
+#endif
     }
 
     [Header("Common")]
     [SerializeField]
     internal Skill[] _skills;
+
+    [CSV("_skills", guidIndex = -1, nameIndex = 0)]
+    internal string _skillsPath;
     
     [Serializable]
     internal struct PurchasePool
@@ -124,7 +147,7 @@ public partial class UserDataMain
     internal PurchasePoolOption[] _purchasePoolOptions;
 
 #if UNITY_EDITOR
-    [SerializeField, CSV("_purchasePoolOptions", guidIndex = -1, nameIndex = -1)] 
+    [SerializeField, CSV("_purchasePoolOptions", guidIndex = -1, nameIndex = 0)] 
     internal string _purchasePoolOptionsPath;
 #endif
 
@@ -182,6 +205,35 @@ public partial class UserDataMain
         public string styleName;
         
         public string skillGroupName;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 卡牌名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌品质
+        {
+            set
+            {
+                styleName = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌技能分组名
+        {
+            set
+            {
+                skillGroupName = value;
+            }
+        }
+#endif
     }
 
     [Serializable]
@@ -198,6 +250,11 @@ public partial class UserDataMain
 
     [SerializeField] 
     internal Card[] _cards;
+
+#if UNITY_EDITOR
+    [SerializeField, CSV("_cards", guidIndex = -1, nameIndex = 0)] 
+    internal string _cardsPath;
+#endif
 
     private const string NAME_SPACE_USER_PURCHASE_POOL_TIMES = "UserPurchasePoolTimes";
     private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
@@ -574,6 +631,53 @@ public partial class UserDataMain
         
         [Tooltip("基础属性值")]
         public float attributeValue;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 装备名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备类型
+        {
+            set
+            {
+                styleName = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备技能名
+        {
+            set
+            {
+                skillName = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备技能分组名
+        {
+            set
+            {
+                skillGroupName = value;
+            }
+        }
+        
+        [CSVField]
+        public float 装备基础属性值
+        {
+            set
+            {
+                attributeValue = value;
+            }
+        }
+#endif
     }
 
     [Serializable]
@@ -619,6 +723,53 @@ public partial class UserDataMain
 
         [Tooltip("下一级技能伤害")]
         public float skillDamage;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 装备槽等级名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备槽等级类型
+        {
+            set
+            {
+                styleName = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备槽等级升级卷轴名
+        {
+            set
+            {
+                itemName = value;
+            }
+        }
+        
+        [CSVField]
+        public float 装备槽等级下一级属性
+        {
+            set
+            {
+                attributeValue = value;
+            }
+        }
+        
+        [CSVField]
+        public float 装备槽等级下一级技能伤害
+        {
+            set
+            {
+                skillDamage = value;
+            }
+        }
+#endif
     }
 
     [Serializable]
@@ -631,6 +782,53 @@ public partial class UserDataMain
         public int count;
 
         public UserAccessory.Property property;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 装备品阶名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备品阶装备
+        {
+            set
+            {
+                accessoryName = value;
+            }
+        }
+        
+        [CSVField]
+        public int 装备品阶需要卷轴数
+        {
+            set
+            {
+                count = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备品阶技能
+        {
+            set
+            {
+                //skillGroupName = value;
+            }
+        }
+        
+        [CSVField]
+        public float 装备品阶属性
+        {
+            set
+            {
+                //attributeValue = value;
+            }
+        }
+#endif
     }
 
     [Header("Items")]
@@ -652,15 +850,27 @@ public partial class UserDataMain
     internal AccessoryDefault[] _accessoryDefaults;
     [SerializeField, Tooltip("装备")] 
     internal Accessory[] _accessories;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_accessories", guidIndex = -1, nameIndex = 0)] 
+    internal string _accessoriesPath;
+#endif
+
     [SerializeField, Tooltip("装备槽")] 
     internal AccessorySlot[] _accessorySlots;
     [SerializeField, Tooltip("装备类型")] 
     internal AccessoryStyle[] _accessoryStyles;
-    [SerializeField, Tooltip("装备品阶")] 
-    internal AccessoryStage[] _accessoryStages;
     [SerializeField, Tooltip("装备槽等级")] 
     internal AccessoryLevel[] _accessoryLevels;
 
+#if UNITY_EDITOR
+    [SerializeField, CSV("_accessoryLevels", guidIndex = -1, nameIndex = 0)] 
+    internal string _accessoryLevelsPath;
+#endif
+
+    [SerializeField, Tooltip("装备品阶")] 
+    internal AccessoryStage[] _accessoryStages;
+    
     private const string NAME_SPACE_USER_ROLES_FLAG = "UserRolesFlag";
     private const string NAME_SPACE_USER_ITEM_COUNT = "UserItemCount";
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
