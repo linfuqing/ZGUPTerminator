@@ -183,6 +183,7 @@ public struct UserAccessory
         }
     }
 
+    [Serializable]
     public struct Attribute
     {
         public UserAttributeType type;
