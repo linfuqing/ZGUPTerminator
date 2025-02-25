@@ -1,6 +1,14 @@
 using System;
 using System.Collections;
 
+public struct UserTip
+{
+    public int value;
+    public int max;
+    public uint unitTime;
+    public long tick;
+}
+
 public struct UserStage_v0
 {
     [Flags]

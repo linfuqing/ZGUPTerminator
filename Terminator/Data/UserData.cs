@@ -65,14 +65,6 @@ public struct User
     //public int level;
 }
 
-public struct UserTip
-{
-    public int value;
-    public int max;
-    public uint unitTime;
-    public long tick;
-}
-
 public struct UserEnergy
 {
     public int value;

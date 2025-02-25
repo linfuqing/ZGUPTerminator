@@ -5,57 +5,6 @@ using UnityEngine;
 
 public partial class UserDataMain
 {
-    [Serializable]
-    public struct Tip
-    {
-        public int max;
-        public float uintTime;
-
-        public int value => GetValue(out _);
-
-        public int GetValue(int value, uint utcTime, out uint time)
-        {
-            var timeUnix = DateTime.UtcNow - Utc1970;
-
-            uint now = (uint)timeUnix.TotalSeconds;
-            
-            time = now;
-            if (uintTime > Mathf.Epsilon)
-            {
-                float tipFloat = (time - (utcTime > 0 ? utcTime : time)) / uintTime;
-                int tipInt =  Mathf.FloorToInt(tipFloat);
-                value += tipInt;
-
-                time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * uintTime);
-            }
-        
-            if (value >= max)
-            {
-                value = max;
-
-                time = now;
-            }
-
-            return value;
-        }
-
-        public int GetValue(out uint time)
-        {
-            return GetValue(PlayerPrefs.GetInt(NAME_SPACE_USER_TIP), 
-                (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME),
-                out time);
-        }
-    }
-
-    private const string NAME_SPACE_USER_TIP = "UserTip";
-    private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
-    private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-    [Header("Legacy")]
-    
-    [SerializeField]
-    internal Tip _tip;
-
     public IEnumerator QueryTip(
         uint userID,
         Action<UserTip> onComplete)
@@ -86,26 +35,6 @@ public partial class UserDataMain
     {
         yield return null;
 
-        /*var timeUnix = DateTime.UtcNow - Utc1970;
-        
-        uint now = (uint)timeUnix.TotalSeconds, time = now;
-        int tip = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
-        if (_tip.uintTime > Mathf.Epsilon)
-        {
-            float tipFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME, (int)time)) / _tip.uintTime;
-            int tipInt =  Mathf.FloorToInt(tipFloat);
-            tip += tipInt;
-
-            time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * _tip.uintTime);
-        }
-        
-        if (tip >= _tip.max)
-        {
-            tip = _tip.max;
-
-            time = now;
-        }*/
-
         int tip = _tip.GetValue(out uint time);
         gold += tip;
 
@@ -114,7 +43,7 @@ public partial class UserDataMain
 
         onComplete(tip);
     }
-
+    
     private const string NAME_SPACE_USER_SKILLS = "UserSkills";
 
     public IEnumerator QuerySkills(
@@ -156,6 +85,8 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_WEAPON_SELECTED = "UserWeaponSelected";
     private const string NAME_SPACE_USER_WEAPONS = "UserWeapons";
     
+    [Header("Legacy")]
+
     [SerializeField] 
     internal Weapon[] _weapons;
 
@@ -468,7 +399,7 @@ public partial class UserData
     {
         return UserDataMain.instance.QueryTip(userID, onComplete);
     }
-
+    
     public IEnumerator QuerySkills(
         uint userID,
         Action<Memory<UserSkill>> onComplete)
@@ -520,7 +451,7 @@ public partial class UserData
     {
         return UserDataMain.instance.SelectWeapon(userID, weaponID, onComplete);
     }
-
+    
     public IEnumerator CollectTip(
         uint userID,
         Action<int> onComplete)
