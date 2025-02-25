@@ -925,6 +925,11 @@ public partial class UserDataMain
     [SerializeField, Tooltip("装备品阶")] 
     internal AccessoryStage[] _accessoryStages;
     
+#if UNITY_EDITOR
+    [SerializeField, CSV("_accessoryStages", guidIndex = -1, nameIndex = 0)] 
+    internal string _accessoryStagesPath;
+#endif
+    
     private const string NAME_SPACE_USER_ROLES_FLAG = "UserRolesFlag";
     private const string NAME_SPACE_USER_ITEM_COUNT = "UserItemCount";
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
