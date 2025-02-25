@@ -685,7 +685,7 @@ public partial class UserDataMain
     {
         public string name;
 
-        public int stage;
+        public string stageName;
 
         public int count;
     }
@@ -1055,14 +1055,28 @@ public partial class UserDataMain
         
         result.roles = userRoles.ToArray();
 
+        List<int> accessoryStageIndices;
         if (isCreated && _accessoryDefaults != null)
         {
+            int numAccessoryStageIndices;
             UserRewardData reward;
             reward.type = UserRewardType.Accessory;
             foreach (var accessoryDefault in _accessoryDefaults)
             {
                 reward.name = accessoryDefault.name;
-                reward.count = accessoryDefault.stage;
+                reward.count = -1;
+
+                accessoryStageIndices = __GetAccessoryStageIndices(__GetAccessoryIndex(accessoryDefault.name));
+                numAccessoryStageIndices = accessoryStageIndices.Count;
+                for (i = 0; i < numAccessoryStageIndices; ++i)
+                {
+                    if (_accessoryStages[accessoryStageIndices[i]].name == accessoryDefault.stageName)
+                    {
+                        reward.count = i;
+                        
+                        break;
+                    }
+                }
 
                 __ApplyReward(reward);
             }
@@ -1078,7 +1092,6 @@ public partial class UserDataMain
         AccessoryStage accessoryStage;
         UserAccessory.Group userAccessoryGroup;
         UserAccessory userAccessory;
-        List<int> accessoryStageIndices;
         var userAccessories = new List<UserAccessory>();
         var userAccessoryGroups = new List<UserAccessory.Group>();
         for (i = 0; i < numAccessories; ++i)
