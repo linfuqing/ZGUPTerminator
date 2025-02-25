@@ -167,7 +167,7 @@ public struct UserAccessory
     }
 
     [Serializable]
-    public struct Skill
+    public struct Skill : IComparable<Skill>
     {
         public string name;
 
@@ -176,6 +176,11 @@ public struct UserAccessory
         public Opcode opcode;
         
         public float damage;
+
+        public int CompareTo(Skill other)
+        {
+            return ((int)other.opcode).CompareTo((int)other.opcode);
+        }
     }
 
     public struct Attribute

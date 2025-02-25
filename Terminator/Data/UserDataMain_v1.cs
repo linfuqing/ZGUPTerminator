@@ -616,6 +616,9 @@ public partial class UserDataMain
 
         [Tooltip("下一级属性加成")]
         public float attributeValue;
+
+        [Tooltip("下一级技能伤害")]
+        public float skillDamage;
     }
 
     [Serializable]
@@ -758,7 +761,7 @@ public partial class UserDataMain
             
             userRole.id = __ToID(i);
 
-            userRole.attributes = __CollectRoleAttributes(role.name, out userRole.skillGroupDamage)?.ToArray();
+            userRole.attributes = __CollectRoleAttributes(role.name, null, out userRole.skillGroupDamage)?.ToArray();
 
             userRoleGroupIDs.Clear();
             for (j = 0; j < numRoleGroups; ++j)
