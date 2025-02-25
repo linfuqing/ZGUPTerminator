@@ -273,7 +273,7 @@ public struct UserAccessoryStyle
         /// <summary>
         /// 升级需要的卷轴数量
         /// </summary>
-        public int count;
+        public int itemCount;
         
         public float attributeValue;
     }

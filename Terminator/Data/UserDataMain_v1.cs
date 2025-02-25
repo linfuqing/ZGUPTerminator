@@ -716,7 +716,7 @@ public partial class UserDataMain
 
         public string itemName;
 
-        public int count;
+        public int itemCount;
 
         [Tooltip("下一级属性加成")]
         public float attributeValue;
@@ -752,6 +752,15 @@ public partial class UserDataMain
             }
         }
         
+        [CSVField]
+        public int 装备槽等级升级卷轴数
+        {
+            set
+            {
+                itemCount = value;
+            }
+        }
+
         [CSVField]
         public float 装备槽等级下一级属性
         {
@@ -803,7 +812,7 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public int 装备品阶需要卷轴数
+        public int 装备品阶需要个数
         {
             set
             {
@@ -817,15 +826,60 @@ public partial class UserDataMain
             set
             {
                 //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserAccessory.Skill skill;
+                property.skills = new UserAccessory.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserAccessory.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    property.skills[i] = skill;
+                }
             }
         }
         
         [CSVField]
-        public float 装备品阶属性
+        public string 装备品阶属性
         {
             set
             {
-                //attributeValue = value;
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserAccessory.Attribute attribute;
+                property.attributes = new UserAccessory.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserAccessory.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
             }
         }
 #endif
@@ -1130,7 +1184,7 @@ public partial class UserDataMain
                 
                 userAccessoryStyleLevel.name = accessoryLevel.name;
                 userAccessoryStyleLevel.itemID = __ToID(__GetItemIndex(accessoryLevel.itemName));
-                userAccessoryStyleLevel.count = accessoryLevel.count;
+                userAccessoryStyleLevel.itemCount = accessoryLevel.itemCount;
                 userAccessoryStyleLevel.attributeValue = accessoryLevel.attributeValue;
                 
                 userAccessoryStyle.levels[j] = userAccessoryStyleLevel;
@@ -1319,9 +1373,9 @@ public partial class UserDataMain
             string itemName = _items[__GetItemIndex(accessoryLevel.itemName)].name, 
                 itemCountKey = $"{NAME_SPACE_USER_ITEM_COUNT}{itemName}";
             int itemCount = PlayerPrefs.GetInt(itemCountKey);
-            if (itemCount >= accessoryLevel.count)
+            if (itemCount >= accessoryLevel.itemCount)
             {
-                PlayerPrefs.SetInt(itemCountKey, itemCount - accessoryLevel.count);
+                PlayerPrefs.SetInt(itemCountKey, itemCount - accessoryLevel.itemCount);
 
                 PlayerPrefs.SetInt(accessoryLevelKey, ++level);
 
