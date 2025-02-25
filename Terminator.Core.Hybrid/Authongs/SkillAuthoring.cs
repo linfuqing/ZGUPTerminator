@@ -319,6 +319,8 @@ public class SkillAuthoring : MonoBehaviour
             cooldownScale.value = authoring._cooldownScale;
             AddComponent(entity, cooldownScale);
 
+            AddComponent<SkillLayerMask>(entity);
+
             var activeIndices = AddBuffer<SkillActiveIndex>(entity);
             int numActives = authoring._actives.Length;
             activeIndices.ResizeUninitialized(numActives);

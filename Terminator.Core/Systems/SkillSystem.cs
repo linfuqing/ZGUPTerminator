@@ -30,6 +30,8 @@ public partial struct SkillSystem : ISystem
 
         public BufferAccessor<Message> outputMessages;
         
+        public NativeArray<SkillLayerMask> skillLayerMasks;
+        
         public NativeArray<BulletLayerMask> bulletLayerMasks;
 
         public bool Execute(int index)
@@ -53,7 +55,19 @@ public partial struct SkillSystem : ISystem
             if (index < bulletLayerMasks.Length)
             {
                 BulletLayerMask bulletLayerMask;
-                bulletLayerMask.value = layerMask;
+                if (index < skillLayerMasks.Length)
+                {
+                    var skillLayerMask = skillLayerMasks[index];
+                    bulletLayerMask = bulletLayerMasks[index];
+                    bulletLayerMask.value &= ~skillLayerMask.value;
+                    bulletLayerMask.value |= layerMask;
+
+                    skillLayerMask.value = layerMask;
+                    skillLayerMasks[index] = skillLayerMask;
+                }
+                else
+                    bulletLayerMask.value = layerMask;
+
                 bulletLayerMasks[index] = bulletLayerMask;
             }
 
@@ -85,6 +99,8 @@ public partial struct SkillSystem : ISystem
 
         public BufferTypeHandle<Message> outputMessageType;
         
+        public ComponentTypeHandle<SkillLayerMask> skillLayerMaskType;
+
         public ComponentTypeHandle<BulletLayerMask> bulletLayerMaskType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -103,6 +119,7 @@ public partial struct SkillSystem : ISystem
             collect.bulletStates = chunk.GetBufferAccessor(ref bulletStatusType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
+            collect.skillLayerMasks = chunk.GetNativeArray(ref skillLayerMaskType);
             collect.bulletLayerMasks = chunk.GetNativeArray(ref bulletLayerMaskType);
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -132,6 +149,8 @@ public partial struct SkillSystem : ISystem
     
     private BufferTypeHandle<Message> __outputMessageType;
 
+    private ComponentTypeHandle<SkillLayerMask> __skillLayerMaskType;
+
     private ComponentTypeHandle<BulletLayerMask> __bulletLayerMaskType;
 
     private EntityQuery __group;
@@ -148,6 +167,7 @@ public partial struct SkillSystem : ISystem
         __bulletStatusType = state.GetBufferTypeHandle<BulletStatus>();
         __statusType = state.GetBufferTypeHandle<SkillStatus>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
+        __skillLayerMaskType = state.GetComponentTypeHandle<SkillLayerMask>();
         __bulletLayerMaskType = state.GetComponentTypeHandle<BulletLayerMask>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -174,6 +194,7 @@ public partial struct SkillSystem : ISystem
         __bulletStatusType.Update(ref state);
         __statusType.Update(ref state);
         __outputMessageType.Update(ref state);
+        __skillLayerMaskType.Update(ref state);
         __bulletLayerMaskType.Update(ref state);
         
         CollectEx collect;
@@ -187,6 +208,7 @@ public partial struct SkillSystem : ISystem
         collect.bulletStatusType = __bulletStatusType;
         collect.statusType = __statusType;
         collect.outputMessageType = __outputMessageType;
+        collect.skillLayerMaskType = __skillLayerMaskType;
         collect.bulletLayerMaskType = __bulletLayerMaskType;
         
         state.Dependency = collect.ScheduleParallelByRef(__group, state.Dependency);

@@ -224,6 +224,11 @@ public struct SkillCooldownScale : IComponentData
     public float value;
 }
 
+public struct SkillLayerMask : IComponentData
+{
+    public int value;
+}
+
 public struct SkillMessage : IBufferElementData
 {
     public SkillMessageType type;
