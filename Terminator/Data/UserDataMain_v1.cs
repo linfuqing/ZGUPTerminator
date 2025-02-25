@@ -7,6 +7,18 @@ using ZG;
 public partial class UserDataMain
 {
     [Serializable]
+    internal struct Skill
+    {
+        public string name;
+
+        public string group;
+    }
+
+    [Header("Common")]
+    [SerializeField]
+    internal Skill[] _skills;
+    
+    [Serializable]
     internal struct PurchasePool
     {
         public string name;
@@ -321,7 +333,7 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public int 卡牌等级升级伤害
+        public float 卡牌等级升级伤害
         {
             set
             {
@@ -545,9 +557,6 @@ public partial class UserDataMain
         
         [Tooltip("技能")]
         public string skillName;
-        
-        [Tooltip("技能组")]
-        public string skillGroupName;
     }
 
     [Serializable]
@@ -726,7 +735,7 @@ public partial class UserDataMain
             role = _roles[i];
             userRole.name = role.name;
             userRole.skillName = role.skillName;
-            userRole.skillGroupName = role.skillGroupName;
+            userRole.skillGroupName = __GetSkillGroupName(role.skillName);
 
             isNew = false;
             key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";
@@ -1270,8 +1279,10 @@ public partial class UserDataMain
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
-        stageProperty.value = __ApplyProperty(userID);
         stageProperty.cache = UserData.GetStageCache(level.name, stage);
+        stageProperty.value = __ApplyProperty(
+            userID, 
+            stageProperty.cache.skills);
         
         onComplete(stageProperty);
     }

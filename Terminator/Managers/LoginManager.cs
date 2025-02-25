@@ -151,6 +151,7 @@ public sealed class LoginManager : MonoBehaviour
     /// <summary>
     /// 总攻击倍率
     /// </summary>
+    [Obsolete]
     public float bulletDamageScale
     {
         get;
@@ -161,6 +162,7 @@ public sealed class LoginManager : MonoBehaviour
     /// <summary>
     /// 总防御倍率
     /// </summary>
+    [Obsolete]
     public float effectTargetDamageScale
     {
         get;
@@ -171,6 +173,7 @@ public sealed class LoginManager : MonoBehaviour
     /// <summary>
     /// 总HP倍率
     /// </summary>
+    [Obsolete]
     public float effectTargetHPScale
     {
         get;
@@ -181,6 +184,7 @@ public sealed class LoginManager : MonoBehaviour
     /// <summary>
     /// 选择的超能武器的名字
     /// </summary>
+    [Obsolete]
     public string[] activeSkillNames
     {
         get;
@@ -212,6 +216,7 @@ public sealed class LoginManager : MonoBehaviour
         ApplyStart(true);
     }
 
+#if USER_DATA_LEGACY
     private void __ApplySkills(Memory<UserSkill> skills)
     {
         ref var skillGroups = ref LevelPlayerShared.skillGroups;
@@ -241,7 +246,8 @@ public sealed class LoginManager : MonoBehaviour
         LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
     }
-
+#endif
+    
     private void __ApplyLevels(Memory<UserLevel> userLevels)
     {
         int numLevels = _levels.Length;
@@ -482,12 +488,69 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.Property property)
     {
-        if (property.skills == null)
+        if (property.skills == null && property.attributes == null)
         {
             __isStart = false;
 
             return;
         }
+
+        float effectDamageScale = 0.0f, effectTargetDamageScale = 0.0f, effectTargetHPScale = 0.0f;
+        if (property.attributes != null)
+        {
+            foreach (var attribute in property.attributes)
+            {
+                switch (attribute.type)
+                {
+                    case UserAttributeType.Hp:
+                        effectTargetHPScale += attribute.value;
+                        break;
+                    case UserAttributeType.Attack:
+                        effectDamageScale += attribute.value;
+                        break;
+                    case UserAttributeType.Defence:
+                        effectTargetDamageScale += attribute.value;
+                        break;
+                }
+            }
+        }
+        
+        LevelPlayerShared.effectTargetHPScale = 1.0f + effectTargetHPScale;
+        LevelPlayerShared.effectDamageScale = 1.0f + effectDamageScale;
+        LevelPlayerShared.effectTargetDamageScale = 1.0f / (1.0f + effectTargetDamageScale);
+
+        ref var activeSkills = ref LevelPlayerShared.activeSkills;
+        activeSkills.Clear();
+        
+        ref var skillGroups = ref LevelPlayerShared.skillGroups;
+        skillGroups.Clear();
+        
+        var skillGroupNames = new List<string>();
+        if (property.skills != null)
+        {
+            LevelPlayerActiveSkill activeSkill;
+            LevelPlayerSkillGroup skillGroup;
+            foreach (var skill in property.skills)
+            {
+                switch (skill.type)
+                {
+                    case UserSkillType.Individual:
+                        activeSkill.name = skill.name;
+                        activeSkill.damageScale = skill.damage;
+                        activeSkills.Add(activeSkill);
+                        break;
+                    case UserSkillType.Group:
+                        skillGroup.name = skill.name;
+                        skillGroup.damageScale = skill.damage;
+                        skillGroups.Add(skillGroup);
+                        
+                        skillGroupNames.Add(skill.name);
+                        break;
+                }
+            }
+        }
+
+        ILevelData.instance = new GameLevelData(userID.Value, skillGroupNames.ToArray());
     }
     
     private void __ApplyStage(IUserData.StageProperty property)
@@ -501,6 +564,8 @@ public sealed class LoginManager : MonoBehaviour
         
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
+        
+        __ApplyLevel(property.value);
     }
 
     private void __ApplyEnergy(User user, UserEnergy userEnergy)
@@ -600,7 +665,10 @@ public sealed class LoginManager : MonoBehaviour
         var userData = IUserData.instance;
 
         uint userID = LoginManager.userID.Value;
+        
+#if USER_DATA_LEGACY
         yield return userData.QuerySkills(userID, __ApplySkills);
+#endif
 
         if (isRestart)
             yield return userData.ApplyLevel(userID, __selectedUserLevelID, __ApplyLevel);
@@ -613,8 +681,6 @@ public sealed class LoginManager : MonoBehaviour
             
             yield break;
         }
-
-        ILevelData.instance = new GameLevelData(userID);
 
         _onStart.Invoke();
         

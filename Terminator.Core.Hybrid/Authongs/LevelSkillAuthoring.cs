@@ -41,7 +41,7 @@ public class LevelSkillAuthoring : MonoBehaviour
 
         [Tooltip("该技能组的对应优先级的基础权重（优先级为0），根据已获得的技能的分组权重和所有技能组的的基础权重，取优先级最高的所有技能分组权重进行累加，进而得出对应技能卡出现的概率。")]
         public float weight;
-        
+
         [Tooltip("该技能组的一级技能")]
         public string[] firstSkillNames;
     }
@@ -324,8 +324,10 @@ public class LevelSkillAuthoring : MonoBehaviour
             AddComponent<LevelSkill>(entity);
             SetComponentEnabled<LevelSkill>(entity, false);
             
-            var levelSkillGroups = AddBuffer<LevelSkillGroup>(entity);
             LevelSkillGroup levelSkillGroup;
+            levelSkillGroup.damageScale = 1.0f;
+
+            var levelSkillGroups = AddBuffer<LevelSkillGroup>(entity);
             string groupName;
             int numGroupNames = authoring._groupNames == null ? 0 : authoring._groupNames.Length;
             //defaultGroups.ResizeUninitialized(numGroupNames);

@@ -202,7 +202,7 @@ public struct SkillDefinition
                     isSelected = true;
                     
                     bulletActiveIndex.value = bullet.index;
-                    bulletActiveIndex.damageScale = bullet.damageScale;
+                    bulletActiveIndex.damageScale = bullet.damageScale * skillActiveIndex.damageScale;
                     bulletActiveIndices.Add(bulletActiveIndex);
                 }
             }
@@ -234,6 +234,8 @@ public struct SkillMessage : IBufferElementData
 public struct SkillActiveIndex : IBufferElementData
 {
     public int value;
+
+    public float damageScale;
 }
 
 public struct SkillStatus : IBufferElementData

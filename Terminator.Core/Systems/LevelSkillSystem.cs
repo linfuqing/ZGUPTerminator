@@ -130,7 +130,6 @@ public partial struct LevelSkillPickableSystem : ISystem
             var hash = math.aslong(time);
             var random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32));
             LevelSkill skill;
-            NativeArray<int> skillGroupIndices;
             DynamicBuffer<LevelSkillGroup> skillGroups;
             DynamicBuffer<SkillActiveIndex> skillActiveIndices;
             while (this.results.TryDequeue(out Result result))
@@ -177,13 +176,9 @@ public partial struct LevelSkillPickableSystem : ISystem
                     }
                 }*/
 
-                skillGroupIndices = this.skillGroups.TryGetBuffer(result.entity, out skillGroups)
-                    ? skillGroups.AsNativeArray().Reinterpret<int>()
-                    : default;
-                
                 definition.definition.Value.Select(
                     skillActiveIndices.AsNativeArray(), 
-                    skillGroupIndices, 
+                    this.skillGroups.TryGetBuffer(result.entity, out skillGroups) ? skillGroups.AsNativeArray() : default,
                     ref skills, 
                     ref random, 
                     out version.priority);

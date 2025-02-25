@@ -11,6 +11,7 @@ public struct LevelSkillDefinition
     {
         public int activeIndex;
         public float value;
+        public float damageScale;
     }
 
     private struct GroupSkillWeight : IComparable<GroupSkillWeight>
@@ -62,7 +63,7 @@ public struct LevelSkillDefinition
 
     public void Select(
         in NativeArray<SkillActiveIndex> activeIndices, 
-        in NativeArray<int> groupsToFilter, 
+        in NativeArray<LevelSkillGroup> groups, 
         ref DynamicBuffer<LevelSkill> results, 
         ref Random random, 
         out int priority)
@@ -87,9 +88,7 @@ public struct LevelSkillDefinition
 
             ref var skill = ref skills[j];
             if(skill.groupIndex == -1 || 
-               groupsToFilter.IsCreated && 
-               groupsToFilter.Length > 0 && 
-               groupsToFilter.IndexOf(skill.groupIndex) == -1/* || __GetSkillIndices(skill.groupIndex, j).Length < 1*/)
+               !__IsInGroup(skill.groupIndex, groups, out weight.damageScale))
                 continue;
                 
             weight.activeIndex = i;
@@ -134,9 +133,7 @@ public struct LevelSkillDefinition
                         
                         if(weight.activeIndex != -1 && 
                            __GetSkillIndices(group.index, index).Length < 1 || 
-                           groupsToFilter.IsCreated && 
-                           groupsToFilter.Length > 0 && 
-                           groupsToFilter.IndexOf(group.index) == -1)
+                           !__IsInGroup(group.index, groups, out weight.damageScale))
                             continue;
                         
                         weight.value = 0.0f;
@@ -152,10 +149,10 @@ public struct LevelSkillDefinition
 
         if (priority == 0)
         {
-            numGroups = groups.Length;
+            numGroups = this.groups.Length;
             for (i = 0; i < numGroups; ++i)
             {
-                ref var group = ref groups[i];
+                ref var group = ref this.groups[i];
 
                 if (weights.TryGetValue(i, out weight))
                 {
@@ -187,9 +184,7 @@ public struct LevelSkillDefinition
                 
                 if(weight.activeIndex != -1 && 
                    __GetSkillIndices(i, index).Length < 1 || 
-                    groupsToFilter.IsCreated && 
-                    groupsToFilter.Length > 0 && 
-                    groupsToFilter.IndexOf(i) == -1)
+                   !__IsInGroup(i, groups, out weight.damageScale))
                     continue;
                 
                 weight.value = group.weight;
@@ -242,6 +237,7 @@ public struct LevelSkillDefinition
                             chance -= groupSkillWeight.value.value;
                         else
                         {
+                            result.damageScale = groupSkillWeight.value.damageScale;
                             result.activeIndex = groupSkillWeight.value.activeIndex;
                             result.originIndex =
                                 result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
@@ -272,13 +268,13 @@ public struct LevelSkillDefinition
                 for (i = 0; i < numWeights; ++i)
                 {
                     groupSkillWeight = groupSkillWeights[i];
+                    result.damageScale = groupSkillWeight.value.damageScale;
                     result.activeIndex = groupSkillWeight.value.activeIndex;
                     result.originIndex =
                         result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
                     ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
                         result.originIndex);
                     numSkillIndices = math.min(skillIndices.Length, numResults);
-
                     for (j = 0; j < numSkillIndices; ++j)
                     {
                         result.index = skillIndices[j];
@@ -296,6 +292,30 @@ public struct LevelSkillDefinition
 
         groupSkillWeights.Dispose();
         weights.Dispose();
+    }
+
+    private bool __IsInGroup(int groupIndex, in NativeArray<LevelSkillGroup> groups, out float damageScale)
+    {
+        damageScale = 1.0f;
+        
+        bool result = true;
+        if (groups.IsCreated && groups.Length > 0)
+        {
+            result = false;
+            foreach (var group in groups)
+            {
+                if (group.value == groupIndex)
+                {
+                    damageScale = group.damageScale;
+
+                    result = true;
+
+                    break;
+                }
+            }
+        }
+
+        return result;
     }
 
     private ref BlobArray<int> __GetSkillIndices(int groupIndex, int skillIndex)
@@ -337,7 +357,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
     public int index;
     public int originIndex;
     public int activeIndex;
-    //public int priority;
+    public float damageScale;
 
     public void Apply(ref NativeList<SkillActiveIndex> activeIndices)
     {
@@ -345,14 +365,18 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         {
             SkillActiveIndex activeIndex;
             activeIndex.value = index;
+            activeIndex.damageScale = damageScale;
 
             activeIndices.Add(activeIndex);
         }
         else
         {
-            UnityEngine.Assertions.Assert.AreEqual(originIndex, activeIndices.ElementAt(activeIndex).value);
+            ref var temp = ref activeIndices.ElementAt(activeIndex);
             
-            activeIndices.ElementAt(activeIndex).value = index;
+            UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
+            
+            temp.value = index;
+            temp.damageScale = damageScale;
         }
     }
 
@@ -367,14 +391,18 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         {
             SkillActiveIndex activeIndex;
             activeIndex.value = index;
+            activeIndex.damageScale = damageScale;
 
             activeIndices.Add(activeIndex);
         }
         else
         {
-            UnityEngine.Assertions.Assert.AreEqual(originIndex, activeIndices.ElementAt(activeIndex).value);
+            ref var temp = ref activeIndices.ElementAt(activeIndex);
+            
+            UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
 
-            activeIndices.ElementAt(activeIndex).value = index;
+            temp.value = index;
+            temp.damageScale = damageScale;
             
             ref var skill = ref skillDefinition.skills[index];
             int bulletIndex, numBullets = skill.bulletIndices.Length;
@@ -417,4 +445,6 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
 public struct LevelSkillGroup : IBufferElementData
 {
     public int value;
+
+    public float damageScale;
 }

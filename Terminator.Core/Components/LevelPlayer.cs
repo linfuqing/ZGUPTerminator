@@ -9,11 +9,15 @@ public struct LevelPlayer : IComponentData
 public struct LevelPlayerActiveSkill
 {
     public FixedString32Bytes name;
+
+    public float damageScale;
 }
 
 public struct LevelPlayerSkillGroup
 {
     public FixedString32Bytes name;
+    
+    public float damageScale;
 }
 
 public static class LevelPlayerShared

@@ -449,16 +449,17 @@ public partial interface IUserData
             int length = skills.Length;
             exp = int.Parse(skills[--length]);
             expMax = int.Parse(skills[--length]);
-            
+
             Array.Resize(ref skills, length);
         }
 
         public override string ToString()
         {
             string result = $"{expMax}{UserData.SEPARATOR}{exp}";
-            return skills == null || skills.Length < 1
-                ? result
-                : $"{string.Join(UserData.SEPARATOR, skills)}{UserData.SEPARATOR}{result}";
+            if(skills != null && skills.Length > 0)
+                result = $"{string.Join(UserData.SEPARATOR, skills)}{UserData.SEPARATOR}{result}";
+            
+            return result;
         }
     }
 

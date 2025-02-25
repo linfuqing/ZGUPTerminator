@@ -28,7 +28,7 @@ public class GameLevelData : ILevelData
 {
     private uint __userID;
     
-    public GameLevelData(uint userID)
+    public GameLevelData(uint userID, string[] skillGroups)
     {
         __userID = userID;
     }
@@ -256,7 +256,7 @@ public class GameMain : GameUser
         (IAnalytics.instance as IAnalyticsEx)?.Login(id);
 
         //__id = id;
-        ILevelData.instance = new GameLevelData(id);
+        ILevelData.instance = new GameLevelData(id, null);
     }
 
     /*private void __OnApplySkills(Memory<UserSkill> skills)
