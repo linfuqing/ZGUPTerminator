@@ -38,7 +38,7 @@ public partial class UserDataMain
     [SerializeField]
     internal Skill[] _skills;
 
-    [CSV("_skills", guidIndex = -1, nameIndex = 0)]
+    [SerializeField, CSV("_skills", guidIndex = -1, nameIndex = 0)]
     internal string _skillsPath;
     
     [Serializable]
