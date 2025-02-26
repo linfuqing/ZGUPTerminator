@@ -310,7 +310,7 @@ public partial class UserDataMain
             switch (condition)
             {
                 case UserStageReward.Condition.Normal:
-                    if((stageFlag | IUserData.StageFlag.Normal) != IUserData.StageFlag.Normal)
+                    if((stageFlag | IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
                         flag |= UserStageReward.Flag.Unlock;
                     break;
                 case UserStageReward.Condition.Once:
