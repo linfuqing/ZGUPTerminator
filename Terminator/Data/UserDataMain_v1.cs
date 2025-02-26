@@ -1017,7 +1017,7 @@ public partial class UserDataMain
         if (isCreated && _itemDefaults != null)
         {
             UserRewardData reward;
-            reward.type = UserRewardType.Item;
+            reward.type = UserRewardType.Role;
 
             foreach (var roleDefault in _roleDefaults)
             {
