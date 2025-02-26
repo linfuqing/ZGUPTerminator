@@ -170,7 +170,7 @@ public partial class LevelManager
             if (__activeSkillNames == null)
                 __activeSkillNames = new Dictionary<(int, int), string>();
 
-            __activeSkillNames.Add((index, level), name);
+            __activeSkillNames[(index, level)] = name;
 
             IAnalytics.instance?.SetActiveSkill(value.Value.name);
             
