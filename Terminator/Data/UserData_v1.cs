@@ -104,8 +104,6 @@ public struct UserCard
 
     public string name;
 
-    public string skillGroupName;
-
     public uint id;
 
     /// <summary>
@@ -124,6 +122,11 @@ public struct UserCard
     public int count;
 
     /// <summary>
+    /// 技能
+    /// </summary>
+    public string[] skillNames;
+    
+    /// <summary>
     /// 装备卡组
     /// </summary>
     public Group[] groups;
@@ -133,16 +136,6 @@ public struct UserRole
 {
     public string name;
     
-    /// <summary>
-    /// 技能
-    /// </summary>
-    public string skillName;
-
-    /// <summary>
-    /// 技能组
-    /// </summary>
-    public string skillGroupName;
-
     public uint id;
 
     public float skillGroupDamage;
@@ -151,6 +144,11 @@ public struct UserRole
     /// 角色总属性
     /// </summary>
     public UserAttributeData[] attributes;
+
+    /// <summary>
+    /// 技能
+    /// </summary>
+    public string[] skillNames;
 
     /// <summary>
     /// 被装备到的套装ID
@@ -220,9 +218,6 @@ public struct UserAccessory
 
     public string name;
     
-    public string skillName;
-    public string skillGroupName;
-
     public uint id;
 
     /// <summary>
@@ -237,6 +232,11 @@ public struct UserAccessory
 
     public float attributeValue;
 
+    /// <summary>
+    /// 技能
+    /// </summary>
+    public string[] skillNames;
+    
     public Stage stageDesc;
 
     /// <summary>

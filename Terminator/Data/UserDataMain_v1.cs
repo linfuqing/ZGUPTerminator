@@ -208,7 +208,7 @@ public partial class UserDataMain
 
         public string styleName;
         
-        public string skillGroupName;
+        public string skillName;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -234,7 +234,7 @@ public partial class UserDataMain
         {
             set
             {
-                skillGroupName = value;
+                skillName = value;
             }
         }
 #endif
@@ -525,7 +525,7 @@ public partial class UserDataMain
                 continue;
             
             userCard.name = card.name;
-            userCard.skillGroupName = card.skillGroupName;
+            userCard.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
             
             userCard.id = __ToID(i);
             userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
@@ -629,7 +629,7 @@ public partial class UserDataMain
         public string name;
         
         [Tooltip("技能")]
-        public string skillName;
+        public string[] skillNames;
     }
 
     [Serializable]
@@ -641,9 +641,6 @@ public partial class UserDataMain
         
         [Tooltip("技能，可填空")]
         public string skillName;
-        
-        [Tooltip("技能组，可填空")]
-        public string skillGroupName;
         
         [Tooltip("基础属性值")]
         public float attributeValue;
@@ -673,15 +670,6 @@ public partial class UserDataMain
             set
             {
                 skillName = value;
-            }
-        }
-        
-        [CSVField]
-        public string 装备技能分组名
-        {
-            set
-            {
-                skillGroupName = value;
             }
         }
         
@@ -1033,16 +1021,29 @@ public partial class UserDataMain
         }
 
         int roleCount, numRoles = _roles.Length;
+        string skillGroupName;
         Role role;
         UserRole userRole;
+        var skillNames = new List<string>();
         var userRoles = new List<UserRole>();
         var userRoleGroupIDs = new List<uint>();
         for (i = 0; i < numRoles; ++i)
         {
             role = _roles[i];
             userRole.name = role.name;
-            userRole.skillName = role.skillName;
-            userRole.skillGroupName = __GetSkillGroupName(role.skillName);
+            
+            skillNames.Clear();
+
+            foreach (var skillName in role.skillNames)
+            {
+                skillGroupName = __GetSkillGroupName(skillName);
+                if (string.IsNullOrEmpty(skillGroupName))
+                    skillNames.Add(skillName);
+                else
+                    skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
+            }
+            
+            userRole.skillNames = skillNames.ToArray();
 
             key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";
             roleCount = PlayerPrefs.GetInt(key);
@@ -1130,9 +1131,21 @@ public partial class UserDataMain
             accessory = _accessories[i];
 
             userAccessory.name = accessory.name;
-            userAccessory.skillName = accessory.styleName;
-            userAccessory.skillGroupName = accessory.skillGroupName;
-            
+
+            if (string.IsNullOrEmpty(accessory.skillName))
+                userAccessory.skillNames = null;
+            else
+            {
+                skillGroupName = __GetSkillGroupName(accessory.skillName);
+                if (string.IsNullOrEmpty(skillGroupName))
+                {
+                    userAccessory.skillNames = new string[1];
+                    userAccessory.skillNames[0] = accessory.skillName;
+                }
+                else
+                    userAccessory.skillNames = __GetSkillGroupSkillNames(skillGroupName).ToArray();
+            }
+
             userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
 
             userAccessory.attributeValue = accessory.attributeValue;

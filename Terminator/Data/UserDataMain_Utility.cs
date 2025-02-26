@@ -554,7 +554,6 @@ public partial class UserDataMain
     private IUserData.Property __ApplyProperty(uint userID)
     {
         IUserData.Skill skill;
-        skill.type = UserSkillType.Group;
 
         var skills = new List<IUserData.Skill>();
         string groupName = _cardGroups[PlayerPrefs.GetInt(NAME_SPACE_USER_CARD_GROUP)].name, 
@@ -567,8 +566,6 @@ public partial class UserDataMain
             if (PlayerPrefs.GetInt($"{keyPrefix}{card.name}", -1) == -1)
                 continue;
 
-            skill.name = card.skillGroupName;
-
             level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
             if (level > 0)
             {
@@ -579,8 +576,15 @@ public partial class UserDataMain
             else
                 skill.damage = 1.0f;
 
+            skill.type = UserSkillType.Individual;
+            skill.name = card.skillName;
+            skills.Add(skill);
+
+            skill.type = UserSkillType.Group;
+            skill.name = __GetSkillGroupName(card.skillName);
             skills.Add(skill);
         }
+        
         groupName = _roleGroups[PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_GROUP)].name;
         keyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}";
 
@@ -593,12 +597,19 @@ public partial class UserDataMain
             new List<UserAttributeData>(), 
             out skill.damage);
 
-        skill.name = __GetSkillGroupName(role.skillName);
-        skills.Add(skill);
+        foreach (var skillName in role.skillNames)
+        {
+            skill.name = skillName;
+            skill.type = UserSkillType.Individual;
+            skills.Add(skill);
 
-        skill.name = role.skillName;
-        skill.type = UserSkillType.Individual;
-        skills.Add(skill);
+            skill.name = __GetSkillGroupName(skillName);
+            if (!string.IsNullOrEmpty(skill.name))
+            {
+                skill.type = UserSkillType.Group;
+                skills.Add(skill);
+            }
+        }
         
         keyPrefix = $"{keyPrefix}{UserData.SEPARATOR}";
         
@@ -668,24 +679,15 @@ public partial class UserDataMain
                 ++numSkills;
             }
             
-            skill.type = UserSkillType.Group;
             skill.name = __GetSkillGroupName(accessory.skillName);
             if (!string.IsNullOrEmpty(skill.name))
             {
-                skills.Add(skill);
-                
-                ++numSkills;
-            }
-            
-            if (!string.IsNullOrEmpty(accessory.skillGroupName) && accessory.skillGroupName != skill.name)
-            {
-                skill.name = accessory.skillGroupName;
                 skill.type = UserSkillType.Group;
                 skills.Add(skill);
                 
                 ++numSkills;
             }
-
+            
             if (accessoryInfo.stage > 0)
             {
                 indices = __GetAccessoryStageIndices(accessoryInfo.index);
@@ -766,13 +768,15 @@ public partial class UserDataMain
                 
                 info.index = i;
 
-                skillNames = __GetSkillGroupSkillNames(card.skillGroupName);
+                skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName));
 
                 foreach (var skillName in skillNames)
                     __skillNameToInfos.Add(skillName, info);
             }
             
             info.belongTo = SkillInfo.BelongTo.Role;
+
+            string skillGroupName;
             int numRoles = _roles.Length;
             for (i = 0; i < numRoles; ++i)
             {
@@ -780,15 +784,23 @@ public partial class UserDataMain
 
                 info.index = i;
 
-                skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(role.skillName));
-
-                foreach (var skillName in skillNames)
-                    __skillNameToInfos.Add(skillName, info);
+                foreach (var roleSkillName in role.skillNames)
+                {
+                    skillGroupName = __GetSkillGroupName(roleSkillName);
+                    if (string.IsNullOrEmpty(skillGroupName))
+                        __skillNameToInfos.Add(roleSkillName, info);
+                    else
+                    {
+                        skillNames = __GetSkillGroupSkillNames(skillGroupName);
+                        
+                        foreach (var skillName in skillNames)
+                            __skillNameToInfos.Add(skillName, info);
+                    }
+                }
             }
             
             info.belongTo = SkillInfo.BelongTo.Accessory;
 
-            string skillGroupName;
             int numAccessories = _accessories.Length;
             for (i = 0; i < numAccessories; ++i)
             {
@@ -796,9 +808,7 @@ public partial class UserDataMain
 
                 info.index = i;
 
-                if (string.IsNullOrEmpty(accessory.skillName))
-                    skillGroupName = null;
-                else
+                if (!string.IsNullOrEmpty(accessory.skillName))
                 {
                     skillGroupName = __GetSkillGroupName(accessory.skillName);
                     if (string.IsNullOrEmpty(skillGroupName))
@@ -809,13 +819,6 @@ public partial class UserDataMain
                         foreach (var skillName in skillNames)
                             __skillNameToInfos.Add(skillName, info);
                     }
-                }
-
-                if(!string.IsNullOrEmpty(accessory.skillGroupName) && accessory.skillGroupName != skillGroupName)
-                {
-                    skillNames = __GetSkillGroupSkillNames(accessory.skillGroupName);
-                    foreach (var skillName in skillNames)
-                        __skillNameToInfos.Add(skillName, info);
                 }
             }
         }
@@ -858,7 +861,7 @@ public partial class UserDataMain
                     skills.Add(skill);
                     
                     skill.type = UserSkillType.Group;
-                    skill.name = card.skillGroupName;
+                    skill.name = __GetSkillGroupName(card.skillName);
                     skills.Add(skill);
                     break;
                 case SkillInfo.BelongTo.Role:
@@ -871,9 +874,15 @@ public partial class UserDataMain
 
                     skills.Add(skill);
 
-                    skill.name = __GetSkillGroupName(role.skillName);
                     skill.type = UserSkillType.Group;
-                    skills.Add(skill);
+                    foreach (var skillName in role.skillNames)
+                    {
+                        skill.name = __GetSkillGroupName(skillName);
+                        if (string.IsNullOrEmpty(skill.name))
+                            continue;
+                        
+                        skills.Add(skill);
+                    }
 
                     break;
                 case SkillInfo.BelongTo.Accessory:
@@ -931,13 +940,6 @@ public partial class UserDataMain
                     if (!string.IsNullOrEmpty(skill.name))
                         skills.Add(skill);
 
-                    if (!string.IsNullOrEmpty(accessory.skillGroupName) && 
-                        accessory.skillGroupName != skill.name)
-                    {
-                        skill.name = accessory.skillGroupName;
-                        skills.Add(skill);
-                    }
-                    
                     indices = __GetAccessoryStageIndices(skillInfo.index);
                     int numIndices = indices.Count;
                     string userAccessoryIDs;
