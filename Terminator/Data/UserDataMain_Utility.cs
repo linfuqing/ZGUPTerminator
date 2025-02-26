@@ -555,7 +555,7 @@ public partial class UserDataMain
         for (i = 0; i < numCards; ++i)
         {
             ref var card = ref _cards[i];
-            if (PlayerPrefs.GetInt($"{keyPrefix}{card.name}") == -1)
+            if (PlayerPrefs.GetInt($"{keyPrefix}{card.name}", -1) == -1)
                 continue;
 
             skill.name = card.skillGroupName;
