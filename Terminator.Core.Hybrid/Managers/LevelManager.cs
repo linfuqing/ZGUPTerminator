@@ -65,7 +65,7 @@ public partial class LevelManager : MonoBehaviour
 
     private List<GameObject> __gameObjectsToDestroy;
 
-    private HashSet<string> __activeSkillNames;
+    private Dictionary<(int, int), string> __activeSkillNames;
 
     private HashSet<int> __stages;
 
@@ -84,6 +84,13 @@ public partial class LevelManager : MonoBehaviour
 
         set;
     } = true;
+
+    public int dataFlag
+    {
+        get => (int)__dataFlag;
+        
+        set => __dataFlag = (ILevelData.Flag)value;
+    }
 
     public void Set(
         int value, 
@@ -135,15 +142,11 @@ public partial class LevelManager : MonoBehaviour
                 int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
                 var activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
                 if(numActiveSkillNames > 0)
-                    __activeSkillNames.CopyTo(activeSkillNames, 0);
+                    __activeSkillNames.Values.CopyTo(activeSkillNames, 0);
 
                 var levelData = ILevelData.instance;
                 if (levelData != null)
-                {
-                    if(__coroutine != null)
-                        StopCoroutine(__coroutine);
-
-                    __coroutine = StartCoroutine(levelData.SubmitStage(
+                    __StartCoroutine(levelData.SubmitStage(
                         __dataFlag, 
                         stage,
                         gold,
@@ -151,7 +154,6 @@ public partial class LevelManager : MonoBehaviour
                         maxExp,
                         activeSkillNames,
                         __OnStageChanged));
-                }
             }
 
             __dataFlag = 0;
@@ -243,39 +245,35 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Quit()
     {
-        //IAnalytics.instance?.Quit();
-        
-        __Submit(__OnQuit);
-    }
-
-    private void __Submit(Action<bool> onComplete)
-    {
-        if (__coroutine != null)
-        {
-            StopCoroutine(__coroutine);
-
-            __coroutine = null;
-        }
-
         var levelData = ILevelData.instance;
         if (levelData == null)
-            onComplete(false);
+            __OnQuit(false);
         else
         {
-            int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
+            /*int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
             string[] activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
             if(numActiveSkillNames > 0)
-                __activeSkillNames.CopyTo(activeSkillNames, 0);
+                __activeSkillNames.Values.CopyTo(activeSkillNames, 0);*/
             
-            if(__coroutine != null)
-                StopCoroutine(__coroutine);
-
-            __coroutine = StartCoroutine(levelData.SubmitLevel(
+            __StartCoroutine(levelData.SubmitLevel(
                 __dataFlag, 
                 __stage,
                 __gold,
-                onComplete));
+                __OnQuit));
         }
+    }
+
+    private IEnumerator __Coroutine(Coroutine coroutine, IEnumerator enumerator)
+    {
+        if (coroutine != null)
+            yield return coroutine;
+
+        yield return enumerator;
+    }
+
+    private void __StartCoroutine(IEnumerator enumerator)
+    {
+        __coroutine = StartCoroutine(__Coroutine(__coroutine, enumerator));
     }
 
     private void __OnStageChanged(bool result)

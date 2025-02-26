@@ -48,6 +48,9 @@ public class PlayerController : MonoBehaviour
     {
         switch (parameters.name)
         {
+            case "Hit":
+                LevelManager.instance.dataFlag |= (int)ILevelData.Flag.HasBeenDamaged;
+                break;
             case "Die":
                 __isDead = true;
                 

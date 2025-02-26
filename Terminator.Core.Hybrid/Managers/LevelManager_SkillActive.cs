@@ -155,7 +155,7 @@ public partial class LevelManager
     {
         if (value == null)
         {
-            if (!__activeSkillNames.Remove(name))
+            if (!__activeSkillNames.Remove((index, level)))
             {
                 Debug.LogError($"Skill {name} has not been active in the level {level} of {index}");
 
@@ -168,14 +168,9 @@ public partial class LevelManager
         else
         {
             if (__activeSkillNames == null)
-                __activeSkillNames = new HashSet<string>();
-            
-            if (!__activeSkillNames.Add(name))
-            {
-                Debug.LogError($"Skill {name} has already been active in the level {level} of {index}");
+                __activeSkillNames = new Dictionary<(int, int), string>();
 
-                return;
-            }
+            __activeSkillNames.Add((index, level), name);
 
             IAnalytics.instance?.SetActiveSkill(value.Value.name);
             

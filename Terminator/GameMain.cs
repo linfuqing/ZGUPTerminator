@@ -28,7 +28,7 @@ public class GameLevelData : ILevelData
 {
     private uint __userID;
     
-    public GameLevelData(uint userID, string[] skillGroups)
+    public GameLevelData(uint userID)
     {
         __userID = userID;
     }
@@ -70,7 +70,7 @@ public class GameLevelData : ILevelData
     private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)
     {
         IUserData.StageFlag stageFlag = 0;
-        if((flag | ILevelData.Flag.NoDamage) == ILevelData.Flag.NoDamage)
+        if((flag | ILevelData.Flag.HasBeenDamaged) != ILevelData.Flag.HasBeenDamaged)
             stageFlag |= IUserData.StageFlag.NoDamage;
 
         return stageFlag;
@@ -256,7 +256,7 @@ public class GameMain : GameUser
         (IAnalytics.instance as IAnalyticsEx)?.Login(id);
 
         //__id = id;
-        ILevelData.instance = new GameLevelData(id, null);
+        ILevelData.instance = new GameLevelData(id);
     }
 
     /*private void __OnApplySkills(Memory<UserSkill> skills)

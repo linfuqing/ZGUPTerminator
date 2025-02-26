@@ -301,6 +301,21 @@ public sealed class LoginManager : MonoBehaviour
 
             style.toggle.onValueChanged.AddListener(x =>
             {
+                __DestroyRewards();
+
+                if (__stageStyles != null)
+                {
+                    foreach (var stageStyle in __stageStyles)
+                    {
+                        if (stageStyle.onDestroy != null)
+                            stageStyle.onDestroy.Invoke();
+                            
+                        Destroy(stageStyle.gameObject, _stageStyleDestroyTime);
+                    }
+                        
+                    __stageStyles.Clear();
+                }
+                
                 if (x)
                 {
                     __selectedLevelEnergy = selectedLevel.energy;
@@ -387,6 +402,8 @@ public sealed class LoginManager : MonoBehaviour
                                         stageStyle.toggle.interactable = true;
                                         stageStyle.toggle.onValueChanged.AddListener(x =>
                                         {
+                                            __DestroyRewards();
+                                            
                                             if (x)
                                             {
                                                 __selectedUserStageID = stage.id;
@@ -398,8 +415,6 @@ public sealed class LoginManager : MonoBehaviour
                                                 if (onStageChanged != null)
                                                     onStageChanged.Invoke(stage.id);
                                             }
-                                            else
-                                                __DestroyRewards();
                                         });
                                     }
 
@@ -416,23 +431,6 @@ public sealed class LoginManager : MonoBehaviour
                             for (i = stageStyleStartIndex; i < numStageStyles; ++i)
                                 __stageStyles[i].gameObject.SetActive(true);
                         }
-                    }
-                }
-                else
-                {
-                    __DestroyRewards();
-
-                    if (__stageStyles != null)
-                    {
-                        foreach (var stageStyle in __stageStyles)
-                        {
-                            if (stageStyle.onDestroy != null)
-                                stageStyle.onDestroy.Invoke();
-                            
-                            Destroy(stageStyle.gameObject, _stageStyleDestroyTime);
-                        }
-                        
-                        __stageStyles.Clear();
                     }
                 }
             });
@@ -528,7 +526,6 @@ public sealed class LoginManager : MonoBehaviour
         ref var skillGroups = ref LevelPlayerShared.skillGroups;
         skillGroups.Clear();
         
-        var skillGroupNames = new List<string>();
         if (property.skills != null)
         {
             LevelPlayerActiveSkill activeSkill;
@@ -546,14 +543,12 @@ public sealed class LoginManager : MonoBehaviour
                         skillGroup.name = skill.name;
                         skillGroup.damageScale = skill.damage;
                         skillGroups.Add(skillGroup);
-                        
-                        skillGroupNames.Add(skill.name);
                         break;
                 }
             }
         }
 
-        ILevelData.instance = new GameLevelData(userID.Value, skillGroupNames.ToArray());
+        ILevelData.instance = new GameLevelData(userID.Value);
     }
     
     private void __ApplyStage(IUserData.StageProperty property)

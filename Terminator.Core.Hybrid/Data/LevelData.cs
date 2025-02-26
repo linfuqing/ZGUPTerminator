@@ -6,7 +6,7 @@ public interface ILevelData
     [Flags]
     public enum Flag
     {
-        NoDamage = 0x01
+        HasBeenDamaged = 0x01
     }
     
     public static ILevelData instance;

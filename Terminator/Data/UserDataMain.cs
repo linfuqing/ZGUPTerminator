@@ -6,6 +6,30 @@ using ZG;
 
 public sealed partial class UserDataMain : MonoBehaviour
 {
+    [Flags]
+    private enum Flag
+    {
+        PurchasesUnlockFirst = 0x01, 
+        PurchasesUnlock = 0x02 | PurchasesUnlockFirst, 
+        CardsCreated = 0x04, 
+        CardsUnlockFirst = 0x08, 
+        CardsUnlock = 0x10 | CardsUnlockFirst, 
+        RolesCreated = 0x20, 
+        RolesUnlockFirst = 0x40, 
+        RolesUnlock = 0x80 | RolesUnlockFirst, 
+        
+        UnlockFirst = PurchasesUnlockFirst | CardsUnlockFirst | RolesUnlockFirst
+    }
+    
+    private const string NAME_SPACE_USER_FLAG = "UserFlag";
+
+    private static Flag flag
+    {
+        get => (Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_FLAG);
+        
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_FLAG, (int)value);
+    }
+    
     public static UserDataMain instance
     {
         get;
@@ -174,6 +198,8 @@ public sealed partial class UserDataMain : MonoBehaviour
 
             yield break;
         }
+        
+        flag &= ~Flag.UnlockFirst;
         
         UserData.LevelCache levelCache;
         levelCache.name = level.name;

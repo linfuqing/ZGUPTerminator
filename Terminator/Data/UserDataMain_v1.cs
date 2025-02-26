@@ -151,7 +151,6 @@ public partial class UserDataMain
     internal string _purchasePoolOptionsPath;
 #endif
 
-    private const string NAME_SPACE_USER_PURCHASES_FLAG = "UserPurchasesFlag";
     private const string NAME_SPACE_USER_DIAMOND = "UserDiamond";
     private const string NAME_SPACE_USER_PURCHASE_POOL_KEY = "UserPurchasePoolKey";
     
@@ -161,14 +160,19 @@ public partial class UserDataMain
     {
         yield return null;
         
-        IUserData.Purchases purchases;
-        purchases.flag = (IUserData.Purchases.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_PURCHASES_FLAG);
-        purchases.diamond = PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
+        IUserData.Purchases result;
+        result.flag = 0;
+
+        var flag = UserDataMain.flag;
+        if ((flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst)
+            result.flag |= IUserData.Purchases.Flag.FirstUnlock;
+        
+        result.diamond = PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
 
         UserPurchasePool userPurchasePool;
         PurchasePool purchasePool;
         int numPurchasePools = _purchasePools.Length;
-        purchases.pools = new UserPurchasePool[numPurchasePools];
+        result.pools = new UserPurchasePool[numPurchasePools];
         for (int i = 0; i < numPurchasePools; ++i)
         {
             purchasePool = _purchasePools[i];
@@ -176,7 +180,7 @@ public partial class UserDataMain
             userPurchasePool.id = __ToID(i);
             userPurchasePool.diamond = purchasePool.diamond;
             
-            purchases.pools[i] = userPurchasePool;
+            result.pools[i] = userPurchasePool;
         }
         
         var userPurchasePoolKeys = new List<IUserData.Purchases.PoolKey>(numPurchasePools);
@@ -192,9 +196,9 @@ public partial class UserDataMain
             userPurchasePoolKeys.Add(userPurchasePoolKey);
         }
 
-        purchases.poolKeys = userPurchasePoolKeys.ToArray();
+        result.poolKeys = userPurchasePoolKeys.ToArray();
         
-        onComplete(purchases);
+        onComplete(result);
     }
 
     [Serializable]
@@ -245,8 +249,8 @@ public partial class UserDataMain
     }
 
     [Header("Cards")]
-    [SerializeField] 
-    internal CardDefault[] _cardsDefaults;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_cardsDefaults")] 
+    internal CardDefault[] _cardDefaults;
 
     [SerializeField] 
     internal Card[] _cards;
@@ -414,7 +418,6 @@ public partial class UserDataMain
     internal string _cardLevelsPath;
 #endif
 
-    private const string NAME_SPACE_USER_CARDS_FLAG = "UserCardsFlag";
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
     private const string NAME_SPACE_USER_CARD_GROUP = "UserCardGroup";
@@ -426,16 +429,14 @@ public partial class UserDataMain
         yield return null;
 
         IUserData.Cards result;
-        result.flag = (IUserData.Cards.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_FLAG);
+        result.flag = 0;
 
-        bool isCreated = (result.flag & IUserData.Cards.Flag.Created) != IUserData.Cards.Flag.Created;
-        if (isCreated)
-        {
-            result.flag |= IUserData.Cards.Flag.Created;
-            
-            PlayerPrefs.SetInt(NAME_SPACE_USER_CARDS_FLAG, (int)result.flag);
-        }
+        var flag = UserDataMain.flag;
+        if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
+            result.flag |= IUserData.Cards.Flag.FirstUnlock;
         
+        bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
+
         result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
 
         result.selectedGroupID = __ToID(PlayerPrefs.GetInt(NAME_SPACE_USER_CARD_GROUP));
@@ -488,16 +489,24 @@ public partial class UserDataMain
             result.cardStyles[i] = userCardStyle;
         }
 
-        if (isCreated && _cardsDefaults != null)
+        if (isCreated && _cardDefaults != null)
         {
             UserRewardData reward;
             reward.type = UserRewardType.Card;
-            foreach (var cardsDefault in _cardsDefaults)
+
+            CardDefault cardDefault;
+            int numCardDefaults = _cardDefaults.Length;
+            for(i = 0; i < numCardDefaults; ++i)
             {
-                reward.name = cardsDefault.name;
-                reward.count = cardsDefault.count;
+                cardDefault = _cardDefaults[i];
+                reward.name = cardDefault.name;
+                reward.count = cardDefault.count;
                         
                 __ApplyReward(reward);
+                
+                for (j = 0; j < numCardGroup; ++j)
+                    PlayerPrefs.SetInt(
+                        $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{cardDefault.name}", i);
             }
         }
 
@@ -545,6 +554,13 @@ public partial class UserDataMain
         }
         
         result.cards = userCards.ToArray();
+        
+        if (isCreated)
+        {
+            flag |= Flag.CardsCreated;
+            
+            UserDataMain.flag = flag;
+        }
         
         onComplete(result);
     }
@@ -930,7 +946,6 @@ public partial class UserDataMain
     internal string _accessoryStagesPath;
 #endif
     
-    private const string NAME_SPACE_USER_ROLES_FLAG = "UserRolesFlag";
     private const string NAME_SPACE_USER_ITEM_COUNT = "UserItemCount";
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
@@ -944,10 +959,13 @@ public partial class UserDataMain
         yield return null;
 
         IUserData.Roles result;
-        result.flag = (IUserData.Roles.Flag)PlayerPrefs.GetInt(NAME_SPACE_USER_ROLES_FLAG);
-        bool isCreated = (result.flag & IUserData.Roles.Flag.Created) != IUserData.Roles.Flag.Created;
-        if(isCreated)
-            PlayerPrefs.SetInt(NAME_SPACE_USER_ROLES_FLAG, (int)IUserData.Roles.Flag.Created);
+        result.flag = 0;
+
+        var flag = UserDataMain.flag;
+        if ((flag & Flag.RolesUnlockFirst) == Flag.RolesUnlockFirst)
+            result.flag |= IUserData.Roles.Flag.FirstUnlock;
+        
+        bool isCreated = (flag & Flag.RolesCreated) != Flag.RolesCreated;
 
         result.selectedGroupID = __ToID(PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_GROUP));
 
@@ -995,11 +1013,28 @@ public partial class UserDataMain
         
         result.items = items.ToArray();
 
-        bool isNew;
-        int j, roleCount, numRoles = _roles.Length;
+        int j;
+        if (isCreated && _itemDefaults != null)
+        {
+            UserRewardData reward;
+            reward.type = UserRewardType.Item;
+
+            foreach (var roleDefault in _roleDefaults)
+            {
+                reward.name = roleDefault;
+                reward.count = 1;
+
+                __ApplyReward(reward);
+                
+                for (j = 0; j < numRoleGroups; ++j)
+                    PlayerPrefs.SetString(
+                        $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}", roleDefault);
+            }
+        }
+
+        int roleCount, numRoles = _roles.Length;
         Role role;
         UserRole userRole;
-        string userRoleGroupName;
         var userRoles = new List<UserRole>();
         var userRoleGroupIDs = new List<uint>();
         for (i = 0; i < numRoles; ++i)
@@ -1009,24 +1044,10 @@ public partial class UserDataMain
             userRole.skillName = role.skillName;
             userRole.skillGroupName = __GetSkillGroupName(role.skillName);
 
-            isNew = false;
             key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";
             roleCount = PlayerPrefs.GetInt(key);
             if (roleCount < 1)
-            {
-                if (isCreated && 
-                    _roleDefaults != null && 
-                    Array.IndexOf(_roleDefaults, userRole.name) != -1)
-                {
-                    isNew = true;
-                    
-                    roleCount = 1;
-                    
-                    PlayerPrefs.SetInt(key, 1);
-                }
-                else
-                    continue;
-            }
+                continue;
             
             userRole.id = __ToID(i);
 
@@ -1036,14 +1057,8 @@ public partial class UserDataMain
             for (j = 0; j < numRoleGroups; ++j)
             {
                 key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}";
-                userRoleGroupName = PlayerPrefs.GetString(key);
-                if (userRoleGroupName != role.name)
-                {
-                    if (isNew && string.IsNullOrEmpty(userRoleGroupName))
-                        PlayerPrefs.SetString(key, role.name);
-                    else
-                        continue;
-                }
+                if (PlayerPrefs.GetString(key) != role.name)
+                    continue;
 
                 userRoleGroupIDs.Add(__ToID(j));
             }
@@ -1055,10 +1070,14 @@ public partial class UserDataMain
         
         result.roles = userRoles.ToArray();
 
+        int numAccessorySlots = _accessorySlots.Length, k;
+        Accessory accessory;
+        AccessorySlot accessorySlot;
         List<int> accessoryStageIndices;
         if (isCreated && _accessoryDefaults != null)
         {
-            int numAccessoryStageIndices;
+            uint id;
+            int accessoryIndex, numAccessoryStageIndices;
             UserRewardData reward;
             reward.type = UserRewardType.Accessory;
             foreach (var accessoryDefault in _accessoryDefaults)
@@ -1066,7 +1085,8 @@ public partial class UserDataMain
                 reward.name = accessoryDefault.name;
                 reward.count = -1;
 
-                accessoryStageIndices = __GetAccessoryStageIndices(__GetAccessoryIndex(accessoryDefault.name));
+                accessoryIndex = __GetAccessoryIndex(accessoryDefault.name);
+                accessoryStageIndices = __GetAccessoryStageIndices(accessoryIndex);
                 numAccessoryStageIndices = accessoryStageIndices.Count;
                 for (i = 0; i < numAccessoryStageIndices; ++i)
                 {
@@ -1078,17 +1098,28 @@ public partial class UserDataMain
                     }
                 }
 
-                __ApplyReward(reward);
+                id = __ApplyReward(reward);
+
+                accessory = _accessories[accessoryIndex];
+                for (j = 0; j < numAccessorySlots; ++j)
+                {
+                    accessorySlot = _accessorySlots[j];
+                    if(accessorySlot.styleName != accessory.styleName)
+                        continue;
+                    
+                    for (k = 0; k < numRoleGroups; ++k)
+                        PlayerPrefs.SetInt(
+                            $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}{accessorySlot.name}",
+                            (int)id);
+                }
             }
         }
 
-        int k, l, 
+        int l, 
             numAccessoryStages, 
-            numAccessories = _accessories.Length, 
-            numAccessorySlots = _accessorySlots.Length;
+            numAccessories = _accessories.Length;
         string userAccessoryGroupKey;
         string[] ids;
-        Accessory accessory;
         AccessoryStage accessoryStage;
         UserAccessory.Group userAccessoryGroup;
         UserAccessory userAccessory;
@@ -1137,9 +1168,9 @@ public partial class UserDataMain
                             $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}";
                         for (l = 0; l < numAccessorySlots; ++l)
                         {
-                            if (PlayerPrefs.GetString(
+                            if ((uint)PlayerPrefs.GetInt(
                                     $"{userAccessoryGroupKey}{_accessorySlots[l].name}") ==
-                                id)
+                                userAccessory.id)
                                 break;
                         }
 
@@ -1162,7 +1193,6 @@ public partial class UserDataMain
         result.accessorySlots = new UserAccessorySlot[numAccessorySlots];
 
         UserAccessorySlot userAccessorySlot;
-        AccessorySlot accessorySlot;
         for (i = 0; i < numAccessorySlots; ++i)
         {
             accessorySlot = _accessorySlots[i];
@@ -1211,6 +1241,13 @@ public partial class UserDataMain
             result.accessoryStyles[i] = userAccessoryStyle;
         }
 
+        if (isCreated)
+        {
+            flag |= Flag.RolesCreated;
+            
+            UserDataMain.flag = flag;
+        }
+        
         onComplete(result);
     }
 
@@ -1359,11 +1396,11 @@ public partial class UserDataMain
             key =
             $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroupName}{UserData.SEPARATOR}{accessorySlot.name}";
         
-        if(PlayerPrefs.GetString(key) == accessoryID.ToString())
+        if((uint)PlayerPrefs.GetInt(key) == accessoryID)
             PlayerPrefs.DeleteKey(key);
         else if(__TryGetAccessory(accessoryID, out var accessoryInfo) && 
                 _accessories[accessoryInfo.index].styleName == accessorySlot.styleName)
-            PlayerPrefs.SetString(key, accessoryID.ToString());
+            PlayerPrefs.SetInt(key, (int)accessoryID);
         else
         {
             onComplete(false);
@@ -1555,6 +1592,8 @@ public partial class UserDataMain
         }
         
         UserData.ApplyStageFlag(level.name, stage);
+
+        flag &= ~Flag.UnlockFirst;
 
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
