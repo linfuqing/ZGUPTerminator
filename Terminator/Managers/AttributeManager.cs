@@ -32,7 +32,13 @@ public class AttributeManager : MonoBehaviour
         private set;
     }
 
-    public void Set(AttributeSpace space, int instanceID, int styleIndex, int value, int max)
+    public void Set(
+        AttributeSpace space, 
+        int instanceID, 
+        int styleIndex, 
+        int attributeIndex,
+        int value, 
+        int max)
     {
         if (__attributes == null)
             __attributes = new Dictionary<int, Attribute>();
@@ -53,14 +59,15 @@ public class AttributeManager : MonoBehaviour
             attribute.style = Instantiate(style, style.transform.parent);
         }
         
-        if(attribute.style.onValue != null)
-            attribute.style.onValue.Invoke(value.ToString());
+        ref var styleAttribute = ref attribute.style.attributes[attributeIndex];
+        if(styleAttribute.onValue != null)
+            styleAttribute.onValue.Invoke(value.ToString());
 
-        if(attribute.style.onMax != null)
-            attribute.style.onMax.Invoke(max.ToString());
+        if(styleAttribute.onMax != null)
+            styleAttribute.onMax.Invoke(max.ToString());
 
-        if (attribute.style.progressbar != null)
-            attribute.style.progressbar.value = value * 1.0f / max;
+        if (styleAttribute.progressbar != null)
+            styleAttribute.progressbar.value = value * 1.0f / max;
         
         attribute.style.gameObject.SetActive(true);
 

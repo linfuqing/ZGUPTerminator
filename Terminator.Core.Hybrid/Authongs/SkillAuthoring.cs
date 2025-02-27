@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 [RequireComponent(typeof(BulletAuthoring))]
-public class SkillAuthoring : MonoBehaviour
+public class SkillAuthoring : MonoBehaviour, IMessageOverride
 {
     [Serializable]
     public struct MessageData : IEquatable<MessageData>
@@ -49,6 +49,8 @@ public class SkillAuthoring : MonoBehaviour
         public LayerMask layerMaskInclude;
         public LayerMask layerMaskExclude;
         
+        public float rage;
+        
         public float duration;
         public float cooldown;
         public BulletData[] bullets;
@@ -80,6 +82,15 @@ public class SkillAuthoring : MonoBehaviour
             set
             {
                 layerMaskExclude = value;
+            }
+        }
+        
+        [CSVField]
+        public float 技能需要怒气
+        {
+            set
+            {
+                rage = value;
             }
         }
         
@@ -218,6 +229,7 @@ public class SkillAuthoring : MonoBehaviour
                     destination.layerMaskExclude = source.layerMaskExclude;
                     destination.duration = source.duration;
                     destination.cooldown = source.cooldown;
+                    destination.rage = source.rage;
 
                     numBulletIndices = source.bullets.Length;
                     bulletIndices = builder.Allocate(ref destination.bulletIndices, numBulletIndices);
@@ -320,6 +332,7 @@ public class SkillAuthoring : MonoBehaviour
             AddComponent(entity, cooldownScale);
 
             AddComponent<SkillLayerMask>(entity);
+            AddComponent<SkillRage>(entity);
 
             var activeIndices = AddBuffer<SkillActiveIndex>(entity);
             int numActives = authoring._actives.Length;
@@ -390,5 +403,30 @@ public class SkillAuthoring : MonoBehaviour
     internal string _activesPath;
     #endregion
 
+    [SerializeField] 
+    internal int _rateMax = 100;
+
+    [SerializeField] 
+    internal Object _attributeParameter;
+
+    public bool Apply(ref DynamicBuffer<Message> messages, ref DynamicBuffer<MessageParameter> messageParameters)
+    {
+        if (_attributeParameter == null)
+            return false;
+        
+        Message message;
+        message.key = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        message.name = "UpdateAttribute";
+        message.value = new WeakObjectReference<Object>(_attributeParameter);
+        messages.Add(message);
+
+        MessageParameter parameter;
+        parameter.messageKey = message.key;
+        parameter.id = (int)EffectAttributeID.RageMax;
+        parameter.value = _rateMax;
+        messageParameters.Add(parameter);
+        
+        return true;
+    }
 }
 #endif

@@ -30,12 +30,21 @@ public partial struct SkillSystem : ISystem
 
         public BufferAccessor<Message> outputMessages;
         
+        public BufferAccessor<MessageParameter> outputMessageParameters;
+
+        public NativeArray<SkillRage> rages;
+
         public NativeArray<SkillLayerMask> skillLayerMasks;
         
         public NativeArray<BulletLayerMask> bulletLayerMasks;
 
         public bool Execute(int index)
         {
+            var rage = index < rages.Length ? rages[index] : default;
+
+            var outputMessageParameters = index < this.outputMessageParameters.Length
+                ? this.outputMessageParameters[index]
+                : default;
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var states = this.states[index];
             var bulletStates = this.bulletStates[index];
@@ -49,8 +58,10 @@ public partial struct SkillSystem : ISystem
                 ref bulletStates, 
                 ref states, 
                 ref outputMessages, 
+                ref outputMessageParameters, 
                 ref bulletDefinitions[index].definition.Value, 
-                out int layerMask);
+                out int layerMask, 
+                ref rage.value);
 
             if (index < bulletLayerMasks.Length)
             {
@@ -70,6 +81,9 @@ public partial struct SkillSystem : ISystem
 
                 bulletLayerMasks[index] = bulletLayerMask;
             }
+
+            if (index < rages.Length)
+                rages[index] = rage;
 
             return result;
         }
@@ -99,6 +113,10 @@ public partial struct SkillSystem : ISystem
 
         public BufferTypeHandle<Message> outputMessageType;
         
+        public BufferTypeHandle<MessageParameter> outputMessageParameterType;
+
+        public ComponentTypeHandle<SkillRage> rageType;
+
         public ComponentTypeHandle<SkillLayerMask> skillLayerMaskType;
 
         public ComponentTypeHandle<BulletLayerMask> bulletLayerMaskType;
@@ -119,6 +137,8 @@ public partial struct SkillSystem : ISystem
             collect.bulletStates = chunk.GetBufferAccessor(ref bulletStatusType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
+            collect.outputMessageParameters = chunk.GetBufferAccessor(ref outputMessageParameterType);
+            collect.rages = chunk.GetNativeArray(ref rageType);
             collect.skillLayerMasks = chunk.GetNativeArray(ref skillLayerMaskType);
             collect.bulletLayerMasks = chunk.GetNativeArray(ref bulletLayerMaskType);
             
@@ -149,6 +169,10 @@ public partial struct SkillSystem : ISystem
     
     private BufferTypeHandle<Message> __outputMessageType;
 
+    private BufferTypeHandle<MessageParameter> __outputMessageParameterType;
+
+    private ComponentTypeHandle<SkillRage> __rageType;
+
     private ComponentTypeHandle<SkillLayerMask> __skillLayerMaskType;
 
     private ComponentTypeHandle<BulletLayerMask> __bulletLayerMaskType;
@@ -167,6 +191,8 @@ public partial struct SkillSystem : ISystem
         __bulletStatusType = state.GetBufferTypeHandle<BulletStatus>();
         __statusType = state.GetBufferTypeHandle<SkillStatus>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
+        __outputMessageParameterType = state.GetBufferTypeHandle<MessageParameter>();
+        __rageType = state.GetComponentTypeHandle<SkillRage>();
         __skillLayerMaskType = state.GetComponentTypeHandle<SkillLayerMask>();
         __bulletLayerMaskType = state.GetComponentTypeHandle<BulletLayerMask>();
         
@@ -194,6 +220,8 @@ public partial struct SkillSystem : ISystem
         __bulletStatusType.Update(ref state);
         __statusType.Update(ref state);
         __outputMessageType.Update(ref state);
+        __outputMessageParameterType.Update(ref state);
+        __rageType.Update(ref state);
         __skillLayerMaskType.Update(ref state);
         __bulletLayerMaskType.Update(ref state);
         
@@ -208,6 +236,8 @@ public partial struct SkillSystem : ISystem
         collect.bulletStatusType = __bulletStatusType;
         collect.statusType = __statusType;
         collect.outputMessageType = __outputMessageType;
+        collect.outputMessageParameterType = __outputMessageParameterType;
+        collect.rageType = __rageType;
         collect.skillLayerMaskType = __skillLayerMaskType;
         collect.bulletLayerMaskType = __bulletLayerMaskType;
         

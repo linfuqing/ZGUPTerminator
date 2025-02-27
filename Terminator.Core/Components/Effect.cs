@@ -8,6 +8,8 @@ using Object = UnityEngine.Object;
 
 public enum EffectAttributeID
 {
+    RageMax, 
+    Rage, 
     HPMax, 
     HP,
     Damage

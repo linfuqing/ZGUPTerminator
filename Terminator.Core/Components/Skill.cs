@@ -25,6 +25,7 @@ public struct SkillDefinition
     {
         public int layerMaskInclude;
         public int layerMaskExclude;
+        public float rage;
         public float duration;
         public float cooldown;
         public BlobArray<int> bulletIndices;
@@ -44,19 +45,21 @@ public struct SkillDefinition
         ref DynamicBuffer<BulletStatus> bulletStates, 
         ref DynamicBuffer<SkillStatus> states, 
         ref DynamicBuffer<Message> outputMessages, 
+        ref DynamicBuffer<MessageParameter> outputMessageParameters, 
         ref BulletDefinition bulletDefinition, 
-        out int layerMask)
+        out int layerMask, 
+        ref float rage)
     {
         bulletActiveIndices.Clear();
         
         states.Resize(skills.Length, NativeArrayOptions.ClearMemory);
 
+        MessageParameter messageParameter;
         SkillMessage inputMessage;
         SkillActiveIndex skillActiveIndex;
         BulletActiveIndex bulletActiveIndex;
         Random random;
         float chance, value;
-        long hash;
         int numActiveIndices = skillActiveIndices.Length,
             numPreIndices, 
             numBulletIndices,
@@ -143,8 +146,21 @@ public struct SkillDefinition
                     isCooldown = true;
             }
 
+            random = default;
+
             if (isCooldown == (SkillMessageType.Cooldown != status.messageType))
             {
+                isSelected = false;
+                if (isCooldown && skill.rage > math.FLT_MIN_NORMAL)
+                {
+                    if (rage < skill.rage)
+                        continue;
+
+                    rage -= skill.rage;
+
+                    isSelected = true;
+                }
+
                 status.messageType = isCooldown ? SkillMessageType.Running : SkillMessageType.Cooldown;
                 
                 if (messageOffset >= 0)
@@ -152,8 +168,9 @@ public struct SkillDefinition
                     numMessageIndices = skill.messageIndices.Length;
                     if (numMessageIndices > 0)
                     {
-                        result = true;
-
+                        messageParameter.id = (int)EffectAttributeID.Rage;
+                        messageParameter.value = (int)math.round(rage);
+                        
                         outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
                         for (j = 0; j < numMessageIndices; ++j)
                         {
@@ -162,9 +179,23 @@ public struct SkillDefinition
                             if(inputMessage.type != status.messageType)
                                 continue;
                                 
-                            outputMessage.key = 0;
+                            result = true;
+
                             outputMessage.name = inputMessage.name;
                             outputMessage.value = inputMessage.value;
+
+                            if (isSelected)
+                            {
+                                __GetOrCreateRandom(status.cooldown, ref random);
+                                
+                                outputMessage.key = random.NextInt();
+                                
+                                messageParameter.messageKey = outputMessage.key;
+                                
+                                outputMessageParameters.Add(messageParameter);
+                            }
+                            else
+                                outputMessage.key = 0;
                         }
 
                         messageOffset += numMessageIndices;
@@ -177,8 +208,8 @@ public struct SkillDefinition
                 layerMaskInclude |= skill.layerMaskInclude;
                 layerMaskExclude |= skill.layerMaskExclude;
                 
-                hash = math.aslong(status.cooldown);
-                random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash);
+                __GetOrCreateRandom(status.cooldown, ref random);
+
                 value = random.NextFloat();
                 chance = 0;
                 isSelected = false;
@@ -212,6 +243,15 @@ public struct SkillDefinition
 
         return result;
     }
+
+    private void __GetOrCreateRandom(double cooldown, ref Random random)
+    {
+        if (random.state != 0)
+            return;
+        
+        long hash = math.aslong(cooldown);
+        random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash);
+    }
 }
 
 public struct SkillDefinitionData : IComponentData
@@ -220,6 +260,11 @@ public struct SkillDefinitionData : IComponentData
 }
 
 public struct SkillCooldownScale : IComponentData
+{
+    public float value;
+}
+
+public struct SkillRage : IComponentData
 {
     public float value;
 }
