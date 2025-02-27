@@ -657,17 +657,14 @@ public partial class UserDataMain
         uint accessoryID;
         AccessoryInfo accessoryInfo;
         UserAttributeData attribute;
-        string accessoryIDString;
         List<UserAccessory.Skill> accessoryStageSkills = null;
         for (i = 0; i < numAccessorySlots; ++i)
         {
             ref var accessorySlot = ref _accessorySlots[i];
-            accessoryIDString = PlayerPrefs.GetString(
+            accessoryID = (uint)PlayerPrefs.GetInt(
                 $"{keyPrefix}{accessorySlot.name}");
             
-            if(string.IsNullOrEmpty(accessoryIDString) || 
-               !uint.TryParse(accessoryIDString, out accessoryID) || 
-               !__TryGetAccessory(accessoryID, out accessoryInfo))
+            if(!__TryGetAccessory(accessoryID, out accessoryInfo))
                 continue;
 
             styleIndex = __GetAccessoryStyleIndex(accessorySlot.styleName);
