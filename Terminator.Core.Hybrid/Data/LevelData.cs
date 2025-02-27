@@ -8,7 +8,7 @@ public interface ILevelData
     {
         HasBeenDamaged = 0x01
     }
-    
+
     public static ILevelData instance;
     
     IEnumerator SubmitStage(
