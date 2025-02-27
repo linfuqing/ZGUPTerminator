@@ -505,6 +505,11 @@ public partial interface IUserData
         Action<Cards> onComplete);
 
     /// <summary>
+    /// 设置卡组
+    /// </summary>
+    IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete);
+
+    /// <summary>
     /// 装备卡组或卸下卡组(position为-1）
     /// </summary>
     IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete);
@@ -521,6 +526,11 @@ public partial interface IUserData
         uint userID,
         Action<Roles> onComplete);
 
+    /// <summary>
+    /// 设置套装
+    /// </summary>
+    IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete);
+    
     /// <summary>
     /// 装备角色
     /// </summary>
@@ -604,6 +614,8 @@ public partial interface IUserData
     /// 一键收集全部关卡奖励
     /// </summary>
     IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete);
+
+    IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete);
 }
 
 public partial class UserData
@@ -631,6 +643,11 @@ public partial class UserData
         return UserDataMain.instance.QueryCards(userID, onComplete);
     }
 
+    public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetCardGroup(userID, groupID, onComplete);
+    }
+
     public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
     {
         return UserDataMain.instance.SetCard(userID, cardID, groupID, position, onComplete);
@@ -648,6 +665,11 @@ public partial class UserData
         return UserDataMain.instance.QueryRoles(userID, onComplete);
     }
 
+    public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetRoleGroup(userID, groupID, onComplete);
+    }
+    
     public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
     {
         return UserDataMain.instance.SetRole(userID, roleID, groupID, onComplete);
@@ -755,5 +777,10 @@ public partial class UserData
     public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectStageRewards(userID, onComplete);
+    }
+
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete)
+    {
+        return UserDataMain.instance.ApplyReward(userID, poolName, onComplete);
     }
 }

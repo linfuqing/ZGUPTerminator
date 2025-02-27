@@ -40,6 +40,13 @@ public class RewardManager : MonoBehaviour
     
     private List<RewardStyle> __rewardStyles;
 
+    public static RewardManager instance
+    {
+        get;
+
+        private set;
+    }
+
     [Preserve]
     public void Apply(string poolName)
     {
@@ -100,5 +107,10 @@ public class RewardManager : MonoBehaviour
                 __rewardStyles.Add(rewardStyle);
             }
         }
+    }
+
+    void Awake()
+    {
+        instance = this;
     }
 }

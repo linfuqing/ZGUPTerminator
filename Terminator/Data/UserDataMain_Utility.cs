@@ -18,6 +18,22 @@ public partial class UserDataMain
         return __skillToGroupNames.TryGetValue(skillName, out string skillGroupName) ? skillGroupName : null;
     }
 
+    private Dictionary<string, int> __cardGroupNameToIndices;
+    
+    private int __GetCardGroupIndex(string name)
+    {
+        if (__cardGroupNameToIndices == null)
+        {
+            int numCardGroups = _cardGroups.Length;
+            __cardGroupNameToIndices = new Dictionary<string, int>(numCardGroups);
+            for (int i = 0; i < numCardGroups; ++i)
+                __cardGroupNameToIndices.Add(_cardGroups[i].name, i);
+        }
+
+        return __cardGroupNameToIndices[name];
+    }
+
+    
     private Dictionary<string, int> __cardNameToIndices;
     
     private int __GetCardIndex(string name)
@@ -92,6 +108,21 @@ public partial class UserDataMain
         }
 
         return __itemNameToIndices[name];
+    }
+
+    private Dictionary<string, int> __roleGroupNameToIndices;
+    
+    private int __GetRoleGroupIndex(string name)
+    {
+        if (__roleGroupNameToIndices == null)
+        {
+            int numRoleGroups = _roleGroups.Length;
+            __roleGroupNameToIndices = new Dictionary<string, int>(numRoleGroups);
+            for (int i = 0; i < numRoleGroups; ++i)
+                __roleGroupNameToIndices.Add(_roleGroups[i].name, i);
+        }
+
+        return __roleGroupNameToIndices[name];
     }
 
     
@@ -555,9 +586,12 @@ public partial class UserDataMain
     {
         IUserData.Skill skill;
 
+        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
+        if(string.IsNullOrEmpty(groupName))
+            groupName = _cardGroups[0].name;
+        
         var skills = new List<IUserData.Skill>();
-        string groupName = _cardGroups[PlayerPrefs.GetInt(NAME_SPACE_USER_CARD_GROUP)].name, 
-            keyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{groupName}{UserData.SEPARATOR}";
+        string keyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{groupName}{UserData.SEPARATOR}";
         int i, level, styleIndex, numCards = _cards.Length;
         List<int> indices;
         for (i = 0; i < numCards; ++i)
@@ -584,8 +618,11 @@ public partial class UserDataMain
             skill.name = __GetSkillGroupName(card.skillName);
             skills.Add(skill);
         }
+
+        groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+        if(string.IsNullOrEmpty(groupName))
+            groupName = _roleGroups[0].name;
         
-        groupName = _roleGroups[PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_GROUP)].name;
         keyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}";
 
         string roleName = PlayerPrefs.GetString(keyPrefix);

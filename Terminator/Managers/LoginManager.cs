@@ -8,6 +8,50 @@ using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
 {
+    public class RewardData : IRewardData
+    {
+        private uint __userID;
+
+        public RewardData(uint userID)
+        {
+            __userID = userID;
+        }
+
+        public IEnumerator ApplyReward(
+            string poolName, 
+            Action<IRewardData.Rewards> onComplete)
+        {
+            return IUserData.instance.ApplyReward(
+                __userID,
+                poolName,
+                x =>
+                {
+                    if (x.IsEmpty)
+                    {
+                        onComplete(default);
+                        
+                        return;
+                    }
+                    
+                    IRewardData.Rewards result;
+                    result.poolName = poolName;
+
+                    int numValues = x.Length;
+                    result.values = new IRewardData.Reward[numValues];
+                    for (int i = 0; i < numValues; ++i)
+                    {
+                        ref var source = ref x.Span[i];
+                        ref var destination = ref result.values[i];
+                        
+                        destination.name = source.name;
+                        destination.count = source.count;
+                    }
+
+                    onComplete(result);
+                });
+        }
+    }
+
     [Serializable]
     internal struct Level
     {
@@ -68,7 +112,7 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_skills")] 
     internal Reward[] _rewards;
 
-    private List<RewardStyle> __rewardStyles;
+    private List<StageRewardStyle> __rewardStyles;
     private List<StageStyle> __stageStyles;
     private Dictionary<int, LevelStyle> __styles;
     private Dictionary<string, int> __rewardIndices;
@@ -548,7 +592,11 @@ public sealed class LoginManager : MonoBehaviour
             }
         }
 
-        ILevelData.instance = new GameLevelData(userID.Value);
+        uint userID = LoginManager.userID.Value;
+        
+        ILevelData.instance = new GameLevelData(userID);
+
+        IRewardData.instance = new RewardData(userID);
     }
     
     private void __ApplyStage(IUserData.StageProperty property)
@@ -602,7 +650,7 @@ public sealed class LoginManager : MonoBehaviour
             style.button.interactable = true;
     }
     
-    private void __CreateRewards(RewardStyle style, UserRewardData[] values)
+    private void __CreateRewards(StageRewardStyle style, UserRewardData[] values)
     {
         if (style != null && values != null &&
             values.Length > 0)
@@ -616,9 +664,9 @@ public sealed class LoginManager : MonoBehaviour
             }
 
             if (__rewardStyles == null)
-                __rewardStyles = new List<RewardStyle>();
+                __rewardStyles = new List<StageRewardStyle>();
 
-            RewardStyle rewardStyle;
+            StageRewardStyle rewardStyle;
             foreach (var value in values)
             {
                 ref var reward = ref _rewards[__rewardIndices[value.name]];

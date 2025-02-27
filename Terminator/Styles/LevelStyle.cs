@@ -18,7 +18,7 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     
     public StageStyle stageStyle;
 
-    public RewardStyle rewardStyle;
+    public StageRewardStyle rewardStyle;
 
     void ISubmitHandler.OnSubmit(BaseEventData eventData)
     {

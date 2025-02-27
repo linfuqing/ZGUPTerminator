@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 
-public class RewardStyle : MonoBehaviour
+public class StageRewardStyle : MonoBehaviour
 {
     public UnityEvent onDestroy;
     public SpriteEvent onSprite;

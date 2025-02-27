@@ -439,7 +439,8 @@ public partial class UserDataMain
 
         result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
 
-        result.selectedGroupID = __ToID(PlayerPrefs.GetInt(NAME_SPACE_USER_CARD_GROUP));
+        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
+        result.selectedGroupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetCardGroupIndex(groupName));
 
         int i, numCardGroup = _cardGroups.Length;
         result.groups = numCardGroup > 0 ? new UserGroup[numCardGroup] : null;
@@ -563,6 +564,15 @@ public partial class UserDataMain
         }
         
         onComplete(result);
+    }
+
+    public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        yield return null;
+
+        PlayerPrefs.SetString(NAME_SPACE_USER_CARD_GROUP, _cardGroups[__ToIndex(groupID)].name);
+
+        onComplete(true);
     }
 
     public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
@@ -955,7 +965,8 @@ public partial class UserDataMain
         
         bool isCreated = (flag & Flag.RolesCreated) != Flag.RolesCreated;
 
-        result.selectedGroupID = __ToID(PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_GROUP));
+        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+        result.selectedGroupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetRoleGroupIndex(groupName));
 
         int i, numRoleGroups = _roleGroups.Length;
         result.groups = new UserGroup[numRoleGroups];
@@ -1262,6 +1273,15 @@ public partial class UserDataMain
         }
         
         onComplete(result);
+    }
+
+    public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        yield return null;
+
+        PlayerPrefs.SetString(NAME_SPACE_USER_ROLE_GROUP, _roleGroups[__ToIndex(groupID)].name);
+
+        onComplete(true);
     }
 
     public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
@@ -1769,4 +1789,52 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete)
+    {
+        yield return null;
+
+        var levelCache = UserData.levelCache;
+        if (levelCache == null)
+            yield break;
+
+        var temp = levelCache.Value;
+        var level = _levels[__ToIndex(temp.id)];
+
+        bool isSelected;
+        float chance, total;
+        var stage = level.stages[Mathf.Min(temp.stage, level.stages.Length - 1)];
+        var results = new List<UserRewardData>();
+        foreach (var rewardPool in stage.rewardPools)
+        {
+            if (rewardPool.name == poolName)
+            {
+                isSelected = false;
+                chance = UnityEngine.Random.value;
+                total = 0.0f;
+                foreach (var option in rewardPool.options)
+                {
+                    total += option.chance;
+                    if (total > 1.0f)
+                    {
+                        total -= 1.0f;
+                        
+                        chance = UnityEngine.Random.value;
+
+                        isSelected = false;
+                    }
+                    
+                    if(isSelected || total < chance)
+                        continue;
+
+                    isSelected = true;
+
+                    results.Add(option.value);
+                }
+                
+                break;
+            }
+        }
+        
+        onComplete(results.ToArray());
+    }
 }
