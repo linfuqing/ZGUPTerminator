@@ -63,11 +63,17 @@ public partial class UserDataMain
         public float chance;
         
         [Tooltip("抽多少次后有效")]
-        public int times;
+        public int minTimes;
+
+        [Tooltip("抽多少次后无效")]
+        public int maxTimes;
+        
+        [Tooltip("在第几章开始生效")]
+        public int minLevel;
 
         [Tooltip("在第几章开始生效")]
-        public int level;
-
+        public int maxLevel;
+        
         [Tooltip("最小获得数量")]
         public int minCount;
         [Tooltip("最大获得数量")]
@@ -102,23 +108,41 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public int 抽卡次数
+        public int 抽卡最小次数
         {
             set
             {
-                times = value;
+                minTimes = value;
             }
         }
         
         [CSVField]
-        public int 抽卡章节
+        public int 抽卡最大次数
         {
             set
             {
-                level = value;
+                maxTimes = value;
             }
         }
 
+        [CSVField]
+        public int 抽卡最小章节
+        {
+            set
+            {
+                minLevel = value;
+            }
+        }
+
+        [CSVField]
+        public int 抽卡最大章节
+        {
+            set
+            {
+                maxLevel = value;
+            }
+        }
+        
         [CSVField]
         public int 抽卡最小张数
         {
@@ -291,10 +315,14 @@ public partial class UserDataMain
                 if(purchasePoolOption.poolName != purchasePoolName)
                     continue;
                 
-                if(purchasePoolOption.times > purchasePoolTimes)
+                if(purchasePoolOption.minTimes < purchasePoolOption.maxTimes && 
+                   (purchasePoolOption.minTimes > purchasePoolTimes || 
+                   purchasePoolOption.maxTimes <= purchasePoolTimes))
                     continue;
                 
-                if(purchasePoolOption.level > level)
+                if(purchasePoolOption.minLevel < purchasePoolOption.maxTimes && 
+                   (purchasePoolOption.minLevel > level ||
+                    purchasePoolOption.maxLevel <= level))
                     continue;
 
                 total += purchasePoolOption.chance;
