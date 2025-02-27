@@ -320,7 +320,7 @@ public partial class UserDataMain
                    purchasePoolOption.maxTimes <= purchasePoolTimes))
                     continue;
                 
-                if(purchasePoolOption.minLevel < purchasePoolOption.maxTimes && 
+                if(purchasePoolOption.minLevel < purchasePoolOption.maxLevel && 
                    (purchasePoolOption.minLevel > level ||
                     purchasePoolOption.maxLevel <= level))
                     continue;
