@@ -42,7 +42,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
     }
     
     [Serializable]
-    internal struct SkillData
+    public struct SkillData
     {
         public string name;
 
@@ -387,6 +387,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
     
     [SerializeField]
     internal SkillData[] _skills;
+    
+    public SkillData[] skills => _skills;
 
     #region CSV
     [SerializeField]
