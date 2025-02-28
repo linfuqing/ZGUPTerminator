@@ -346,9 +346,9 @@ public partial class UserDataMain
                 userItem.count = reward.count;
 
                 results.Add(userItem);
-
-                ++purchasePoolTimes;
             }
+
+            ++purchasePoolTimes;
         }
         
         PlayerPrefs.SetInt(timeKey, purchasePoolTimes);
