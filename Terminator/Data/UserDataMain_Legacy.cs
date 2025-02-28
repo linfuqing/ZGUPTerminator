@@ -49,6 +49,8 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_TIP = "UserTip";
     
+    [Header("Legacy")]
+
     [SerializeField]
     internal Tip_v0 _tip_v0;
 
@@ -132,8 +134,6 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_WEAPON_SELECTED = "UserWeaponSelected";
     private const string NAME_SPACE_USER_WEAPONS = "UserWeapons";
     
-    [Header("Legacy")]
-
     [SerializeField] 
     internal Weapon[] _weapons;
 

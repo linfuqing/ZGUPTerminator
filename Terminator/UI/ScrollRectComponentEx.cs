@@ -31,97 +31,106 @@ namespace ZG
                 RectTransform.Axis axis = scrollRect.horizontal ? RectTransform.Axis.Horizontal : RectTransform.Axis.Vertical;
                 int2 result = int2.zero;
                 result[(int)axis] = count;
-                if (version == base.version || toggleStyle == null)
+                if (version == base.version)
                     return result;
                 
                 ISubmitHandler submitHandler;
                 if (count > 0)
                 {
-                    ScrollRectToggle toggle;
-                    if (__toggles == null)
-                        __toggles = new Dictionary<ISubmitHandler, ScrollRectToggle>();
-                    else
+                    int min = 0, max = count - 1, index;
+                    if (toggleStyle != null)
                     {
-                        bool isContains;
-                        List<ISubmitHandler> submitHandlersToDestroy = null;
-                        foreach (var pair in __toggles)
+                        ScrollRectToggle toggle;
+                        if (__toggles == null)
+                            __toggles = new Dictionary<ISubmitHandler, ScrollRectToggle>();
+                        else
                         {
-                            submitHandler = pair.Key;
-
-                            isContains = false;
-                            foreach (var submitHandlerToDestroy in __submitHandlers)
+                            bool isContains;
+                            List<ISubmitHandler> submitHandlersToDestroy = null;
+                            foreach (var pair in __toggles)
                             {
-                                if (submitHandlerToDestroy == submitHandler)
-                                {
-                                    isContains = true;
+                                submitHandler = pair.Key;
 
-                                    break;
+                                isContains = false;
+                                foreach (var submitHandlerToDestroy in __submitHandlers)
+                                {
+                                    if (submitHandlerToDestroy == submitHandler)
+                                    {
+                                        isContains = true;
+
+                                        break;
+                                    }
+                                }
+
+                                if (!isContains)
+                                {
+                                    toggle = pair.Value;
+                                    if (toggle != null)
+                                        Destroy(toggle.gameObject);
+
+                                    if (submitHandlersToDestroy == null)
+                                        submitHandlersToDestroy = new List<ISubmitHandler>();
+
+                                    submitHandlersToDestroy.Add(submitHandler);
                                 }
                             }
-                            
-                            if (!isContains)
-                            {
-                                toggle = pair.Value;
-                                if (toggle != null)
-                                    Destroy(toggle.gameObject);
 
-                                if (submitHandlersToDestroy == null)
-                                    submitHandlersToDestroy = new List<ISubmitHandler>();
-                                
-                                submitHandlersToDestroy.Add(submitHandler);
+                            if (submitHandlersToDestroy != null)
+                            {
+                                foreach (var submitHandlerToDestroy in submitHandlersToDestroy)
+                                    __toggles.Remove(submitHandlerToDestroy);
                             }
                         }
 
-                        if (submitHandlersToDestroy != null)
+                        GameObject gameObject;
+                        Transform parent = toggleStyle == null ? null : toggleStyle.transform;
+                        parent = parent == null ? null : parent.parent;
+                        for (int i = 0; i < count; ++i)
                         {
-                            foreach (var submitHandlerToDestroy in submitHandlersToDestroy)
-                                __toggles.Remove(submitHandlerToDestroy);
-                        }
-                    }
+                            submitHandler = __submitHandlers[i];
+                            if (submitHandler == null)
+                                continue;
 
-                    GameObject gameObject;
-                    Transform parent = toggleStyle == null ? null : toggleStyle.transform;
-                    parent = parent == null ? null : parent.parent;
-                    for(int i = 0; i < count; ++i)
-                    {
-                        submitHandler = __submitHandlers[i];
-                        if(submitHandler == null)
-                            continue;
-                        
-                        if (__toggles.TryGetValue(submitHandler, out toggle) && toggle != null)
-                        {
+                            if (__toggles.TryGetValue(submitHandler, out toggle) && toggle != null)
+                            {
+                                toggle.transform.SetSiblingIndex(i + 1);
+
+                                continue;
+                            }
+
+                            toggle = Instantiate(toggleStyle, parent);
+                            if (toggle == null)
+                                continue;
+
+                            toggle.handler = this;
+                            toggle.index = i;
+
                             toggle.transform.SetSiblingIndex(i + 1);
 
-                            continue;
+                            gameObject = toggle.gameObject;
+                            if (gameObject != null)
+                                gameObject.SetActive(true);
+
+                            __toggles[submitHandler] = toggle;
                         }
 
-                        toggle = Instantiate(toggleStyle, parent);
-                        if (toggle == null)
-                            continue;
-
-                        toggle.handler = this;
-                        toggle.index = i;
-                        
-                        toggle.transform.SetSiblingIndex(i + 1);
-
-                        gameObject = toggle.gameObject;
-                        if (gameObject != null)
-                            gameObject.SetActive(true);
-
-                        __toggles[submitHandler] = toggle;
+                        int2 temp = selectedIndex;
+                        index = math.clamp(math.max(temp.x, temp.y), min, max);
+                        submitHandler = __submitHandlers[index];
+                        if (submitHandler != null &&
+                            __toggles.TryGetValue(submitHandler, out toggle) &&
+                            toggle != null &&
+                            toggle.onSelected != null)
+                        {
+                            __isMoving = true;
+                            toggle.onSelected.Invoke();
+                            __isMoving = false;
+                        }
                     }
-
-                    int2 temp = selectedIndex;
-                    int min = 0, max = count - 1, index = math.clamp(math.max(temp.x, temp.y), min, max);
-                    submitHandler = __submitHandlers[index];
-                    if (submitHandler != null && 
-                        __toggles.TryGetValue(submitHandler, out toggle) && 
-                        toggle != null && 
-                        toggle.onSelected != null)
+                    else
                     {
-                        __isMoving = true;
-                        toggle.onSelected.Invoke();
-                        __isMoving = false;
+                        int2 temp = selectedIndex;
+                        index = math.clamp(math.max(temp.x, temp.y), min, max);
                     }
 
                     if (onPreviousChanged != null)
@@ -158,7 +167,7 @@ namespace ZG
         {
             get
             {
-                return math.all(__selectedIndex == IndexNull) ? index : math.min(__selectedIndex, __toggles == null ? 0 : __toggles.Count - 1);
+                return math.all(__selectedIndex == IndexNull) ? index : math.min(__selectedIndex, __toggles == null ? count[axis] : __toggles.Count - 1);
             }
         }
 
