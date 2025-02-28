@@ -386,6 +386,7 @@ public partial class UserDataMain
     private uint __ApplyReward(in UserRewardData reward)
     {
         var flag = UserDataMain.flag;
+        int count = 0;
         uint id = 0;
         string key;
         switch (reward.type)
@@ -399,6 +400,7 @@ public partial class UserDataMain
                 break;
             case UserRewardType.CardsCapacity:
                 id = 1;
+                count = 3;
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
                 break;
             case UserRewardType.Card:
@@ -451,7 +453,7 @@ public partial class UserDataMain
                 return 0;
         }
         
-        int count = PlayerPrefs.GetInt(key);
+        count = PlayerPrefs.GetInt(key, count);
         count += reward.count;
         PlayerPrefs.SetInt(key, count);
 
