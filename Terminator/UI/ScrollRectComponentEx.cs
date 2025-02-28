@@ -167,7 +167,7 @@ namespace ZG
         {
             get
             {
-                return math.all(__selectedIndex == IndexNull) ? index : math.min(__selectedIndex, __toggles == null ? count[axis] : __toggles.Count - 1);
+                return math.all(__selectedIndex == IndexNull) ? index : math.min(__selectedIndex, length - 1);
             }
         }
 
@@ -180,6 +180,8 @@ namespace ZG
                 return axis;
             }
         }
+
+        public int length => __toggles == null ? count[axis] : __toggles.Count;
 
         public ScrollRectComponentEx()
         {
@@ -251,13 +253,14 @@ namespace ZG
 
         private void __OnChanged(int2 source)
         {
+            int length = this.length;
             bool isNull = math.all(__selectedIndex == IndexNull);
-            if (!isNull && !math.all(math.min(__selectedIndex, __toggles == null ? 0 : __toggles.Count - 1) == source))
+            if (!isNull && !math.all(math.min(__selectedIndex, length - 1) == source))
                 return;
 
             if (isNull)
             {
-                int length = __toggles == null ? 0 : __toggles.Count, index = math.clamp(math.max(source.x, source.y), 0, length - 1);
+                int index = math.clamp(math.max(source.x, source.y), 0, length - 1);
                 int2 destination = base.index;
                 __Update(math.max(destination.x, destination.y), index);
             }
@@ -269,6 +272,8 @@ namespace ZG
         {
             int length;
             if (toggleStyle == null)
+                length = count[axis];
+            else
             {
                 length = __toggles == null ? 0 : __toggles.Count;
                 ScrollRectToggle toggle = length > destination ? __toggles[__submitHandlers[destination]] : null;
@@ -279,8 +284,6 @@ namespace ZG
                     __isMoving = false;
                 }
             }
-            else
-                length = count[axis];
 
             int min = 0, max = length - 1;
             if (destination <= min)
