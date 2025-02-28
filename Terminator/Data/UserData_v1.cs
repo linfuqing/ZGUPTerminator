@@ -633,5 +633,5 @@ public partial interface IUserData
     /// </summary>
     IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete);
 
-    IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete);
+    IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete);
 }

@@ -1988,7 +1988,7 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
-    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete)
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
@@ -2033,8 +2033,16 @@ public partial class UserDataMain
                 break;
             }
         }
-        
-        onComplete(results.ToArray());
+
+        if (results.Count > 0)
+        {
+            var rewards = new List<UserReward>();
+            __ApplyRewards(results.ToArray(), rewards);
+
+            onComplete(rewards.ToArray());
+        }
+        else
+            onComplete(null);
     }
 }
 
@@ -2223,7 +2231,7 @@ public partial class UserData
         return UserDataMain.instance.CollectStageRewards(userID, onComplete);
     }
 
-    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete)
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.ApplyReward(userID, poolName, onComplete);
     }
