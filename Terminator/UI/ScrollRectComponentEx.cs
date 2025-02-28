@@ -267,15 +267,22 @@ namespace ZG
 
         private void __Update(int source, int destination)
         {
-            int length = __toggles == null ? 0 : __toggles.Count, min = 0, max = length - 1;
-            ScrollRectToggle toggle = length > destination ? __toggles[__submitHandlers[destination]] : null;
-            if (toggle != null && toggle.onSelected != null)
+            int length;
+            if (toggleStyle == null)
             {
-                __isMoving = true;
-                toggle.onSelected.Invoke();
-                __isMoving = false;
+                length = __toggles == null ? 0 : __toggles.Count;
+                ScrollRectToggle toggle = length > destination ? __toggles[__submitHandlers[destination]] : null;
+                if (toggle != null && toggle.onSelected != null)
+                {
+                    __isMoving = true;
+                    toggle.onSelected.Invoke();
+                    __isMoving = false;
+                }
             }
+            else
+                length = count[axis];
 
+            int min = 0, max = length - 1;
             if (destination <= min)
             {
                 if (onPreviousChanged != null)
