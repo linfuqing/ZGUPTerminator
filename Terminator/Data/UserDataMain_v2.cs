@@ -8,6 +8,7 @@ public partial class UserDataMain
     [Serializable]
     public struct Tip
     {
+        [Serializable]
         public struct Reward
         {
             public string name;
