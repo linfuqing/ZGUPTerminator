@@ -70,7 +70,7 @@ public class GameLevelData : ILevelData
     private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)
     {
         IUserData.StageFlag stageFlag = 0;
-        if((flag | ILevelData.Flag.HasBeenDamaged) != ILevelData.Flag.HasBeenDamaged)
+        if((flag & ILevelData.Flag.HasBeenDamaged) != ILevelData.Flag.HasBeenDamaged)
             stageFlag |= IUserData.StageFlag.NoDamage;
 
         return stageFlag;
