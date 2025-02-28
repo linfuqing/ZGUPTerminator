@@ -533,6 +533,29 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.Property property)
     {
+        LevelShared.exp = 0;
+        LevelShared.expMax = 0;
+
+        __SubmitStage(property);
+    }
+    
+    private void __ApplyStage(IUserData.StageProperty property)
+    {
+        if (property.cache.skills == null)
+        {
+            __isStart = false;
+            
+            return;
+        }
+        
+        LevelShared.exp = property.cache.exp;
+        LevelShared.expMax = property.cache.expMax;
+        
+        __SubmitStage(property.value);
+    }
+
+    private void __SubmitStage(IUserData.Property property)
+    {
         if (property.skills == null && property.attributes == null)
         {
             __isStart = false;
@@ -599,21 +622,6 @@ public sealed class LoginManager : MonoBehaviour
         IRewardData.instance = new RewardData(userID);
     }
     
-    private void __ApplyStage(IUserData.StageProperty property)
-    {
-        if (property.cache.skills == null)
-        {
-            __isStart = false;
-            
-            return;
-        }
-        
-        LevelShared.exp = property.cache.exp;
-        LevelShared.expMax = property.cache.expMax;
-        
-        __ApplyLevel(property.value);
-    }
-
     private void __ApplyEnergy(User user, UserEnergy userEnergy)
     {
         userID = user.id;
