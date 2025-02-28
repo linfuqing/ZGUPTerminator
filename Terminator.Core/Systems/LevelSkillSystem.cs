@@ -182,6 +182,9 @@ public partial struct LevelSkillPickableSystem : ISystem
                     ref skills, 
                     ref random, 
                     out version.priority);
+                
+                if(skills.Length < 1)
+                    continue;
 
                 if (result.priorityToStyleIndex != 0)
                 {
