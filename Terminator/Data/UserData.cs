@@ -102,8 +102,8 @@ public partial interface IUserData : IGameUserData
     public enum StageFlag
     {
         Normal = 0x01, 
-        Once = 0x02, 
-        NoDamage = 0x03
+        Once = 0x02 | Normal, 
+        NoDamage = 0x04 | Normal
     }
 
     public struct Skill
