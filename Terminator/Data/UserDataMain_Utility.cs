@@ -494,8 +494,8 @@ public partial class UserDataMain
             numStages = level.stages.Length;
             numTargetStages = Mathf.Min(stageIndex + numStages, targetStageIndex) - stageIndex;
             for (j = 0; j < numTargetStages; ++j)
-                rewardIndex += level.stages[stageIndex + j].indirectRewards.Length;
-            
+                rewardIndex += level.stages[j].indirectRewards.Length;
+
             if (numTargetStages < numStages)
             {
                 levelIndex = i;
