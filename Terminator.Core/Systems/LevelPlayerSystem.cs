@@ -157,9 +157,11 @@ public partial struct LevelPlayerSystem : ISystem
                 effectTargetDamageScales[player] = effectTargetDamageScale;
             }
             
-            if (effectDamages.TryGetComponent(player, out var effectDamage))
+            float effectDamageScale = 1.0f + this.effectDamageScale;
+            if (math.abs(effectDamageScale) > math.FLT_MIN_NORMAL && 
+                effectDamages.TryGetComponent(player, out var effectDamage))
             {
-                effectDamage.scale = 1.0f + this.effectDamageScale;
+                effectDamage.scale = 1.0f / effectDamageScale;
 
                 effectDamages[player] = effectDamage;
             }
