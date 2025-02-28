@@ -1511,11 +1511,11 @@ public partial class UserDataMain
         string roleName = _roles[__ToIndex(roleID)].name;
         Talent talent;
         UserTalent userTalent;
-        var userTalents = new UserTalent[numTalents];
+        var userTalents = new List<UserTalent>();
         for (int i = 0; i < numTalents; ++i)
         {
             talent = _talents[i];
-            if(talent.name != roleName)
+            if(talent.roleName != roleName)
                 continue;
             
             userTalent.name = talent.name;
@@ -1524,10 +1524,10 @@ public partial class UserDataMain
             userTalent.gold = talent.gold;
             userTalent.skillGroupDamage = talent.skillGroupDamage;
             userTalent.attribute = talent.attribute;
-            userTalents[i] = userTalent;
+            userTalents.Add(userTalent);
         }
 
-        onComplete(userTalents);
+        onComplete(userTalents.ToArray());
     }
 
     public IEnumerator UpgradeRoleTalent(
