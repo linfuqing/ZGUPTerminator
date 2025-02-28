@@ -8,85 +8,109 @@ public partial class UserDataMain
     [Serializable]
     public struct Tip
     {
-        public int max;
-        public float uintTime;
-
-        public int value => GetValue(out _);
-
-        public int GetValue(int value, uint utcTime, out uint time)
+        public struct Reward
         {
-            var timeUnix = DateTime.UtcNow - Utc1970;
+            public string name;
 
-            uint now = (uint)timeUnix.TotalSeconds;
-            
-            time = now;
-            if (uintTime > Mathf.Epsilon)
-            {
-                float tipFloat = (time - (utcTime > 0 ? utcTime : time)) / uintTime;
-                int tipInt =  Mathf.FloorToInt(tipFloat);
-                value += tipInt;
+            public UserRewardType type;
 
-                time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * uintTime);
-            }
-        
-            if (value >= max)
-            {
-                value = max;
+            public int min;
+            public int max;
 
-                time = now;
-            }
+            public float unitTime;
 
-            return value;
+            public float chance;
         }
 
-        public int GetValue(out uint time)
+        public double maxTime;
+
+        public Reward[] rewards;
+
+        public IUserData.Tip instance
         {
-            return GetValue(PlayerPrefs.GetInt(NAME_SPACE_USER_TIP), 
-                (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME),
-                out time);
+            get
+            {
+                int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
+                if (time == 0)
+                {
+                    var timeUnix = DateTime.UtcNow - Utc1970;
+                    time = (int)timeUnix.TotalSeconds;
+            
+                    PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
+                }
+
+                return Create((uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks);
+            }
+        }
+
+        public IUserData.Tip Create(long tick)
+        {
+            IUserData.Tip result;
+            result.maxTime = (uint)Math.Round(maxTime * TimeSpan.TicksPerMillisecond);
+            result.tick = tick;
+            
+            int numRewards = rewards.Length;
+            
+            result.rewards = new IUserData.Tip.Reward[numRewards];
+
+            for (int i = 0; i < numRewards; ++i)
+            {
+                ref var source = ref rewards[i];
+                ref var destination = ref result.rewards[i];
+                
+                destination.name = source.name;
+                destination.type = source.type;
+                destination.min = source.min;
+                destination.max = source.max;
+                destination.unitTime = (uint)Math.Round(source.unitTime * TimeSpan.TicksPerMillisecond);
+                destination.chance = source.chance;
+            }
+
+            return result;
         }
     }
 
-    private const string NAME_SPACE_USER_TIP = "UserTip";
     private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
     private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [SerializeField]
     internal Tip _tip;
-
+    
     public IEnumerator QueryTip(
         uint userID,
         Action<IUserData.Tip> onComplete)
     {
         yield return null;
 
-        var timeUnix = DateTime.UtcNow - Utc1970;
         int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
         if (time == 0)
         {
+            var timeUnix = DateTime.UtcNow - Utc1970;
             time = (int)timeUnix.TotalSeconds;
             
             PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
         }
 
-        UserTip userTip;
-        userTip.value = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
-        userTip.max = _tip.max;
-        userTip.unitTime = (uint)Mathf.RoundToInt(_tip.uintTime * 1000);
-        userTip.tick = (uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks;
-        
-        onComplete(default);
+        onComplete(_tip.instance);
     }
 
     public IEnumerator CollectTip(
         uint userID,
-        Action<Memory<UserRewardData>> onComplete)
+        Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
-        onComplete(null);
-    }
+        var results = _tip.instance.Generate();
 
+        var timeUnix = DateTime.UtcNow - Utc1970;
+        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds);
+
+        var rewards = new List<UserReward>();
+        foreach (var result in results)
+            __ApplyRewards(results, rewards);
+        
+        onComplete(rewards.ToArray());
+    }
 }
 
 
@@ -101,7 +125,7 @@ public partial class UserData
     
     public IEnumerator CollectTip(
         uint userID,
-        Action<Memory<UserRewardData>> onComplete)
+        Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectTip(userID, onComplete);
     }

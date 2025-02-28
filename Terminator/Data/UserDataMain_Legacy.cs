@@ -5,6 +5,53 @@ using UnityEngine;
 
 public partial class UserDataMain
 {
+    [Serializable]
+    public struct Tip_v0
+    {
+        public int max;
+        public float uintTime;
+
+        public int value => GetValue(out _);
+
+        public int GetValue(int value, uint utcTime, out uint time)
+        {
+            var timeUnix = DateTime.UtcNow - Utc1970;
+
+            uint now = (uint)timeUnix.TotalSeconds;
+            
+            time = now;
+            if (uintTime > Mathf.Epsilon)
+            {
+                float tipFloat = (time - (utcTime > 0 ? utcTime : time)) / uintTime;
+                int tipInt =  Mathf.FloorToInt(tipFloat);
+                value += tipInt;
+
+                time -= (uint)Mathf.RoundToInt((tipFloat - tipInt) * uintTime);
+            }
+        
+            if (value >= max)
+            {
+                value = max;
+
+                time = now;
+            }
+
+            return value;
+        }
+
+        public int GetValue(out uint time)
+        {
+            return GetValue(PlayerPrefs.GetInt(NAME_SPACE_USER_TIP), 
+                (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME),
+                out time);
+        }
+    }
+
+    private const string NAME_SPACE_USER_TIP = "UserTip";
+    
+    [SerializeField]
+    internal Tip_v0 _tip_v0;
+
     public IEnumerator QueryTip(
         uint userID,
         Action<UserTip> onComplete)
@@ -22,8 +69,8 @@ public partial class UserDataMain
 
         UserTip userTip;
         userTip.value = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
-        userTip.max = _tip.max;
-        userTip.unitTime = (uint)Mathf.RoundToInt(_tip.uintTime * 1000);
+        userTip.max = _tip_v0.max;
+        userTip.unitTime = (uint)Mathf.RoundToInt(_tip_v0.uintTime * 1000);
         userTip.tick = (uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks;
         
         onComplete(userTip);
@@ -35,7 +82,7 @@ public partial class UserDataMain
     {
         yield return null;
 
-        int tip = _tip.GetValue(out uint time);
+        int tip = _tip_v0.GetValue(out uint time);
         gold += tip;
 
         PlayerPrefs.SetInt(NAME_SPACE_USER_TIP, 0);
