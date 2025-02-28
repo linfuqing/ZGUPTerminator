@@ -315,14 +315,12 @@ public partial class UserDataMain
                 if(purchasePoolOption.poolName != purchasePoolName)
                     continue;
                 
-                if(purchasePoolOption.minTimes < purchasePoolOption.maxTimes && 
-                   (purchasePoolOption.minTimes > purchasePoolTimes || 
-                   purchasePoolOption.maxTimes <= purchasePoolTimes))
+                if(purchasePoolOption.minTimes > purchasePoolTimes || 
+                   purchasePoolOption.minTimes < purchasePoolOption.maxTimes && purchasePoolOption.maxTimes <= purchasePoolTimes)
                     continue;
                 
-                if(purchasePoolOption.minLevel < purchasePoolOption.maxLevel && 
-                   (purchasePoolOption.minLevel > level ||
-                    purchasePoolOption.maxLevel <= level))
+                if(purchasePoolOption.minLevel > level ||
+                   purchasePoolOption.minLevel < purchasePoolOption.maxLevel && purchasePoolOption.maxLevel <= level)
                     continue;
 
                 total += purchasePoolOption.chance;
