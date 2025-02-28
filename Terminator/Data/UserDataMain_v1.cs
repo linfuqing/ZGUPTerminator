@@ -295,13 +295,36 @@ public partial class UserDataMain
     {
         yield return null;
 
+        var purchasePool = _purchasePools[__ToIndex(purchasePoolID)];
+        string poolKey = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{purchasePool.name}";
+        int keyCount = PlayerPrefs.GetInt(poolKey);
+        if (keyCount < times)
+        {
+            int destination = (times - keyCount) * purchasePool.diamond, source = PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
+            if (destination > source)
+            {
+                onComplete(null);
+
+                yield break;
+            }
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, source - destination);
+            
+            PlayerPrefs.DeleteKey(poolKey);
+        }
+        else
+        {
+            keyCount -= times;
+            
+            PlayerPrefs.SetInt(poolKey, keyCount);
+        }
+
         UserRewardData reward;
         reward.type = UserRewardType.Card;
         
         UserItem userItem;
         var results = new List<UserItem>();
-        string purchasePoolName = _purchasePools[__ToIndex(purchasePoolID)].name, 
-            timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePoolName}";
+        string timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}";
         float chance, total;
         int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, i;
         bool isSelected;
@@ -312,7 +335,7 @@ public partial class UserDataMain
             chance = UnityEngine.Random.value;
             foreach (var purchasePoolOption in _purchasePoolOptions)
             {
-                if(purchasePoolOption.poolName != purchasePoolName)
+                if(purchasePoolOption.poolName != purchasePool.name)
                     continue;
                 
                 if(purchasePoolOption.minTimes > purchasePoolTimes || 
