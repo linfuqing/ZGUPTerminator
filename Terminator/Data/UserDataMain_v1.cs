@@ -468,11 +468,11 @@ public partial class UserDataMain
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
         result.selectedGroupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetCardGroupIndex(groupName));
 
-        int i, numCardGroup = _cardGroups.Length;
-        result.groups = numCardGroup > 0 ? new UserGroup[numCardGroup] : null;
+        int i, numCardGroups = _cardGroups.Length;
+        result.groups = numCardGroups > 0 ? new UserGroup[numCardGroups] : null;
         
         UserGroup userGroup;
-        for (i = 0; i < numCardGroup; ++i)
+        for (i = 0; i < numCardGroups; ++i)
         {
             userGroup.id = __ToID(i);
             userGroup.name = _cardGroups[i].name;
@@ -531,7 +531,7 @@ public partial class UserDataMain
                         
                 __ApplyReward(reward);
                 
-                for (j = 0; j < numCardGroup; ++j)
+                for (j = 0; j < numCardGroups; ++j)
                     PlayerPrefs.SetInt(
                         $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{cardDefault.name}", i);
             }
@@ -560,7 +560,7 @@ public partial class UserDataMain
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
             userCardGroups.Clear();
-            for (j = 0; j < numCardGroup; ++j)
+            for (j = 0; j < numCardGroups; ++j)
             {
                 userCardGroup.position =
                     PlayerPrefs.GetInt(
@@ -592,6 +592,51 @@ public partial class UserDataMain
         onComplete(result);
     }
 
+    public IEnumerator QueryCard(
+        uint userID,
+        uint cardID,
+        Action<UserCard> onComplete)
+    {
+        yield return null;
+
+        var card = _cards[__ToIndex(cardID)];
+        
+        UserCard result;
+        result.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1);
+        if (result.level == -1)
+            yield break;
+            
+        result.name = card.name;
+        result.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
+            
+        result.id = cardID;
+        result.styleID = __ToID(__GetCardStyleIndex(card.styleName));
+            
+        result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+
+        int numCardGroups = _cardGroups.Length;
+        UserCard.Group userCardGroup;
+        var userCardGroups = new List<UserCard.Group>();
+        for (int i = 0; i < numCardGroups; ++i)
+        {
+            userCardGroup.position =
+                PlayerPrefs.GetInt(
+                    $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[i].name}{UserData.SEPARATOR}{card.name}",
+                    -1);
+                
+            if(userCardGroup.position == -1)
+                continue;
+
+            userCardGroup.groupID = __ToID(i);
+                
+            userCardGroups.Add(userCardGroup);
+        }
+            
+        result.groups = userCardGroups.Count > 0 ? userCardGroups.ToArray() : null;
+
+        onComplete(result);
+    }
+    
     public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
     {
         yield return null;
@@ -1067,22 +1112,7 @@ public partial class UserDataMain
         for (i = 0; i < numRoles; ++i)
         {
             role = _roles[i];
-            userRole.name = role.name;
-            
-            skillNames.Clear();
-
-            foreach (var skillName in role.skillNames)
-            {
-                skillGroupName = __GetSkillGroupName(skillName);
-                if (string.IsNullOrEmpty(skillGroupName))
-                    skillNames.Add(skillName);
-                else
-                    skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
-            }
-            
-            userRole.skillNames = skillNames.ToArray();
-
-            key = $"{NAME_SPACE_USER_ROLE_COUNT}{userRole.name}";
+            key = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
             roleCount = PlayerPrefs.GetInt(key);
             if (roleCount < 1)
                 continue;
@@ -1102,6 +1132,21 @@ public partial class UserDataMain
             }
 
             userRole.groupIDs = userRoleGroupIDs.ToArray();
+
+            userRole.name = role.name;
+            
+            skillNames.Clear();
+
+            foreach (var skillName in role.skillNames)
+            {
+                skillGroupName = __GetSkillGroupName(skillName);
+                if (string.IsNullOrEmpty(skillGroupName))
+                    skillNames.Add(skillName);
+                else
+                    skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
+            }
+            
+            userRole.skillNames = skillNames.ToArray();
 
             userRoles.Add(userRole);
         }
@@ -1301,6 +1346,59 @@ public partial class UserDataMain
         onComplete(result);
     }
 
+    public IEnumerator QueryRole(
+        uint userID,
+        uint roleID,
+        Action<UserRole> onComplete)
+    {
+        yield return null;
+        
+        UserRole result;
+        
+        var role = _roles[__ToIndex(roleID)];
+        var key = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
+        if (PlayerPrefs.GetInt(key) < 1)
+        {
+            onComplete(default);
+            
+            yield break;
+        }
+            
+        result.name = role.name;
+
+        string skillGroupName;
+        var skillNames = new List<string>();
+        foreach (var skillName in role.skillNames)
+        {
+            skillGroupName = __GetSkillGroupName(skillName);
+            if (string.IsNullOrEmpty(skillGroupName))
+                skillNames.Add(skillName);
+            else
+                skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
+        }
+            
+        result.skillNames = skillNames.ToArray();
+
+        result.id = roleID;
+
+        result.attributes = __CollectRoleAttributes(role.name, null, out result.skillGroupDamage)?.ToArray();
+
+        int numRoleGroups = _roleGroups.Length;
+        var userRoleGroupIDs = new List<uint>();
+        for (int i = 0; i < numRoleGroups; ++i)
+        {
+            key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[i].name}";
+            if (PlayerPrefs.GetString(key) != role.name)
+                continue;
+
+            userRoleGroupIDs.Add(__ToID(i));
+        }
+
+        result.groupIDs = userRoleGroupIDs.ToArray();
+        
+        onComplete(result);
+    }
+    
     public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
     {
         yield return null;
@@ -1464,6 +1562,81 @@ public partial class UserDataMain
         PlayerPrefs.SetInt(key, (int)flag);
 
         onComplete(true);
+    }
+
+    public IEnumerator QueryAccessory(
+        uint userID,
+        uint accessoryID,
+        Action<UserAccessory> onComplete)
+    {
+        yield return null;
+
+        if (!__TryGetAccessory(accessoryID, out var info))
+        {
+            onComplete(default);
+            
+            yield break;
+        }
+        
+        UserAccessory result;
+        var accessory = _accessories[info.index];
+        result.name = accessory.name;
+        result.id = accessoryID;
+        
+        if (string.IsNullOrEmpty(accessory.skillName))
+            result.skillNames = null;
+        else
+        {
+            string skillGroupName = __GetSkillGroupName(accessory.skillName);
+            if (string.IsNullOrEmpty(skillGroupName))
+            {
+                result.skillNames = new string[1];
+                result.skillNames[0] = accessory.skillName;
+            }
+            else
+                result.skillNames = __GetSkillGroupSkillNames(skillGroupName).ToArray();
+        }
+
+        result.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
+
+        result.attributeValue = accessory.attributeValue;
+
+        result.stage = info.stage;
+
+        var accessoryStageIndices = __GetAccessoryStageIndices(info.index);
+        var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
+
+        result.stageDesc.name = accessoryStage.name;
+        result.stageDesc.count = accessoryStage.count;
+        result.stageDesc.property = accessoryStage.property;
+
+        int i, j, numRoleGroups = _roleGroups.Length, numAccessorySlots = _accessorySlots.Length;
+        string userAccessoryGroupKey;
+        UserAccessory.Group userAccessoryGroup;
+        var userAccessoryGroups = new List<UserAccessory.Group>();
+        for (i = 0; i < numRoleGroups; ++i)
+        {
+            userAccessoryGroupKey =
+                $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[i].name}{UserData.SEPARATOR}";
+            for (j = 0; j < numAccessorySlots; ++j)
+            {
+                if ((uint)PlayerPrefs.GetInt(
+                        $"{userAccessoryGroupKey}{_accessorySlots[j].name}") ==
+                    accessoryID)
+                    break;
+            }
+
+            if (j == numAccessorySlots)
+                continue;
+
+            userAccessoryGroup.slotID = __ToID(j);
+            userAccessoryGroup.groupID = __ToID(i);
+            userAccessoryGroups.Add(userAccessoryGroup);
+        }
+
+        result.groups = userAccessoryGroups.ToArray();
+        
+        onComplete(result);
     }
 
     public IEnumerator QueryAccessoryStages(
@@ -1862,5 +2035,196 @@ public partial class UserDataMain
         }
         
         onComplete(results.ToArray());
+    }
+}
+
+public partial class UserData
+{
+    public IEnumerator QueryPurchases(
+        uint userID,
+        Action<IUserData.Purchases> onComplete)
+    {
+        return UserDataMain.instance.QueryPurchases(userID, onComplete);
+    }
+
+    public IEnumerator Purchase(
+        uint userID,
+        uint purchasePoolID,
+        int times,
+        Action<Memory<UserItem>> onComplete)
+    {
+        return UserDataMain.instance.Purchase(userID, purchasePoolID, times, onComplete);
+    }
+
+    public IEnumerator QueryCards(
+        uint userID,
+        Action<IUserData.Cards> onComplete)
+    {
+        return UserDataMain.instance.QueryCards(userID, onComplete);
+    }
+
+    public IEnumerator QueryCard(
+        uint userID,
+        uint cardID,
+        Action<UserCard> onComplete)
+    {
+        return UserDataMain.instance.QueryCard(userID, cardID, onComplete);
+    }
+    
+    public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetCardGroup(userID, groupID, onComplete);
+    }
+
+    public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetCard(userID, cardID, groupID, position, onComplete);
+    }
+
+    public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.UpgradeCard(userID, cardID, onComplete);
+    }
+
+    public IEnumerator QueryRoles(
+        uint userID,
+        Action<IUserData.Roles> onComplete)
+    {
+        return UserDataMain.instance.QueryRoles(userID, onComplete);
+    }
+
+    public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetRoleGroup(userID, groupID, onComplete);
+    }
+    
+    public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetRole(userID, roleID, groupID, onComplete);
+    }
+
+    public IEnumerator QueryRole(
+        uint userID,
+        uint roleID,
+        Action<UserRole> onComplete)
+    {
+        return UserDataMain.instance.QueryRole(userID, roleID, onComplete);
+    }
+
+    public IEnumerator QueryRoleTalents(
+        uint userID,
+        uint roleID,
+        Action<Memory<UserTalent>> onComplete)
+    {
+        return UserDataMain.instance.QueryRoleTalents(userID, roleID, onComplete);
+    }
+
+    public IEnumerator UpgradeRoleTalent(
+        uint userID,
+        uint talentID,
+        Action<bool> onComplete)
+    {
+        return UserDataMain.instance.UpgradeRoleTalent(userID, talentID, onComplete);
+    }
+
+    public IEnumerator QueryAccessory(
+        uint userID,
+        uint accessoryID,
+        Action<UserAccessory> onComplete)
+    {
+        return UserDataMain.instance.QueryAccessory(userID, accessoryID, onComplete);
+    }
+    
+    public IEnumerator QueryAccessoryStages(
+        uint userID,
+        uint accessoryID,
+        Action<Memory<UserAccessory.Stage>> onComplete)
+    {
+        return UserDataMain.instance.QueryAccessoryStages(userID, accessoryID, onComplete);
+    }
+
+    public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, slotID, onComplete);
+    }
+
+    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, onComplete);
+    }
+
+    public IEnumerator UprankAccessory(
+        uint userID, 
+        uint destinationAccessoryID, 
+        uint[] sourceAccessoryIDs, 
+        Action<UserAccessory.Stage?> onComplete)
+    {
+        return UserDataMain.instance.UprankAccessory(userID, destinationAccessoryID, sourceAccessoryIDs, onComplete);
+    }
+
+    public IEnumerator QueryStage(
+        uint userID,
+        uint stageID,
+        Action<IUserData.Stage> onComplete)
+    {
+        return UserDataMain.instance.QueryStage(userID, stageID, onComplete);
+    }
+
+    public IEnumerator ApplyStage(
+        uint userID,
+        uint stageID,
+        Action<IUserData.StageProperty> onComplete)
+    {
+        return UserDataMain.instance.ApplyStage(userID, stageID, onComplete);
+    }
+    
+    public IEnumerator SubmitStage(
+        uint userID,
+        IUserData.StageFlag flag,
+        int stage,
+        int gold, 
+        int exp, 
+        int expMax, 
+        string[] skills,
+        Action<bool> onComplete)
+    {
+        var levelCache = UserData.levelCache;
+        if (levelCache == null)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        var temp = levelCache.Value;
+
+        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+
+        IUserData.StageCache stageCache;
+        stageCache.exp = exp;
+        stageCache.expMax = expMax;
+        stageCache.skills = skills;
+        PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage), stageCache.ToString());
+        
+        temp.stage = stage;
+        temp.gold = gold;
+        UserData.levelCache = temp;
+        
+        onComplete(true);
+    }
+    
+    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.CollectStageReward(userID, stageRewardID, onComplete);
+    }
+
+    public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.CollectStageRewards(userID, onComplete);
+    }
+
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete)
+    {
+        return UserDataMain.instance.ApplyReward(userID, poolName, onComplete);
     }
 }

@@ -505,6 +505,14 @@ public partial interface IUserData
         Action<Cards> onComplete);
 
     /// <summary>
+    /// 卡牌
+    /// </summary>
+    IEnumerator QueryCard(
+        uint userID,
+        uint cardID, 
+        Action<UserCard> onComplete);
+
+    /// <summary>
     /// 设置卡组
     /// </summary>
     IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete);
@@ -525,6 +533,11 @@ public partial interface IUserData
     IEnumerator QueryRoles(
         uint userID,
         Action<Roles> onComplete);
+    
+    IEnumerator QueryRole(
+        uint userID,
+        uint roleID, 
+        Action<UserRole> onComplete);
 
     /// <summary>
     /// 设置套装
@@ -551,6 +564,11 @@ public partial interface IUserData
         uint userID,
         uint talentID,
         Action<bool> onComplete);
+
+    IEnumerator QueryAccessory(
+        uint userID,
+        uint accessoryID, 
+        Action<UserAccessory> onComplete);
 
     /// <summary>
     /// 查询装备所有品阶
@@ -616,171 +634,4 @@ public partial interface IUserData
     IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete);
 
     IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete);
-}
-
-public partial class UserData
-{
-    public IEnumerator QueryPurchases(
-        uint userID,
-        Action<IUserData.Purchases> onComplete)
-    {
-        return UserDataMain.instance.QueryPurchases(userID, onComplete);
-    }
-
-    public IEnumerator Purchase(
-        uint userID,
-        uint purchasePoolID,
-        int times,
-        Action<Memory<UserItem>> onComplete)
-    {
-        return UserDataMain.instance.Purchase(userID, purchasePoolID, times, onComplete);
-    }
-
-    public IEnumerator QueryCards(
-        uint userID,
-        Action<IUserData.Cards> onComplete)
-    {
-        return UserDataMain.instance.QueryCards(userID, onComplete);
-    }
-
-    public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetCardGroup(userID, groupID, onComplete);
-    }
-
-    public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetCard(userID, cardID, groupID, position, onComplete);
-    }
-
-    public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.UpgradeCard(userID, cardID, onComplete);
-    }
-
-    public IEnumerator QueryRoles(
-        uint userID,
-        Action<IUserData.Roles> onComplete)
-    {
-        return UserDataMain.instance.QueryRoles(userID, onComplete);
-    }
-
-    public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetRoleGroup(userID, groupID, onComplete);
-    }
-    
-    public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetRole(userID, roleID, groupID, onComplete);
-    }
-
-    public IEnumerator QueryRoleTalents(
-        uint userID,
-        uint roleID,
-        Action<Memory<UserTalent>> onComplete)
-    {
-        return UserDataMain.instance.QueryRoleTalents(userID, roleID, onComplete);
-    }
-
-    public IEnumerator UpgradeRoleTalent(
-        uint userID,
-        uint talentID,
-        Action<bool> onComplete)
-    {
-        return UserDataMain.instance.UpgradeRoleTalent(userID, talentID, onComplete);
-    }
-
-    public IEnumerator QueryAccessoryStages(
-        uint userID,
-        uint accessoryID,
-        Action<Memory<UserAccessory.Stage>> onComplete)
-    {
-        return UserDataMain.instance.QueryAccessoryStages(userID, accessoryID, onComplete);
-    }
-
-    public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, slotID, onComplete);
-    }
-
-    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, onComplete);
-    }
-
-    public IEnumerator UprankAccessory(
-        uint userID, 
-        uint destinationAccessoryID, 
-        uint[] sourceAccessoryIDs, 
-        Action<UserAccessory.Stage?> onComplete)
-    {
-        return UserDataMain.instance.UprankAccessory(userID, destinationAccessoryID, sourceAccessoryIDs, onComplete);
-    }
-
-    public IEnumerator QueryStage(
-        uint userID,
-        uint stageID,
-        Action<IUserData.Stage> onComplete)
-    {
-        return UserDataMain.instance.QueryStage(userID, stageID, onComplete);
-    }
-
-    public IEnumerator ApplyStage(
-        uint userID,
-        uint stageID,
-        Action<IUserData.StageProperty> onComplete)
-    {
-        return UserDataMain.instance.ApplyStage(userID, stageID, onComplete);
-    }
-    
-    public IEnumerator SubmitStage(
-        uint userID,
-        IUserData.StageFlag flag,
-        int stage,
-        int gold, 
-        int exp, 
-        int expMax, 
-        string[] skills,
-        Action<bool> onComplete)
-    {
-        var levelCache = UserData.levelCache;
-        if (levelCache == null)
-        {
-            onComplete(false);
-            
-            yield break;
-        }
-
-        var temp = levelCache.Value;
-
-        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
-
-        IUserData.StageCache stageCache;
-        stageCache.exp = exp;
-        stageCache.expMax = expMax;
-        stageCache.skills = skills;
-        PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage), stageCache.ToString());
-        
-        temp.stage = stage;
-        temp.gold = gold;
-        UserData.levelCache = temp;
-        
-        onComplete(true);
-    }
-    
-    public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
-    {
-        return UserDataMain.instance.CollectStageReward(userID, stageRewardID, onComplete);
-    }
-
-    public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
-    {
-        return UserDataMain.instance.CollectStageRewards(userID, onComplete);
-    }
-
-    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserRewardData>> onComplete)
-    {
-        return UserDataMain.instance.ApplyReward(userID, poolName, onComplete);
-    }
 }
