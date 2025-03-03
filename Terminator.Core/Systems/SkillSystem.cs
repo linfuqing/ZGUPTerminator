@@ -49,6 +49,7 @@ public partial struct SkillSystem : ISystem
             var states = this.states[index];
             var bulletStates = this.bulletStates[index];
             var bulletActiveIndices = this.bulletActiveIndices[index];
+            int layerMask = index < bulletLayerMasks.Length ? bulletLayerMasks[index].value : 0;
             bool result = instances[index].definition.Value.Update(
                 index < cooldownScales.Length ? cooldownScales[index].value : 1.0f, 
                 time,
@@ -60,7 +61,7 @@ public partial struct SkillSystem : ISystem
                 ref outputMessages, 
                 ref outputMessageParameters, 
                 ref bulletDefinitions[index].definition.Value, 
-                out int layerMask, 
+                ref layerMask, 
                 ref rage.value);
 
             if (index < bulletLayerMasks.Length)

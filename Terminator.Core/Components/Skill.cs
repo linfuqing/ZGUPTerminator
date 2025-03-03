@@ -23,6 +23,7 @@ public struct SkillDefinition
     
     public struct Skill
     {
+        public int layerMask;
         public int layerMaskInclude;
         public int layerMaskExclude;
         public float rage;
@@ -47,7 +48,7 @@ public struct SkillDefinition
         ref DynamicBuffer<Message> outputMessages, 
         ref DynamicBuffer<MessageParameter> outputMessageParameters, 
         ref BulletDefinition bulletDefinition, 
-        out int layerMask, 
+        ref int layerMask, 
         ref float rage)
     {
         bulletActiveIndices.Clear();
@@ -76,74 +77,85 @@ public struct SkillDefinition
             ref var skill = ref skills[skillActiveIndex.value];
             ref var status = ref states.ElementAt(skillActiveIndex.value);
             
-            numBulletIndices = skill.bulletIndices.Length;
             if (status.cooldown > time)
                 continue;
-            
-            numPreIndices = skill.preIndices.Length;
-            isSelected = numPreIndices < 1;
-            for (j = 0; j < numPreIndices; ++j)
-            {
-                preIndex = skill.preIndices[j];
-                for (k = 0; k < numActiveIndices; ++k)
-                {
-                    if (skillActiveIndices[k].value == preIndex)
-                        break;
-                }
 
-                if (k < numActiveIndices)
-                {
-                    isSelected = true;
-                    break;
-                }
-            }
-
-            if (!isSelected)
-                continue;
-            
-            isCooldown = status.cooldown + skill.duration > time;
+            isCooldown = skill.layerMask == 0 || (skill.layerMask & layerMask) != 0;
             if (isCooldown)
             {
-                isSelected = false;
-                for (j = 0; j < numBulletIndices; ++j)
+                numPreIndices = skill.preIndices.Length;
+                isCooldown = numPreIndices < 1;
+                for (j = 0; j < numPreIndices; ++j)
                 {
-                    ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                    if (bullet.index < bulletStates.Length)
+                    preIndex = skill.preIndices[j];
+                    for (k = 0; k < numActiveIndices; ++k)
                     {
-                        ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                        if (bulletStatus.cooldown > time || bulletStatus.version != 0)
-                        {
-                            isSelected = true;
-
+                        if (skillActiveIndices[k].value == preIndex)
                             break;
-                        }
+                    }
+
+                    if (k < numActiveIndices)
+                    {
+                        isCooldown = true;
+                        break;
                     }
                 }
-
-                if (!isSelected)
-                    status.cooldown = time;
             }
-            else
-            {
-                status.cooldown = time + skill.cooldown * cooldownScale;
-                //status.cooldown = cooldown + skill.duration;
 
-                if (status.cooldown > time)
+            numBulletIndices = skill.bulletIndices.Length;
+            if (isCooldown)
+            {
+                isCooldown = status.cooldown + skill.duration > time;
+                if (isCooldown)
                 {
+                    isSelected = false;
                     for (j = 0; j < numBulletIndices; ++j)
                     {
                         ref var bullet = ref this.bullets[skill.bulletIndices[j]];
                         if (bullet.index < bulletStates.Length)
                         {
                             ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                            bulletStatus.cooldown = status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
-                            bulletStatus.count = 0;
-                            bulletStatus.version = 0;
+                            if (bulletStatus.cooldown > time || bulletStatus.version != 0)
+                            {
+                                isSelected = true;
+
+                                break;
+                            }
                         }
                     }
+
+                    if (!isSelected)
+                        status.cooldown = time;
                 }
                 else
-                    isCooldown = true;
+                {
+                    status.cooldown = time + skill.cooldown * cooldownScale;
+                    //status.cooldown = cooldown + skill.duration;
+
+                    if (status.cooldown > time)
+                    {
+                        for (j = 0; j < numBulletIndices; ++j)
+                        {
+                            ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                            if (bullet.index < bulletStates.Length)
+                            {
+                                ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                                bulletStatus.cooldown =
+                                    status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
+                                bulletStatus.times = 0;
+                                bulletStatus.count = 0;
+                                bulletStatus.version = 0;
+                            }
+                        }
+                    }
+                    else if (rage >= skill.rage)
+                    {
+                        if(SkillMessageType.Cooldown != status.messageType)
+                            rage -= skill.rage;
+                        
+                        isCooldown = true;
+                    }
+                }
             }
 
             random = default;

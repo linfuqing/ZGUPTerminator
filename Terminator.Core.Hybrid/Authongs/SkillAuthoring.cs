@@ -46,6 +46,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
     {
         public string name;
 
+        public LayerMask layerMask;
+        
         public LayerMask layerMaskInclude;
         public LayerMask layerMaskExclude;
         
@@ -67,6 +69,15 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             }
         }
         
+        [CSVField]
+        public int 技能标签
+        {
+            set
+            {
+                layerMask = value;
+            }
+        }
+
         [CSVField]
         public int 技能包含标签
         {
@@ -225,6 +236,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     ref var source = ref authoring._skills[i];
                     ref var destination = ref skills[i];
 
+                    destination.layerMask = source.layerMask;
                     destination.layerMaskInclude = source.layerMaskInclude;
                     destination.layerMaskExclude = source.layerMaskExclude;
                     destination.duration = source.duration;

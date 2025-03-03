@@ -43,7 +43,7 @@ public partial interface IUserData
                 for(int i = 0; i < numRewards; ++i)
                 {
                     ref var reward = ref rewards[i];
-                    if (rewardTimes[i]++ * reward.unitTime * TimeSpan.TicksPerMillisecond > tick ||
+                    if (++rewardTimes[i] * reward.unitTime * TimeSpan.TicksPerMillisecond > tick ||
                         reward.chance < random.NextFloat())
                         continue;
                     
