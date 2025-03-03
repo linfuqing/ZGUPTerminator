@@ -95,7 +95,7 @@ public class AttributeManager : MonoBehaviour
     {
         if (_camera == null)
         {
-            var canvas = GetComponentInParent<Canvas>();
+            var canvas = GetComponentInParent<Canvas>(true);
             _camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
         }
     }
