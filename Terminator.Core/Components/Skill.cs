@@ -148,7 +148,7 @@ public struct SkillDefinition
 
             random = default;
 
-            if (isCooldown == (SkillMessageType.Cooldown != status.messageType))
+            if (isCooldown == (SkillMessageType.Cooldown == status.messageType))
             {
                 isSelected = false;
                 if (isCooldown && skill.rage > math.FLT_MIN_NORMAL)
