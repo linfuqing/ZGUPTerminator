@@ -47,7 +47,7 @@ public partial class UserDataMain
         public IUserData.Tip Create(long tick)
         {
             IUserData.Tip result;
-            result.maxTime = (uint)Math.Round(maxTime * TimeSpan.TicksPerMillisecond);
+            result.maxTime = (uint)Math.Round(maxTime * TimeSpan.TicksPerSecond);
             result.tick = tick;
             
             int numRewards = rewards.Length;
@@ -63,7 +63,7 @@ public partial class UserDataMain
                 destination.type = source.type;
                 destination.min = source.min;
                 destination.max = source.max;
-                destination.unitTime = (uint)Math.Round(source.unitTime * TimeSpan.TicksPerMillisecond);
+                destination.unitTime = (uint)Math.Round(source.unitTime * TimeSpan.TicksPerSecond);
                 destination.chance = source.chance;
             }
 

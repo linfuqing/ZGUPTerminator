@@ -131,6 +131,8 @@ public struct SkillDefinition
                 }
                 else
                 {
+                    status.messageType = SkillMessageType.Cooldown;
+
                     isCooldown = true;
 
                     isChanged = true;

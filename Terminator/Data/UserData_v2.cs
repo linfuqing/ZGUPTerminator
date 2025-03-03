@@ -33,7 +33,7 @@ public partial interface IUserData
 
             bool isContains;
             int numRewards = rewards.Length;
-            long tick = Math.Min(DateTime.UtcNow.Ticks - this.tick, maxTime * TimeSpan.TicksPerMillisecond);
+            long tick = Math.Min(DateTime.UtcNow.Ticks - this.tick, maxTime);
             UserRewardData result;
             var results = new Dictionary<int, UserRewardData>();
             var rewardTimes = new int[numRewards];
@@ -43,7 +43,7 @@ public partial interface IUserData
                 for(int i = 0; i < numRewards; ++i)
                 {
                     ref var reward = ref rewards[i];
-                    if (++rewardTimes[i] * reward.unitTime * TimeSpan.TicksPerMillisecond > tick ||
+                    if (++rewardTimes[i] * reward.unitTime > tick ||
                         reward.chance < random.NextFloat())
                         continue;
                     
