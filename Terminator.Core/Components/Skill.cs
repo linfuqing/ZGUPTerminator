@@ -183,8 +183,8 @@ public struct SkillDefinition
                     numMessageIndices = skill.messageIndices.Length;
                     if (numMessageIndices > 0)
                     {
+                        messageParameter.value = (int)math.round(skill.rage);
                         messageParameter.id = (int)EffectAttributeID.Rage;
-                        messageParameter.value = (int)math.round(rage);
                         
                         outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
                         for (j = 0; j < numMessageIndices; ++j)
@@ -204,10 +204,13 @@ public struct SkillDefinition
                                 __GetOrCreateRandom(status.cooldown, ref random);
                                 
                                 outputMessage.key = random.NextInt();
-                                
-                                messageParameter.messageKey = outputMessage.key;
-                                
-                                outputMessageParameters.Add(messageParameter);
+
+                                if (messageParameter.value != 0)
+                                {
+                                    messageParameter.messageKey = outputMessage.key;
+
+                                    outputMessageParameters.Add(messageParameter);
+                                }
                             }
                             else
                                 outputMessage.key = 0;

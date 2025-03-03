@@ -21,6 +21,7 @@ public class AttributeEventReceiver : MonoBehaviour
 
     private int __hpMax;
     private int __rageMax;
+    private int __rage;
 
     public event Action<int> onHPMaxChanged;
     public event Action<int> onHPChanged;
@@ -82,21 +83,23 @@ public class AttributeEventReceiver : MonoBehaviour
             __rageMax = rageMax;
         }
 
-        if (parameters.TryGet((int)EffectAttributeID.Rage, out int rage))
+        if (parameters.TryGet((int)EffectAttributeID.Rage, out int rage) && rage != 0)
+        {
+            __rage += rage;
+            
             dirtyFlag |= 1 << (int)AttributeType.Rage;
-        else
-            rage = __rageMax;
+        }
 
         if((dirtyFlag & (1 << (int)AttributeType.Rage)) != 0)
         {
-            onRageChanged?.Invoke(rage);
+            onRageChanged?.Invoke(__rage);
 
             AttributeManager.instance.Set(
                 _space,
                 __instanceID,
                 _styleIndex,
                 (int)AttributeType.Rage,
-                rage % __rageMax,
+                __rage % __rageMax,
                 __rageMax);
             
             /*AttributeManager.instance.Set(
