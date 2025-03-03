@@ -743,6 +743,7 @@ public partial class UserDataMain
             __ApplySkills(skills, accessoryStageSkills);
 
         IUserData.Property result;
+        result.name = role.instanceName;
         result.skills = skills.ToArray();
         result.attributes = attributes.ToArray();
 
@@ -870,6 +871,7 @@ public partial class UserDataMain
         List<int> indices;
         IUserData.Skill skill;
         SkillInfo skillInfo;
+        string instanceName = null;
         int level, styleIndex;
         foreach (var cacheSkill in cacheSkills)
         {
@@ -902,6 +904,8 @@ public partial class UserDataMain
                     break;
                 case SkillInfo.BelongTo.Role:
                     ref var role = ref _roles[skillInfo.index];
+
+                    instanceName = role.instanceName;
                     
                     attributes = __CollectRoleAttributes(
                         role.name, 
@@ -1011,6 +1015,7 @@ public partial class UserDataMain
             __ApplySkills(skills, accessoryStageSkills);
 
         IUserData.Property result;
+        result.name = instanceName;
         result.skills = skills.ToArray();
         result.attributes = attributes.ToArray();
 

@@ -731,6 +731,8 @@ public partial class UserDataMain
     internal struct Role
     {
         public string name;
+
+        public string instanceName;
         
         [Tooltip("技能")]
         public string[] skillNames;

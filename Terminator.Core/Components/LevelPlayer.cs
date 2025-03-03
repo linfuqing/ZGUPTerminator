@@ -22,11 +22,11 @@ public struct LevelPlayerSkillGroup
 
 public static class LevelPlayerShared
 {
-    private class Value<T>
+    private class Value<TChildClass, TValue> where TValue : unmanaged
     {
-        private static readonly SharedStatic<float> Result = SharedStatic<float>.GetOrCreate<T>();
+        private static readonly SharedStatic<TValue> Result = SharedStatic<TValue>.GetOrCreate<TChildClass>();
 
-        public static float value
+        public static TValue value
         {
             get => Result.Data;
 
@@ -34,18 +34,22 @@ public static class LevelPlayerShared
         }
     }
     
-    private class EffectDamageScale : Value<EffectDamageScale>
+    private class EffectDamageScale : Value<EffectDamageScale, float>
     {
     }
     
-    private class EffectTargetDamageScale : Value<EffectTargetDamageScale>
+    private class EffectTargetDamageScale : Value<EffectTargetDamageScale, float>
     {
     }
     
-    private class EffectTargetHPScale : Value<EffectTargetHPScale>
+    private class EffectTargetHPScale : Value<EffectTargetHPScale, float>
     {
     }
 
+    private class InstanceName : Value<InstanceName, FixedString32Bytes>
+    {
+    }
+    
     private struct ActiveSkills
     {
         private static readonly SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>> Values =
@@ -81,6 +85,13 @@ public static class LevelPlayerShared
         get => EffectTargetHPScale.value;
 
         set => EffectTargetHPScale.value = value;
+    }
+
+    public static FixedString32Bytes instanceName
+    {
+        get => InstanceName.value;
+
+        set => InstanceName.value = value;
     }
 
     public static ref FixedList512Bytes<LevelPlayerActiveSkill> activeSkills => ref ActiveSkills.values;

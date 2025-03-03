@@ -115,6 +115,7 @@ public partial interface IUserData : IGameUserData
 
     public struct Property
     {
+        public string name;
         public Skill[] skills;
         public UserAttributeData[] attributes;
     }

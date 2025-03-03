@@ -4,7 +4,7 @@ using Unity.Entities.Serialization;
 
 public struct Instance : IComponentData, IEnableableComponent
 {
-    public FixedString128Bytes name;
+    public FixedString32Bytes name;
 }
 
 public struct InstancePrefab : IBufferElementData, IEnableableComponent

@@ -586,6 +586,8 @@ public sealed class LoginManager : MonoBehaviour
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
         LevelPlayerShared.effectDamageScale = effectDamageScale;
         LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
+        
+        LevelPlayerShared.instanceName = property.name;
 
         ref var activeSkills = ref LevelPlayerShared.activeSkills;
         activeSkills.Clear();
