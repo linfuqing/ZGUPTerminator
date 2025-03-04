@@ -322,6 +322,14 @@ public partial class UserDataMain
         
         idsString = string.IsNullOrEmpty(idsString) ? id.ToString() : $"{idsString}{UserData.SEPARATOR}{id}";
         PlayerPrefs.SetString(key, idsString);
+
+        if (__accessoryIDToInfos != null)
+        {
+            AccessoryInfo accessoryInfo;
+            accessoryInfo.index = index;
+            accessoryInfo.stage = stage;
+            __accessoryIDToInfos.Add(id, accessoryInfo);
+        }
     }
 
     private UserStageReward.Flag __GetStageRewardFlag(
