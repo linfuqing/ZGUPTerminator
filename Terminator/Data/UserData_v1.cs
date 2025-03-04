@@ -177,16 +177,21 @@ public struct UserAccessory
 
         public int CompareTo(Skill other)
         {
-            return ((int)other.opcode).CompareTo((int)other.opcode);
+            return ((int)opcode).CompareTo((int)other.opcode);
         }
     }
 
     [Serializable]
-    public struct Attribute
+    public struct Attribute : IComparable<Attribute>
     {
         public UserAttributeType type;
         public Opcode opcode;
         public float value;
+        
+        public int CompareTo(Attribute other)
+        {
+            return ((int)opcode).CompareTo((int)other.opcode);
+        }
     }
 
     [Serializable]
@@ -236,6 +241,8 @@ public struct UserAccessory
     /// 技能
     /// </summary>
     public string[] skillNames;
+
+    public Property property;
     
     public Stage stageDesc;
 

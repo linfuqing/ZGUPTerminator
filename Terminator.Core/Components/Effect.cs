@@ -21,11 +21,6 @@ public enum EffectSpace
     Local
 }
 
-public interface IEffectDamage
-{
-    public int value { get; }
-}
-
 public struct EffectTargetInvulnerabilityDefinition
 {
     public struct Invulnerability
@@ -192,10 +187,11 @@ public struct EffectStatusTarget : IBufferElementData, IEnableableComponent
 public struct EffectTargetData : IComponentData
 {
     public int hpMax;
-    public float resetTime;
+    public float recoveryChance;
+    public float recoveryTime;
 
-    public FixedString128Bytes resetMessageName;
-    public WeakObjectReference<Object> resetMessageValue;
+    public FixedString128Bytes recoveryMessageName;
+    public WeakObjectReference<Object> recoveryMessageValue;
 }
 
 public struct EffectTarget : IComponentData

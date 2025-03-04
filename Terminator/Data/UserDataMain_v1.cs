@@ -751,6 +751,8 @@ public partial class UserDataMain
         [Tooltip("基础属性值")]
         public float attributeValue;
         
+        public UserAccessory.Property property;
+
 #if UNITY_EDITOR
         [CSVField]
         public string 装备名字
@@ -785,6 +787,69 @@ public partial class UserDataMain
             set
             {
                 attributeValue = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserAccessory.Attribute attribute;
+                property.attributes = new UserAccessory.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserAccessory.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 装备技能
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserAccessory.Skill skill;
+                property.skills = new UserAccessory.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserAccessory.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    property.skills[i] = skill;
+                }
             }
         }
 #endif
@@ -931,6 +996,37 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public string 装备品阶属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserAccessory.Attribute attribute;
+                property.attributes = new UserAccessory.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserAccessory.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
+            }
+        }
+        
+        [CSVField]
         public string 装备品阶技能
         {
             set
@@ -958,37 +1054,6 @@ public partial class UserDataMain
                     skill.damage = float.Parse(skillParameters[3]);
 
                     property.skills[i] = skill;
-                }
-            }
-        }
-        
-        [CSVField]
-        public string 装备品阶属性
-        {
-            set
-            {
-                //skillGroupName = value;
-                if (string.IsNullOrEmpty(value))
-                {
-                    property.attributes = null;
-                    
-                    return;
-                }
-
-                var parameters = value.Split('/');
-
-                int numParameters = parameters.Length;
-                string[] attributeParameters;
-                UserAccessory.Attribute attribute;
-                property.attributes = new UserAccessory.Attribute[numParameters];
-                for (int i = 0; i < numParameters; ++i)
-                {
-                    attributeParameters = parameters[i].Split(':');
-                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
-                    attribute.opcode = (UserAccessory.Opcode)int.Parse(attributeParameters[1]);
-                    attribute.value = float.Parse(attributeParameters[2]);
-
-                    property.attributes[i] = attribute;
                 }
             }
         }
@@ -1256,6 +1321,8 @@ public partial class UserDataMain
             userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
 
             userAccessory.attributeValue = accessory.attributeValue;
+
+            userAccessory.property = accessory.property;
             
             accessoryStageIndices = __GetAccessoryStageIndices(i);
 
@@ -1624,9 +1691,10 @@ public partial class UserDataMain
 
         result.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
 
-        result.attributeValue = accessory.attributeValue;
-
         result.stage = info.stage;
+
+        result.attributeValue = accessory.attributeValue;
+        result.property = accessory.property;
 
         var accessoryStageIndices = __GetAccessoryStageIndices(info.index);
         var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];

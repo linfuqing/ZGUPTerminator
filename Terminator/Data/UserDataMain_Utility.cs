@@ -542,6 +542,47 @@ public partial class UserDataMain
         return attributes;
     }
 
+    private void __ApplyAttributes(
+        List<UserAttributeData> attributes, 
+        List<UserAccessory.Attribute> accessoryStageAttributes)
+    {
+        accessoryStageAttributes.Sort();
+
+        UserAttributeData attribute;
+        int i, numAttributes = attributes.Count;
+        foreach (var accessoryStageAttribute in accessoryStageAttributes)
+        {
+            for (i = 0; i < numAttributes; ++i)
+            {
+                attribute = attributes[i];
+                if (attribute.type == accessoryStageAttribute.type)
+                {
+                    switch (accessoryStageAttribute.opcode)
+                    {
+                        case UserAccessory.Opcode.Add:
+                            attribute.value += accessoryStageAttribute.value;
+                            break;
+                        case UserAccessory.Opcode.Mul:
+                            attribute.value *= accessoryStageAttribute.value;
+                            break;
+                    }
+
+                    break;
+                }
+            }
+
+            if (i == numAttributes)
+            {
+                attribute.type = accessoryStageAttribute.type;
+                attribute.value = accessoryStageAttribute.value;
+                            
+                attributes.Add(attribute);
+                            
+                ++numAttributes;
+            }
+        }
+    }
+
     private void __ApplySkills(
         List<IUserData.Skill> skills, 
         List<UserAccessory.Skill> accessoryStageSkills)
@@ -659,6 +700,8 @@ public partial class UserDataMain
         uint accessoryID;
         AccessoryInfo accessoryInfo;
         UserAttributeData attribute;
+        UserAccessory.Property property;
+        List<UserAccessory.Attribute> accessoryStageAttributes = null;
         List<UserAccessory.Skill> accessoryStageSkills = null;
         for (i = 0; i < numAccessorySlots; ++i)
         {
@@ -723,29 +766,43 @@ public partial class UserDataMain
                 
                 ++numSkills;
             }
-            
+
             if (accessoryInfo.stage > 0)
             {
                 indices = __GetAccessoryStageIndices(accessoryInfo.index);
-                
-                ref var accessoryStage = ref _accessoryStages[indices[accessoryInfo.stage - 1]];
-                if (accessoryStage.property.skills != null && accessoryStage.property.skills.Length > 0)
-                {
-                    if (accessoryStageSkills == null)
-                        accessoryStageSkills = new List<UserAccessory.Skill>();
-                    
-                    accessoryStageSkills.AddRange(accessoryStage.property.skills);
-                }
+
+                property = _accessoryStages[indices[accessoryInfo.stage - 1]].property;
+            }
+            else
+                property = accessory.property;
+            
+            if (property.attributes != null && property.attributes.Length > 0)
+            {
+                if (accessoryStageAttributes == null)
+                    accessoryStageAttributes = new List<UserAccessory.Attribute>();
+
+                accessoryStageAttributes.AddRange(property.attributes);
+            }
+
+            if (property.skills != null && property.skills.Length > 0)
+            {
+                if (accessoryStageSkills == null)
+                    accessoryStageSkills = new List<UserAccessory.Skill>();
+
+                accessoryStageSkills.AddRange(property.skills);
             }
         }
+        
+        if(accessoryStageAttributes != null)
+            __ApplyAttributes(attributes, accessoryStageAttributes);
         
         if(accessoryStageSkills != null)
             __ApplySkills(skills, accessoryStageSkills);
 
         IUserData.Property result;
         result.name = role.instanceName;
-        result.skills = skills.ToArray();
         result.attributes = attributes.ToArray();
+        result.skills = skills.ToArray();
 
         return result;
     }
@@ -867,10 +924,12 @@ public partial class UserDataMain
     {
         var skills = new List<IUserData.Skill>();
         var attributes = new List<UserAttributeData>();
+        List<UserAccessory.Attribute> accessoryStageAttributes = null;
         List<UserAccessory.Skill> accessoryStageSkills = null;
         List<int> indices;
         IUserData.Skill skill;
         SkillInfo skillInfo;
+        UserAccessory.Property property;
         string instanceName = null;
         int level, styleIndex;
         foreach (var cacheSkill in cacheSkills)
@@ -995,29 +1054,36 @@ public partial class UserDataMain
                         break;
                     }
 
-                    if (i > 0)
+                    property = i > 0 ? _accessoryStages[indices[i - 1]].property : accessory.property;
+                    if (property.attributes != null && property.attributes.Length > 0)
                     {
-                        ref var accessoryStage = ref _accessoryStages[indices[i - 1]];
-                        if (accessoryStage.property.skills != null && accessoryStage.property.skills.Length > 0)
-                        {
-                            if (accessoryStageSkills == null)
-                                accessoryStageSkills = new List<UserAccessory.Skill>();
+                        if (accessoryStageAttributes == null)
+                            accessoryStageAttributes = new List<UserAccessory.Attribute>();
                     
-                            accessoryStageSkills.AddRange(accessoryStage.property.skills);
-                        }
+                        accessoryStageAttributes.AddRange(property.attributes);
                     }
 
+                    if (property.skills != null && property.skills.Length > 0)
+                    {
+                        if (accessoryStageSkills == null)
+                            accessoryStageSkills = new List<UserAccessory.Skill>();
+                    
+                        accessoryStageSkills.AddRange(property.skills);
+                    }
                     break;
             }
         }
         
+        if(accessoryStageAttributes != null)
+            __ApplyAttributes(attributes, accessoryStageAttributes);
+
         if(accessoryStageSkills != null)
             __ApplySkills(skills, accessoryStageSkills);
 
         IUserData.Property result;
         result.name = instanceName;
-        result.skills = skills.ToArray();
         result.attributes = attributes.ToArray();
+        result.skills = skills.ToArray();
 
         return result;
     }

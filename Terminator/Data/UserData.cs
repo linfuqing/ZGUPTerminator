@@ -27,7 +27,8 @@ public enum UserAttributeType
     None, 
     Hp, 
     Attack, 
-    Defence
+    Defence, 
+    Recovery, 
 }
 
 [Serializable]

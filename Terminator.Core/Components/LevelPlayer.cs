@@ -46,6 +46,10 @@ public static class LevelPlayerShared
     {
     }
 
+    private class EffectTargetRecovery : Value<EffectTargetRecovery, float>
+    {
+    }
+
     private class InstanceName : Value<InstanceName, FixedString32Bytes>
     {
     }
@@ -85,6 +89,13 @@ public static class LevelPlayerShared
         get => EffectTargetHPScale.value;
 
         set => EffectTargetHPScale.value = value;
+    }
+
+    public static float effectTargetRecovery
+    {
+        get => EffectTargetRecovery.value;
+
+        set => EffectTargetRecovery.value = value;
     }
 
     public static FixedString32Bytes instanceName

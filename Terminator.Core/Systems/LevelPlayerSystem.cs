@@ -14,6 +14,7 @@ public partial struct LevelPlayerSystem : ISystem
         public float effectDamageScale;
         public float effectTargetDamageScale;
         public float effectTargetHPScale;
+        public float effectTargetRecovery;
 
         public FixedString32Bytes instanceName;
 
@@ -152,11 +153,13 @@ public partial struct LevelPlayerSystem : ISystem
                 }
                 
                 effectTarget.hp = hp;
+                effectTarget.times = (int)math.floor(effectTargetRecovery);
 
                 effectTargets[player] = effectTarget;
                 
                 if (effectTargetDatas.TryGetComponent(player, out var effectTargetData))
                 {
+                    effectTargetData.recoveryChance = math.trunc(effectTargetRecovery);
                     effectTargetData.hpMax = hp;
                     effectTargetDatas[player] = effectTargetData;
                 }
@@ -264,6 +267,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.effectDamageScale = LevelPlayerShared.effectDamageScale;
         apply.effectTargetDamageScale = LevelPlayerShared.effectTargetDamageScale;
         apply.effectTargetHPScale = LevelPlayerShared.effectTargetHPScale;
+        apply.effectTargetRecovery = LevelPlayerShared.effectTargetRecovery;
         apply.instanceName = LevelPlayerShared.instanceName;
         apply.activeSkills = LevelPlayerShared.activeSkills;
         apply.skillGroups = LevelPlayerShared.skillGroups;

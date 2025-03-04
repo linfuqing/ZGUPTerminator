@@ -24,6 +24,7 @@ public partial struct EffectSystem : ISystem
         Message = 0x01,
         StatusTarget = 0x02, 
         Destroyed = 0x04, 
+        Reset = 0x08
     }
     
     private struct DamageInstance
@@ -908,6 +909,9 @@ public partial struct EffectSystem : ISystem
         public NativeArray<KinematicCharacterBody> characterBodies;
 
         [ReadOnly] 
+        public NativeArray<EffectTargetData> instances;
+
+        [ReadOnly] 
         public NativeArray<EffectTargetLevel> targetLevels;
 
         [ReadOnly] 
@@ -934,14 +938,17 @@ public partial struct EffectSystem : ISystem
 
         public PrefabLoader.ParallelWriter prefabLoader;
 
-        public bool Execute(int index)
+        public EnabledFlags Execute(int index)
         {
-            var targetHP = targetHPs[index];
-            var targetDamage = targetDamages[index];
+            EnabledFlags result = 0;
             var target = targets[index];
-            target.hp += targetHP.value;
             if (target.invincibleTime < time)
             {
+                var targetHP = targetHPs[index];
+                var targetDamage = targetDamages[index];
+                
+                target.hp += targetHP.value;
+                
                 int damage = (int)math.ceil(targetDamage.value *
                                             (index < targetDamageScales.Length
                                                 ? targetDamageScales[index].value
@@ -982,7 +989,7 @@ public partial struct EffectSystem : ISystem
                             if (isInvulnerability)
                             {
                                 target.invincibleTime = time + invulnerablilitity.time;
-                                
+
                                 ++targetInvulnerabilityStatus.count;
                             }
 
@@ -1008,11 +1015,11 @@ public partial struct EffectSystem : ISystem
 
                                     isInvulnerability = targetInvulnerabilityStatus.damage == 0 &&
                                                         targetInvulnerabilityStatus.times == 0;
-                                    
+
                                     if (isInvulnerability)
                                         continue;
                                 }
-                                
+
                                 break;
                             }
 
@@ -1024,65 +1031,25 @@ public partial struct EffectSystem : ISystem
 
                     targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
                 }
-                
+
                 target.hp += -damage;
-            }
-
-            if (target.hp <= 0)
-            {
-                if (index < targetLevels.Length && this.levelStatus.IsValid)
-                {
-                    var targetLevel = targetLevels[index];
-
-                    ref var levelStatus = ref this.levelStatus.ValueRW;
-                    Interlocked.Add(ref levelStatus.value, targetLevel.value);
-                    Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                    Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
-
-                    Interlocked.Increment(ref levelStatus.count);
-                }
-
-                if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
-                {
-                    if (index < characterGravityFactors.Length)
-                    {
-                        ThirdPersionCharacterGravityFactor characterGravityFactor;
-                        characterGravityFactor.value = 1.0f;
-                        characterGravityFactors[index] = characterGravityFactor;
-                    }
-
-                    entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
-                }
-                else
-                {
-                    if (index < children.Length)
-                    {
-                        var children = this.children[index];
-                        foreach (var child in children)
-                            entityManager.DestroyEntity(int.MaxValue - 1, child.Value);
-                    }
-                    
-                    entityManager.DestroyEntity(int.MaxValue, entityArray[index]);
-                }
-            }
-
-            targets[index] = target;
-            
-            bool result = false;
-            if (targetHP.value != 0 && targetHP.layerMask != 0 || targetDamage.value != 0 && targetDamage.layerMask != 0)
-            {
-                if (index < targetMessages.Length)
+                
+                Message message;
+                var messages = index < this.messages.Length ? this.messages[index] : default;
+                if (index < targetMessages.Length && 
+                    (targetHP.value != 0 && targetHP.layerMask != 0 || 
+                     targetDamage.value != 0 && targetDamage.layerMask != 0))
                 {
                     float3 position = localToWorlds[index].Position;
                     Entity messageReceiver;
-                    Message message;
                     MessageParameter messageParameter;
-                    var messageParameters = index < this.messageParameters.Length ? this.messageParameters[index] : default;
-                    var messages = this.messages[index];
+                    var messageParameters = index < this.messageParameters.Length
+                        ? this.messageParameters[index]
+                        : default;
                     var targetMessages = this.targetMessages[index];
                     foreach (var targetMessage in targetMessages)
                     {
-                        if (targetMessage.layerMask == 0 || 
+                        if (targetMessage.layerMask == 0 ||
                             (targetMessage.layerMask & (targetHP.layerMask | targetDamage.layerMask)) != 0)
                         {
                             message.key = random.NextInt();
@@ -1133,15 +1100,76 @@ public partial struct EffectSystem : ISystem
                                     messageParameters.Add(messageParameter);
                                 }
 
-                                result = true;
+                                result |= EnabledFlags.Message;
                             }
                         }
                     }
                 }
+
+                targetHP.value = 0;
+                if (target.hp <= 0)
+                {
+                    var instance = instances[index];
+                    if (target.times > 0 && instance.recoveryChance > random.NextFloat())
+                    {
+                        --target.times;
+
+                        target.invincibleTime = time + instance.recoveryTime;
+
+                        targetHP.value = instance.hpMax;
+
+                        result |= EnabledFlags.Reset;
+
+                        if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
+                        {
+                            message.key = 0;
+                            message.name = instance.recoveryMessageName;
+                            message.value = instance.recoveryMessageValue;
+                            messages.Add(message);
+                        }
+                    }
+                    else if (index < targetLevels.Length && this.levelStatus.IsValid)
+                    {
+                        var targetLevel = targetLevels[index];
+
+                        ref var levelStatus = ref this.levelStatus.ValueRW;
+                        Interlocked.Add(ref levelStatus.value, targetLevel.value);
+                        Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
+                        Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+
+                        Interlocked.Increment(ref levelStatus.count);
+                    }
+
+                    if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
+                    {
+                        if (index < characterGravityFactors.Length)
+                        {
+                            ThirdPersionCharacterGravityFactor characterGravityFactor;
+                            characterGravityFactor.value = 1.0f;
+                            characterGravityFactors[index] = characterGravityFactor;
+                        }
+
+                        entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
+                    }
+                    else
+                    {
+                        if (index < children.Length)
+                        {
+                            var children = this.children[index];
+                            foreach (var child in children)
+                                entityManager.DestroyEntity(int.MaxValue - 1, child.Value);
+                        }
+
+                        entityManager.DestroyEntity(int.MaxValue, entityArray[index]);
+                    }
+                }
+
+                targets[index] = target;
+
+                targetHPs[index] = targetHP;
             }
 
             targetDamages[index] = default;
-            targetHPs[index] = default;
 
             return result;
         }
@@ -1172,7 +1200,7 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
         [ReadOnly]
-        public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
+        public ComponentTypeHandle<EffectTargetData> instanceType;
 
         [ReadOnly]
         public ComponentTypeHandle<EffectTargetLevel> targetLevelType;
@@ -1192,6 +1220,8 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<EffectTarget> targetType;
 
         public ComponentTypeHandle<ThirdPersionCharacterGravityFactor> characterGravityFactorType;
+
+        public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
 
         public BufferTypeHandle<Message> messageType;
 
@@ -1215,6 +1245,7 @@ public partial struct EffectSystem : ISystem
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.characterBodies = chunk.GetNativeArray(ref characterBodyType);
+            apply.instances = chunk.GetNativeArray(ref instanceType);
             apply.targetLevels = chunk.GetNativeArray(ref targetLevelType);
             apply.targetDamageScales = chunk.GetNativeArray(ref targetDamageScaleType);
             apply.targetInvulnerabilities = chunk.GetNativeArray(ref targetInvulnerabilityType);
@@ -1228,13 +1259,20 @@ public partial struct EffectSystem : ISystem
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
 
+            bool isReset;
+            EnabledFlags result;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
-                if(apply.Execute(i))
-                    chunk.SetComponentEnabled(ref messageType, i, true);
+                result = apply.Execute(i);
                 
-                chunk.SetComponentEnabled(ref targetHPType, i, false);
+                if((result & EnabledFlags.Message) == EnabledFlags.Message)
+                    chunk.SetComponentEnabled(ref messageType, i, true);
+
+                isReset = (result & EnabledFlags.Reset) == EnabledFlags.Reset;
+                chunk.SetComponentEnabled(ref characterBodyType, i, !isReset);
+                chunk.SetComponentEnabled(ref targetHPType, i, isReset);
+                
                 chunk.SetComponentEnabled(ref targetDamageType, i, false);
             }
         }
@@ -1256,11 +1294,11 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
-    private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
-
     private ComponentTypeHandle<EffectDamageParent> __damageParentType;
 
     private ComponentTypeHandle<EffectDefinitionData> __instanceType;
+
+    private ComponentTypeHandle<EffectTargetData> __targetInstanceType;
 
     private ComponentTypeHandle<SimulationCollision> __simulationCollisionType;
 
@@ -1292,6 +1330,8 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<EffectTargetHP> __targetHPType;
 
     private ComponentTypeHandle<EffectTarget> __targetType;
+
+    private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
     private ComponentTypeHandle<ThirdPersionCharacterGravityFactor> __characterGravityFactorType;
 
@@ -1330,9 +1370,9 @@ public partial struct EffectSystem : ISystem
         __entityType = state.GetEntityTypeHandle();
         __childType = state.GetBufferTypeHandle<Child>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
-        __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
         __instanceType = state.GetComponentTypeHandle<EffectDefinitionData>(true);
+        __targetInstanceType = state.GetComponentTypeHandle<EffectTargetData>(true);
         __simulationCollisionType = state.GetComponentTypeHandle<SimulationCollision>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
@@ -1349,6 +1389,7 @@ public partial struct EffectSystem : ISystem
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __targetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
+        __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
@@ -1490,6 +1531,7 @@ public partial struct EffectSystem : ISystem
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
+        __targetInstanceType.Update(ref state);
         __targetType.Update(ref state);
         __targetLevelType.Update(ref state);
         __targetInvulnerabilityType.Update(ref state);
@@ -1507,7 +1549,7 @@ public partial struct EffectSystem : ISystem
         apply.childType = __childType;
         apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
-        apply.characterBodyType = __characterBodyType;
+        apply.instanceType = __targetInstanceType;
         apply.targetLevelType = __targetLevelType;
         apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;
@@ -1515,6 +1557,7 @@ public partial struct EffectSystem : ISystem
         apply.targetInvulnerabilityType = __targetInvulnerabilityType;
         apply.targetInvulnerabilityStatusType = __targetInvulnerabilityStatusType;
         apply.targetType = __targetType;
+        apply.characterBodyType = __characterBodyType;
         apply.characterGravityFactorType = __characterGravityFactorType;
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;

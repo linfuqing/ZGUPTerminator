@@ -53,11 +53,12 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
             EffectTargetData instance;
             instance.hpMax = authoring._hp;
-            instance.resetTime = authoring._resetTime;
-            instance.resetMessageName = authoring._resetMessageName;
-            instance.resetMessageValue = authoring._resetMessageValue == null
+            instance.recoveryChance = authoring._recoveryChance;
+            instance.recoveryTime = authoring._recoveryTime;
+            instance.recoveryMessageName = authoring._recoveryMessageName;
+            instance.recoveryMessageValue = authoring._recoveryMessageValue == null
                 ? default
-                : new WeakObjectReference<Object>(authoring._resetMessageValue);
+                : new WeakObjectReference<Object>(authoring._recoveryMessageValue);
             AddComponent(entity, instance);
 
             EffectTarget target;
@@ -157,14 +158,17 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [SerializeField] 
     internal float _damageScale = 1.0f;
 
+    [Tooltip("复活概率"), SerializeField] 
+    internal float _recoveryChance = 1.0f;
+    
     [Tooltip("复活时间"), SerializeField] 
-    internal float _resetTime = 3.0f;
+    internal float _recoveryTime = 3.0f;
 
     [Tooltip("复活事件"), SerializeField]
-    internal string _resetMessageName;
+    internal string _recoveryMessageName;
     
     [Tooltip("复活事件"), SerializeField]
-    internal Object _resetMessageValue;
+    internal Object _recoveryMessageValue;
 
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("attributeParameter")] 
     internal Object _attributeParameter;
