@@ -287,6 +287,8 @@ public partial class UserDataMain
         if(!__TryGetAccessory(id, out AccessoryInfo info))
             return false;
 
+        __accessoryIDToInfos.Remove(id);
+
         int accessoryStageIndex = __GetAccessoryStageIndices(info.index)[info.stage];
         string accessoryStageName = _accessoryStages[accessoryStageIndex].name, 
             accessoryName = _accessories[info.index].name, 
