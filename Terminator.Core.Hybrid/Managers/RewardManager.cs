@@ -28,6 +28,12 @@ public class RewardManager : MonoBehaviour
 
         public Style[] styles;
     }
+
+    private struct Instance
+    {
+        public int count;
+        public List<RewardStyle> styles;
+    }
     
     [SerializeField]
     internal Reward[] _rewards;
@@ -38,7 +44,7 @@ public class RewardManager : MonoBehaviour
     private Dictionary<string, int> __poolIndices;
     private Dictionary<string, int> __rewardIndices;
     
-    private List<RewardStyle> __rewardStyles;
+    private Dictionary<int, Instance> __instances;
 
     public static RewardManager instance
     {
@@ -81,30 +87,49 @@ public class RewardManager : MonoBehaviour
 
         int rewardIndex;
         RewardStyle rewardStyle;
+        Instance instance;
         foreach (var rewardValue in rewards.values)
         {
             if (!__rewardIndices.TryGetValue(rewardValue.name, out rewardIndex))
                 continue;
 
-            ref var reward = ref _rewards[rewardIndex];
-
-            foreach (var style in pool.styles)
+            if (__instances.TryGetValue(rewardIndex, out instance))
             {
-                rewardStyle = Instantiate(style.value, style.value.transform.parent);
+                instance.count += rewardValue.count;
 
-                rewardStyle.onSprite?.Invoke(reward.sprite);
-                rewardStyle.onTitle?.Invoke(reward.name);
-                rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
+                foreach (var style in instance.styles)
+                    style.onCount?.Invoke(instance.count.ToString());
                 
-                rewardStyle.gameObject.SetActive(true);
+                __instances[rewardIndex] = instance;
+            }
+            else
+            {
+                instance.styles = null;
+                
+                ref var reward = ref _rewards[rewardIndex];
 
-                if (rewardStyle.isDestroyOnDisable)
-                    continue;
+                foreach (var style in pool.styles)
+                {
+                    rewardStyle = Instantiate(style.value, style.value.transform.parent);
+
+                    rewardStyle.onSprite?.Invoke(reward.sprite);
+                    rewardStyle.onTitle?.Invoke(reward.name);
+                    rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
+
+                    rewardStyle.gameObject.SetActive(true);
+
+                    if (rewardStyle.isDestroyOnDisable)
+                        continue;
+
+                    if(instance.styles == null)
+                        instance.styles = new List<RewardStyle>();
+
+                    instance.styles.Add(rewardStyle);
+                }
                 
-                if(__rewardStyles == null)
-                    __rewardStyles = new List<RewardStyle>();
-                
-                __rewardStyles.Add(rewardStyle);
+                instance.count = rewardValue.count;
+
+                __instances[rewardIndex] = instance;
             }
         }
     }

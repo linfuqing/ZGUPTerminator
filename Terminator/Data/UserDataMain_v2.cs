@@ -15,8 +15,13 @@ public partial class UserDataMain
 
             public UserRewardType type;
 
-            public int min;
-            public int max;
+            [UnityEngine.Serialization.FormerlySerializedAs("min")]
+            public int minCount;
+            [UnityEngine.Serialization.FormerlySerializedAs("max")]
+            public int maxCount;
+
+            public int minLevel;
+            public int maxLevel;
 
             public float unitTime;
 
@@ -54,15 +59,19 @@ public partial class UserDataMain
             
             result.rewards = new IUserData.Tip.Reward[numRewards];
 
+            int level = UserData.level;
             for (int i = 0; i < numRewards; ++i)
             {
                 ref var source = ref rewards[i];
+                if(source.minLevel > level || source.minLevel < source.maxLevel && source.maxLevel < level)
+                    continue;
+                
                 ref var destination = ref result.rewards[i];
                 
                 destination.name = source.name;
                 destination.type = source.type;
-                destination.min = source.min;
-                destination.max = source.max;
+                destination.min = source.minCount;
+                destination.max = source.maxCount;
                 destination.unitTime = (uint)Math.Round(source.unitTime * TimeSpan.TicksPerSecond);
                 destination.chance = source.chance;
             }
@@ -107,8 +116,7 @@ public partial class UserDataMain
         PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds);
 
         var rewards = new List<UserReward>();
-        foreach (var result in results)
-            __ApplyRewards(results, rewards);
+        __ApplyRewards(results, rewards);
         
         onComplete(rewards.ToArray());
     }
