@@ -256,7 +256,7 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public string 卡牌技能分组名
+        public string 卡牌技能名
         {
             set
             {

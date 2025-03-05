@@ -95,7 +95,7 @@ public partial struct LevelPlayerSystem : ISystem
                             }
 
                             skillActiveIndex.value = i;
-                            skillActiveIndex.damageScale = activeSkill.damageScale;
+                            skillActiveIndex.damageScale = 1.0f + activeSkill.damageScale;
                             skillActiveIndices.Add(skillActiveIndex);
                         }
                     }
@@ -125,7 +125,7 @@ public partial struct LevelPlayerSystem : ISystem
                             }
 
                             levelSkillGroup.value = i;
-                            levelSkillGroup.damageScale = skillGroup.damageScale;
+                            levelSkillGroup.damageScale = 1.0f + skillGroup.damageScale;
                             levelSkillGroups.Add(levelSkillGroup);
                         }
                     }
