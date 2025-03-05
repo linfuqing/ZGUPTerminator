@@ -159,7 +159,10 @@ public partial struct LevelPlayerSystem : ISystem
                 
                 if (effectTargetDatas.TryGetComponent(player, out var effectTargetData))
                 {
-                    effectTargetData.recoveryChance = math.trunc(effectTargetRecovery);
+                    effectTargetData.recoveryChance = effectTargetRecovery - effectTarget.times;
+                    effectTargetData.recoveryChance = effectTargetData.recoveryChance > math.FLT_MIN_NORMAL
+                        ? effectTargetData.recoveryChance
+                        : 1.0f;
                     effectTargetData.hpMax = hp;
                     effectTargetDatas[player] = effectTargetData;
                 }

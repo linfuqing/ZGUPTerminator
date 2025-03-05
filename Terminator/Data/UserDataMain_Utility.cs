@@ -403,7 +403,7 @@ public partial class UserDataMain
         {
             case UserRewardType.PurchasePoolKey:
                 if ((flag & Flag.PurchasesUnlock) != 0)
-                    flag |= Flag.PurchasesUnlock;
+                    UserDataMain.flag |= Flag.PurchasesUnlock;
                 
                 id = 1;
                 key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
@@ -437,7 +437,7 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
                 break;
             case UserRewardType.Accessory:
-                if ((flag & Flag.RolesCreated) == 0 && (flag & Flag.RolesCreated) == 0)
+                if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RolesCreated) == 0)
                     UserDataMain.flag |= Flag.RolesUnlock;
                 
                 uint accessoryID = (uint)Random.Range(int.MinValue, int.MaxValue);
@@ -449,15 +449,15 @@ public partial class UserDataMain
                 break; 
             case UserRewardType.Diamond:
                 id = 1;
-                key = $"{NAME_SPACE_USER_DIAMOND}{reward.name}";
+                key = NAME_SPACE_USER_DIAMOND;
                 break;
             case UserRewardType.Gold:
                 id = 1;
-                key = $"{NAME_SPACE_USER_GOLD}{reward.name}";
+                key = NAME_SPACE_USER_GOLD;
                 break;
             case UserRewardType.Energy:
                 id = 1;
-                key = $"{NAME_SPACE_USER_ENERGY}{reward.name}";
+                key = NAME_SPACE_USER_ENERGY;
                 break;
             default:
                 return 0;
