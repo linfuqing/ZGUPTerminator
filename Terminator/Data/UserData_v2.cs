@@ -16,12 +16,12 @@ public partial interface IUserData
             public int min;
             public int max;
 
-            public uint unitTime;
+            public long unitTime;
 
             public float chance;
         }
         
-        public uint maxTime;
+        public long maxTime;
         public long tick;
         
         public Reward[] rewards;

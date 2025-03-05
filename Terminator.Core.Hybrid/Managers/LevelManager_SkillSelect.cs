@@ -253,22 +253,10 @@ public partial class LevelManager
         __DestroyGameObjects();
 
         if (selectedSkillSelectionIndex == -1)
-        {
-            if (SkillSelectionStatus.Complete == __skillSelectionStatus)
-            {
-                __skillSelectionStatus = 0;
-            
-                Time.timeScale = 1.0f;
-            }
-        }
-        else
-        {
-            var selection = _skillSelections[selectedSkillSelectionIndex];
-            
-            if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
-                yield return __FinishSkillSelection(selection);
-        }
-        
+            __CompleteSkillSelection();
+        else if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
+            yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
+
         /*if (__selectedSkillIndices == null)
             __selectedSkillIndices = new List<int>();
 
@@ -291,28 +279,14 @@ public partial class LevelManager
         }
 
         if (selectedSkillSelectionIndex == -1)
-        {
-            if (SkillSelectionStatus.Complete == __skillSelectionStatus)
-            {
-                __skillSelectionStatus = 0;
-            
-                Time.timeScale = 1.0f;
-            }
-        }
+            __CompleteSkillSelection();
         
         yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
 
         if (selectedSkillSelectionIndex == -1)
-        {
-            if (SkillSelectionStatus.Complete == __skillSelectionStatus)
-            {
-                __skillSelectionStatus = 0;
-                
-                Time.timeScale = 1.0f;
-            }
-        }
+            __CompleteSkillSelection();
         else
         {
             var selection = _skillSelections[selectedSkillSelectionIndex];
@@ -399,6 +373,16 @@ public partial class LevelManager
     {
         if(SkillSelectionStatus.Complete == __skillSelectionStatus)
             StartCoroutine(__CloseSkillSelection());
+    }
+
+    private void __CompleteSkillSelection()
+    {
+        if (SkillSelectionStatus.Complete == __skillSelectionStatus)
+        {
+            __skillSelectionStatus = 0;
+                
+            Time.timeScale = 1.0f;
+        }
     }
 
     private void __DestroyGameObjects()
