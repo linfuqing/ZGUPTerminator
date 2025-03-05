@@ -149,7 +149,7 @@ public partial struct LevelSkillPickableSystem : ISystem
                     out version.priority);
 
                 if (skills.Length < 1 && 
-                    (result.count == 1 || result.index == 0 || result.version != versions[entity].entity))
+                    (result.count == 1 || result.index == 0 || result.version != version.entity))
                     continue;
 
                 if (result.priorityToStyleIndex != 0)
@@ -170,6 +170,8 @@ public partial struct LevelSkillPickableSystem : ISystem
                 version.index = result.index;
                 if(version.index == 0)
                     ++version.value;
+
+                version.entity = result.version;
 
                 versions[entity] = version;
                 

@@ -147,7 +147,8 @@ public partial class LevelManager
     {
         while ((SkillSelectionStatus.Start & __skillSelectionStatus) == 0)
             yield return null;
-        
+
+        bool result = false;
         int numSkills = skills.Length;
         var destination = _skillSelectionDatas[styleIndex];
         if (destination.style == null)
@@ -163,71 +164,115 @@ public partial class LevelManager
                     yield return new WaitForSecondsRealtime(destination.delayTime);
                 
                 yield return __SelectSkill(destination.destroyTime, skill);
-            }
 
-            yield break;
+                result = true;
+            }
+        }
+        else
+        {
+            destination.onEnable.Invoke();
+
+            int skillSelectionGuideIndex, times;
+            string key;
+            LevelSkillStyle style;
+            for (int i = 0; i < numSkills; ++i)
+            {
+                var source = skills[i];
+                if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
+                {
+                    if (source.selectIndex == -1 && destination.style.child == null)
+                        continue;
+
+                    style = Instantiate(destination.style, destination.style.transform.parent);
+                }
+                else
+                {
+                    style = __skillStyles[source.parentName];
+                    style = Instantiate(style.child, style.child.transform.parent);
+                }
+
+                if (style.button != null && source.selectIndex != -1)
+                {
+                    result = true;
+                    
+                    style.button.onClick.AddListener(() =>
+                    {
+                        destination.onDisable.Invoke();
+
+                        StartCoroutine(__SelectSkill(destination.destroyTime, source));
+                    });
+                }
+
+                style.SetAsset(source.value);
+
+                key = NAME_SPACE_SKILL_SELECTION_TIMES + source. /*value.*/name;
+                times = PlayerPrefs.GetInt(key);
+
+                if (times == 0 &&
+                    _skillSelectionGuides != null)
+                {
+                    skillSelectionGuideIndex = Array.IndexOf(_skillSelectionGuides, source. /*value.*/name);
+                    if (skillSelectionGuideIndex != -1)
+                    {
+                        if (style.onGuide != null)
+                            style.onGuide.Invoke();
+
+                        if (_onSkillSelectionGuide != null)
+                            _onSkillSelectionGuide.Invoke(skillSelectionGuideIndex);
+                    }
+                }
+
+                PlayerPrefs.SetInt(key, ++times);
+
+                if (__skillStyles == null)
+                    __skillStyles = new Dictionary<string, LevelSkillStyle>();
+
+                __skillStyles.Add(source. /*value.*/name, style);
+
+                if (destination.delayTime > 0.0f)
+                    yield return new WaitForSecondsRealtime(destination.delayTime);
+            }
         }
         
-        destination.onEnable.Invoke();
-
-        int skillSelectionGuideIndex, times;
-        string key;
-        LevelSkillStyle style;
-        for (int i = 0; i < numSkills; ++i)
+        if(result)
+            yield break;
+        
+        if (__skillStyles != null)
         {
-            var source = skills[i];
-            if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
+            foreach (var skillStyle in __skillStyles.Values)
             {
-                if(source.selectIndex == -1 && destination.style.child == null)
-                    continue;
-                
-                style = Instantiate(destination.style, destination.style.transform.parent);
-            }
-            else
-            {
-                style = __skillStyles[source.parentName];
-                style = Instantiate(style.child, style.child.transform.parent);
-            }
-            
-            if (style.button != null && source.selectIndex != -1)
-            {
-                style.button.onClick.AddListener(() =>
-                {
-                    destination.onDisable.Invoke();
+                if (__gameObjectsToDestroy == null)
+                    __gameObjectsToDestroy = new List<GameObject>();
 
-                    StartCoroutine(__SelectSkill(destination.destroyTime, source));
-                });
+                __gameObjectsToDestroy.Add(skillStyle.gameObject);
             }
 
-            style.SetAsset(source.value);
-
-            key = NAME_SPACE_SKILL_SELECTION_TIMES + source./*value.*/name;
-            times = PlayerPrefs.GetInt(key);
-
-            if (times == 0 &&
-                _skillSelectionGuides != null)
-            {
-                skillSelectionGuideIndex = Array.IndexOf(_skillSelectionGuides, source./*value.*/name);
-                if (skillSelectionGuideIndex != -1)
-                {
-                    if(style.onGuide != null)
-                        style.onGuide.Invoke();
-
-                    if (_onSkillSelectionGuide != null)
-                        _onSkillSelectionGuide.Invoke(skillSelectionGuideIndex);
-                }
-            }
-
-            PlayerPrefs.SetInt(key, ++times);
-
-            if (__skillStyles == null)
-                __skillStyles = new Dictionary<string, LevelSkillStyle>();
-
-            __skillStyles.Add(source./*value.*/name, style);
-
-            if (destination.delayTime > 0.0f)
-                yield return new WaitForSecondsRealtime(destination.delayTime);
+            __skillStyles.Clear();
         }
+
+        __DestroyGameObjects();
+
+        if (selectedSkillSelectionIndex == -1)
+        {
+            if (SkillSelectionStatus.Complete == __skillSelectionStatus)
+            {
+                __skillSelectionStatus = 0;
+            
+                Time.timeScale = 1.0f;
+            }
+        }
+        else
+        {
+            var selection = _skillSelections[selectedSkillSelectionIndex];
+            
+            if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
+                yield return __FinishSkillSelection(selection);
+        }
+        
+        /*if (__selectedSkillIndices == null)
+            __selectedSkillIndices = new List<int>();
+
+        __selectedSkillIndices.Add(value.selectIndex);*/
     }
 
     private IEnumerator __SelectSkill(float destroyTime, LevelSkillData value)
