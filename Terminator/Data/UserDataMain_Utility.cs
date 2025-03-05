@@ -577,6 +577,8 @@ public partial class UserDataMain
                             break;
                     }
 
+                    attributes[i] = attribute;
+
                     break;
                 }
             }
@@ -617,6 +619,8 @@ public partial class UserDataMain
                             skill.damage *= accessoryStageSkill.damage;
                             break;
                     }
+
+                    skills[i] = skill;
 
                     break;
                 }
