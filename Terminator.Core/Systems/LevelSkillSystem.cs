@@ -22,9 +22,11 @@ public partial struct LevelSkillPickableSystem : ISystem
     
     private struct Collect
     {
-        public Entity version;
         public Random random;
         
+        [ReadOnly] 
+        public NativeArray<Entity> entityArray;
+
         [ReadOnly] 
         public NativeArray<PickableStatus> states;
 
@@ -43,7 +45,7 @@ public partial struct LevelSkillPickableSystem : ISystem
             int count = random.NextInt(instance.min, instance.max + 1);
 
             Result result;
-            result.version = version;
+            result.version = entityArray[index];
             result.selection = instance.selection;
             result.priorityToStyleIndex = instance.priorityToStyleIndex;
             result.count = count;
@@ -59,8 +61,10 @@ public partial struct LevelSkillPickableSystem : ISystem
     [BurstCompile]
     private struct CollectEx : IJobChunk
     {
-        public Entity version;
         public double time;
+
+        [ReadOnly] 
+        public EntityTypeHandle entityType;
         
         [ReadOnly] 
         public ComponentTypeHandle<PickableStatus> statusType;
@@ -76,8 +80,8 @@ public partial struct LevelSkillPickableSystem : ISystem
             ulong hash = math.asulong(time);
             
             Collect collect;
-            collect.version = version;
             collect.random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash ^ (uint)unfilteredChunkIndex);
+            collect.entityArray = chunk.GetNativeArray(entityType);
             collect.states = chunk.GetNativeArray(ref statusType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.results = results;
@@ -111,18 +115,18 @@ public partial struct LevelSkillPickableSystem : ISystem
 
         public void Execute()
         {
-            if (!this.skills.TryGetBuffer(this.entity, out var skills) || 
-                !definitions.TryGetComponent(this.entity, out var definition))
+            if (!this.skills.TryGetBuffer(entity, out var skills) || 
+                !definitions.TryGetComponent(entity, out var definition))
             {
                 results.Clear();
 
                 return;
             }
 
-            if (this.skills.IsBufferEnabled(this.entity))
+            if (this.skills.IsBufferEnabled(entity))
                 return;
 
-            versions.TryGetComponent(this.entity, out var version);
+            versions.TryGetComponent(entity, out var version);
             
             skills.Clear();
 
@@ -132,49 +136,10 @@ public partial struct LevelSkillPickableSystem : ISystem
             LevelSkill skill;
             DynamicBuffer<LevelSkillGroup> skillGroups;
             DynamicBuffer<SkillActiveIndex> skillActiveIndices;
-            while (this.results.TryDequeue(out Result result))
+            while (results.TryDequeue(out Result result))
             {
-                if(result.version != entity)
-                    continue;
-                
                 if(!this.skillActiveIndices.TryGetBuffer(result.entity, out skillActiveIndices))
                     continue;
-
-                /*if(result.count == 1)
-                    instance.definition.Value.Select(skillActiveIndices.AsNativeArray(), ref skills, ref random, out priority);
-                else
-                {
-                    if (results.IsCreated)
-                        results.Clear();
-                    else
-                        results = new NativeList<SkillActiveIndex>(Allocator.Temp);
-                    
-                    results.AddRange(skillActiveIndices.AsNativeArray());
-                    for (i = 0; i < result.count; ++i)
-                    {
-                        instance.definition.Value.Select(
-                            results.AsArray(),
-                            ref skills,
-                            ref random,
-                            out priority);
-                        numSkills = skills.Length;
-                        if (priority == 0)
-                        {
-                            skillIndex = random.NextInt(skillCount, numSkills);
-                            skill = skills[skillIndex];
-                            
-                            skill.Apply(ref results);
-                            //skill.priority = result.priority;
-                            
-                            skills.ResizeUninitialized(skillCount + 1);
-                            skills[skillCount] = skill;
-
-                            numSkills = 1;
-                        }
-
-                        skillCount += numSkills;
-                    }
-                }*/
 
                 definition.definition.Value.Select(
                     skillActiveIndices.AsNativeArray(), 
@@ -183,7 +148,8 @@ public partial struct LevelSkillPickableSystem : ISystem
                     ref random, 
                     out version.priority);
 
-                if (skills.Length < 1 && (result.count == 1 || result.index == 0))
+                if (skills.Length < 1 && 
+                    (result.count == 1 || result.index == 0 || result.version != versions[entity].entity))
                     continue;
 
                 if (result.priorityToStyleIndex != 0)
@@ -205,14 +171,16 @@ public partial struct LevelSkillPickableSystem : ISystem
                 if(version.index == 0)
                     ++version.value;
 
-                versions[this.entity] = version;
+                versions[entity] = version;
                 
-                this.skills.SetBufferEnabled(this.entity, true);
+                this.skills.SetBufferEnabled(entity, true);
                 
                 break;
             }
         }
     }
+
+    private EntityTypeHandle __entityType;
 
     private ComponentTypeHandle<PickableStatus> __statusType;
 
@@ -234,6 +202,7 @@ public partial struct LevelSkillPickableSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __entityType = state.GetEntityTypeHandle();
         __statusType = state.GetComponentTypeHandle<PickableStatus>(true);
         __instanceType = state.GetComponentTypeHandle<LevelSkillPickable>(true);
         
@@ -263,25 +232,20 @@ public partial struct LevelSkillPickableSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __entityType.Update(ref state);
         __statusType.Update(ref state);
         __instanceType.Update(ref state);
 
         double time = SystemAPI.Time.ElapsedTime;
         
-        JobHandle jobHandle;
-        if (SystemAPI.TryGetSingletonEntity<LevelSkillDefinitionData>(out Entity entity))
-        {
-            CollectEx collect;
-            collect.version = entity;
-            collect.time = time;
-            collect.instanceType = __instanceType;
-            collect.statusType = __statusType;
-            collect.results = __results.AsParallelWriter();
+        CollectEx collect;
+        collect.time = time;
+        collect.entityType = __entityType;
+        collect.instanceType = __instanceType;
+        collect.statusType = __statusType;
+        collect.results = __results.AsParallelWriter();
 
-            jobHandle = collect.ScheduleParallelByRef(__group, state.Dependency);
-        }
-        else
-            jobHandle = state.Dependency;
+        var jobHandle = collect.ScheduleParallelByRef(__group, state.Dependency);
 
         __versions.Update(ref state);
         __defintions.Update(ref state);
@@ -291,7 +255,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         
         Select select;
         select.time = time;
-        select.entity = entity;
+        select.entity = SystemAPI.TryGetSingletonEntity<LevelSkillDefinitionData>(out Entity entity) ? entity : Entity.Null;
         select.definitions = __defintions;
         select.skillActiveIndices = __skillActiveIndices;
         select.skillGroups = __skillGroups;

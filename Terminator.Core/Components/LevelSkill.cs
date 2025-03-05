@@ -350,6 +350,7 @@ public struct LevelSkillVersion : IComponentData
     public int count;
     public int priority;
     public int selection;
+    public Entity entity;
 }
 
 public struct LevelSkill : IBufferElementData, IEnableableComponent
