@@ -121,6 +121,8 @@ public struct UserCard
     /// </summary>
     public int count;
 
+    public float skillGroupDamage;
+
     /// <summary>
     /// 技能
     /// </summary>

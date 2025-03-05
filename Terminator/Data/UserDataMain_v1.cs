@@ -233,6 +233,8 @@ public partial class UserDataMain
         public string styleName;
         
         public string skillName;
+
+        public float skillGroupDamage;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -259,6 +261,15 @@ public partial class UserDataMain
             set
             {
                 skillName = value;
+            }
+        }
+        
+        [CSVField]
+        public float 卡牌技能组伤害
+        {
+            set
+            {
+                skillGroupDamage = value;
             }
         }
 #endif
@@ -582,6 +593,8 @@ public partial class UserDataMain
             
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
+            userCard.skillGroupDamage = card.skillGroupDamage;
+            
             userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
             {
@@ -637,6 +650,8 @@ public partial class UserDataMain
             
         result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
+        result.skillGroupDamage = card.skillGroupDamage;
+        
         int numCardGroups = _cardGroups.Length;
         UserCard.Group userCardGroup;
         var userCardGroups = new List<UserCard.Group>();

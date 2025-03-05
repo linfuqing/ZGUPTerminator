@@ -665,7 +665,7 @@ public partial class UserDataMain
                 skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
             }
             else
-                skill.damage = 1.0f;
+                skill.damage = card.skillGroupDamage;
 
             skill.type = UserSkillType.Individual;
             skill.name = card.skillName;
@@ -967,7 +967,7 @@ public partial class UserDataMain
                         skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
                     }
                     else
-                        skill.damage = 1.0f;
+                        skill.damage = card.skillGroupDamage;
 
                     skills.Add(skill);
                     
