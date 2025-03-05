@@ -22,8 +22,9 @@ public partial class LevelManager
     private enum SkillSelectionStatus
     {
         Start = 0x01, 
-        Finish = 0x02, 
-        Complete = Start | Finish
+        End = 0x02, 
+        Finish = 0x04, 
+        Complete = Start | Finish, 
     }
     
     [Serializable]
@@ -128,7 +129,8 @@ public partial class LevelManager
         __skillSelectionStatus |= SkillSelectionStatus.Finish;
 
         if (selectedSkillSelectionIndex != -1 && 
-            __selectedSkillIndices != null && __selectedSkillIndices.Count > 0 && 
+            (__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End && 
+            //__selectedSkillIndices != null && __selectedSkillIndices.Count > 0 && 
             (__resultSkillStyles == null || __resultSkillStyles.Count < 1))
             StartCoroutine(__FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]));
     }
@@ -136,6 +138,8 @@ public partial class LevelManager
     public void SelectSkills(int styleIndex, LevelSkillData[] skills)
     {
         IAnalytics.instance?.SelectSkills(styleIndex, skills);
+
+        __skillSelectionStatus &= ~SkillSelectionStatus.End;
         
         if(__selectedSkillIndices != null)
             __selectedSkillIndices.Clear();
@@ -257,6 +261,7 @@ public partial class LevelManager
         else if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
             yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
 
+        __skillSelectionStatus |= SkillSelectionStatus.End;
         /*if (__selectedSkillIndices == null)
             __selectedSkillIndices = new List<int>();
 
@@ -318,6 +323,8 @@ public partial class LevelManager
             __selectedSkillIndices = new List<int>();
 
         __selectedSkillIndices.Add(value.selectIndex);
+        
+        __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
     private IEnumerator __FinishSkillSelection(SkillSelection selection)
