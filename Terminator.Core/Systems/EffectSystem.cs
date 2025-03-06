@@ -24,8 +24,9 @@ public partial struct EffectSystem : ISystem
         Message = 0x01,
         StatusTarget = 0x02, 
         Destroyed = 0x04, 
-        Die = 0x08,
-        Recovery = 0x10, 
+        Drop = 0x08,
+        Die = 0x10,
+        Recovery = 0x20, 
     }
     
     private struct DamageInstance
@@ -92,29 +93,11 @@ public partial struct EffectSystem : ISystem
     private struct Destroy
     {
         [ReadOnly]
-        public NativeArray<Entity> entityArray;
-
-        [ReadOnly]
         public NativeArray<KinematicCharacterBody> characterBodies;
 
-        [ReadOnly]
-        public BufferAccessor<Child> children;
-
-        public EntityCommandBuffer.ParallelWriter entityManager;
-
-        public void Execute(int index)
+        public bool Execute(int index)
         {
-            if (index >= characterBodies.Length || characterBodies[index].IsGrounded)
-            {
-                if (index < children.Length)
-                {
-                    var children = this.children[index];
-                    foreach (var child in children)
-                        entityManager.DestroyEntity(int.MaxValue - 1, child.Value);
-                }
-
-                entityManager.DestroyEntity(0, entityArray[index]);
-            }
+            return index >= characterBodies.Length || characterBodies[index].IsGrounded;
         }
     }
 
@@ -122,27 +105,26 @@ public partial struct EffectSystem : ISystem
     private struct DestroyEx : IJobChunk
     {
         [ReadOnly]
-        public EntityTypeHandle entityType;
-
-        [ReadOnly]
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
 
-        [ReadOnly]
-        public BufferTypeHandle<Child> childType;
+        public ComponentTypeHandle<EffectTarget> targetType;
 
-        public EntityCommandBuffer.ParallelWriter entityManager;
+        public ComponentTypeHandle<EffectTargetDamage> targetDamageType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Destroy destroy;
-            destroy.entityArray = chunk.GetNativeArray(entityType);
             destroy.characterBodies = chunk.GetNativeArray(ref characterBodyType);
-            destroy.children = chunk.GetBufferAccessor(ref childType);
-            destroy.entityManager = entityManager;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
-                destroy.Execute(i);
+            {
+                if (destroy.Execute(i))
+                {
+                    chunk.SetComponentEnabled(ref targetType, i, true);
+                    chunk.SetComponentEnabled(ref targetDamageType, i, true);
+                }
+            }
         }
     }
 
@@ -1129,10 +1111,22 @@ public partial struct EffectSystem : ISystem
                 targetHP.value = 0;
                 if (target.hp <= 0)
                 {
-                    result |= EnabledFlags.Die;
-
-                    if (target.times > 0 && instance.recoveryChance > random.NextFloat())
+                    if (index < targetLevels.Length && this.levelStatus.IsValid)
                     {
+                        var targetLevel = targetLevels[index];
+
+                        ref var levelStatus = ref this.levelStatus.ValueRW;
+                        Interlocked.Add(ref levelStatus.value, targetLevel.value);
+                        Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
+                        Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+
+                        Interlocked.Increment(ref levelStatus.count);
+                    }
+
+                    if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
+                    {
+                        result |= EnabledFlags.Drop;
+
                         if (index < characterGravityFactors.Length)
                         {
                             ThirdPersionCharacterGravityFactor characterGravityFactor;
@@ -1140,45 +1134,30 @@ public partial struct EffectSystem : ISystem
                             characterGravityFactors[index] = characterGravityFactor;
                         }
 
-                        --target.times;
-
-                        target.invincibleTime = time + instance.recoveryTime;
-                        target.hp = 0;
-                        
-                        targetHP.value = instance.hpMax;
-
-                        if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
-                        {
-                            message.key = 0;
-                            message.name = instance.recoveryMessageName;
-                            message.value = instance.recoveryMessageValue;
-                            messages.Add(message);
-                        }
+                        entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
                     }
                     else
                     {
-                        if (index < targetLevels.Length && this.levelStatus.IsValid)
+                        result |= EnabledFlags.Die;
+
+                        if (target.times > 0 && instance.recoveryChance > random.NextFloat())
                         {
-                            var targetLevel = targetLevels[index];
+                            result |= EnabledFlags.Recovery;
+                            
+                            --target.times;
 
-                            ref var levelStatus = ref this.levelStatus.ValueRW;
-                            Interlocked.Add(ref levelStatus.value, targetLevel.value);
-                            Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                            Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+                            target.invincibleTime = time + instance.recoveryTime;
+                            target.hp = 0;
 
-                            Interlocked.Increment(ref levelStatus.count);
-                        }
+                            targetHP.value = instance.hpMax;
 
-                        if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
-                        {
-                            if (index < characterGravityFactors.Length)
+                            if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
                             {
-                                ThirdPersionCharacterGravityFactor characterGravityFactor;
-                                characterGravityFactor.value = 1.0f;
-                                characterGravityFactors[index] = characterGravityFactor;
+                                message.key = 0;
+                                message.name = instance.recoveryMessageName;
+                                message.value = instance.recoveryMessageValue;
+                                messages.Add(message);
                             }
-
-                            entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
                         }
                         else
                         {
@@ -1297,12 +1276,18 @@ public partial struct EffectSystem : ISystem
                 
                 if((result & EnabledFlags.Message) == EnabledFlags.Message)
                     chunk.SetComponentEnabled(ref messageType, i, true);
-
+                
+                if((result & EnabledFlags.Drop) == EnabledFlags.Drop)
+                    chunk.SetComponentEnabled(ref targetType, i, false);
+                
                 if ((result & EnabledFlags.Die) == EnabledFlags.Die)
                 {
                     chunk.SetComponentEnabled(ref characterBodyType, i, false);
 
-                    chunk.SetComponentEnabled(ref targetHPType, i, true);
+                    if((result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
+                        chunk.SetComponentEnabled(ref targetHPType, i, true);
+                    else
+                        chunk.SetComponentEnabled(ref targetType, i, false);
                 }
                 else
                 {
@@ -1440,6 +1425,8 @@ public partial struct EffectSystem : ISystem
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToDestroy = builder
                 .WithAll<FallToDestroy>()
+                .WithNone<EffectTarget>()
+                .WithPresentRW<EffectTargetDamage>()
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1489,15 +1476,14 @@ public partial struct EffectSystem : ISystem
         instantiate.prefabLoader = __prefabLoader.AsWriter();
         var jobHandle = instantiate.Schedule(state.Dependency);
             
-        __entityType.Update(ref state);
-        __childType.Update(ref state);
         __characterBodyType.Update(ref state);
+        __targetType.Update(ref state);
+        __targetDamageType.Update(ref state);
         
         DestroyEx destroy;
-        destroy.entityType = __entityType;
         destroy.characterBodyType = __characterBodyType;
-        destroy.childType = __childType;
-        destroy.entityManager = entityManager;
+        destroy.targetType = __targetType;
+        destroy.targetDamageType = __targetDamageType;
         jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, jobHandle);
 
         __instanceType.Update(ref state);
@@ -1515,6 +1501,7 @@ public partial struct EffectSystem : ISystem
         clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
 
+        __entityType.Update(ref state);
         __damageParents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
@@ -1569,15 +1556,14 @@ public partial struct EffectSystem : ISystem
         SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
+        __childType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
         __targetInstanceType.Update(ref state);
-        __targetType.Update(ref state);
         __targetLevelType.Update(ref state);
         __targetInvulnerabilityType.Update(ref state);
         __targetInvulnerabilityStatusType.Update(ref state);
         __targetMessageType.Update(ref state);
         __targetDamageScaleType.Update(ref state);
-        __targetDamageType.Update(ref state);
         __targetHPType.Update(ref state);
         __messageParameterType.Update(ref state);
 

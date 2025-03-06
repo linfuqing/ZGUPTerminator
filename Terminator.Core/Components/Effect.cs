@@ -195,7 +195,7 @@ public struct EffectTargetData : IComponentData
     public WeakObjectReference<Object> recoveryMessageValue;
 }
 
-public struct EffectTarget : IComponentData
+public struct EffectTarget : IComponentData, IEnableableComponent
 {
     public int times;
     public int hp;
