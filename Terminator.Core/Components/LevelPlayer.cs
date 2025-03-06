@@ -33,6 +33,11 @@ public static class LevelPlayerShared
             set => Result.Data = value;
         }
     }
+
+    private class SkillRage : Value<SkillRage, int>
+    {
+        
+    }
     
     private class EffectDamageScale : Value<EffectDamageScale, float>
     {
@@ -68,6 +73,13 @@ public static class LevelPlayerShared
             SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
 
         public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
+    }
+
+    public static int skillRage
+    {
+        get => SkillRage.value;
+        
+        set => SkillRage.value = value;
     }
 
     public static float effectDamageScale

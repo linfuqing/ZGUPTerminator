@@ -533,6 +533,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.Property property)
     {
+        LevelPlayerShared.skillRage = 0;
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
 
@@ -548,6 +549,7 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
         
+        LevelPlayerShared.skillRage = property.cache.rage;
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
         

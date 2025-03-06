@@ -68,7 +68,12 @@ public class PlayerController : MonoBehaviour
         parameters.Apply(animator);
     }
 
-    protected void Awake()
+    private void __OnRageChanged(int value)
+    {
+        LevelManager.instance.rage = value;
+    }
+
+    void Awake()
     {
         if (__attributeEventReceiver == null)
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
@@ -80,11 +85,13 @@ public class PlayerController : MonoBehaviour
             {
                 __attributeEventReceiver.onHPMaxChanged += analytics.SetPlayerHPMax;
                 __attributeEventReceiver.onHPChanged += analytics.SetPlayerHP;
+
+                __attributeEventReceiver.onRageChanged += __OnRageChanged;
             }
         }
     }
 
-    protected void OnEnable()
+    void OnEnable()
     {
         if (__isDead)
         {
@@ -96,7 +103,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    protected void OnDisable()
+    void OnDisable()
     {
         if (__isDead)
         {
@@ -106,7 +113,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    protected void Update()
+    void Update()
     {
         var transform = this.transform;
         var position = transform.position;

@@ -936,7 +936,7 @@ public partial struct EffectSystem : ISystem
                 {
                     damage = 0;
 
-                    damageLayerMask = 0;
+                    damageLayerMask = targetHP.layerMask;
                     
                     target.hp += targetHP.value;
 
@@ -1150,6 +1150,7 @@ public partial struct EffectSystem : ISystem
                             target.hp = 0;
 
                             targetHP.value = instance.hpMax;
+                            targetHP.layerMask = damageLayerMask;
 
                             if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
                             {
@@ -1268,6 +1269,7 @@ public partial struct EffectSystem : ISystem
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
 
+            bool isCharacter = chunk.Has(ref characterBodyType);
             EnabledFlags result;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -1282,7 +1284,8 @@ public partial struct EffectSystem : ISystem
                 
                 if ((result & EnabledFlags.Die) == EnabledFlags.Die)
                 {
-                    chunk.SetComponentEnabled(ref characterBodyType, i, false);
+                    if(isCharacter)
+                        chunk.SetComponentEnabled(ref characterBodyType, i, false);
 
                     if((result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
                         chunk.SetComponentEnabled(ref targetHPType, i, true);
@@ -1291,7 +1294,7 @@ public partial struct EffectSystem : ISystem
                 }
                 else
                 {
-                    if((result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
+                    if(isCharacter && (result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
                         chunk.SetComponentEnabled(ref characterBodyType, i, true);
                     
                     chunk.SetComponentEnabled(ref targetHPType, i, false);

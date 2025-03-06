@@ -167,7 +167,7 @@ public struct SpawnerDefinition
 
     public void Update(
         int layerMask,
-        double time,
+        float time,
         in float3 playerPosition,
         in Entity entity,
         in CollisionWorld collisionWorld, 
@@ -229,7 +229,7 @@ public struct SpawnerDefinition
     public bool Update(
         int index, 
         int layerMask, 
-        double time, 
+        float time, 
         in float3 playerPosition, 
         in Entity entity, 
         in CollisionWorld collisionWorld, 
@@ -251,10 +251,11 @@ public struct SpawnerDefinition
             return false;
         }
 
-        if (status.startTime < math.DBL_MIN_NORMAL)
-            status.startTime = time;
+        /*if (status.startTime < math.DBL_MIN_NORMAL)
+            status.startTime = time;*/
 
-        if (status.startTime + data.startTime > time || data.endTime > math.FLT_MIN_NORMAL && status.startTime + data.endTime < time)
+        if (/*status.startTime + */data.startTime > time || 
+            data.endTime > math.FLT_MIN_NORMAL && /*status.startTime + */data.endTime < time)
             return false;
         
         float chance = random.NextFloat();
@@ -291,7 +292,7 @@ public struct SpawnerDefinition
             return false;*/
 
         bool result = false;
-        float currentTime = (float)(time - status.startTime);
+        float currentTime = time;//(float)(time - status.startTime);
         while(status.cooldown < time || status.count == 0 && entityCount < data.maxCountToNextTime)
         {
             if (status.count < data.countPerTime)
@@ -491,6 +492,11 @@ public struct SpawnerLayerMask : IComponentData
     }
 }
 
+public struct SpawnerTime : IComponentData
+{
+    public double value;
+}
+
 public struct SpawnerPrefab : IBufferElementData
 {
     public EntityPrefabReference prefab;
@@ -505,8 +511,8 @@ public struct SpawnerStatus : IBufferElementData
 {
     public int count;
     public int times;
-    public double cooldown;
-    public double startTime;
+    public float cooldown;
+    //public double startTime;
 }
 
 public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>

@@ -441,6 +441,7 @@ public partial interface IUserData
 
     public struct StageCache
     {
+        public int rage;
         public int exp;
         public int expMax;
         public string[] skills;
@@ -449,6 +450,7 @@ public partial interface IUserData
         {
             if (string.IsNullOrEmpty(value))
             {
+                rage = 0;
                 exp = 0;
                 expMax = 0;
 
@@ -460,6 +462,7 @@ public partial interface IUserData
             skills = value.Split(UserData.SEPARATOR);
             
             int length = skills.Length;
+            rage = int.Parse(skills[--length]);
             exp = int.Parse(skills[--length]);
             expMax = int.Parse(skills[--length]);
 
@@ -468,7 +471,7 @@ public partial interface IUserData
 
         public override string ToString()
         {
-            string result = $"{expMax}{UserData.SEPARATOR}{exp}";
+            string result = $"{expMax}{UserData.SEPARATOR}{exp}{UserData.SEPARATOR}{rage}";
             if(skills != null && skills.Length > 0)
                 result = $"{string.Join(UserData.SEPARATOR, skills)}{UserData.SEPARATOR}{result}";
             
@@ -627,6 +630,7 @@ public partial interface IUserData
         StageFlag flag,
         int stage,
         int gold,
+        int rage, 
         int exp,
         int expMax,
         string[] skills,

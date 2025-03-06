@@ -15,6 +15,7 @@ public interface ILevelData
         Flag flag, 
         int stage, 
         int gold, 
+        int rage, 
         int exp, 
         int expMax, 
         string[] skills,

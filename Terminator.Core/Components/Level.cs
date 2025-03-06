@@ -20,6 +20,7 @@ public struct LevelStageOption
     
     public enum Type
     {
+        SpawnerTime = 11, 
         SpawnerLayerMaskInclude = 1,
         SpawnerLayerMaskExclude = 2,
         SpawnerEntityRemaining = 7, 
@@ -40,15 +41,16 @@ public struct LevelStageOption
     
     public bool Judge(
         float deltaTime, 
-        ref LevelStageConditionStatus condition, 
-        ref BlobArray<LevelDefinition.Area> areas, 
+        float spawnerTime,
         in float3 playerPosition, 
         in LevelStatus status, 
         in SpawnerLayerMaskOverride spawnerLayerMaskOverride, 
         in SpawnerSingleton spawnerSingleton, 
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
-        in ComponentLookup<SpawnerDefinitionData> spawners)
+        in ComponentLookup<SpawnerDefinitionData> spawners, 
+        ref BlobArray<LevelDefinition.Area> areas, 
+        ref LevelStageConditionStatus condition)
     {
         switch (type)
         {
@@ -62,6 +64,8 @@ public struct LevelStageOption
                 return value <= status.exp;
             case Type.Stage:
                 return value == status.stage;
+            case Type.SpawnerTime:
+                return value <= spawnerTime;
             case Type.SpawnerLayerMaskInclude:
                 return (value & spawnerLayerMaskOverride.value) == value;
             case Type.SpawnerLayerMaskExclude:
@@ -163,6 +167,7 @@ public struct LevelStageOption
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
+        ref float spawnerTime,
         ref SpawnerLayerMaskInclude spawnerLayerMaskInclude, 
         ref SpawnerLayerMaskExclude spawnerLayerMaskExclude, 
         in SpawnerSingleton spawnerSingleton, 
@@ -186,6 +191,9 @@ public struct LevelStageOption
                 break;
             case Type.Stage:
                 status.stage = value;
+                break;
+            case Type.SpawnerTime:
+                spawnerTime = value * 1000.0f;
                 break;
             case Type.SpawnerLayerMaskInclude:
                 spawnerLayerMaskInclude.value = value;

@@ -680,6 +680,7 @@ public class SpawnerAuthoring : MonoBehaviour
             AddBlobAsset(ref instance.definition, out _);
             
             AddComponent(entity, instance);
+            AddComponent<SpawnerTime>(entity);
             AddComponent<SpawnerStatus>(entity);
             AddComponent<SpawnerEntityCount>(entity);
 

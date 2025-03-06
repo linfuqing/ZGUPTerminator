@@ -263,6 +263,8 @@ public partial struct SpawnerSystem : ISystem
         [ReadOnly]
         public NativeArray<SpawnerLayerMaskExclude> layerMaskExcludes;
         [ReadOnly]
+        public NativeArray<SpawnerTime> times;
+        [ReadOnly]
         public BufferAccessor<SpawnerPrefab> prefabs;
 
         public BufferAccessor<SpawnerStatus> states;
@@ -282,7 +284,7 @@ public partial struct SpawnerSystem : ISystem
             ref var definition = ref instances[index].definition.Value;
             definition.Update(
                 layerMask,
-                time,
+                (float)(time - times[index].value),
                 playerPosition,
                 entityArray[index],
                 collisionWorld,
@@ -307,6 +309,9 @@ public partial struct SpawnerSystem : ISystem
         [NativeDisableParallelForRestriction]
         public NativeArray<int> instanceCount;
 
+        [ReadOnly] 
+        public NativeParallelMultiHashMap<SpawnerEntity, Entity> entities;
+
         [ReadOnly]
         public CollisionWorld collisionWorld;
         
@@ -317,11 +322,12 @@ public partial struct SpawnerSystem : ISystem
         public ComponentLookup<LocalTransform> localTransforms;
 
         [ReadOnly] 
-        public NativeParallelMultiHashMap<SpawnerEntity, Entity> entities;
-
-        [ReadOnly] 
         public EntityTypeHandle entityType;
 
+        [ReadOnly]
+        public ComponentTypeHandle<SpawnerDefinitionData> instanceType;
+        [ReadOnly]
+        public ComponentTypeHandle<SpawnerTime> timeType;
         [ReadOnly]
         public ComponentTypeHandle<SpawnerLayerMask> layerMaskType;
         [ReadOnly]
@@ -330,9 +336,6 @@ public partial struct SpawnerSystem : ISystem
         public ComponentTypeHandle<SpawnerLayerMaskInclude> layerMaskIncludeType;
         [ReadOnly]
         public ComponentTypeHandle<SpawnerLayerMaskExclude> layerMaskExcludeType;
-
-        [ReadOnly]
-        public ComponentTypeHandle<SpawnerDefinitionData> instanceType;
         [ReadOnly]
         public BufferTypeHandle<SpawnerPrefab> prefabType;
 
@@ -360,11 +363,12 @@ public partial struct SpawnerSystem : ISystem
             collect.colliders = colliders;
             collect.entities = entities;
             collect.entityArray = chunk.GetNativeArray(entityType);
+            collect.instances = chunk.GetNativeArray(ref instanceType);
+            collect.times = chunk.GetNativeArray(ref timeType);
             collect.layerMasks = chunk.GetNativeArray(ref layerMaskType);
             collect.layerMaskOverrides = chunk.GetNativeArray(ref layerMaskOverrideType);
             collect.layerMaskIncludes = chunk.GetNativeArray(ref layerMaskIncludeType);
             collect.layerMaskExcludes = chunk.GetNativeArray(ref layerMaskExcludeType);
-            collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.entityCounts = chunk.GetBufferAccessor(ref entityCountType);
@@ -385,6 +389,8 @@ public partial struct SpawnerSystem : ISystem
 
     private EntityTypeHandle __entityType;
 
+    private ComponentTypeHandle<SpawnerDefinitionData> __instanceType;
+    private ComponentTypeHandle<SpawnerTime> __timeType;
     private ComponentTypeHandle<SpawnerLayerMask> __layerMaskType;
     private ComponentTypeHandle<SpawnerLayerMaskOverride> __layerMaskOverrideType;
     private ComponentTypeHandle<SpawnerLayerMaskInclude> __layerMaskIncludeType;
@@ -392,7 +398,6 @@ public partial struct SpawnerSystem : ISystem
 
     private ComponentTypeHandle<SpawnerTrigger> __triggerType;
 
-    private ComponentTypeHandle<SpawnerDefinitionData> __instanceType;
     private BufferTypeHandle<SpawnerPrefab> __prefabType;
     private BufferTypeHandle<SpawnerStatus> __statusType;
     private BufferTypeHandle<SpawnerEntityCount> __entityCountType;
@@ -406,16 +411,16 @@ public partial struct SpawnerSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __colliders = state.GetComponentLookup<PhysicsCollider>(true);
-        //__prefabLoadResults = state.GetComponentLookup<PrefabLoadResult>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __layerMasks = state.GetComponentLookup<SpawnerLayerMaskOverride>();
         __entityType = state.GetEntityTypeHandle();
+        __instanceType = state.GetComponentTypeHandle<SpawnerDefinitionData>(true);
+        __timeType = state.GetComponentTypeHandle<SpawnerTime>(true);
         __layerMaskType = state.GetComponentTypeHandle<SpawnerLayerMask>(true);
         __layerMaskOverrideType = state.GetComponentTypeHandle<SpawnerLayerMaskOverride>(true);
         __layerMaskIncludeType = state.GetComponentTypeHandle<SpawnerLayerMaskInclude>(true);
         __layerMaskExcludeType = state.GetComponentTypeHandle<SpawnerLayerMaskExclude>(true);
         __triggerType = state.GetComponentTypeHandle<SpawnerTrigger>(true);
-        __instanceType = state.GetComponentTypeHandle<SpawnerDefinitionData>(true);
         __prefabType = state.GetBufferTypeHandle<SpawnerPrefab>(true);
         __statusType = state.GetBufferTypeHandle<SpawnerStatus>();
         __entityCountType = state.GetBufferTypeHandle<SpawnerEntityCount>();
@@ -427,7 +432,7 @@ public partial struct SpawnerSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToCollect = builder
-                .WithAll<SpawnerDefinitionData>()
+                .WithAll<SpawnerDefinitionData, SpawnerTime>()
                 .WithAllRW<SpawnerStatus>()
                 .Build(ref state);
 
@@ -467,41 +472,42 @@ public partial struct SpawnerSystem : ISystem
         var triggerJobHandle = trigger.ScheduleParallelByRef(__groupToTrigger, resetJobHandle);
 
         __colliders.Update(ref state);
-        //__prefabLoadResults.Update(ref state);
         __localTransforms.Update(ref state);
+        __instanceType.Update(ref state);
+        __timeType.Update(ref state);
         __layerMaskType.Update(ref state);
         __layerMaskOverrideType.Update(ref state);
         __layerMaskIncludeType.Update(ref state);
         __layerMaskExcludeType.Update(ref state);
         __entityType.Update(ref state);
-        __instanceType.Update(ref state);
         __prefabType.Update(ref state);
         __statusType.Update(ref state);
         __entityCountType.Update(ref state);
-        //__prefabLoader.Update(ref state);
 
         var spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         
         CollectEx collect;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
+        collect.instanceCount = spawnerSingleton.instanceCount;
+        collect.entities = spawnerSingleton.entities;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         collect.colliders = __colliders;
-        //collect.prefabLoadResults = __prefabLoadResults;
         collect.localTransforms = __localTransforms;
+        collect.entityType = __entityType;
+        collect.instanceType = __instanceType;
+        collect.timeType = __timeType;
         collect.layerMaskType = __layerMaskType;
         collect.layerMaskOverrideType = __layerMaskOverrideType;
         collect.layerMaskIncludeType = __layerMaskIncludeType;
         collect.layerMaskExcludeType = __layerMaskExcludeType;
-        collect.instanceCount = spawnerSingleton.instanceCount;
-        collect.entities = spawnerSingleton.entities;
-        collect.entityType = __entityType;
-        collect.instanceType = __instanceType;
         collect.prefabType = __prefabType;
         collect.statusType = __statusType;
         collect.entityCountType = __entityCountType;
-        collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
+            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         collect.prefabLoader = __prefabLoader.AsParallelWriter();
-        state.Dependency = collect.ScheduleParallelByRef(__groupToCollect, JobHandle.CombineDependencies(triggerJobHandle, jobHandle));
+        state.Dependency = collect.ScheduleParallelByRef(__groupToCollect,
+            JobHandle.CombineDependencies(triggerJobHandle, jobHandle));
     }
 }

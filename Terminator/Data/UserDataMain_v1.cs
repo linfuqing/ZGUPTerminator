@@ -2299,6 +2299,7 @@ public partial class UserData
         IUserData.StageFlag flag,
         int stage,
         int gold, 
+        int rage, 
         int exp, 
         int expMax, 
         string[] skills,
@@ -2317,6 +2318,7 @@ public partial class UserData
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
 
         IUserData.StageCache stageCache;
+        stageCache.rage = rage;
         stageCache.exp = exp;
         stageCache.expMax = expMax;
         stageCache.skills = skills;

@@ -92,6 +92,13 @@ public partial class LevelManager : MonoBehaviour
         set => __dataFlag = (ILevelData.Flag)value;
     }
 
+    public int rage
+    {
+        get;
+
+        set;
+    }
+
     public void Set(
         int value, 
         int max, 
@@ -150,6 +157,7 @@ public partial class LevelManager : MonoBehaviour
                         __dataFlag, 
                         stage,
                         gold,
+                        rage, 
                         exp,
                         maxExp,
                         activeSkillNames,

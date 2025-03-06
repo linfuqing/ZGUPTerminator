@@ -11,6 +11,8 @@ public partial struct LevelPlayerSystem : ISystem
     [BurstCompile]
     private struct Apply : IJobParallelFor
     {
+        public int skillRage;
+        
         public float effectDamageScale;
         public float effectTargetDamageScale;
         public float effectTargetHPScale;
@@ -32,6 +34,9 @@ public partial struct LevelPlayerSystem : ISystem
 
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<Instance> instances;
+
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<SkillRage> skillRages;
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<LevelSkillGroup> levelSkillGroups;
@@ -65,6 +70,13 @@ public partial struct LevelPlayerSystem : ISystem
                 instance.name = instanceName;
                 
                 instances[player] = instance;
+            }
+
+            if (skillRages.HasComponent(player))
+            {
+                SkillRage skillRage;
+                skillRage.value = this.skillRage;
+                skillRages[player] = skillRage;
             }
 
             if ((activeSkills.Length > 0 || skillGroups.Length > 0) && 
@@ -197,6 +209,8 @@ public partial struct LevelPlayerSystem : ISystem
 
     private ComponentLookup<Instance> __instances;
 
+    private ComponentLookup<SkillRage> __skillRages;
+
     private BufferLookup<LevelSkillGroup> __levelSkillGroups;
 
     private BufferLookup<SkillActiveIndex> __skillActiveIndices;
@@ -220,6 +234,7 @@ public partial struct LevelPlayerSystem : ISystem
     {
         __levelSkillNameDefinitions = state.GetComponentLookup<LevelSkillNameDefinitionData>();
         __instances = state.GetComponentLookup<Instance>();
+        __skillRages = state.GetComponentLookup<SkillRage>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
@@ -259,6 +274,7 @@ public partial struct LevelPlayerSystem : ISystem
         
         __levelSkillNameDefinitions.Update(ref state);
         __instances.Update(ref state);
+        __skillRages.Update(ref state);
         __levelSkillGroups.Update(ref state);
         __skillActiveIndices.Update(ref state);
         __messageParameters.Update(ref state);
@@ -269,6 +285,7 @@ public partial struct LevelPlayerSystem : ISystem
         __thirdPersonPlayers.Update(ref state);
             
         Apply apply;
+        apply.skillRage = LevelPlayerShared.skillRage;
         apply.effectDamageScale = LevelPlayerShared.effectDamageScale;
         apply.effectTargetDamageScale = LevelPlayerShared.effectTargetDamageScale;
         apply.effectTargetHPScale = LevelPlayerShared.effectTargetHPScale;
@@ -280,6 +297,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.players = players;
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
         apply.instances = __instances;
+        apply.skillRages = __skillRages;
         apply.levelSkillGroups = __levelSkillGroups;
         apply.skillActiveIndices = __skillActiveIndices;
         apply.messageParameters = __messageParameters;
