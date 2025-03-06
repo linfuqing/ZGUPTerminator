@@ -458,6 +458,7 @@ public struct BulletDefinition
         public float interval;
         public float cooldown;
         public float startTime;
+        public float delayTime;
         public int capacity;
         public int times;
 
@@ -502,7 +503,7 @@ public struct BulletDefinition
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
-        ref EntityCommandBuffer.ParallelWriter entityManager,
+        ref DynamicBuffer<BulletInstance> instances,
         ref PrefabLoader.ParallelWriter prefabLoader,
         ref BulletStatus status, 
         ref Random random)
@@ -691,84 +692,52 @@ public struct BulletDefinition
         if (data.space == BulletSpace.Local)
             transformResult = math.mul(math.inverse(math.RigidTransform(transform)), transformResult);
 
+        BulletInstance instance;
+        instance.index = index;
+        instance.damageScale = damageScale;
+        instance.time = cooldown + data.delayTime;
+        instance.targetPosition = targetStatus.targetPosition;
+        instance.parentPosition = transform.c3.xyz;
+        instance.transform = transformResult;
+        instance.target = targetStatus.target;
+        instance.parent = parent;
+        instance.prefabRoot = prefab;
+        
         if(entityCount == 1)
-        {
-            var entity = entityManager.Instantiate(0, prefab);
-
-            __Instantiate(
-                index,
-                damageScale,
-                cooldown, 
-                transform.c3.xyz,
-                transformResult, 
-                parent, 
-                entity, 
-                prefab, 
-                //cameraRotation, 
-                collisionWorld, 
-                //characterBodies, 
-                characterControls,
-                animationCurveDeltas, 
-                targetStatus, 
-                //status, 
-                ref data, 
-                //ref target, 
-                ref entityManager);
-        }
+            instances.Add(instance);
         else
         {
-            using(var entityArray = new NativeArray<Entity>(entityCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
+            entityCount = 0;
+            int count, i;
+            do
             {
-                entityManager.Instantiate(0, prefab, entityArray);
-
-                entityCount = 0;
-                int count, i;
-                do
+                if (data.interval > math.FLT_MIN_NORMAL)
                 {
-                    if (data.interval > math.FLT_MIN_NORMAL)
-                    {
-                        count = data.capacity - statusCount;
-                        count = math.min(count, (int)math.floor((time - cooldown) / data.interval) + 1);
-                    }
-                    else
-                        count = 1;
+                    count = data.capacity - statusCount;
+                    count = math.min(count, (int)math.floor((time - cooldown) / data.interval) + 1);
+                }
+                else
+                    count = 1;
 
-                    for(i = 0; i < count; ++i)
-                    {
-                        __Instantiate(
-                            index,
-                            damageScale,
-                            cooldown,
-                            transform.c3.xyz,
-                            transformResult, 
-                            parent,
-                            entityArray[entityCount + i],
-                            prefab,
-                            //cameraRotation,
-                            collisionWorld,
-                            //characterBodies,
-                            characterControls,
-                            animationCurveDeltas,
-                            targetStatus,
-                            //status,
-                            ref data,
-                            //ref target,
-                            ref entityManager);
+                for(i = 0; i < count; ++i)
+                {
+                    instance.time = cooldown;
 
-                        cooldown += data.interval;
-                    }
+                    instances.Add(instance);
+                    
+                    cooldown += data.interval;
+                }
 
-                    entityCount += count;
+                entityCount += count;
 
-                    statusCount += count;
-                    if (statusCount == data.capacity)
-                    {
-                        statusCount = 0;
+                statusCount += count;
+                if (statusCount == data.capacity)
+                {
+                    statusCount = 0;
 
-                        cooldown += data.cooldown;
-                    }
-                } while (cooldown <= time);
-            }
+                    cooldown += data.cooldown;
+                }
+            } while (cooldown <= time);
         }
 
         return true;
@@ -796,7 +765,7 @@ public struct BulletDefinition
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref DynamicBuffer<BulletStatus> states,
-        ref EntityCommandBuffer.ParallelWriter entityManager,
+        ref DynamicBuffer<BulletInstance> instances,
         ref PrefabLoader.ParallelWriter prefabLoader,
         ref BulletVersion version, 
         ref Random random)
@@ -855,7 +824,7 @@ public struct BulletDefinition
                 inputMessages,
                 ref outputMessages,
                 ref targetStates,
-                ref entityManager, 
+                ref instances, 
                 ref prefabLoader, 
                 ref states.ElementAt(activeIndex.value), 
                 ref random);
@@ -928,15 +897,11 @@ public struct BulletDefinition
         in Entity parent,
         in Entity entity,
         in Entity prefabRoot,
-        //in quaternion cameraRotation,
         in CollisionWorld collisionWorld,
-        //in ComponentLookup<KinematicCharacterBody> characterBodies,
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in BulletTargetStatus targetStatus,
-        //in BulletStatus status,
         ref Bullet data, 
-        //ref Target target,
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         //var entity = entityManager.Instantiate(0, prefabRoot);
@@ -1074,6 +1039,159 @@ public struct BulletDefinitionData : IComponentData
 public struct BulletLayerMask : IComponentData
 {
     public int value;
+}
+
+public struct BulletInstance : IBufferElementData
+{
+    public int index;
+    public float damageScale;
+    public double time;
+    public float3 targetPosition;
+    public float3 parentPosition;
+    public RigidTransform transform;
+    public Entity target;
+    public Entity parent;
+    public Entity prefabRoot;
+
+    public bool Apply(
+        in double time, 
+        in CollisionWorld collisionWorld,
+        in ComponentLookup<ThirdPersonCharacterControl> characterControls,
+        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        ref BulletDefinition definition, 
+        ref EntityCommandBuffer.ParallelWriter entityManager)
+    {
+        if (time > this.time)
+            return false;
+
+        Entity entity = entityManager.Instantiate(0, prefabRoot);
+        
+        __Apply(
+            entity, 
+            collisionWorld, 
+            characterControls, 
+            animationCurveDeltas, 
+            ref definition.bullets[index], 
+            ref entityManager);
+        
+        return true;
+    }
+
+    private Entity __Apply(
+        in Entity entity, 
+        in CollisionWorld collisionWorld,
+        in ComponentLookup<ThirdPersonCharacterControl> characterControls,
+        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        ref BulletDefinition.Bullet data, 
+        ref EntityCommandBuffer.ParallelWriter entityManager)
+    {
+        BulletEntity bulletEntity;
+        bulletEntity.index = index;
+        bulletEntity.parent = parent;
+        entityManager.AddComponent(1, entity, bulletEntity);
+
+        if (data.space == BulletSpace.Local)
+        {
+            Parent temp;
+            temp.Value = parent;
+            entityManager.AddComponent(1, entity, temp);
+        }
+
+        var transformResult = transform;
+
+        int rigidBodyIndex = target == Entity.Null
+            ? -1
+            : collisionWorld.GetRigidBodyIndex(target);
+        float3 targetPosition = rigidBodyIndex == -1
+            ? this.targetPosition
+            : collisionWorld.Bodies[rigidBodyIndex].WorldFromBody.pos;
+        if (data.targetSpace == BulletSpace.Local && target != Entity.Null)
+        {
+            Parent temp;
+            temp.Value = target;
+            entityManager.AddComponent(1, entity, temp);
+
+            transformResult.pos -= targetPosition;
+        }
+
+        FollowTarget followTarget;
+        switch (data.followTarget)
+        {
+            case BulletFollowTarget.Source:
+                followTarget.entity = parent;
+                followTarget.offset = data.space == BulletSpace.Local ? transformResult.pos : transformResult.pos - parentPosition;//transform.c3.xyz;
+                followTarget.space = FollowTargetSpace.Camera;
+                entityManager.SetComponent(1, entity, followTarget);
+                entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
+                break;
+            case BulletFollowTarget.Destination:
+                if (target != Entity.Null)
+                {
+                    followTarget.entity = target;
+                    
+                    followTarget.offset = this.targetPosition - targetPosition;
+                    followTarget.space = FollowTargetSpace.World;
+                    entityManager.SetComponent(1, entity, followTarget);
+                    entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
+                }
+
+                break;
+        }
+
+        LocalTransform localTransform;
+        localTransform.Scale = 1.0f;
+        localTransform.Position = transformResult.pos;
+        localTransform.Rotation = transformResult.rot;
+        entityManager.SetComponent(1, entity, localTransform);
+
+
+        if (animationCurveDeltas.HasComponent(prefabRoot))
+        {
+            AnimationCurveDelta animationCurveDelta;
+            animationCurveDelta.elapsed = time;
+            animationCurveDelta.start = time;
+            entityManager.SetComponent(1, entity, animationCurveDelta);
+        }
+
+        if (data.animationCurveSpeed > math.FLT_MIN_NORMAL)
+        {
+            AnimationCurveSpeed animationCurveSpeed;
+            animationCurveSpeed.value = data.animationCurveSpeed;
+            entityManager.SetComponent(1, entity, animationCurveSpeed);
+        }
+
+        if (data.linearSpeed > math.FLT_MIN_NORMAL)
+        {
+            var forward = math.forward(transformResult.rot);
+
+            if (characterControls.TryGetComponent(prefabRoot, out var control))
+            {
+                control.MoveVector = forward * data.linearSpeed;
+                entityManager.SetComponent(1, entity, control);
+            }
+            else
+            {
+                PhysicsVelocity velocity;
+                velocity.Angular = data.angularSpeed;
+                velocity.Linear = forward * data.linearSpeed;
+                entityManager.SetComponent(1, entity, velocity);
+            }
+        }
+
+        if (damageScale > math.FLT_MIN_NORMAL)
+        {
+            EffectDamage effectDamage;
+            effectDamage.scale = damageScale;
+            entityManager.AddComponent(1, entity, effectDamage);
+        }
+
+        EffectDamageParent damageParent;
+        damageParent.index = index;
+        damageParent.entity = parent;
+        entityManager.AddComponent(1, entity, damageParent);
+
+        return entity;
+    }
 }
 
 public struct BulletStatus : IBufferElementData

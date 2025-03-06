@@ -253,6 +253,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public float targetPositionInterpolation;
         [Tooltip("开始释放时间，可以利用这个时间错开几个子弹的释放间距")]
         public float startTime;
+        [Tooltip("延迟释放时间，用来配合角色动作")]
+        public float delayTime;
         [Tooltip("间隔时间")]
         public float interval;
         [Tooltip("装弹时间")]
@@ -386,6 +388,15 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             }
         }
 
+        [CSVField]
+        public float 子弹延迟时间
+        {
+            set
+            {
+                delayTime = value;
+            }
+        }
+        
         [CSVField]
         public float 子弹间隔时间
         {
@@ -650,6 +661,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.interval = source.interval;
                     destination.cooldown = source.cooldown;
                     destination.startTime = source.startTime;
+                    destination.delayTime = source.delayTime;
                     destination.capacity = source.capacity;
                     destination.times = source.times;
 
@@ -693,6 +705,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             AddComponent<BulletStatus>(entity);
             AddComponent<BulletTargetStatus>(entity);
 
+            AddComponent<BulletInstance>(entity);
+            
             AddComponent<BulletVersion>(entity);
             
             var activeIndices = AddBuffer<BulletActiveIndex>(entity);

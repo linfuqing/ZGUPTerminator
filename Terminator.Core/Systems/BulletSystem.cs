@@ -164,7 +164,7 @@ public partial struct BulletSystem : ISystem
         public NativeArray<LookAtTarget> lookAtTargets;
 
         [ReadOnly]
-        public NativeArray<BulletDefinitionData> instances;
+        public NativeArray<BulletDefinitionData> definitions;
 
         [ReadOnly]
         public BufferAccessor<BulletPrefab> prefabs;
@@ -180,6 +180,8 @@ public partial struct BulletSystem : ISystem
         public BufferAccessor<BulletStatus> states;
 
         public BufferAccessor<BulletTargetStatus> targetStates;
+
+        public BufferAccessor<BulletInstance> instances;
 
         public NativeArray<BulletVersion> versions;
 
@@ -199,7 +201,7 @@ public partial struct BulletSystem : ISystem
     
             BulletLocation location = 0;
             float3 up = math.up();
-            ref var definition = ref instances[index].definition.Value;
+            ref var definition = ref definitions[index].definition.Value;
             if (character != Entity.Null)
             {
                 up = characterBody.GroundingUp;
@@ -231,6 +233,7 @@ public partial struct BulletSystem : ISystem
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var targetStates = this.targetStates[index];
             var states = this.states[index];
+            var instances = this.instances[index];
             var version = versions[index];
             definition.Update(
                 location, 
@@ -254,12 +257,29 @@ public partial struct BulletSystem : ISystem
                 ref outputMessages,
                 ref targetStates,
                 ref states,
-                ref entityManager,
+                ref instances,
                 ref prefabLoader, 
                 ref version, 
                 ref random);
             
             versions[index] = version;
+
+            int numInstances = instances.Length;
+            for (int i = 0; i < numInstances; i++)
+            {
+                if (instances[i].Apply(
+                        time,
+                        collisionWorld,
+                        characterControls,
+                        animationCurveDeltas,
+                        ref definition,
+                        ref entityManager))
+                {
+                    instances.RemoveAtSwapBack(i--);
+                    
+                    --numInstances;
+                }
+            }
 
             return outputMessages.IsCreated && outputMessages.Length > 0;
         }
@@ -321,7 +341,7 @@ public partial struct BulletSystem : ISystem
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
 
         [ReadOnly]
-        public ComponentTypeHandle<BulletDefinitionData> instanceType;
+        public ComponentTypeHandle<BulletDefinitionData> definitionType;
 
         [ReadOnly]
         public BufferTypeHandle<BulletPrefab> prefabType;
@@ -337,6 +357,8 @@ public partial struct BulletSystem : ISystem
         public BufferTypeHandle<BulletStatus> statusType;
 
         public BufferTypeHandle<BulletTargetStatus> targetStatusType;
+
+        public BufferTypeHandle<BulletInstance> instanceType;
 
         public ComponentTypeHandle<BulletVersion> versionType;
 
@@ -364,13 +386,14 @@ public partial struct BulletSystem : ISystem
             collect.effectDamageParents = effectDamageParents;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
-            collect.instances = chunk.GetNativeArray(ref instanceType);
+            collect.definitions = chunk.GetNativeArray(ref definitionType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.targetStates = chunk.GetBufferAccessor(ref targetStatusType);
+            collect.instances = chunk.GetBufferAccessor(ref instanceType);
             collect.versions = chunk.GetNativeArray(ref versionType);
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
@@ -406,11 +429,13 @@ public partial struct BulletSystem : ISystem
 
     private ComponentTypeHandle<LookAtTarget> __lookAtType;
 
-    private ComponentTypeHandle<BulletDefinitionData> __instanceType;
+    private ComponentTypeHandle<BulletDefinitionData> __definitionType;
 
     private BufferTypeHandle<BulletPrefab> __prefabType;
 
     private BufferTypeHandle<BulletActiveIndex> __activeIndexType;
+    
+    private BufferTypeHandle<BulletInstance> __instanceType;
 
     private BufferTypeHandle<BulletStatus> __statusType;
 
@@ -440,9 +465,10 @@ public partial struct BulletSystem : ISystem
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
-        __instanceType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
+        __definitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
         __prefabType = state.GetBufferTypeHandle<BulletPrefab>(true);
         __activeIndexType = state.GetBufferTypeHandle<BulletActiveIndex>(true);
+        __instanceType = state.GetBufferTypeHandle<BulletInstance>();
         __statusType = state.GetBufferTypeHandle<BulletStatus>();
         __targetStatusType = state.GetBufferTypeHandle<BulletTargetStatus>();
         __inputMessageType = state.GetBufferTypeHandle<BulletMessage>(true);
@@ -453,7 +479,7 @@ public partial struct BulletSystem : ISystem
             __group = builder
                 .WithAll<LocalToWorld, BulletDefinitionData, BulletActiveIndex>()
                 .WithAllRW<BulletStatus, BulletTargetStatus>()
-                .WithAllRW<BulletVersion>()
+                .WithAllRW<BulletInstance, BulletVersion>()
                 .Build(ref state);
 
         __prefabLoader = new PrefabLoader(ref state);
@@ -484,9 +510,10 @@ public partial struct BulletSystem : ISystem
         __effectDamageParents.Update(ref state);
         __entityType.Update(ref state);
         __lookAtType.Update(ref state);
-        __instanceType.Update(ref state);
+        __definitionType.Update(ref state);
         __prefabType.Update(ref state);
         __activeIndexType.Update(ref state);
+        __instanceType.Update(ref state);
         __statusType.Update(ref state);
         __targetStatusType.Update(ref state);
         __inputMessageType.Update(ref state);
@@ -509,9 +536,10 @@ public partial struct BulletSystem : ISystem
         collect.effectDamageParents = __effectDamageParents;
         collect.entityType = __entityType;
         collect.lookAtTargetType = __lookAtType;
-        collect.instanceType = __instanceType;
+        collect.definitionType = __definitionType;
         collect.prefabType = __prefabType;
         collect.activeIndexType = __activeIndexType;
+        collect.instanceType = __instanceType;
         collect.statusType = __statusType;
         collect.targetStatusType = __targetStatusType;
         collect.inputMessageType = __inputMessageType;
