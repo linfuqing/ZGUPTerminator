@@ -182,9 +182,7 @@ public partial class LevelManager
             int guidePriority = 0, 
                 recommendPriority = 0, 
                 guideIndex = -1, 
-                recommendIndex = -1, 
-                times;
-            string key;
+                recommendIndex = -1;
             LevelSkillStyle style;
             for (int i = 0; i < numSkills; ++i)
             {
@@ -202,12 +200,26 @@ public partial class LevelManager
                     style = Instantiate(style.child, style.child.transform.parent);
                 }
 
+                string key = NAME_SPACE_SKILL_SELECTION_TIMES + source. /*value.*/name;
+                int times = PlayerPrefs.GetInt(key);
+
+                if (times == 0 && 
+                    (guideIndex == -1 || guidePriority < source.value.flag) &&
+                    _skillSelectionGuides != null &&
+                    Array.IndexOf(_skillSelectionGuides, source.name) != -1)
+                {
+                    guidePriority = source.value.flag;
+                    guideIndex = i;
+                }
+
                 if (style.button != null && source.selectIndex != -1)
                 {
                     result = true;
 
                     style.button.onClick.AddListener(() =>
                     {
+                        PlayerPrefs.SetInt(key, ++times);
+
                         destination.onDisable.Invoke();
 
                         StartCoroutine(__SelectSkill(destination.destroyTime, source));
@@ -221,20 +233,6 @@ public partial class LevelManager
                     recommendPriority = source.value.flag;
                     recommendIndex = i;
                 }
-
-                key = NAME_SPACE_SKILL_SELECTION_TIMES + source. /*value.*/name;
-                times = PlayerPrefs.GetInt(key);
-
-                if (times == 0 && 
-                    (guideIndex == -1 || guidePriority < source.value.flag) &&
-                    _skillSelectionGuides != null &&
-                    Array.IndexOf(_skillSelectionGuides, source.name) != -1)
-                {
-                    guidePriority = source.value.flag;
-                    guideIndex = i;
-                }
-
-                PlayerPrefs.SetInt(key, ++times);
 
                 if (__skillStyles == null)
                     __skillStyles = new Dictionary<string, LevelSkillStyle>();
