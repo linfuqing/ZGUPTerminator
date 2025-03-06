@@ -236,7 +236,7 @@ public partial struct LevelSystem : ISystem
                 !spawnerLayerMaskOverrides.HasComponent(spawnerLayerMaskEntity))
                 return;
             
-            long time = math.aslong(this.time);
+            long hash = math.aslong(time);
 
             Update update;
             update.deltaTime = deltaTime;
@@ -246,7 +246,7 @@ public partial struct LevelSystem : ISystem
             update.spawnerLayerMaskExclude = spawnerLayerMaskExcludes.GetRefRW(spawnerLayerMaskEntity);
             update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
-            update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)time ^ (int)(time >> 32)));
+            update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
             update.spawnerPrefabs = spawnerPrefabs;
             update.spawnerSingleton = spawnerSingleton;
