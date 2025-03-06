@@ -347,7 +347,7 @@ public partial class LevelManager
 
     private IEnumerator __CloseSkillSelection()
     {
-        UnityEngine.Assertions.Assert.AreEqual(SkillSelectionStatus.Complete, __skillSelectionStatus);
+        UnityEngine.Assertions.Assert.IsTrue((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete);
         UnityEngine.Assertions.Assert.AreNotEqual(-1, selectedSkillSelectionIndex);
 
         var selection = _skillSelections[selectedSkillSelectionIndex];
@@ -378,13 +378,13 @@ public partial class LevelManager
 
     private void __CloseSkillSelectionRightNow()
     {
-        if(SkillSelectionStatus.Complete == __skillSelectionStatus)
+        if((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
             StartCoroutine(__CloseSkillSelection());
     }
 
     private void __CompleteSkillSelection()
     {
-        if (SkillSelectionStatus.Complete == __skillSelectionStatus)
+        if ((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
         {
             __skillSelectionStatus = 0;
                 
