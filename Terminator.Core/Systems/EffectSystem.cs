@@ -946,109 +946,119 @@ public partial struct EffectSystem : ISystem
             if (target.invincibleTime < time)
             {
                 var instance = instances[index];
+
+                int damage, damageLayerMask;
                 
                 var targetHP = targetHPs[index];
                 if (targetHP.value != 0)
                 {
+                    damage = 0;
+
+                    damageLayerMask = 0;
+                    
                     target.hp += targetHP.value;
 
                     target.invincibleTime = time + instance.recoveryInvincibleTime;
 
                     result |= EnabledFlags.Recovery;
                 }
-
-                var targetDamage = targetDamages[index];
-                
-                int damage = (int)math.ceil(targetDamage.value *
-                                            (index < targetDamageScales.Length
-                                                ? targetDamageScales[index].value
-                                                : 1.0f));
-                if (damage > 0 && index < targetInvulnerabilityStates.Length)
+                else
                 {
-                    bool isInvulnerability;
-                    var targetInvulnerabilityStatus = targetInvulnerabilityStates[index];
-                    if (targetInvulnerabilityStatus.damage > damage || targetInvulnerabilityStatus.times > 0)
+                    var targetDamage = targetDamages[index];
+
+                    damageLayerMask = targetDamage.layerMask;
+
+                    damage = (int)math.ceil(targetDamage.value *
+                                                (index < targetDamageScales.Length
+                                                    ? targetDamageScales[index].value
+                                                    : 1.0f));
+                    if (damage > 0 && index < targetInvulnerabilityStates.Length)
                     {
-                        if (targetInvulnerabilityStatus.damage > damage)
-                            targetInvulnerabilityStatus.damage -= damage;
-                        else if (targetInvulnerabilityStatus.damage > 0)
+                        bool isInvulnerability;
+                        var targetInvulnerabilityStatus = targetInvulnerabilityStates[index];
+                        if (targetInvulnerabilityStatus.damage > damage || targetInvulnerabilityStatus.times > 0)
                         {
-                            damage = targetInvulnerabilityStatus.damage;
-
-                            targetInvulnerabilityStatus.damage = 0;
-                        }
-
-                        if (targetInvulnerabilityStatus.times > 0)
-                            --targetInvulnerabilityStatus.times;
-
-                        isInvulnerability = true;
-                    }
-                    else
-                        isInvulnerability = false;
-
-                    if (targetInvulnerabilityStatus.damage == 0 &&
-                        targetInvulnerabilityStatus.times == 0 &&
-                        index < targetInvulnerabilities.Length)
-                    {
-                        ref var definition = ref targetInvulnerabilities[index].definition.Value;
-                        while (definition.invulnerabilities.Length > targetInvulnerabilityStatus.index)
-                        {
-                            ref var invulnerablilitity =
-                                ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
-
-                            if (isInvulnerability)
+                            if (targetInvulnerabilityStatus.damage > damage)
+                                targetInvulnerabilityStatus.damage -= damage;
+                            else if (targetInvulnerabilityStatus.damage > 0)
                             {
-                                target.invincibleTime = time + invulnerablilitity.time;
+                                damage = targetInvulnerabilityStatus.damage;
 
-                                ++targetInvulnerabilityStatus.count;
+                                targetInvulnerabilityStatus.damage = 0;
                             }
 
-                            if (invulnerablilitity.count == 0 ||
-                                invulnerablilitity.count > targetInvulnerabilityStatus.count)
+                            if (targetInvulnerabilityStatus.times > 0)
+                                --targetInvulnerabilityStatus.times;
+
+                            isInvulnerability = true;
+                        }
+                        else
+                            isInvulnerability = false;
+
+                        if (targetInvulnerabilityStatus.damage == 0 &&
+                            targetInvulnerabilityStatus.times == 0 &&
+                            index < targetInvulnerabilities.Length)
+                        {
+                            ref var definition = ref targetInvulnerabilities[index].definition.Value;
+                            while (definition.invulnerabilities.Length > targetInvulnerabilityStatus.index)
                             {
-                                targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
-                                targetInvulnerabilityStatus.times = invulnerablilitity.times;
+                                ref var invulnerablilitity =
+                                    ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
 
-                                if (!isInvulnerability)
+                                if (isInvulnerability)
                                 {
-                                    if (targetInvulnerabilityStatus.damage > damage)
-                                        targetInvulnerabilityStatus.damage -= damage;
-                                    else if (targetInvulnerabilityStatus.damage > 0)
-                                    {
-                                        damage = targetInvulnerabilityStatus.damage;
+                                    target.invincibleTime = time + invulnerablilitity.time;
 
-                                        targetInvulnerabilityStatus.damage = 0;
-                                    }
-
-                                    if (targetInvulnerabilityStatus.times > 0)
-                                        --targetInvulnerabilityStatus.times;
-
-                                    isInvulnerability = targetInvulnerabilityStatus.damage == 0 &&
-                                                        targetInvulnerabilityStatus.times == 0;
-
-                                    if (isInvulnerability)
-                                        continue;
+                                    ++targetInvulnerabilityStatus.count;
                                 }
 
-                                break;
-                            }
+                                if (invulnerablilitity.count == 0 ||
+                                    invulnerablilitity.count > targetInvulnerabilityStatus.count)
+                                {
+                                    targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
+                                    targetInvulnerabilityStatus.times = invulnerablilitity.times;
 
-                            targetInvulnerabilityStatus.count = 0;
-                            ++targetInvulnerabilityStatus.index;
+                                    if (!isInvulnerability)
+                                    {
+                                        if (targetInvulnerabilityStatus.damage > damage)
+                                            targetInvulnerabilityStatus.damage -= damage;
+                                        else if (targetInvulnerabilityStatus.damage > 0)
+                                        {
+                                            damage = targetInvulnerabilityStatus.damage;
+
+                                            targetInvulnerabilityStatus.damage = 0;
+                                        }
+
+                                        if (targetInvulnerabilityStatus.times > 0)
+                                            --targetInvulnerabilityStatus.times;
+
+                                        isInvulnerability = targetInvulnerabilityStatus.damage == 0 &&
+                                                            targetInvulnerabilityStatus.times == 0;
+
+                                        if (isInvulnerability)
+                                            continue;
+                                    }
+
+                                    break;
+                                }
+
+                                targetInvulnerabilityStatus.count = 0;
+                                ++targetInvulnerabilityStatus.index;
+                            }
                         }
+
+
+                        targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
                     }
 
-
-                    targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
+                    target.hp += -damage;
                 }
 
-                target.hp += -damage;
-                
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length && 
                     (targetHP.value != 0 && targetHP.layerMask != 0 || 
-                     targetDamage.value != 0 && targetDamage.layerMask != 0))
+                     damage != 0 && damageLayerMask != 0))
                 {
                     float3 position = localToWorlds[index].Position;
                     Entity messageReceiver;
@@ -1060,7 +1070,7 @@ public partial struct EffectSystem : ISystem
                     foreach (var targetMessage in targetMessages)
                     {
                         if (targetMessage.layerMask == 0 ||
-                            (targetMessage.layerMask & (targetHP.layerMask | targetDamage.layerMask)) != 0)
+                            (targetMessage.layerMask & (targetHP.layerMask | damageLayerMask)) != 0)
                         {
                             message.key = random.NextInt();
                             message.name = targetMessage.messageName;
@@ -1079,7 +1089,7 @@ public partial struct EffectSystem : ISystem
                                         entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
 
                                         messageParameter.messageKey = message.key;
-                                        messageParameter.value = -targetDamage.value;
+                                        messageParameter.value = -damage;
                                         messageParameter.id = (int)EffectAttributeID.Damage;
                                         entityManager.SetBuffer<MessageParameter>(1, messageReceiver)
                                             .Add(messageParameter);
@@ -1098,9 +1108,9 @@ public partial struct EffectSystem : ISystem
                                 {
                                     messageParameter.messageKey = message.key;
 
-                                    if ((targetMessage.layerMask & targetDamage.layerMask) != 0)
+                                    if ((targetMessage.layerMask & damageLayerMask) != 0)
                                     {
-                                        messageParameter.value = -targetDamage.value;
+                                        messageParameter.value = -damage;
                                         messageParameter.id = (int)EffectAttributeID.Damage;
                                         messageParameters.Add(messageParameter);
                                     }
@@ -1279,7 +1289,6 @@ public partial struct EffectSystem : ISystem
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
 
-            bool isRecovery;
             EnabledFlags result;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
