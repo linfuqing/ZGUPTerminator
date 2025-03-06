@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class LevelSkillStyle : SkillStyle
 {
     public UnityEvent onGuide;
+    public UnityEvent onRecommend;
 
     public Button button;
 
