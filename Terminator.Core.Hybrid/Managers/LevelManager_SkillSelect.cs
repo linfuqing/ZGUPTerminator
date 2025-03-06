@@ -99,7 +99,7 @@ public partial class LevelManager
         IAnalytics.instance?.SelectSkillBegin(selectionIndex);
 
         UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
-        UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
+        UnityEngine.Assertions.Assert.AreEqual(0, (int)(__skillSelectionStatus & ~SkillSelectionStatus.End));
 
         selectedSkillSelectionIndex = selectionIndex;
 
@@ -130,10 +130,11 @@ public partial class LevelManager
         //UnityEngine.Assertions.Assert.AreNotEqual(-1, __skillSelectionIndex);
         __skillSelectionStatus |= SkillSelectionStatus.Finish;
 
-        if (selectedSkillSelectionIndex != -1 && 
-            (__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End && 
-            //__selectedSkillIndices != null && __selectedSkillIndices.Count > 0 && 
-            (__resultSkillStyles == null || __resultSkillStyles.Count < 1))
+        if (selectedSkillSelectionIndex != -1 
+            && (__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End
+            //&& __selectedSkillIndices != null && __selectedSkillIndices.Count > 0 
+            //&& (__resultSkillStyles == null || __resultSkillStyles.Count < 1)
+            )
             StartCoroutine(__FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]));
     }
 
