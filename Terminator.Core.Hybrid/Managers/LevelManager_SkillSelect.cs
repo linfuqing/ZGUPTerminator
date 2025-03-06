@@ -82,6 +82,8 @@ public partial class LevelManager
     public const string NAME_SPACE_SKILL_SELECTION_TIMES = "LevelManagerSkillSelectionTimes";
 
     public bool isClear => __gameObjectsToDestroy == null || __gameObjectsToDestroy.Count < 1;
+    
+    public bool isEndOfSkillSelection => (__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End;
 
     public int selectedSkillSelectionIndex
     {
