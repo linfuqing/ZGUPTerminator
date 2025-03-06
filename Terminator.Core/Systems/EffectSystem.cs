@@ -24,7 +24,7 @@ public partial struct EffectSystem : ISystem
         Message = 0x01,
         StatusTarget = 0x02, 
         Destroyed = 0x04, 
-        Reset = 0x08
+        Recovery = 0x08
     }
     
     private struct DamageInstance
@@ -1126,7 +1126,7 @@ public partial struct EffectSystem : ISystem
                         
                         targetHP.value = instance.hpMax;
 
-                        result |= EnabledFlags.Reset;
+                        result |= EnabledFlags.Recovery;
 
                         if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
                         {
@@ -1270,7 +1270,7 @@ public partial struct EffectSystem : ISystem
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
 
-            bool isReset;
+            bool isRecovery;
             EnabledFlags result;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -1280,10 +1280,16 @@ public partial struct EffectSystem : ISystem
                 if((result & EnabledFlags.Message) == EnabledFlags.Message)
                     chunk.SetComponentEnabled(ref messageType, i, true);
 
-                isReset = (result & EnabledFlags.Reset) == EnabledFlags.Reset;
-                chunk.SetComponentEnabled(ref characterBodyType, i, !isReset);
-                chunk.SetComponentEnabled(ref targetHPType, i, isReset);
-                
+                isRecovery = (result & EnabledFlags.Recovery) == EnabledFlags.Recovery;
+                if (isRecovery)
+                {
+                    chunk.SetComponentEnabled(ref characterBodyType, i, false);
+
+                    chunk.SetComponentEnabled(ref targetHPType, i, true);
+                }
+                else if(!chunk.IsComponentEnabled(ref targetHPType, i))
+                    chunk.SetComponentEnabled(ref characterBodyType, i, true);
+
                 chunk.SetComponentEnabled(ref targetDamageType, i, false);
             }
         }
