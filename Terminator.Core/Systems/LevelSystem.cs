@@ -126,9 +126,9 @@ public partial struct LevelSystem : ISystem
                 numResults = stageDefinition.results.Length;
                 if (numResults > 0)
                 {
-                    ref var stageResultStatus = ref stageResultStates.ElementAt(i);
-                    spawnerLayerMaskInclude.value = stageResultStatus.layerMaskInclude;
-                    spawnerLayerMaskExclude.value = stageResultStatus.layerMaskExclude;
+                    //ref var stageResultStatus = ref stageResultStates.ElementAt(i);
+                    spawnerLayerMaskInclude.value = 0;//stageResultStatus.layerMaskInclude;
+                    spawnerLayerMaskExclude.value = 0;//stageResultStatus.layerMaskExclude;
 
                     for (j = 0; j < numResults; ++j)
                     {
@@ -146,7 +146,8 @@ public partial struct LevelSystem : ISystem
                             spawnerPrefabs,
                             spawners);
                     }
-
+                    
+                    ref var stageResultStatus = ref stageResultStates.ElementAt(i);
                     stageResultStatus.layerMaskInclude = spawnerLayerMaskInclude.value;
                     stageResultStatus.layerMaskExclude = spawnerLayerMaskExclude.value;
 

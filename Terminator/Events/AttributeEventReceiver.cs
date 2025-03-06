@@ -99,7 +99,7 @@ public class AttributeEventReceiver : MonoBehaviour
                 __instanceID,
                 _styleIndex,
                 (int)AttributeType.Rage,
-                __rage % __rageMax,
+                __rage, // % __rageMax,
                 __rageMax);
             
             /*AttributeManager.instance.Set(

@@ -371,7 +371,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             AddComponent<SkillStatus>(entity);
 
             var messages = AddBuffer<SkillMessage>(entity);
-            messages.ResizeUninitialized(numMessages);
+            messages.ResizeUninitialized(numMessages + (authoring._attributeParameter == null ? 0 : 1));
             for (i = 0; i < numMessages; ++i)
             {
                 ref var source = ref authoring._messages[i];
@@ -387,6 +387,16 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     
                     destination.value = new WeakObjectReference<Object>(source.messageValue);
                 }
+            }
+
+            if (authoring._attributeParameter != null)
+            {
+                SkillMessage message;
+                message.type = SkillMessageType.Running;
+                message.name = "UpdateAttribute";
+                message.value = new WeakObjectReference<Object>(authoring._attributeParameter);
+                
+                messages[numMessages] = message;
             }
         }
     }
