@@ -74,7 +74,7 @@ public class AttributeEventReceiver : MonoBehaviour
                 __hpMax);
         }
 
-        if (parameters.TryGet((int)EffectAttributeID.HPMax, out int rageMax))
+        if (parameters.TryGet((int)EffectAttributeID.RageMax, out int rageMax))
         {
             dirtyFlag |= 1 << (int)AttributeType.Rage;
             

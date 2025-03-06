@@ -153,16 +153,18 @@ public partial struct LevelPlayerSystem : ISystem
                 }
                 
                 effectTarget.hp = hp;
-                effectTarget.times = (int)math.floor(effectTargetRecovery);
+                
+                if(effectTargetRecovery > math.FLT_MIN_NORMAL)
+                    effectTarget.times = (int)math.floor(effectTargetRecovery);
 
                 effectTargets[player] = effectTarget;
                 
                 if (effectTargetDatas.TryGetComponent(player, out var effectTargetData))
                 {
-                    effectTargetData.recoveryChance = effectTargetRecovery - effectTarget.times;
-                    effectTargetData.recoveryChance = effectTargetData.recoveryChance > math.FLT_MIN_NORMAL
-                        ? effectTargetData.recoveryChance
-                        : 1.0f;
+                    float recoveryChance = effectTargetRecovery - effectTarget.times;
+                    if (recoveryChance > math.FLT_MIN_NORMAL)
+                        effectTargetData.recoveryChance = recoveryChance;
+                    
                     effectTargetData.hpMax = hp;
                     effectTargetDatas[player] = effectTargetData;
                 }
