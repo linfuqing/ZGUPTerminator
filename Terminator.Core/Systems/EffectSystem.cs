@@ -24,7 +24,8 @@ public partial struct EffectSystem : ISystem
         Message = 0x01,
         StatusTarget = 0x02, 
         Destroyed = 0x04, 
-        Recovery = 0x08
+        Die = 0x08,
+        Recovery = 0x10, 
     }
     
     private struct DamageInstance
@@ -952,6 +953,8 @@ public partial struct EffectSystem : ISystem
                     target.hp += targetHP.value;
 
                     target.invincibleTime = time + instance.recoveryInvincibleTime;
+
+                    result |= EnabledFlags.Recovery;
                 }
 
                 var targetDamage = targetDamages[index];
@@ -1116,6 +1119,8 @@ public partial struct EffectSystem : ISystem
                 targetHP.value = 0;
                 if (target.hp <= 0)
                 {
+                    result |= EnabledFlags.Die;
+
                     if (target.times > 0 && instance.recoveryChance > random.NextFloat())
                     {
                         if (index < characterGravityFactors.Length)
@@ -1131,8 +1136,6 @@ public partial struct EffectSystem : ISystem
                         target.hp = 0;
                         
                         targetHP.value = instance.hpMax;
-
-                        result |= EnabledFlags.Recovery;
 
                         if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
                         {
@@ -1286,15 +1289,19 @@ public partial struct EffectSystem : ISystem
                 if((result & EnabledFlags.Message) == EnabledFlags.Message)
                     chunk.SetComponentEnabled(ref messageType, i, true);
 
-                isRecovery = (result & EnabledFlags.Recovery) == EnabledFlags.Recovery;
-                if (isRecovery)
+                if ((result & EnabledFlags.Die) == EnabledFlags.Die)
                 {
                     chunk.SetComponentEnabled(ref characterBodyType, i, false);
 
                     chunk.SetComponentEnabled(ref targetHPType, i, true);
                 }
-                else if(!chunk.IsComponentEnabled(ref targetHPType, i))
-                    chunk.SetComponentEnabled(ref characterBodyType, i, true);
+                else
+                {
+                    if((result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
+                        chunk.SetComponentEnabled(ref characterBodyType, i, true);
+                    
+                    chunk.SetComponentEnabled(ref targetHPType, i, false);
+                }
 
                 chunk.SetComponentEnabled(ref targetDamageType, i, false);
             }
