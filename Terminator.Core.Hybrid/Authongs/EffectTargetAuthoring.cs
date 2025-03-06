@@ -55,6 +55,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             instance.hpMax = authoring._hp;
             instance.recoveryChance = authoring._recoveryChance;
             instance.recoveryTime = authoring._recoveryTime;
+            instance.recoveryInvincibleTime = authoring._recoveryInvincibleTime;
             instance.recoveryMessageName = authoring._recoveryMessageName;
             instance.recoveryMessageValue = authoring._recoveryMessageValue == null
                 ? default
@@ -163,6 +164,9 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     
     [Tooltip("复活时间"), SerializeField] 
     internal float _recoveryTime = 3.0f;
+
+    [Tooltip("复活之后的无敌时间"), SerializeField] 
+    internal float _recoveryInvincibleTime = 10.0f;
 
     [Tooltip("复活事件"), SerializeField]
     internal string _recoveryMessageName;

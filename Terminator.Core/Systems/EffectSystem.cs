@@ -944,10 +944,17 @@ public partial struct EffectSystem : ISystem
             var target = targets[index];
             if (target.invincibleTime < time)
             {
-                var targetHP = targetHPs[index];
-                var targetDamage = targetDamages[index];
+                var instance = instances[index];
                 
-                target.hp += targetHP.value;
+                var targetHP = targetHPs[index];
+                if (targetHP.value != 0)
+                {
+                    target.hp += targetHP.value;
+
+                    target.invincibleTime = time + instance.recoveryInvincibleTime;
+                }
+
+                var targetDamage = targetDamages[index];
                 
                 int damage = (int)math.ceil(targetDamage.value *
                                             (index < targetDamageScales.Length
@@ -1109,7 +1116,6 @@ public partial struct EffectSystem : ISystem
                 targetHP.value = 0;
                 if (target.hp <= 0)
                 {
-                    var instance = instances[index];
                     if (target.times > 0 && instance.recoveryChance > random.NextFloat())
                     {
                         if (index < characterGravityFactors.Length)

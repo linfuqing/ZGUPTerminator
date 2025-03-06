@@ -189,6 +189,7 @@ public struct EffectTargetData : IComponentData
     public int hpMax;
     public float recoveryChance;
     public float recoveryTime;
+    public float recoveryInvincibleTime;
 
     public FixedString128Bytes recoveryMessageName;
     public WeakObjectReference<Object> recoveryMessageValue;
