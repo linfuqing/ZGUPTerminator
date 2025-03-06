@@ -249,7 +249,6 @@ public partial struct BulletSystem : ISystem
                 parents, 
                 physicsColliders,
                 characterBodies, 
-                characterControls,
                 animationCurveDeltas, 
                 prefabs[index],
                 activeIndices[index],

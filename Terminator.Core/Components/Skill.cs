@@ -92,7 +92,7 @@ public struct SkillDefinition
                     if (bullet.index < bulletStates.Length)
                     {
                         ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                        if (bulletStatus.cooldown > time || bulletStatus.version != 0)
+                        if (/*bulletStatus.cooldown > time || */bulletStatus.version != 0)
                         {
                             isChanged = true;
 

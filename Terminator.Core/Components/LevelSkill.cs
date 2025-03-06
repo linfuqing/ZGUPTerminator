@@ -415,6 +415,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
                 bulletStatus.cooldown = time + bullet.startTime;
                 bulletStatus.count = 0;
                 bulletStatus.times = bullet.times;
+                bulletStatus.version = 0;
             }
         }
     }

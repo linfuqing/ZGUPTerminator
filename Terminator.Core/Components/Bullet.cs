@@ -497,8 +497,6 @@ public struct BulletDefinition
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
-        in ComponentLookup<ThirdPersonCharacterControl> characterControls,
-        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
@@ -757,7 +755,6 @@ public struct BulletDefinition
         in ComponentLookup<Parent> parents,
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
-        in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletActiveIndex> activeIndices, 
@@ -818,8 +815,6 @@ public struct BulletDefinition
                 collisionWorld,
                 physicsColliders,
                 characterBodies, 
-                characterControls,
-                animationCurveDeltas, 
                 prefabs, 
                 inputMessages,
                 ref outputMessages,
@@ -1061,7 +1056,7 @@ public struct BulletInstance : IBufferElementData
         ref BulletDefinition definition, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
-        if (time > this.time)
+        if (time < this.time)
             return false;
 
         Entity entity = entityManager.Instantiate(0, prefabRoot);
