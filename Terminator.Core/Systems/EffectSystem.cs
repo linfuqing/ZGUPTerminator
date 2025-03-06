@@ -1112,10 +1112,18 @@ public partial struct EffectSystem : ISystem
                     var instance = instances[index];
                     if (target.times > 0 && instance.recoveryChance > random.NextFloat())
                     {
+                        if (index < characterGravityFactors.Length)
+                        {
+                            ThirdPersionCharacterGravityFactor characterGravityFactor;
+                            characterGravityFactor.value = 1.0f;
+                            characterGravityFactors[index] = characterGravityFactor;
+                        }
+
                         --target.times;
 
                         target.invincibleTime = time + instance.recoveryTime;
-
+                        target.hp = 0;
+                        
                         targetHP.value = instance.hpMax;
 
                         result |= EnabledFlags.Reset;
@@ -1128,39 +1136,42 @@ public partial struct EffectSystem : ISystem
                             messages.Add(message);
                         }
                     }
-                    else if (index < targetLevels.Length && this.levelStatus.IsValid)
-                    {
-                        var targetLevel = targetLevels[index];
-
-                        ref var levelStatus = ref this.levelStatus.ValueRW;
-                        Interlocked.Add(ref levelStatus.value, targetLevel.value);
-                        Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                        Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
-
-                        Interlocked.Increment(ref levelStatus.count);
-                    }
-
-                    if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
-                    {
-                        if (index < characterGravityFactors.Length)
-                        {
-                            ThirdPersionCharacterGravityFactor characterGravityFactor;
-                            characterGravityFactor.value = 1.0f;
-                            characterGravityFactors[index] = characterGravityFactor;
-                        }
-
-                        entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
-                    }
                     else
                     {
-                        if (index < children.Length)
+                        if (index < targetLevels.Length && this.levelStatus.IsValid)
                         {
-                            var children = this.children[index];
-                            foreach (var child in children)
-                                entityManager.DestroyEntity(int.MaxValue - 1, child.Value);
+                            var targetLevel = targetLevels[index];
+
+                            ref var levelStatus = ref this.levelStatus.ValueRW;
+                            Interlocked.Add(ref levelStatus.value, targetLevel.value);
+                            Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
+                            Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+
+                            Interlocked.Increment(ref levelStatus.count);
                         }
 
-                        entityManager.DestroyEntity(int.MaxValue, entityArray[index]);
+                        if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
+                        {
+                            if (index < characterGravityFactors.Length)
+                            {
+                                ThirdPersionCharacterGravityFactor characterGravityFactor;
+                                characterGravityFactor.value = 1.0f;
+                                characterGravityFactors[index] = characterGravityFactor;
+                            }
+
+                            entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
+                        }
+                        else
+                        {
+                            if (index < children.Length)
+                            {
+                                var children = this.children[index];
+                                foreach (var child in children)
+                                    entityManager.DestroyEntity(int.MaxValue - 1, child.Value);
+                            }
+
+                            entityManager.DestroyEntity(int.MaxValue, entityArray[index]);
+                        }
                     }
                 }
 

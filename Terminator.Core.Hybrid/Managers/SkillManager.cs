@@ -157,6 +157,15 @@ public class SkillManager : MonoBehaviour
         {
             set { rarity = value; }
         }
+        
+        [CSVField]
+        public int 关卡技能描述标签
+        {
+            set
+            {
+                flag = value;
+            }
+        }
 #endif
     }
 
