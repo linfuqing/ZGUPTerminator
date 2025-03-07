@@ -108,26 +108,12 @@ public struct SkillDefinition
             }
             else
             {
-                isChanged = false;
-                
-                status.cooldown = time + skill.cooldown * cooldownScale;
-                //status.cooldown = cooldown + skill.duration;
-
-                if (status.cooldown > time)
+                value = skill.cooldown * cooldownScale;
+                if (value > math.FLT_MIN_NORMAL)
                 {
-                    for (j = 0; j < numBulletIndices; ++j)
-                    {
-                        ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                        if (bullet.index < bulletStates.Length)
-                        {
-                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                            bulletStatus.cooldown =
-                                status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
-                            bulletStatus.times = 0;
-                            bulletStatus.count = 0;
-                            bulletStatus.version = 0;
-                        }
-                    }
+                    status.cooldown = time + value;
+                    
+                    isChanged = false;
                 }
                 else
                 {
@@ -168,7 +154,23 @@ public struct SkillDefinition
                     if (rage < skill.rage)
                         isCooldown = false;
                     else
+                    {
                         rage -= skill.rage;
+                        
+                        for (j = 0; j < numBulletIndices; ++j)
+                        {
+                            ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                            if (bullet.index < bulletStates.Length)
+                            {
+                                ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                                bulletStatus.cooldown =
+                                    status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
+                                bulletStatus.times = 0;
+                                bulletStatus.count = 0;
+                                bulletStatus.version = 0;
+                            }
+                        }
+                    }
                 }
             }
 
