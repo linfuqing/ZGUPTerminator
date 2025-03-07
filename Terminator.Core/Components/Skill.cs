@@ -183,7 +183,7 @@ public struct SkillDefinition
                     numMessageIndices = skill.messageIndices.Length;
                     if (numMessageIndices > 0)
                     {
-                        messageParameter.value = (int)math.round(skill.rage);
+                        messageParameter.value = -(int)math.round(skill.rage);
                         messageParameter.id = (int)EffectAttributeID.Rage;
                         
                         for (j = 0; j < numMessageIndices; ++j)
