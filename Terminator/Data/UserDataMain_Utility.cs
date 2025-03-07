@@ -987,12 +987,16 @@ public partial class UserDataMain
 
                     skills.Add(skill);
 
-                    skill.type = UserSkillType.Group;
                     foreach (var skillName in role.skillNames)
                     {
                         skill.name = __GetSkillGroupName(skillName);
                         if (string.IsNullOrEmpty(skill.name))
-                            continue;
+                        {
+                            skill.name = skillName;
+                            skill.type = UserSkillType.Individual;
+                        }
+                        else
+                            skill.type = UserSkillType.Group;
                         
                         skills.Add(skill);
                     }
