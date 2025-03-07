@@ -9,16 +9,19 @@ public sealed partial class UserDataMain : MonoBehaviour
     [Flags]
     private enum Flag
     {
-        PurchasesUnlockFirst = 0x01, 
-        PurchasesUnlock = 0x02 | PurchasesUnlockFirst, 
-        CardsCreated = 0x04, 
-        CardsUnlockFirst = 0x08, 
-        CardsUnlock = 0x10 | CardsUnlockFirst, 
-        RolesCreated = 0x20, 
-        RolesUnlockFirst = 0x40, 
-        RolesUnlock = 0x80 | RolesUnlockFirst, 
+        PurchasesUnlockFirst = 0x0001, 
+        PurchasesUnlock = 0x0002 | PurchasesUnlockFirst, 
+        CardsCreated = 0x0004, 
+        CardsUnlockFirst = 0x0008, 
+        CardsUnlock = 0x0010 | CardsUnlockFirst, 
+        RolesCreated = 0x0020, 
+        RolesUnlockFirst = 0x0040, 
+        RolesUnlock = 0x0080 | RolesUnlockFirst, 
         
-        UnlockFirst = PurchasesUnlockFirst | CardsUnlockFirst | RolesUnlockFirst
+        RoleUnlockFirst = 0x0100, 
+        RoleUnlock = 0x0200 | RoleUnlockFirst, 
+        
+        UnlockFirst = PurchasesUnlockFirst | CardsUnlockFirst | RolesUnlockFirst | RoleUnlockFirst
     }
     
     private const string NAME_SPACE_USER_FLAG = "UserFlag";

@@ -1138,6 +1138,15 @@ public partial class UserDataMain
         var flag = UserDataMain.flag;
         if ((flag & Flag.RolesUnlockFirst) == Flag.RolesUnlockFirst)
             result.flag |= IUserData.Roles.Flag.FirstUnlock;
+        else if ((flag & Flag.RoleUnlock) == 0 && (flag & Flag.RolesUnlock) != 0)
+        {
+            flag |= Flag.RoleUnlock;
+            
+            UserDataMain.flag = flag;
+        }
+        
+        if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
+            result.flag |= IUserData.Roles.Flag.RoleUnlock;
         
         bool isCreated = (flag & Flag.RolesCreated) != Flag.RolesCreated;
 
