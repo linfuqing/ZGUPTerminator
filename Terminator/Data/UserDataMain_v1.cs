@@ -389,6 +389,8 @@ public partial class UserDataMain
         
         PlayerPrefs.SetInt(timeKey, purchasePoolTimes);
 
+        flag &= ~Flag.PurchasesUnlockFirst;
+
         onComplete(results.ToArray());
     }
     
@@ -694,6 +696,8 @@ public partial class UserDataMain
 
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
         PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
+        
+        flag &= ~Flag.CardsUnlockFirst;
         
         onComplete(true);
     }
@@ -1654,6 +1658,8 @@ public partial class UserDataMain
             userTalents.Add(userTalent);
         }
 
+        flag &= ~Flag.RoleUnlockFirst;
+
         onComplete(userTalents.ToArray());
     }
 
@@ -1825,6 +1831,8 @@ public partial class UserDataMain
             
             yield break;
         }
+
+        flag &= ~Flag.RolesUnlockFirst;
         
         onComplete(true);
     }

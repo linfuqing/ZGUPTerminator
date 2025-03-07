@@ -164,10 +164,11 @@ public struct LevelStageOption
     public void Apply(
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref BlobArray<LevelDefinition.Area> areas, 
+        ref DynamicBuffer<SpawnerStatus> spawnerStates, 
+        ref float spawnerTime,
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
-        ref float spawnerTime,
         ref SpawnerLayerMaskInclude spawnerLayerMaskInclude, 
         ref SpawnerLayerMaskExclude spawnerLayerMaskExclude, 
         in SpawnerSingleton spawnerSingleton, 
@@ -194,6 +195,8 @@ public struct LevelStageOption
                 break;
             case Type.SpawnerTime:
                 spawnerTime = value * 1000.0f;
+                
+                spawnerStates.Clear();
                 break;
             case Type.SpawnerLayerMaskInclude:
                 spawnerLayerMaskInclude.value = value;
