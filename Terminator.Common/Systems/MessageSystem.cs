@@ -71,11 +71,11 @@ public partial class MessageSystem : SystemBase
                                 numParameters = parameters.IsCreated ? parameters.Length : 0;
                                 for (j = 0; j < numParameters; ++j)
                                 {
-                                    ref var parameter = ref parameters.ElementAt(i);
+                                    ref var parameter = ref parameters.ElementAt(j);
                                     if (parameter.messageKey != message.key)
                                         continue;
 
-                                    parameters.RemoveAt(i--);
+                                    parameters.RemoveAt(j--);
 
                                     --numParameters;
                                 }
