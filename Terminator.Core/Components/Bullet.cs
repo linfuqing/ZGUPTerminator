@@ -575,9 +575,9 @@ public struct BulletDefinition
                 return false;
         }
 
-        Entity prefab = Entity.Null;
-        result = result &&
-                 prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.prefabLoaderIndex].entityPrefabReference, out prefab);
+        //Entity prefab = Entity.Null;
+        //result = result &&
+        //         prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.prefabLoaderIndex].entityPrefabReference, out prefab);
 
         /*double cooldown;
         if (status.count < 0)
@@ -699,7 +699,7 @@ public struct BulletDefinition
         instance.transform = transformResult;
         instance.target = targetStatus.target;
         instance.parent = parent;
-        instance.prefabRoot = prefab;
+        instance.entityPrefabReference = prefabs[data.prefabLoaderIndex].entityPrefabReference;
         
         if(entityCount == 1)
             instances.Add(instance);
@@ -1046,7 +1046,7 @@ public struct BulletInstance : IBufferElementData
     public RigidTransform transform;
     public Entity target;
     public Entity parent;
-    public Entity prefabRoot;
+    public EntityPrefabReference entityPrefabReference;
 
     public bool Apply(
         in double time, 
@@ -1054,15 +1054,20 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         ref BulletDefinition definition, 
+        ref PrefabLoader.ParallelWriter prefabLoader,
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         if (time < this.time)
             return false;
 
+        if (!prefabLoader.TryGetOrLoadPrefabRoot(entityPrefabReference, out var prefabRoot))
+            return false;
+        
         Entity entity = entityManager.Instantiate(0, prefabRoot);
         
         __Apply(
             entity, 
+            prefabRoot, 
             collisionWorld, 
             characterControls, 
             animationCurveDeltas, 
@@ -1074,6 +1079,7 @@ public struct BulletInstance : IBufferElementData
 
     private Entity __Apply(
         in Entity entity, 
+        in Entity prefabRoot, 
         in CollisionWorld collisionWorld,
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,

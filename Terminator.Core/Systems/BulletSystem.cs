@@ -272,6 +272,7 @@ public partial struct BulletSystem : ISystem
                         characterControls,
                         animationCurveDeltas,
                         ref definition,
+                        ref prefabLoader, 
                         ref entityManager))
                 {
                     instances.RemoveAtSwapBack(i--);

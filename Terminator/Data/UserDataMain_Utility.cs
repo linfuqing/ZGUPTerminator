@@ -1009,11 +1009,13 @@ public partial class UserDataMain
                         ref var accessorySlot = ref _accessorySlots[i];
                         if(accessorySlot.styleName != accessory.styleName)
                             continue;
-                        
-                        level = Mathf.Max(level, PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
+
+                        level = Mathf.Max(level,
+                            PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
                     }
 
-                    int numAttributes = attributes.Count, accessoryStyleIndex = __GetAccessoryStyleIndex(accessory.styleName);
+                    int numAttributes = attributes.Count,
+                        accessoryStyleIndex = __GetAccessoryStyleIndex(accessory.styleName);
                     ref var accessoryStyle = ref _accessoryStyles[accessoryStyleIndex];
                     for(i = 0; i < numAttributes ; ++i)
                     {
