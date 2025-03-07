@@ -76,9 +76,14 @@ public struct SkillDefinition
             skillActiveIndex = skillActiveIndices[i];
             ref var skill = ref skills[skillActiveIndex.value];
             ref var status = ref states.ElementAt(skillActiveIndex.value);
-            
-            if (status.cooldown > time)
-                continue;
+
+            if (status.cooldown > math.DBL_MIN_NORMAL)
+            {
+                if (status.cooldown > time)
+                    continue;
+            }
+            else
+                status.cooldown = time;
 
             numBulletIndices = skill.bulletIndices.Length;
 
@@ -164,7 +169,7 @@ public struct SkillDefinition
                             {
                                 ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
                                 bulletStatus.cooldown =
-                                    status.cooldown + bulletDefinition.bullets[bullet.index].startTime;
+                                    time + bulletDefinition.bullets[bullet.index].startTime;
                                 bulletStatus.times = 0;
                                 bulletStatus.count = 0;
                                 bulletStatus.version = 0;
