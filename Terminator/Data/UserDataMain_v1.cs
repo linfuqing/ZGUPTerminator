@@ -190,6 +190,8 @@ public partial class UserDataMain
         var flag = UserDataMain.flag;
         if ((flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst)
             result.flag |= IUserData.Purchases.Flag.FirstUnlock;
+        else if ((flag & Flag.PurchasesUnlock) != 0)
+            result.flag |= IUserData.Purchases.Flag.Unlock;
         
         result.diamond = PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
 
@@ -494,6 +496,8 @@ public partial class UserDataMain
         var flag = UserDataMain.flag;
         if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
             result.flag |= IUserData.Cards.Flag.FirstUnlock;
+        else if ((flag & Flag.CardsUnlock) != 0)
+            result.flag |= IUserData.Cards.Flag.Unlock;
         
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
 
@@ -1147,6 +1151,8 @@ public partial class UserDataMain
         
         if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
             result.flag |= IUserData.Roles.Flag.RoleUnlock;
+        else if ((flag & Flag.RoleUnlock) != 0)
+            result.flag |= IUserData.Roles.Flag.Unlock;
         
         bool isCreated = (flag & Flag.RolesCreated) != Flag.RolesCreated;
 
