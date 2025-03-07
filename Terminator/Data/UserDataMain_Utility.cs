@@ -402,7 +402,7 @@ public partial class UserDataMain
         switch (reward.type)
         {
             case UserRewardType.PurchasePoolKey:
-                if ((flag & Flag.PurchasesUnlock) != 0)
+                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.level > 0)
                     UserDataMain.flag |= Flag.PurchasesUnlock;
                 
                 id = 1;
@@ -414,7 +414,7 @@ public partial class UserDataMain
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
                 break;
             case UserRewardType.Card:
-                if ((flag & Flag.CardsUnlock) != 0 && (flag & Flag.CardsCreated) == 0)
+                if ((flag & Flag.CardsUnlock) == 0 && UserData.level > 0)//(flag & Flag.CardsCreated) == 0)
                     UserDataMain.flag |= Flag.CardsUnlock;
                 
                 id = __ToID(__GetCardIndex(reward.name));
@@ -437,7 +437,7 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
                 break;
             case UserRewardType.Accessory:
-                if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RolesCreated) == 0)
+                if ((flag & Flag.RolesUnlock) == 0 && UserData.level > 0)//(flag & Flag.RolesCreated) == 0)
                     UserDataMain.flag |= Flag.RolesUnlock;
                 
                 uint accessoryID = (uint)Random.Range(int.MinValue, int.MaxValue);
