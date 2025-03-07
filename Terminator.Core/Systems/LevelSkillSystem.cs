@@ -189,7 +189,7 @@ public partial struct LevelSkillPickableSystem : ISystem
     private ComponentTypeHandle<LevelSkillPickable> __instanceType;
 
     private ComponentLookup<LevelSkillVersion> __versions;
-    private ComponentLookup<LevelSkillDefinitionData> __defintions;
+    private ComponentLookup<LevelSkillDefinitionData> __definitions;
 
     private BufferLookup<LevelSkill> __skills;
 
@@ -209,7 +209,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         __instanceType = state.GetComponentTypeHandle<LevelSkillPickable>(true);
         
         __versions = state.GetComponentLookup<LevelSkillVersion>();
-        __defintions = state.GetComponentLookup<LevelSkillDefinitionData>(true);
+        __definitions = state.GetComponentLookup<LevelSkillDefinitionData>(true);
         __skills = state.GetBufferLookup<LevelSkill>();
         __skillGroups = state.GetBufferLookup<LevelSkillGroup>(true);
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>(true);
@@ -250,7 +250,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         var jobHandle = collect.ScheduleParallelByRef(__group, state.Dependency);
 
         __versions.Update(ref state);
-        __defintions.Update(ref state);
+        __definitions.Update(ref state);
         __skills.Update(ref state);
         __skillGroups.Update(ref state);
         __skillActiveIndices.Update(ref state);
@@ -258,7 +258,7 @@ public partial struct LevelSkillPickableSystem : ISystem
         Select select;
         select.time = time;
         select.entity = SystemAPI.TryGetSingletonEntity<LevelSkillDefinitionData>(out Entity entity) ? entity : Entity.Null;
-        select.definitions = __defintions;
+        select.definitions = __definitions;
         select.skillActiveIndices = __skillActiveIndices;
         select.skillGroups = __skillGroups;
         select.skills = __skills;

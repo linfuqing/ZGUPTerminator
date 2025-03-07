@@ -93,6 +93,9 @@ public class RewardManager : MonoBehaviour
             if (!__rewardIndices.TryGetValue(rewardValue.name, out rewardIndex))
                 continue;
 
+            if (__instances == null)
+                __instances = new Dictionary<int, Instance>();
+
             if (__instances.TryGetValue(rewardIndex, out instance))
             {
                 instance.count += rewardValue.count;
