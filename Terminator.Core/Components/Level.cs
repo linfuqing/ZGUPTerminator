@@ -196,7 +196,7 @@ public struct LevelStageOption
             case Type.SpawnerTime:
                 spawnerTime = value * 1000.0f;
                 
-                spawnerStates.Clear();
+                //spawnerStates.Clear();
                 break;
             case Type.SpawnerLayerMaskInclude:
                 spawnerLayerMaskInclude.value = value;
