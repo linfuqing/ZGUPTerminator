@@ -1300,7 +1300,7 @@ public partial struct EffectSystem : ISystem
                     if(isCharacter && (result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
                         chunk.SetComponentEnabled(ref characterBodyType, i, true);
                     
-                    if((result & EnabledFlags.Invincible) == EnabledFlags.Invincible)
+                    if((result & EnabledFlags.Invincible) != EnabledFlags.Invincible)
                         chunk.SetComponentEnabled(ref targetHPType, i, false);
                 }
 

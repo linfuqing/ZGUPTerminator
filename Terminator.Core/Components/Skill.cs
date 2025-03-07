@@ -70,7 +70,7 @@ public struct SkillDefinition
             layerMaskExclude = 0, 
             preIndex,
             i, j, k;
-        bool isCooldown, isChanged, result = false;
+        bool isCooldown, isChanged, isReload, result = false;
         for (i = 0; i < numActiveIndices; ++i)
         {
             skillActiveIndex = skillActiveIndices[i];
@@ -110,6 +110,8 @@ public struct SkillDefinition
                     status.cooldown = time;
 
                 isChanged = SkillMessageType.Cooldown == status.messageType;
+
+                isReload = true;
             }
             else
             {
@@ -117,7 +119,7 @@ public struct SkillDefinition
                 if (value > math.FLT_MIN_NORMAL)
                 {
                     status.cooldown = time + value;
-                    
+
                     isChanged = false;
                 }
                 else
@@ -128,6 +130,8 @@ public struct SkillDefinition
 
                     isChanged = true;
                 }
+                
+                isReload = false;
             }
             
             if (isChanged)
@@ -159,21 +163,22 @@ public struct SkillDefinition
                     if (rage < skill.rage)
                         isCooldown = false;
                     else
-                    {
                         rage -= skill.rage;
-                        
-                        for (j = 0; j < numBulletIndices; ++j)
+                }
+
+                if (isCooldown && isReload)
+                {
+                    for (j = 0; j < numBulletIndices; ++j)
+                    {
+                        ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                        if (bullet.index < bulletStates.Length)
                         {
-                            ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                            if (bullet.index < bulletStates.Length)
-                            {
-                                ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                                bulletStatus.cooldown =
-                                    time + bulletDefinition.bullets[bullet.index].startTime;
-                                bulletStatus.times = 0;
-                                bulletStatus.count = 0;
-                                bulletStatus.version = 0;
-                            }
+                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                            bulletStatus.cooldown =
+                                time + bulletDefinition.bullets[bullet.index].startTime;
+                            bulletStatus.times = 0;
+                            bulletStatus.count = 0;
+                            bulletStatus.version = 0;
                         }
                     }
                 }
