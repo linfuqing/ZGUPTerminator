@@ -155,7 +155,7 @@ public partial class LevelManager
     {
         if (value == null)
         {
-            if (!__activeSkillNames.Remove((index, level)))
+            if (!__skillActiveNames.Remove((index, level)))
             {
                 Debug.LogError($"Skill {name} has not been active in the level {level} of {index}");
 
@@ -167,10 +167,10 @@ public partial class LevelManager
         }
         else
         {
-            if (__activeSkillNames == null)
-                __activeSkillNames = new Dictionary<(int, int), string>();
+            if (__skillActiveNames == null)
+                __skillActiveNames = new Dictionary<(int, int), string>();
 
-            __activeSkillNames[(index, level)] = name;
+            __skillActiveNames[(index, level)] = name;
 
             IAnalytics.instance?.SetActiveSkill(value.Value.name);
             

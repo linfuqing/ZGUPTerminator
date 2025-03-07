@@ -79,8 +79,6 @@ public partial class LevelManager
     private List<ResultSkillStyle> __resultSkillStyles;
     private Dictionary<string, LevelSkillStyle> __skillStyles;
 
-    public const string NAME_SPACE_SKILL_SELECTION_TIMES = "LevelManagerSkillSelectionTimes";
-
     public bool isClear => __gameObjectsToDestroy == null || __gameObjectsToDestroy.Count < 1;
     
     public bool isEndOfSkillSelection => (__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End;
@@ -200,10 +198,7 @@ public partial class LevelManager
                     style = Instantiate(style.child, style.child.transform.parent);
                 }
 
-                string key = NAME_SPACE_SKILL_SELECTION_TIMES + source. /*value.*/name;
-                int times = PlayerPrefs.GetInt(key);
-
-                if (times == 0 && 
+                if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) && 
                     (guideIndex == -1 || guidePriority < source.value.flag) &&
                     _skillSelectionGuides != null &&
                     Array.IndexOf(_skillSelectionGuides, source.name) != -1)
@@ -218,7 +213,10 @@ public partial class LevelManager
 
                     style.button.onClick.AddListener(() =>
                     {
-                        PlayerPrefs.SetInt(key, ++times);
+                        if (__skillSelectionGuideNames == null)
+                            __skillSelectionGuideNames = new HashSet<string>();
+
+                        __skillSelectionGuideNames.Add(source.name);
 
                         destination.onDisable.Invoke();
 

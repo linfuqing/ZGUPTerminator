@@ -27,6 +27,7 @@ public partial struct EffectSystem : ISystem
         Drop = 0x08,
         Die = 0x10,
         Recovery = 0x20, 
+        Invincible = 0x40
     }
     
     private struct DamageInstance
@@ -656,7 +657,7 @@ public partial struct EffectSystem : ISystem
             return enabledFlags;
         }
 
-        public void __Drop(
+        private void __Drop(
             in RigidTransform transform, 
             in Entity parent, 
             in EffectDamage instanceDamage, 
@@ -930,14 +931,14 @@ public partial struct EffectSystem : ISystem
                 var instance = instances[index];
 
                 int damage, damageLayerMask;
-                
+
                 var targetHP = targetHPs[index];
                 if (targetHP.value != 0)
                 {
                     damage = 0;
 
                     damageLayerMask = targetHP.layerMask;
-                    
+
                     target.hp += targetHP.value;
 
                     target.invincibleTime = time + instance.recoveryInvincibleTime;
@@ -951,9 +952,9 @@ public partial struct EffectSystem : ISystem
                     damageLayerMask = targetDamage.layerMask;
 
                     damage = (int)math.ceil(targetDamage.value *
-                                                (index < targetDamageScales.Length
-                                                    ? targetDamageScales[index].value
-                                                    : 1.0f));
+                                            (index < targetDamageScales.Length
+                                                ? targetDamageScales[index].value
+                                                : 1.0f));
                     if (damage > 0 && index < targetInvulnerabilityStates.Length)
                     {
                         bool isInvulnerability;
@@ -1038,8 +1039,8 @@ public partial struct EffectSystem : ISystem
 
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
-                if (index < targetMessages.Length && 
-                    (targetHP.value != 0 && targetHP.layerMask != 0 || 
+                if (index < targetMessages.Length &&
+                    (targetHP.value != 0 && targetHP.layerMask != 0 ||
                      damage != 0 && damageLayerMask != 0))
                 {
                     float3 position = localToWorlds[index].Position;
@@ -1143,7 +1144,7 @@ public partial struct EffectSystem : ISystem
                         if (target.times > 0 && instance.recoveryChance > random.NextFloat())
                         {
                             result |= EnabledFlags.Recovery;
-                            
+
                             --target.times;
 
                             target.invincibleTime = time + instance.recoveryTime;
@@ -1178,6 +1179,8 @@ public partial struct EffectSystem : ISystem
 
                 targetHPs[index] = targetHP;
             }
+            else
+                result |= EnabledFlags.Invincible;
 
             targetDamages[index] = default;
 
@@ -1297,7 +1300,8 @@ public partial struct EffectSystem : ISystem
                     if(isCharacter && (result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
                         chunk.SetComponentEnabled(ref characterBodyType, i, true);
                     
-                    chunk.SetComponentEnabled(ref targetHPType, i, false);
+                    if((result & EnabledFlags.Invincible) == EnabledFlags.Invincible)
+                        chunk.SetComponentEnabled(ref targetHPType, i, false);
                 }
 
                 chunk.SetComponentEnabled(ref targetDamageType, i, false);

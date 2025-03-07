@@ -91,9 +91,6 @@ public class GameMain : GameUser
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
 
-    //private uint __id;
-    private string __defaultSceneName;
-
     public IAssetBundleFactory factory
     {
         get;
@@ -211,7 +208,7 @@ public class GameMain : GameUser
     {
         Shared.onActivated -= __OnActivated;
         
-        __defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
+        //__defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
 
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.Activate(Shared.channelName, Shared.channelUser);
@@ -227,53 +224,41 @@ public class GameMain : GameUser
 
     private IEnumerator __Init()
     {
-        GameSceneActivation activation;
-        if (string.IsNullOrEmpty(__defaultSceneName))
-        {
-            activation = null;
-            __defaultSceneName = GameConstantManager.Get(DefaultSceneName);
-        }
-        else
-        {
-            yield return IUserData.instance.QueryUser(Shared.channelName, Shared.channelUser, __OnApplyLevel);
-            //yield return IUserData.instance.QuerySkills(__id, __OnApplySkills);
-            
-            activation = new GameSceneActivation();
-            
-            var analytics = IAnalytics.instance as IAnalyticsEx;
-            analytics?.StartLevel(__defaultSceneName);
-        }
+        string defaultSceneName = null;
+        GameSceneActivation activation = null;
+        yield return IUserData.instance.QueryUser(
+            Shared.channelName, 
+            Shared.channelUser,
+            (x, y) =>
+            {
+                (IAnalytics.instance as IAnalyticsEx)?.Login(y);
+        
+                switch (x)
+                {
+                    case IUserData.UserStatus.Guide:
+                        defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
+
+                        activation = new GameSceneActivation();
+                
+                        var analytics = IAnalytics.instance as IAnalyticsEx;
+                        analytics?.StartLevel(defaultSceneName);
+                        break;
+                    default:
+                        defaultSceneName = GameConstantManager.Get(DefaultSceneName);
+                        break;
+                }
+
+                ILevelData.instance = new GameLevelData(y);
+            });
 
         yield return GameAssetManager.instance.Init(
-            __defaultSceneName, 
+            defaultSceneName, 
             GameConstantManager.Get(AssetScenePath), 
                 GameConstantManager.Get(AssetPath), 
                     GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
             factory, 
             activation);
     }
-
-    private void __OnApplyLevel(uint id)
-    {
-        (IAnalytics.instance as IAnalyticsEx)?.Login(id);
-
-        //__id = id;
-        ILevelData.instance = new GameLevelData(id);
-    }
-
-    /*private void __OnApplySkills(Memory<UserSkill> skills)
-    {
-        ref var skillGroups = ref LevelPlayerShared.skillGroups;
-        skillGroups.Clear();
-
-        LevelPlayerSkillGroup skillGroup;
-        foreach (var skill in skills.Span)
-        {
-            skillGroup.name = skill.name;
-            skillGroups.Add(skillGroup);
-        }
-
-    }*/
 
     private void __OnConfirmCancel()
     {

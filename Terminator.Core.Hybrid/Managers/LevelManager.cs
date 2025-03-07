@@ -65,7 +65,9 @@ public partial class LevelManager : MonoBehaviour
 
     private List<GameObject> __gameObjectsToDestroy;
 
-    private Dictionary<(int, int), string> __activeSkillNames;
+    private Dictionary<(int, int), string> __skillActiveNames;
+    
+    private HashSet<string> __skillSelectionGuideNames;
 
     private HashSet<int> __stages;
 
@@ -146,10 +148,10 @@ public partial class LevelManager : MonoBehaviour
         {
             if (!isRestart && stage > __stage)
             {
-                int numActiveSkillNames = __activeSkillNames == null ? 0 : __activeSkillNames.Count;
-                var activeSkillNames = numActiveSkillNames > 0 ? new string[numActiveSkillNames] : null;
-                if(numActiveSkillNames > 0)
-                    __activeSkillNames.Values.CopyTo(activeSkillNames, 0);
+                int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
+                var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
+                if(numSkillActiveNames > 0)
+                    __skillActiveNames.Values.CopyTo(skillActiveNames, 0);
 
                 var levelData = ILevelData.instance;
                 if (levelData != null)
@@ -160,7 +162,7 @@ public partial class LevelManager : MonoBehaviour
                         rage, 
                         exp,
                         maxExp,
-                        activeSkillNames,
+                        skillActiveNames,
                         __OnStageChanged));
             }
 
@@ -170,7 +172,12 @@ public partial class LevelManager : MonoBehaviour
         }
 
         if (isRestart)
+        {
             __dataFlag = 0;
+            
+            if(__skillSelectionGuideNames != null)
+                __skillSelectionGuideNames.Clear();
+        }
     }
 
     public bool EnableStage(string name)
