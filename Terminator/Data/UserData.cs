@@ -99,7 +99,7 @@ public struct UserTalent
 
 public partial interface IUserData : IGameUserData
 {
-    public enum UserStatus
+    public enum Status
     {
         Normal, 
         Guide
@@ -132,7 +132,7 @@ public partial interface IUserData : IGameUserData
     IEnumerator QueryUser(
         string channelName, 
         string channelUser, 
-        Action<UserStatus, uint> onComplete);
+        Action<Status, uint> onComplete);
     
     IEnumerator QueryUser(
         string channelName, 
@@ -251,7 +251,7 @@ public partial class UserData : MonoBehaviour, IUserData
     public IEnumerator QueryUser(
         string channelName,
         string channelUser,
-        Action<IUserData.UserStatus, uint> onComplete)
+        Action<IUserData.Status, uint> onComplete)
     {
         yield return null;
 
@@ -263,7 +263,7 @@ public partial class UserData : MonoBehaviour, IUserData
 
         UserData.levelCache = levelCache;
 
-        onComplete(level > 0 ? IUserData.UserStatus.Normal : IUserData.UserStatus.Guide, id);
+        onComplete(level > 0 ? IUserData.Status.Normal : IUserData.Status.Guide, id);
     }
     
     public IEnumerator SubmitLevel(

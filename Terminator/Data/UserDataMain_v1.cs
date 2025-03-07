@@ -189,7 +189,7 @@ public partial class UserDataMain
 
         var flag = UserDataMain.flag;
         if ((flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst)
-            result.flag |= IUserData.Purchases.Flag.FirstUnlock;
+            result.flag |= IUserData.Purchases.Flag.UnlockFirst;
         else if ((flag & Flag.PurchasesUnlock) != 0)
             result.flag |= IUserData.Purchases.Flag.Unlock;
         
@@ -495,7 +495,7 @@ public partial class UserDataMain
 
         var flag = UserDataMain.flag;
         if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
-            result.flag |= IUserData.Cards.Flag.FirstUnlock;
+            result.flag |= IUserData.Cards.Flag.UnlockFirst;
         else if ((flag & Flag.CardsUnlock) != 0)
             result.flag |= IUserData.Cards.Flag.Unlock;
         
@@ -1141,18 +1141,23 @@ public partial class UserDataMain
 
         var flag = UserDataMain.flag;
         if ((flag & Flag.RolesUnlockFirst) == Flag.RolesUnlockFirst)
-            result.flag |= IUserData.Roles.Flag.FirstUnlock;
-        else if ((flag & Flag.RoleUnlock) == 0 && (flag & Flag.RolesUnlock) != 0)
+            result.flag |= IUserData.Roles.Flag.UnlockFirst;
+        else if ((flag & Flag.RolesUnlock) != 0)
         {
-            flag |= Flag.RoleUnlock;
+            result.flag |= IUserData.Roles.Flag.Unlock;
             
-            UserDataMain.flag = flag;
+            if ((flag & Flag.RoleUnlock) == 0)
+            {
+                flag |= Flag.RoleUnlock;
+
+                UserDataMain.flag = flag;
+            }
         }
         
         if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
-            result.flag |= IUserData.Roles.Flag.RoleUnlock;
+            result.flag |= IUserData.Roles.Flag.RoleUnlockFirst;
         else if ((flag & Flag.RoleUnlock) != 0)
-            result.flag |= IUserData.Roles.Flag.Unlock;
+            result.flag |= IUserData.Roles.Flag.RoleUnlock;
         
         bool isCreated = (flag & Flag.RolesCreated) != Flag.RolesCreated;
 

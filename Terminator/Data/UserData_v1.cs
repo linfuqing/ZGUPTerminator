@@ -334,7 +334,7 @@ public partial interface IUserData
         public enum Flag
         {
             Unlock = 0x01, 
-            FirstUnlock = 0x02 | Unlock, 
+            UnlockFirst = 0x02 | Unlock, 
         }
 
         public struct PoolKey
@@ -367,7 +367,7 @@ public partial interface IUserData
         public enum Flag
         {
             Unlock = 0x01, 
-            FirstUnlock = 0x02 | Unlock
+            UnlockFirst = 0x02 | Unlock
         }
 
         /// <summary>
@@ -405,9 +405,11 @@ public partial interface IUserData
         {
             Unlock = 0x01, 
 
-            FirstUnlock = 0x02 | Unlock, 
+            UnlockFirst = 0x02 | Unlock, 
             
-            RoleUnlock = 0x04
+            RoleUnlock = 0x04, 
+            
+            RoleUnlockFirst = 0x08
         }
 
         public Flag flag;

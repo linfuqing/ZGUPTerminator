@@ -235,7 +235,7 @@ public class GameMain : GameUser
         
                 switch (x)
                 {
-                    case IUserData.UserStatus.Guide:
+                    case IUserData.Status.Guide:
                         defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
 
                         activation = new GameSceneActivation();
