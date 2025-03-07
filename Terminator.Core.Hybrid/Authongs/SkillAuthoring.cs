@@ -212,7 +212,10 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
         public override void Bake(SkillAuthoring authoring)
         {
             SkillDefinitionData instance;
-            int i, j, numSkills = authoring._skills.Length, numMessages = authoring._messages == null ? 0 : authoring._messages.Length;
+            int i, j, 
+                numSkills = authoring._skills.Length, 
+                numMessages = authoring._messages == null ? 0 : authoring._messages.Length, 
+                numAttributeMessages = (authoring._attributeParameter == null ? 0 : 1);
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
                 var bulletAuthoring = GetComponent<BulletAuthoring>();
@@ -284,7 +287,9 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     }
 
                     numMessageIndices = source.messageNames == null ? 0 : source.messageNames.Length;
-                    messageIndices = builder.Allocate(ref destination.messageIndices, numMessageIndices);
+                    messageIndices = builder.Allocate(
+                        ref destination.messageIndices, 
+                        numMessageIndices + (source.rage > Mathf.Epsilon ? numAttributeMessages : 0));
                     for (j = 0; j < numMessageIndices; ++j)
                     {
                         messageIndices[j] = -1;
@@ -303,6 +308,9 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                         if (messageIndices[j] == -1)
                             Debug.LogError($"Message {messageName} of skill {source.name} can not been found!");
                     }
+
+                    if (source.rage > Mathf.Epsilon && numAttributeMessages > 0)
+                        messageIndices[numMessageIndices] = numMessages;
 
                     numPreIndices = source.preNames == null ? 0 : source.preNames.Length;
                     preIndices = builder.Allocate(ref destination.preIndices, numPreIndices);
@@ -371,7 +379,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             AddComponent<SkillStatus>(entity);
 
             var messages = AddBuffer<SkillMessage>(entity);
-            messages.ResizeUninitialized(numMessages + (authoring._attributeParameter == null ? 0 : 1));
+            messages.ResizeUninitialized(numMessages + numAttributeMessages);
             for (i = 0; i < numMessages; ++i)
             {
                 ref var source = ref authoring._messages[i];
