@@ -895,9 +895,9 @@ public partial class UserDataMain
                 foreach (var roleSkillName in role.skillNames)
                 {
                     skillGroupName = __GetSkillGroupName(roleSkillName);
-                    if (string.IsNullOrEmpty(skillGroupName))
-                        __skillNameToInfos.Add(roleSkillName, info);
-                    else
+                    if (!string.IsNullOrEmpty(skillGroupName))
+                        /*__skillNameToInfos.Add(roleSkillName, info);
+                    else*/
                     {
                         skillNames = __GetSkillGroupSkillNames(skillGroupName);
                         
