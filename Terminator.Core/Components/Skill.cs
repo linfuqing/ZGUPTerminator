@@ -56,6 +56,7 @@ public struct SkillDefinition
         states.Resize(skills.Length, NativeArrayOptions.ClearMemory);
 
         MessageParameter messageParameter;
+        Message outputMessage;
         SkillMessage inputMessage;
         SkillActiveIndex skillActiveIndex;
         BulletActiveIndex bulletActiveIndex;
@@ -65,7 +66,6 @@ public struct SkillDefinition
             numPreIndices, 
             numBulletIndices,
             numMessageIndices,
-            messageOffset = outputMessages.IsCreated ? outputMessages.Length : -1,
             layerMaskInclude = 0, 
             layerMaskExclude = 0, 
             preIndex,
@@ -178,7 +178,7 @@ public struct SkillDefinition
             {
                 status.messageType = isCooldown ? SkillMessageType.Running : SkillMessageType.Cooldown;
                 
-                if (messageOffset >= 0)
+                if (outputMessages.IsCreated)
                 {
                     numMessageIndices = skill.messageIndices.Length;
                     if (numMessageIndices > 0)
@@ -186,10 +186,8 @@ public struct SkillDefinition
                         messageParameter.value = (int)math.round(skill.rage);
                         messageParameter.id = (int)EffectAttributeID.Rage;
                         
-                        outputMessages.ResizeUninitialized(messageOffset + numMessageIndices);
                         for (j = 0; j < numMessageIndices; ++j)
                         {
-                            ref var outputMessage = ref outputMessages.ElementAt(messageOffset + j);
                             inputMessage = inputMessages[skill.messageIndices[j]];
                             if(inputMessage.type != status.messageType)
                                 continue;
@@ -214,9 +212,9 @@ public struct SkillDefinition
                             }
                             else
                                 outputMessage.key = 0;
-                        }
 
-                        messageOffset += numMessageIndices;
+                            outputMessages.Add(outputMessage);
+                        }
                     }
                 }
             }
