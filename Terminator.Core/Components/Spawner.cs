@@ -167,9 +167,10 @@ public struct SpawnerDefinition
 
     public void Update(
         int layerMask,
-        float time,
+        double time, 
         in float3 playerPosition,
         in Entity entity,
+        in SpawnerTime spawnerTime, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
         //in ComponentLookup<PrefabLoadResult> prefabLoadResults,
@@ -182,23 +183,7 @@ public struct SpawnerDefinition
         ref Random random, 
         ref int instanceCount)
     {
-        int /*numStates = states.Length, */numSpawners = this.spawners.Length;
-        /*if (numStates < numPrefabs)
-        {
-            states.Resize(numPrefabs, NativeArrayOptions.UninitializedMemory);
-
-            SpawnerStatus status;
-            status.times = 0;
-            status.count = 0;
-            for (int i = numStates; i < numPrefabs; ++i)
-            {
-                ref var prefab = ref this.prefabs[i];
-                status.cooldown = time + prefab.startTime;
-                status.time = time + prefab.endTime;
-
-                states[i] = status;
-            }
-        }*/
+        int numSpawners = this.spawners.Length;
         states.Resize(numSpawners, NativeArrayOptions.ClearMemory);
         entityCounts.Resize(numSpawners, NativeArrayOptions.ClearMemory);
 
@@ -212,6 +197,7 @@ public struct SpawnerDefinition
                 time,
                 playerPosition,
                 entity,
+                spawnerTime, 
                 collisionWorld,
                 colliders, 
                 entities, 
@@ -229,9 +215,10 @@ public struct SpawnerDefinition
     public bool Update(
         int index, 
         int layerMask, 
-        float time, 
+        double time, 
         in float3 playerPosition, 
         in Entity entity, 
+        in SpawnerTime spawnerTime, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities, 
@@ -251,11 +238,12 @@ public struct SpawnerDefinition
             return false;
         }
 
+        float currentTime = (float)(time - spawnerTime.value);//(float)(time - status.startTime);
         /*if (status.startTime < math.DBL_MIN_NORMAL)
             status.startTime = time;*/
 
-        if (/*status.startTime + */data.startTime > time || 
-            data.endTime > math.FLT_MIN_NORMAL && /*status.startTime + */data.endTime < time)
+        if (/*status.startTime + */data.startTime > currentTime || 
+            data.endTime > math.FLT_MIN_NORMAL && /*status.startTime + */data.endTime < currentTime)
             return false;
         
         float chance = random.NextFloat();
@@ -279,20 +267,20 @@ public struct SpawnerDefinition
         if (!prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
             return false;
 
+        /*if (spawnerTime.version != status.version)
+        {
+            status = default;
+            
+            status.version = spawnerTime.version;
+        }*/
+
         SpawnerEntity spawnerEntity;
         spawnerEntity.spawner = entity;
         spawnerEntity.spawnerIndex = index;
         spawnerEntity.loaderIndex = i;
         
         int entityCount = entities.CountValuesForKey(spawnerEntity) + count.value;
-        /*if (status.cooldown > time && entityCount >= data.maxCountToNextTime)
-            return false;*/
-
-        /*if (status.count == 0 && data.minCountToNextTime > 0 && entityCount > data.minCountToNextTime)
-            return false;*/
-
         bool result = false;
-        float currentTime = time;//(float)(time - status.startTime);
         while(status.cooldown < time || status.count == 0 && entityCount < data.maxCountToNextTime)
         {
             if (status.count < data.countPerTime)
@@ -337,7 +325,7 @@ public struct SpawnerDefinition
             else
                 break;
             
-        } //while (status.cooldown < time);
+        }
 
         return result;
     }
@@ -494,6 +482,7 @@ public struct SpawnerLayerMask : IComponentData
 
 public struct SpawnerTime : IComponentData
 {
+    public int version;
     public double value;
 }
 
@@ -509,9 +498,10 @@ public struct SpawnerEntityCount : IBufferElementData
 
 public struct SpawnerStatus : IBufferElementData
 {
+    //public int version;
     public int count;
     public int times;
-    public float cooldown;
+    public double cooldown;
     //public double startTime;
 }
 

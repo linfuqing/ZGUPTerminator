@@ -162,19 +162,20 @@ public struct LevelStageOption
     }
     
     public void Apply(
+        double time, 
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref BlobArray<LevelDefinition.Area> areas, 
-        ref DynamicBuffer<SpawnerStatus> spawnerStates, 
-        ref float spawnerTime,
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
+        ref SpawnerTime spawnerTime,
         ref SpawnerLayerMaskInclude spawnerLayerMaskInclude, 
         ref SpawnerLayerMaskExclude spawnerLayerMaskExclude, 
         in SpawnerSingleton spawnerSingleton, 
+        //in NativeList<Entity> spawners, 
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
-        in ComponentLookup<SpawnerDefinitionData> spawners)
+        in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions)
     {
         switch (type)
         {
@@ -194,13 +195,9 @@ public struct LevelStageOption
                 status.stage = value;
                 break;
             case Type.SpawnerTime:
-                float result = value * 1000.0f, distance = result - spawnerTime;
-                
-                int numSpawnerStates = spawnerStates.Length;
-                for (int i = 0; i < numSpawnerStates; ++i)
-                    spawnerStates.ElementAt(i).cooldown += distance;
-                
-                spawnerTime = result;
+                ++spawnerTime.version;
+
+                spawnerTime.value = time + value * 1000.0f;
                 
                 //spawnerStates.Clear();
                 break;
@@ -213,21 +210,25 @@ public struct LevelStageOption
             case Type.SpawnerEntityRemaining:
                 using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                 {
+                    DynamicBuffer<SpawnerStatus> spawnerStatusBuffer;
                     SpawnerEntity spawnerEntity;
-                    SpawnerDefinitionData spawner;
+                    SpawnerDefinitionData spawnerDefinition;
                     int numKeys = spawnerEntities.Unique();
                     for (int i = 0; i < numKeys; ++i)
                     {
                         spawnerEntity = spawnerEntities[i];
-                        if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawner))
+                        if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                             continue;
 
-                        ref var definition = ref spawner.definition.Value;
+                        ref var definition = ref spawnerDefinition.definition.Value;
                         if(definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
 
                         if ((definition.spawners[spawnerEntity.spawnerIndex].layerMask & value) == 0)
                             continue;
+
+                        //if (spawnerStates.TryGetBuffer(spawnerEntity.spawner, out spawnerStatusBuffer))
+                        //    spawnerStatusBuffer.ElementAt(spawnerEntity.spawnerIndex) = default;
 
                         foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
                             entityManager.DestroyEntity(0, entity);
@@ -246,7 +247,7 @@ public struct LevelStageOption
                     for(int i = 0; i < numKeys; ++i)
                     {
                         spawnerEntity = spawnerEntities[i];
-                        if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                        if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                             continue;
 
                         ref var definition = ref spawnerDefinition.definition.Value;
@@ -272,7 +273,7 @@ public struct LevelStageOption
                 }
                 break;
             case Type.PlayerArea:
-                playerPosition += areas[value].GetPosition(ref random);
+                ZG.Mathematics.Math.InterlockedAdd(ref playerPosition, areas[value].GetPosition(ref random));
                 break;
             case Type.Millisecond:
                 //status.time += value * 1000.0f;
@@ -352,7 +353,7 @@ public struct LevelStage : IBufferElementData
 
 public struct LevelStageConditionStatus : IBufferElementData
 {
-    public int version;
+    public uint version;
     public int value;
 }
 

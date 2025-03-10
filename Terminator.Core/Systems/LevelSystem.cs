@@ -26,8 +26,6 @@ public partial struct LevelSystem : ISystem
 
         public RefRW<LocalTransform> playerTransform;
 
-        public DynamicBuffer<SpawnerStatus> spawnerStates;
-
         public Random random;
 
         [ReadOnly]
@@ -135,13 +133,13 @@ public partial struct LevelSystem : ISystem
                     for (j = 0; j < numResults; ++j)
                     {
                         stageDefinition.results[j].Apply(
+                            time, 
                             ref entityManager,
                             ref definition.areas,
-                            ref spawnerStates, 
-                            ref spawnerTime, 
                             ref playerPosition,
                             ref random,
                             ref status,
+                            ref this.spawnerTime.ValueRW, 
                             ref spawnerLayerMaskInclude,
                             ref spawnerLayerMaskExclude,
                             spawnerSingleton,
@@ -204,9 +202,6 @@ public partial struct LevelSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<SpawnerTime> spawnerTimes;
 
-        [NativeDisableParallelForRestriction]
-        public BufferLookup<SpawnerStatus> spawnerStates;
-
         [ReadOnly]
         public ComponentLookup<SpawnerLayerMaskOverride> spawnerLayerMaskOverrides;
 
@@ -240,8 +235,7 @@ public partial struct LevelSystem : ISystem
                 !spawnerLayerMaskIncludes.HasComponent(spawnerLayerMaskEntity) ||
                 !spawnerLayerMaskExcludes.HasComponent(spawnerLayerMaskEntity) || 
                 !spawnerLayerMaskOverrides.HasComponent(spawnerLayerMaskEntity) ||
-                !spawnerTimes.HasComponent(spawnerLayerMaskEntity) || 
-                !spawnerStates.HasBuffer(spawnerLayerMaskEntity))
+                !spawnerTimes.HasComponent(spawnerLayerMaskEntity))
                 return;
             
             long hash = math.aslong(time);
@@ -253,7 +247,6 @@ public partial struct LevelSystem : ISystem
             update.spawnerLayerMaskInclude = spawnerLayerMaskIncludes.GetRefRW(spawnerLayerMaskEntity);
             update.spawnerLayerMaskExclude = spawnerLayerMaskExcludes.GetRefRW(spawnerLayerMaskEntity);
             update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskEntity);
-            update.spawnerStates = spawnerStates[spawnerLayerMaskEntity];
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
@@ -283,8 +276,6 @@ public partial struct LevelSystem : ISystem
 
     private ComponentLookup<SpawnerTime> __spawnerTimes;
 
-    private BufferLookup<SpawnerStatus> __spawnerStates;
-
     private BufferLookup<SpawnerPrefab> __spawnerPrefabs;
 
     private BufferTypeHandle<LevelPrefab> __prefabType;
@@ -309,7 +300,6 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskIncludes = state.GetComponentLookup<SpawnerLayerMaskInclude>();
         __spawnerLayerMaskExcludes = state.GetComponentLookup<SpawnerLayerMaskExclude>();
         __spawnerTimes = state.GetComponentLookup<SpawnerTime>();
-        __spawnerStates = state.GetBufferLookup<SpawnerStatus>();
         __spawnerPrefabs = state.GetBufferLookup<SpawnerPrefab>(true);
         __prefabType = state.GetBufferTypeHandle<LevelPrefab>(true);
         __instanceType = state.GetComponentTypeHandle<LevelDefinitionData>(true);
@@ -339,7 +329,6 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskIncludes.Update(ref state);
         __spawnerLayerMaskExcludes.Update(ref state);
         __spawnerTimes.Update(ref state);
-        __spawnerStates.Update(ref state);
         __spawnerPrefabs.Update(ref state);
         __prefabType.Update(ref state);
         __instanceType.Update(ref state);
@@ -360,7 +349,6 @@ public partial struct LevelSystem : ISystem
         update.spawnerLayerMaskIncludes = __spawnerLayerMaskIncludes;
         update.spawnerLayerMaskExcludes = __spawnerLayerMaskExcludes;
         update.spawnerTimes = __spawnerTimes;
-        update.spawnerStates = __spawnerStates;
         update.spawnerPrefabs = __spawnerPrefabs;
         update.spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         update.spawners = __spawners;

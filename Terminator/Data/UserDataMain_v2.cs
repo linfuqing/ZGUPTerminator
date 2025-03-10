@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 public partial class UserDataMain
 {
@@ -26,6 +27,80 @@ public partial class UserDataMain
             public float unitTime;
 
             public float chance;
+            
+#if UNITY_EDITOR
+            [CSVField]
+            public string 游荡奖励名字
+            {
+                set
+                {
+                    name = value;
+                }
+            }
+            
+            [CSVField]
+            public int 游荡奖励类型
+            {
+                set
+                {
+                    type = (UserRewardType)value;
+                }
+            }
+            
+            [CSVField]
+            public int 游荡奖励最小数量
+            {
+                set
+                {
+                    minCount = value;
+                }
+            }
+            
+            [CSVField]
+            public int 游荡奖励最大数量
+            {
+                set
+                {
+                    maxCount = value;
+                }
+            }
+            
+            [CSVField]
+            public int 游荡奖励最小章节
+            {
+                set
+                {
+                    minLevel = value;
+                }
+            }
+            
+            [CSVField]
+            public int 游荡奖励最大章节
+            {
+                set
+                {
+                    maxLevel = value;
+                }
+            }
+            
+            [CSVField]
+            public float 游荡奖励刷新时间
+            {
+                set
+                {
+                    unitTime = value;
+                }
+            }
+            
+            [CSVField]
+            public float 游荡奖励刷新概率
+            {
+                set
+                {
+                    chance = value;
+                }
+            }
+#endif
         }
 
         public double maxTime;

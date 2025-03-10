@@ -10,10 +10,10 @@ using Unity.Transforms;
 
 public struct SpawnerSingleton : IComponentData
 {
-    public int version;
+    public uint version;
     
     public NativeArray<int> instanceCount;
-
+    
     public NativeParallelMultiHashMap<SpawnerEntity, Entity> entities;
 }
 
@@ -75,7 +75,7 @@ public partial struct SpawnerRecountSystem : ISystem
         }
     }
 
-    private int __version;
+    private uint __version;
     
     private EntityTypeHandle __entityType;
     private ComponentTypeHandle<SpawnerEntity> __spawnerEntityType;
@@ -125,8 +125,8 @@ public partial struct SpawnerRecountSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        int version = __entityGroup.GetCombinedComponentOrderVersion(false);
-        if (version != __version)
+        uint version = (uint)__entityGroup.GetCombinedComponentOrderVersion(false);
+        if (ChangeVersionUtility.DidChange(version, __version))
         {
             int entityCount = __entityGroup.CalculateEntityCount();
 
@@ -237,6 +237,8 @@ public partial struct SpawnerSystem : ISystem
 
         public Random random;
 
+        public SpawnerTime spawnerTime;
+
         public RefRW<Counter> instanceCount;
 
         [ReadOnly]
@@ -263,8 +265,6 @@ public partial struct SpawnerSystem : ISystem
         [ReadOnly]
         public NativeArray<SpawnerLayerMaskExclude> layerMaskExcludes;
         [ReadOnly]
-        public NativeArray<SpawnerTime> times;
-        [ReadOnly]
         public BufferAccessor<SpawnerPrefab> prefabs;
 
         public BufferAccessor<SpawnerStatus> states;
@@ -284,9 +284,10 @@ public partial struct SpawnerSystem : ISystem
             ref var definition = ref instances[index].definition.Value;
             definition.Update(
                 layerMask,
-                (float)(time - times[index].value),
+                time,
                 playerPosition,
                 entityArray[index],
+                spawnerTime, 
                 collisionWorld,
                 colliders, 
                 entities, 
@@ -305,6 +306,8 @@ public partial struct SpawnerSystem : ISystem
     {
         public double time;
         public Entity playerEntity;
+        
+        public SpawnerTime spawnerTime;
         
         [NativeDisableParallelForRestriction]
         public NativeArray<int> instanceCount;
@@ -326,8 +329,6 @@ public partial struct SpawnerSystem : ISystem
 
         [ReadOnly]
         public ComponentTypeHandle<SpawnerDefinitionData> instanceType;
-        [ReadOnly]
-        public ComponentTypeHandle<SpawnerTime> timeType;
         [ReadOnly]
         public ComponentTypeHandle<SpawnerLayerMask> layerMaskType;
         [ReadOnly]
@@ -359,12 +360,12 @@ public partial struct SpawnerSystem : ISystem
             collect.time = this.time;
             collect.playerPosition = localTransform.Position;
             collect.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)time ^ (int)(time >> 32)));
+            collect.spawnerTime = spawnerTime;
             collect.collisionWorld = collisionWorld;
             collect.colliders = colliders;
             collect.entities = entities;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
-            collect.times = chunk.GetNativeArray(ref timeType);
             collect.layerMasks = chunk.GetNativeArray(ref layerMaskType);
             collect.layerMaskOverrides = chunk.GetNativeArray(ref layerMaskOverrideType);
             collect.layerMaskIncludes = chunk.GetNativeArray(ref layerMaskIncludeType);
@@ -390,7 +391,6 @@ public partial struct SpawnerSystem : ISystem
     private EntityTypeHandle __entityType;
 
     private ComponentTypeHandle<SpawnerDefinitionData> __instanceType;
-    private ComponentTypeHandle<SpawnerTime> __timeType;
     private ComponentTypeHandle<SpawnerLayerMask> __layerMaskType;
     private ComponentTypeHandle<SpawnerLayerMaskOverride> __layerMaskOverrideType;
     private ComponentTypeHandle<SpawnerLayerMaskInclude> __layerMaskIncludeType;
@@ -415,7 +415,6 @@ public partial struct SpawnerSystem : ISystem
         __layerMasks = state.GetComponentLookup<SpawnerLayerMaskOverride>();
         __entityType = state.GetEntityTypeHandle();
         __instanceType = state.GetComponentTypeHandle<SpawnerDefinitionData>(true);
-        __timeType = state.GetComponentTypeHandle<SpawnerTime>(true);
         __layerMaskType = state.GetComponentTypeHandle<SpawnerLayerMask>(true);
         __layerMaskOverrideType = state.GetComponentTypeHandle<SpawnerLayerMaskOverride>(true);
         __layerMaskIncludeType = state.GetComponentTypeHandle<SpawnerLayerMaskInclude>(true);
@@ -432,7 +431,7 @@ public partial struct SpawnerSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToCollect = builder
-                .WithAll<SpawnerDefinitionData, SpawnerTime>()
+                .WithAll<SpawnerDefinitionData>()
                 .WithAllRW<SpawnerStatus>()
                 .Build(ref state);
 
@@ -440,6 +439,7 @@ public partial struct SpawnerSystem : ISystem
         state.RequireForUpdate<PhysicsWorldSingleton>();
         state.RequireForUpdate<SpawnerSingleton>();
         state.RequireForUpdate<SpawnerLayerMask>();
+        state.RequireForUpdate<SpawnerTime>();
         state.RequireForUpdate<ThirdPersonPlayer>();
 
         __prefabLoader = new PrefabLoader(ref state);
@@ -474,7 +474,6 @@ public partial struct SpawnerSystem : ISystem
         __colliders.Update(ref state);
         __localTransforms.Update(ref state);
         __instanceType.Update(ref state);
-        __timeType.Update(ref state);
         __layerMaskType.Update(ref state);
         __layerMaskOverrideType.Update(ref state);
         __layerMaskIncludeType.Update(ref state);
@@ -489,6 +488,7 @@ public partial struct SpawnerSystem : ISystem
         CollectEx collect;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
+        collect.spawnerTime = SystemAPI.GetSingleton<SpawnerTime>();
         collect.instanceCount = spawnerSingleton.instanceCount;
         collect.entities = spawnerSingleton.entities;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
@@ -496,7 +496,6 @@ public partial struct SpawnerSystem : ISystem
         collect.localTransforms = __localTransforms;
         collect.entityType = __entityType;
         collect.instanceType = __instanceType;
-        collect.timeType = __timeType;
         collect.layerMaskType = __layerMaskType;
         collect.layerMaskOverrideType = __layerMaskOverrideType;
         collect.layerMaskIncludeType = __layerMaskIncludeType;
