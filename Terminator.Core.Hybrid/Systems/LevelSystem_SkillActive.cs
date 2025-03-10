@@ -145,8 +145,9 @@ public partial class LevelSystemManaged
                 {
                     value = __indices[keyToRemove];
 
-                    __indices.Remove(keyToRemove);
                     __Unset(value, keyToRemove, /*descs, */ref definition, ref skillNames, manager);
+                    
+                    __indices.Remove(keyToRemove);
                 }
 
                 keysToRemove.Dispose();
