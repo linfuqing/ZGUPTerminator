@@ -149,16 +149,21 @@ public partial struct LevelSystem : ISystem
                     }
                     
                     ref var stageResultStatus = ref stageResultStates.ElementAt(i);
-                    stageResultStatus.layerMaskInclude = spawnerLayerMaskInclude.value;
-                    stageResultStatus.layerMaskExclude = spawnerLayerMaskExclude.value;
 
-                    isResultChanged = true;
+                    if (stageResultStatus.layerMaskInclude != spawnerLayerMaskInclude.value ||
+                        stageResultStatus.layerMaskExclude != spawnerLayerMaskExclude.value)
+                    {
+                        stageResultStatus.layerMaskInclude = spawnerLayerMaskInclude.value;
+                        stageResultStatus.layerMaskExclude = spawnerLayerMaskExclude.value;
+
+                        isResultChanged = true;
+                    }
                 }
             }
 
             if (isResultChanged)
             {
-                this.spawnerTime.ValueRW.value = time - spawnerTime;
+                //this.spawnerTime.ValueRW.value = time - spawnerTime;
                 
                 spawnerLayerMaskInclude.value = 0;
                 spawnerLayerMaskExclude.value = 0;
