@@ -227,7 +227,7 @@ public class TimeActivatorController : MonoBehaviour
         if (time > 0.0f)
         {
             while (__Next())
-                yield return new WaitForSeconds(time);
+                yield return new WaitForSecondsRealtime(time);
         }
         else
         {
