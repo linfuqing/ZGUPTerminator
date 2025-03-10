@@ -107,6 +107,10 @@ public partial class UserDataMain
 
         public Reward[] rewards;
 
+#if UNITY_EDITOR
+        [CSV("rewards", guidIndex = -1, nameIndex = 0)]
+        internal string _rewardsPath;
+#endif
         public IUserData.Tip instance
         {
             get
