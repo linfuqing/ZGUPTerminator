@@ -194,7 +194,13 @@ public struct LevelStageOption
                 status.stage = value;
                 break;
             case Type.SpawnerTime:
-                spawnerTime = value * 1000.0f;
+                float result = value * 1000.0f, distance = result - spawnerTime;
+                
+                int numSpawnerStates = spawnerStates.Length;
+                for (int i = 0; i < numSpawnerStates; ++i)
+                    spawnerStates.ElementAt(i).cooldown += distance;
+                
+                spawnerTime = result;
                 
                 //spawnerStates.Clear();
                 break;

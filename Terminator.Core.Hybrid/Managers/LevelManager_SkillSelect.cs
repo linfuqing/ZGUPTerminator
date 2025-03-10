@@ -155,9 +155,9 @@ public partial class LevelManager
 
         bool result = false;
         int numSkills = skills.Length;
-        var destination = _skillSelectionDatas[styleIndex];
-        if (destination.style == null)
+        if (styleIndex == -1)
         {
+            int endIndex = numSkills - 1;
             LevelSkillData skill;
             for (int i = 0; i < numSkills; ++i)
             {
@@ -165,102 +165,118 @@ public partial class LevelManager
                 if(skill.selectIndex == -1)
                     continue;
                 
-                if (destination.delayTime > 0.0f)
-                    yield return new WaitForSecondsRealtime(destination.delayTime);
-                
-                yield return __SelectSkill(destination.destroyTime, skill);
+                yield return __SelectSkill(i == endIndex, 0.0f, skill);
 
                 result = true;
             }
         }
         else
         {
-            destination.onEnable.Invoke();
-
-            int guidePriority = 0, 
-                recommendPriority = 0, 
-                guideIndex = -1, 
-                recommendIndex = -1;
-            LevelSkillStyle style;
-            for (int i = 0; i < numSkills; ++i)
+            var destination = _skillSelectionDatas[styleIndex];
+            if (destination.style == null)
             {
-                var source = skills[i];
-                if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
+                int endIndex = numSkills - 1;
+                LevelSkillData skill;
+                for (int i = 0; i < numSkills; ++i)
                 {
-                    if (source.selectIndex == -1 && destination.style.child == null)
+                    skill = skills[i];
+                    if (skill.selectIndex == -1)
                         continue;
 
-                    style = Instantiate(destination.style, destination.style.transform.parent);
-                }
-                else
-                {
-                    style = __skillStyles[source.parentName];
-                    style = Instantiate(style.child, style.child.transform.parent);
-                }
+                    yield return __SelectSkill(i == endIndex, destination.destroyTime, skill);
 
-                if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) && 
-                    (guideIndex == -1 || guidePriority < source.value.flag) &&
-                    _skillSelectionGuides != null &&
-                    Array.IndexOf(_skillSelectionGuides, source.name) != -1)
-                {
-                    guidePriority = source.value.flag;
-                    guideIndex = i;
-                }
-
-                if (style.button != null && source.selectIndex != -1)
-                {
                     result = true;
-
-                    style.button.onClick.AddListener(() =>
-                    {
-                        if (__skillSelectionGuideNames == null)
-                            __skillSelectionGuideNames = new HashSet<string>();
-
-                        __skillSelectionGuideNames.Add(source.name);
-
-                        destination.onDisable.Invoke();
-
-                        StartCoroutine(__SelectSkill(destination.destroyTime, source));
-                    });
                 }
+            }
+            else
+            {
+                destination.onEnable.Invoke();
 
-                style.SetAsset(source.value);
-
-                if (source.value.flag > 0 && (recommendIndex == -1 || recommendPriority < source.value.flag))
+                int guidePriority = 0,
+                    recommendPriority = 0,
+                    guideIndex = -1,
+                    recommendIndex = -1;
+                LevelSkillStyle style;
+                for (int i = 0; i < numSkills; ++i)
                 {
-                    recommendPriority = source.value.flag;
-                    recommendIndex = i;
+                    var source = skills[i];
+                    if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
+                    {
+                        if (source.selectIndex == -1 && destination.style.child == null)
+                            continue;
+
+                        style = Instantiate(destination.style, destination.style.transform.parent);
+                    }
+                    else
+                    {
+                        style = __skillStyles[source.parentName];
+                        style = Instantiate(style.child, style.child.transform.parent);
+                    }
+
+                    if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
+                        (guideIndex == -1 || guidePriority < source.value.flag) &&
+                        _skillSelectionGuides != null &&
+                        Array.IndexOf(_skillSelectionGuides, source.name) != -1)
+                    {
+                        guidePriority = source.value.flag;
+                        guideIndex = i;
+                    }
+
+                    if (style.button != null && source.selectIndex != -1)
+                    {
+                        result = true;
+
+                        style.button.onClick.AddListener(() =>
+                        {
+                            if (__skillSelectionGuideNames == null)
+                                __skillSelectionGuideNames = new HashSet<string>();
+
+                            __skillSelectionGuideNames.Add(source.name);
+
+                            destination.onDisable.Invoke();
+
+                            StartCoroutine(__SelectSkill(true, destination.destroyTime, source));
+                        });
+                    }
+
+                    style.SetAsset(source.value);
+
+                    if (source.value.flag > 0 && (recommendIndex == -1 || recommendPriority < source.value.flag))
+                    {
+                        recommendPriority = source.value.flag;
+                        recommendIndex = i;
+                    }
+
+                    if (__skillStyles == null)
+                        __skillStyles = new Dictionary<string, LevelSkillStyle>();
+
+                    __skillStyles.Add(source.name, style);
+
+                    if (destination.delayTime > 0.0f)
+                        yield return new WaitForSecondsRealtime(destination.delayTime);
                 }
 
-                if (__skillStyles == null)
-                    __skillStyles = new Dictionary<string, LevelSkillStyle>();
+                if (recommendIndex != -1)
+                {
+                    var skillName = skills[recommendIndex].name;
+                    style = __skillStyles[skillName];
+                    if (style.onRecommend != null)
+                        style.onRecommend.Invoke();
+                }
 
-                __skillStyles.Add(source.name, style);
+                if (guideIndex != -1)
+                {
+                    var skillName = skills[guideIndex].name;
+                    style = __skillStyles[skillName];
+                    if (style.onGuide != null)
+                        style.onGuide.Invoke();
 
-                if (destination.delayTime > 0.0f)
-                    yield return new WaitForSecondsRealtime(destination.delayTime);
-            }
-
-            if (recommendIndex != -1)
-            {
-                var skillName = skills[recommendIndex].name;
-                style = __skillStyles[skillName];
-                if (style.onRecommend != null)
-                    style.onRecommend.Invoke();
-            }
-            
-            if (guideIndex != -1)
-            {
-                var skillName = skills[guideIndex].name;
-                style = __skillStyles[skillName];
-                if (style.onGuide != null)
-                    style.onGuide.Invoke();
-
-                if (_onSkillSelectionGuide != null)
-                    _onSkillSelectionGuide.Invoke(Array.IndexOf(_skillSelectionGuides, skillName));
+                    if (_onSkillSelectionGuide != null)
+                        _onSkillSelectionGuide.Invoke(Array.IndexOf(_skillSelectionGuides, skillName));
+                }
             }
         }
-        
+
         if(result)
             yield break;
         
@@ -291,7 +307,7 @@ public partial class LevelManager
         __selectedSkillIndices.Add(value.selectIndex);*/
     }
 
-    private IEnumerator __SelectSkill(float destroyTime, LevelSkillData value)
+    private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value)
     {
         if (__skillStyles != null)
         {
@@ -347,7 +363,8 @@ public partial class LevelManager
 
         __selectedSkillIndices.Add(value.selectIndex);
         
-        __skillSelectionStatus |= SkillSelectionStatus.End;
+        if(isEnd)
+            __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
     private IEnumerator __FinishSkillSelection(SkillSelection selection)

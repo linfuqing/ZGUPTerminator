@@ -64,7 +64,7 @@ public partial struct LevelSystem : ISystem
             var stageConditionStates = this.stageConditionStates[index];
             bool isResultChanged = stageConditionStates.Length < 1;
             int conditionOffset = 0, conditionCount, numConditions, numNextStageIndices, numResults, i, j, k;
-            float spawnerTime = (float)(this.spawnerTime.ValueRO.value - time);
+            float spawnerTime = (float)(time - this.spawnerTime.ValueRO.value);
             float3 playerPosition = this.playerTransform.ValueRO.Position;
             SpawnerLayerMaskInclude spawnerLayerMaskInclude;
             SpawnerLayerMaskExclude spawnerLayerMaskExclude;
@@ -160,7 +160,7 @@ public partial struct LevelSystem : ISystem
 
             if (isResultChanged)
             {
-                this.spawnerTime.ValueRW.value = spawnerTime + time;
+                this.spawnerTime.ValueRW.value = time - spawnerTime;
                 
                 spawnerLayerMaskInclude.value = 0;
                 spawnerLayerMaskExclude.value = 0;
