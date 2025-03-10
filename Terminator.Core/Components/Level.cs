@@ -210,7 +210,6 @@ public struct LevelStageOption
             case Type.SpawnerEntityRemaining:
                 using (var spawnerEntities = spawnerSingleton.entities.GetKeyArray(Allocator.Temp))
                 {
-                    DynamicBuffer<SpawnerStatus> spawnerStatusBuffer;
                     SpawnerEntity spawnerEntity;
                     SpawnerDefinitionData spawnerDefinition;
                     int numKeys = spawnerEntities.Unique();

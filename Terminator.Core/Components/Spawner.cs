@@ -233,7 +233,7 @@ public struct SpawnerDefinition
     {
         if ((layerMask & data.layerMask) != data.layerMask)
         {
-            status = default;
+            //status = default;
             
             return false;
         }
@@ -267,12 +267,12 @@ public struct SpawnerDefinition
         if (!prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
             return false;
 
-        /*if (spawnerTime.version != status.version)
+        if (spawnerTime.version != status.version)
         {
             status = default;
             
             status.version = spawnerTime.version;
-        }*/
+        }
 
         SpawnerEntity spawnerEntity;
         spawnerEntity.spawner = entity;
@@ -498,7 +498,7 @@ public struct SpawnerEntityCount : IBufferElementData
 
 public struct SpawnerStatus : IBufferElementData
 {
-    //public int version;
+    public int version;
     public int count;
     public int times;
     public double cooldown;
