@@ -186,10 +186,10 @@ public partial struct LevelSystem : ISystem
                 
                 this.spawnerLayerMaskInclude.ValueRW = spawnerLayerMaskInclude;
                 this.spawnerLayerMaskExclude.ValueRW = spawnerLayerMaskExclude;
-
-                playerTransform.ValueRW.Position = playerPosition;
             }
 
+            playerTransform.ValueRW.Position = playerPosition;
+            
             states[index] = status;
         }
     }
