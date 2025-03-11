@@ -202,9 +202,13 @@ public struct LevelStageOption
                 //spawnerStates.Clear();
                 break;
             case Type.SpawnerLayerMaskInclude:
+                ++spawnerTime.version;
+                
                 spawnerLayerMaskInclude.value = value;
                 break;
             case Type.SpawnerLayerMaskExclude:
+                ++spawnerTime.version;
+                
                 spawnerLayerMaskExclude.value = value;
                 break;
             case Type.SpawnerEntityRemaining:

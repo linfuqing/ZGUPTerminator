@@ -52,6 +52,13 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
+    public struct Stage
+    {
+        public string name;
+        public string levelName;
+        public uint id;
+    }
+
     [Serializable]
     internal struct Level
     {
@@ -69,7 +76,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public static event Action<Memory<UserRewardData>> onAwake;
     
-    public static event Action<uint> onStageChanged;
+    public static event Action<Stage> onStageChanged;
     
     public event Action<int> onEnergyChanged;
 
@@ -401,7 +408,7 @@ public sealed class LoginManager : MonoBehaviour
                                 stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
                                 if (stageStyle.onTitle != null)
-                                    stageStyle.onTitle.Invoke(i.ToString());
+                                    stageStyle.onTitle.Invoke((i + 1).ToString());
 
                                 if (stage.rewardFlags == null)
                                 {
@@ -457,7 +464,13 @@ public sealed class LoginManager : MonoBehaviour
                                                 __CreateRewards(style.rewardStyle, stage.rewards);
 
                                                 if (onStageChanged != null)
-                                                    onStageChanged.Invoke(stage.id);
+                                                {
+                                                    Stage result;
+                                                    result.name = (stageIndex + 1).ToString();
+                                                    result.levelName = level.title;
+                                                    result.id = stage.id;
+                                                    onStageChanged.Invoke(result);
+                                                }
                                             }
                                         });
                                     }
