@@ -119,7 +119,7 @@ public partial class LevelSystemManaged
 
                 if (value < numActiveIndices)
                 {
-                    if (value == -1 || activeIndices[value].value != index)
+                    if (value != -1 && activeIndices[value].value != index)
                     {
                         if (!indicesToRemove.IsCreated)
                             indicesToRemove = new NativeHashMap<int, int>(1, Allocator.Temp);
