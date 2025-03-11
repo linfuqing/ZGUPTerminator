@@ -2020,7 +2020,7 @@ public partial class UserDataMain
         
         UserData.ApplyStageFlag(level.name, stage);
 
-        flag &= ~Flag.UnlockFirst;
+        //flag &= ~Flag.UnlockFirst;
 
         UserData.LevelCache levelCache;
         levelCache.name = level.name;

@@ -202,7 +202,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
         
-        flag &= ~Flag.UnlockFirst;
+        //flag &= ~Flag.UnlockFirst;
         
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
