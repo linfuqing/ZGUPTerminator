@@ -48,7 +48,7 @@ public partial class LevelSystemManaged
             //LevelSkillDesc desc;
             SkillStatus status;
             int i, level, originIndex, index, numActiveIndices = activeIndices.Length;
-            bool isComplete, isAllComplete = true;
+            bool isComplete;
             for (i = 0; i < numActiveIndices; ++i)
             {
                 index = activeIndices[i].value;
@@ -108,12 +108,10 @@ public partial class LevelSystemManaged
                         skill.cooldown,
                         skill.cooldown > cooldown ? skill.cooldown - cooldown : skill.cooldown);
                 }
-                else
-                    isAllComplete = false;
             }
 
             int value;
-            NativeList<int> keysToRemove = default;
+            NativeHashMap<int, int> indicesToRemove = default;
             foreach (var pair in __indices)
             {
                 value = pair.Value;
@@ -123,47 +121,30 @@ public partial class LevelSystemManaged
                 {
                     if (value == -1 || activeIndices[value].value != index)
                     {
-                        if (!keysToRemove.IsCreated)
-                            keysToRemove = new NativeList<int>(Allocator.Temp);
+                        if (!indicesToRemove.IsCreated)
+                            indicesToRemove = new NativeHashMap<int, int>(1, Allocator.Temp);
                     
-                        keysToRemove.Add(index);
+                        indicesToRemove.Add(index, -1);
                     }
                 }
                 else
                 {
-                    if (!keysToRemove.IsCreated)
-                        keysToRemove = new NativeList<int>(Allocator.Temp);
+                    if (!indicesToRemove.IsCreated)
+                        indicesToRemove = new NativeHashMap<int, int>(1, Allocator.Temp);
                     
-                    keysToRemove.Add(index);
+                    indicesToRemove.Add(index, value);
                 }
             }
 
-            if (keysToRemove.IsCreated)
+            if (indicesToRemove.IsCreated)
             {
-                foreach (var keyToRemove in keysToRemove)
-                {
-                    value = __indices[keyToRemove];
-
-                    __Unset(value, keyToRemove, /*descs, */ref definition, ref skillNames, manager);
-                    
-                    //__indices.Remove(keyToRemove);
-                }
-
-                if (isAllComplete)
-                {
-                    keysToRemove.Clear();
-
-                    foreach (var pair in __indices)
-                    {
-                        if (pair.Value == -1)
-                            keysToRemove.Add(pair.Key);
-                    }
-
-                    foreach (var keyToRemove in keysToRemove)
-                        __indices.Remove(keyToRemove);
-                }
+                foreach (var pair in indicesToRemove)
+                    __Unset(pair.Value, pair.Key, /*descs, */ref definition, ref skillNames, manager);
                 
-                keysToRemove.Dispose();
+                foreach (var pair in indicesToRemove)
+                    __indices.Remove(pair.Key);
+
+                indicesToRemove.Dispose();
             }
         }
 
