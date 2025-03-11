@@ -479,11 +479,11 @@ public class SpawnerAuthoring : MonoBehaviour
         }
 
         [CSVField]
-        public int 标签
+        public uint 标签
         {
             set
             {
-                layerMask = value;
+                layerMask = (int)value;
             }
         }
         
