@@ -1457,7 +1457,7 @@ public partial class UserDataMain
                 accessoryLevel = _accessoryLevels[accessoryLevelIndices[j]];
                 
                 userAccessoryStyleLevel.name = accessoryLevel.name;
-                userAccessoryStyleLevel.itemID = __ToID(__GetItemIndex(accessoryLevel.itemName));
+                userAccessoryStyleLevel.itemName = accessoryLevel.itemName;
                 userAccessoryStyleLevel.itemCount = accessoryLevel.itemCount;
                 userAccessoryStyleLevel.attributeValue = accessoryLevel.attributeValue;
                 

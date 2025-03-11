@@ -48,7 +48,7 @@ public partial class LevelSystemManaged
             //LevelSkillDesc desc;
             SkillStatus status;
             int i, level, originIndex, index, numActiveIndices = activeIndices.Length;
-            bool isComplete;
+            bool isComplete, isAllComplete = true;
             for (i = 0; i < numActiveIndices; ++i)
             {
                 index = activeIndices[i].value;
@@ -92,45 +92,44 @@ public partial class LevelSystemManaged
 
                 if (isComplete)
                 {
-                    if(level == -1)
+                    if (level == -1)
                         level = __GetLevel(
-                            activeIndices[__indices[index]].value, 
-                            index, 
-                            __indices, 
+                            activeIndices[__indices[index]].value,
+                            index,
+                            __indices,
                             ref definition);
-                    
+
                     ref var skill = ref definition.skills[index];
                     status = states[index];
-                    float cooldown = (float)(Math.Max(status.cooldown/* - skill.duration*/, time) - time);
+                    float cooldown = (float)(Math.Max(status.cooldown /* - skill.duration*/, time) - time);
                     manager.SetActiveSkill(
-                        originIndex, 
-                        level, 
+                        originIndex,
+                        level,
                         skill.cooldown,
                         skill.cooldown > cooldown ? skill.cooldown - cooldown : skill.cooldown);
                 }
+                else
+                    isAllComplete = false;
             }
 
-            bool isRemove;
-            int j, value;
+            int value;
             NativeList<int> keysToRemove = default;
             foreach (var pair in __indices)
             {
                 value = pair.Value;
                 index = pair.Key;
-                
-                isRemove = value >= numActiveIndices;
-                if (!isRemove)
+
+                if (value < numActiveIndices)
                 {
-                    for (j = 0; j < numActiveIndices; ++j)
+                    if (value == -1 || activeIndices[value].value != index)
                     {
-                        if (activeIndices[j].value == index)
-                            break;
+                        if (!keysToRemove.IsCreated)
+                            keysToRemove = new NativeList<int>(Allocator.Temp);
+                    
+                        keysToRemove.Add(index);
                     }
-
-                    isRemove = j == numActiveIndices;
                 }
-
-                if (isRemove)
+                else
                 {
                     if (!keysToRemove.IsCreated)
                         keysToRemove = new NativeList<int>(Allocator.Temp);
@@ -147,9 +146,23 @@ public partial class LevelSystemManaged
 
                     __Unset(value, keyToRemove, /*descs, */ref definition, ref skillNames, manager);
                     
-                    __indices.Remove(keyToRemove);
+                    //__indices.Remove(keyToRemove);
                 }
 
+                if (isAllComplete)
+                {
+                    keysToRemove.Clear();
+
+                    foreach (var pair in __indices)
+                    {
+                        if (pair.Value == -1)
+                            keysToRemove.Add(pair.Key);
+                    }
+
+                    foreach (var keyToRemove in keysToRemove)
+                        __indices.Remove(keyToRemove);
+                }
+                
                 keysToRemove.Dispose();
             }
         }

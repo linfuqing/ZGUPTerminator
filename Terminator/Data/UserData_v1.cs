@@ -275,9 +275,9 @@ public struct UserAccessoryStyle
         public string name;
 
         /// <summary>
-        /// 升级需要的卷轴ID
+        /// 升级需要的卷轴
         /// </summary>
-        public uint itemID;
+        public string itemName;
 
         /// <summary>
         /// 升级需要的卷轴数量
