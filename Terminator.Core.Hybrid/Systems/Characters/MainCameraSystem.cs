@@ -17,7 +17,7 @@ public partial class MainCameraSystem : SystemBase
         MainCameraScreenToWorld screenToWorld;
         screenToWorld.pixelHeight = 0.0f;
         screenToWorld.aspect = 1.0f;
-        screenToWorld.value = float4x4.identity;
+        screenToWorld.previousViewProjectionMatrix = float4x4.identity;
         EntityManager.CreateSingleton(screenToWorld);
     }
 
@@ -44,7 +44,7 @@ public partial class MainCameraSystem : SystemBase
             MainCameraScreenToWorld screenToWorld;
             screenToWorld.pixelHeight = camera.pixelHeight;
             screenToWorld.aspect = camera.aspect;
-            screenToWorld.value = camera.previousViewProjectionMatrix.inverse;
+            screenToWorld.previousViewProjectionMatrix = camera.previousViewProjectionMatrix.inverse;
             SystemAPI.SetSingleton(screenToWorld);
         }
     }
