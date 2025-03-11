@@ -142,12 +142,14 @@ public struct LevelSpawners
         __entities.Dispose();
     }
 
-    public ReadOnly AsReadOnly(ref JobHandle jobHandle)
+    public ReadOnly AsReadOnly(ref SystemState state, ref JobHandle jobHandle)
     {
         uint version = (uint)__group.GetCombinedComponentOrderVersion(true);
         if (ChangeVersionUtility.DidChange(version, __version))
         {
             __version = version;
+            
+            __entityType.Update(ref state);
             
             Resize resize;
             resize.entityType = __entityType;

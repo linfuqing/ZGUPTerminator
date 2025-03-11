@@ -380,7 +380,7 @@ public partial struct LevelSystem : ISystem
         update.deltaTime = time.DeltaTime;
         update.time = time.ElapsedTime;
         update.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
-        update.spawners = __spawners.AsReadOnly(ref jobHandle);
+        update.spawners = __spawners.AsReadOnly(ref state, ref jobHandle);
         update.localTransforms = __localTransforms;
         update.spawnerLayerMaskEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMask>();
         update.spawnerLayerMaskOverrides = __spawnerLayerMaskOverrides;
