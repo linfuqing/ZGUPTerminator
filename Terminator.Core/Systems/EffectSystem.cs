@@ -417,9 +417,6 @@ public partial struct EffectSystem : ISystem
                         statusTarget.entity = simulationEvent.entity;
                         statusTargets.Add(statusTarget);
 
-                        if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
-                            ++entityCount;
-
                         isResult = false;
 
                         if (delayDestroies.HasComponent(simulationEvent.entity))
@@ -539,6 +536,9 @@ public partial struct EffectSystem : ISystem
 
                         if (isResult)
                         {
+                            if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
+                                ++entityCount;
+
                             enabledFlags |= EnabledFlags.StatusTarget;
 
                             numMessageIndices = damage.messageIndices.Length;
