@@ -27,9 +27,11 @@ public partial struct LevelSystem : ISystem
         public RefRW<LocalTransform> playerTransform;
 
         public Random random;
+        
+        public LevelSpawners.ReadOnly spawners;
 
         [ReadOnly]
-        public ComponentLookup<SpawnerDefinitionData> spawners;
+        public ComponentLookup<SpawnerDefinitionData> spawnerDefinitions;
 
         [ReadOnly]
         public SpawnerSingleton spawnerSingleton;
@@ -49,6 +51,9 @@ public partial struct LevelSystem : ISystem
 
         public BufferAccessor<LevelStageConditionStatus> stageConditionStates;
         public BufferAccessor<LevelStageResultStatus> stageResultStates;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<SpawnerStatus> spawnerStates;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
@@ -98,9 +103,11 @@ public partial struct LevelSystem : ISystem
                                     status,
                                     spawnerLayerMaskOverride.ValueRO,
                                     spawnerSingleton,
+                                    spawners, 
                                     prefabs,
                                     spawnerPrefabs,
-                                    spawners, 
+                                    spawnerStates, 
+                                    spawnerDefinitions, 
                                     ref definition.areas,
                                     ref stageConditionStates.ElementAt(conditionOffset + k)))
                                 break;
@@ -134,6 +141,7 @@ public partial struct LevelSystem : ISystem
                     {
                         stageDefinition.results[j].Apply(
                             time, 
+                            ref spawnerStates, 
                             ref entityManager,
                             ref definition.areas,
                             ref playerPosition,
@@ -143,9 +151,10 @@ public partial struct LevelSystem : ISystem
                             ref spawnerLayerMaskInclude,
                             ref spawnerLayerMaskExclude,
                             spawnerSingleton,
+                            spawners, 
                             prefabs,
                             spawnerPrefabs,
-                            spawners);
+                            spawnerDefinitions);
                     }
                     
                     ref var stageResultStatus = ref stageResultStates.ElementAt(i);
@@ -195,6 +204,8 @@ public partial struct LevelSystem : ISystem
         
         public Entity playerEntity;
         
+        public LevelSpawners.ReadOnly spawners;
+
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalTransform> localTransforms;
 
@@ -211,7 +222,7 @@ public partial struct LevelSystem : ISystem
         public ComponentLookup<SpawnerLayerMaskOverride> spawnerLayerMaskOverrides;
 
         [ReadOnly]
-        public ComponentLookup<SpawnerDefinitionData> spawners;
+        public ComponentLookup<SpawnerDefinitionData> spawnerDefinitions;
 
         [ReadOnly]
         public BufferLookup<SpawnerPrefab> spawnerPrefabs;
@@ -231,6 +242,9 @@ public partial struct LevelSystem : ISystem
 
         public BufferTypeHandle<LevelStageConditionStatus> stageConditionStatusType;
         public BufferTypeHandle<LevelStageResultStatus> stageResultStatusType;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<SpawnerStatus> spawnerStates;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -255,6 +269,7 @@ public partial struct LevelSystem : ISystem
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
+            update.spawnerDefinitions = spawnerDefinitions;
             update.spawnerPrefabs = spawnerPrefabs;
             update.spawnerSingleton = spawnerSingleton;
             update.prefabs = chunk.GetBufferAccessor(ref prefabType);
@@ -263,6 +278,7 @@ public partial struct LevelSystem : ISystem
             update.stages = chunk.GetBufferAccessor(ref stageType);
             update.stageConditionStates = chunk.GetBufferAccessor(ref stageConditionStatusType);
             update.stageResultStates = chunk.GetBufferAccessor(ref stageResultStatusType);
+            update.spawnerStates = spawnerStates;
             update.entityManager = entityManager;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -273,13 +289,15 @@ public partial struct LevelSystem : ISystem
     }
 
     private ComponentLookup<LocalTransform> __localTransforms;
-    private ComponentLookup<SpawnerDefinitionData> __spawners;
+    private ComponentLookup<SpawnerDefinitionData> __spawnerDefinitions;
 
     private ComponentLookup<SpawnerLayerMaskOverride> __spawnerLayerMaskOverrides;
     private ComponentLookup<SpawnerLayerMaskInclude> __spawnerLayerMaskIncludes;
     private ComponentLookup<SpawnerLayerMaskExclude> __spawnerLayerMaskExcludes;
 
     private ComponentLookup<SpawnerTime> __spawnerTimes;
+
+    private BufferLookup<SpawnerStatus> __spawnerStates;
 
     private BufferLookup<SpawnerPrefab> __spawnerPrefabs;
 
@@ -296,15 +314,18 @@ public partial struct LevelSystem : ISystem
     
     private EntityQuery __group;
 
+    private LevelSpawners __spawners;
+
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __localTransforms = state.GetComponentLookup<LocalTransform>();
-        __spawners = state.GetComponentLookup<SpawnerDefinitionData>(true);
+        __spawnerDefinitions = state.GetComponentLookup<SpawnerDefinitionData>(true);
         __spawnerLayerMaskOverrides = state.GetComponentLookup<SpawnerLayerMaskOverride>(true);
         __spawnerLayerMaskIncludes = state.GetComponentLookup<SpawnerLayerMaskInclude>();
         __spawnerLayerMaskExcludes = state.GetComponentLookup<SpawnerLayerMaskExclude>();
         __spawnerTimes = state.GetComponentLookup<SpawnerTime>();
+        __spawnerStates = state.GetBufferLookup<SpawnerStatus>();
         __spawnerPrefabs = state.GetBufferLookup<SpawnerPrefab>(true);
         __prefabType = state.GetBufferTypeHandle<LevelPrefab>(true);
         __instanceType = state.GetComponentTypeHandle<LevelDefinitionData>(true);
@@ -323,13 +344,21 @@ public partial struct LevelSystem : ISystem
         state.RequireForUpdate<SpawnerSingleton>();
         state.RequireForUpdate<ThirdPersonPlayer>();
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
+
+        __spawners = new LevelSpawners(ref state);
+    }
+
+    [BurstCompile]
+    public void OnDestroy(ref SystemState state)
+    {
+        __spawners.Dispose();
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         __localTransforms.Update(ref state);
-        __spawners.Update(ref state);
+        __spawnerDefinitions.Update(ref state);
         __spawnerLayerMaskOverrides.Update(ref state);
         __spawnerLayerMaskIncludes.Update(ref state);
         __spawnerLayerMaskExcludes.Update(ref state);
@@ -341,13 +370,17 @@ public partial struct LevelSystem : ISystem
         __stageType.Update(ref state);
         __stageConditionStatusType.Update(ref state);
         __stageResultStatusType.Update(ref state);
+        __spawnerStates.Update(ref state);
 
         ref readonly var time = ref SystemAPI.Time;
+
+        var jobHandle = state.Dependency;
         
         UpdateEx update;
         update.deltaTime = time.DeltaTime;
         update.time = time.ElapsedTime;
         update.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
+        update.spawners = __spawners.AsReadOnly(ref jobHandle);
         update.localTransforms = __localTransforms;
         update.spawnerLayerMaskEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMask>();
         update.spawnerLayerMaskOverrides = __spawnerLayerMaskOverrides;
@@ -356,15 +389,16 @@ public partial struct LevelSystem : ISystem
         update.spawnerTimes = __spawnerTimes;
         update.spawnerPrefabs = __spawnerPrefabs;
         update.spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
-        update.spawners = __spawners;
+        update.spawnerDefinitions = __spawnerDefinitions;
         update.prefabType = __prefabType;
         update.instanceType = __instanceType;
         update.statusType = __statusType;
         update.stageType = __stageType;
         update.stageConditionStatusType = __stageConditionStatusType;
         update.stageResultStatusType = __stageResultStatusType;
+        update.spawnerStates = __spawnerStates;
         update.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-        state.Dependency = update.ScheduleParallelByRef(__group, state.Dependency);
+        state.Dependency = update.ScheduleParallelByRef(__group, jobHandle);
     }
 }

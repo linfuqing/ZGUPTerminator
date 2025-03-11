@@ -1,12 +1,163 @@
 using System;
 using Unity.Burst;
+using Unity.Burst.Intrinsics;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Entities.Serialization;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Scenes;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
+
+
+public struct LevelSpawners
+{
+    [BurstCompile]
+    private struct Resize : IJobChunk
+    {
+        [ReadOnly]
+        public EntityTypeHandle entityType;
+        public NativeList<Entity> entities;
+        
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            var entityArray = chunk.GetNativeArray(entityType);
+            if (useEnabledMask)
+            {
+                var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+                while (iterator.NextEntityIndex(out int i))
+                    entities.Add(entityArray[i]);
+            }
+            else
+                entities.AddRange(entityArray);
+        }
+    }
+    
+    [NativeContainerIsReadOnly]
+    public readonly struct ReadOnly
+    {
+        public readonly uint Version;
+        [ReadOnly]
+        public readonly NativeList<Entity> Entities;
+
+        public ReadOnly(uint version, NativeList<Entity> entities)
+        {
+            Version = version;
+            Entities = entities;
+        }
+
+        public bool IsDone(int layerMask, 
+            in ComponentLookup<SpawnerDefinitionData> definitions, 
+            in BufferLookup<SpawnerStatus> states)
+        {
+            int i, numSpawners;
+            SpawnerStatus status;
+            DynamicBuffer<SpawnerStatus> statusBuffer = default;
+            SpawnerDefinitionData definitionData;
+            foreach (var entity in Entities)
+            {
+                if (!definitions.TryGetComponent(entity, out definitionData))
+                    continue;
+                
+                ref var definition = ref definitionData.definition.Value;
+
+                numSpawners = definition.spawners.Length;
+                for (i = 0; i < numSpawners; ++i)
+                {
+                    ref var spawner = ref definition.spawners[i];
+                    if((spawner.layerMask & layerMask) == 0)
+                        continue;
+
+                    if (!statusBuffer.IsCreated && !states.TryGetBuffer(entity, out statusBuffer))
+                        break;
+
+                    if (statusBuffer.Length <= i)
+                        return false;
+
+                    status = statusBuffer[i];
+                    if (status.count < spawner.countPerTime || status.times < spawner.times)
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        public void Clear(
+            int layerMask, 
+            in ComponentLookup<SpawnerDefinitionData> definitions, 
+            ref BufferLookup<SpawnerStatus> states)
+        {
+            int i, numSpawners;
+            DynamicBuffer<SpawnerStatus> statusBuffer = default;
+            SpawnerDefinitionData definitionData;
+            foreach (var entity in Entities)
+            {
+                if (!definitions.TryGetComponent(entity, out definitionData))
+                    continue;
+                
+                ref var definition = ref definitionData.definition.Value;
+
+                numSpawners = definition.spawners.Length;
+                for (i = 0; i < numSpawners; ++i)
+                {
+                    ref var spawner = ref definition.spawners[i];
+                    if((spawner.layerMask & layerMask) == 0)
+                        continue;
+
+                    if (!statusBuffer.IsCreated && !states.TryGetBuffer(entity, out statusBuffer))
+                        break;
+
+                    if (statusBuffer.Length <= i)
+                        continue;
+
+                    statusBuffer[i] = default;
+                }
+            }
+        }
+    }
+
+    private uint __version;
+    private EntityTypeHandle __entityType;
+    private EntityQuery __group;
+    private NativeList<Entity> __entities;
+
+    public LevelSpawners(ref SystemState state)
+    {
+        __version = 0;
+        __entityType = state.GetEntityTypeHandle();
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __group = builder
+                .WithAll<SpawnerStatus>()
+                .Build(ref state);
+
+        __entities = new NativeList<Entity>(Allocator.Persistent);
+    }
+
+    public void Dispose()
+    {
+        __entities.Dispose();
+    }
+
+    public ReadOnly AsReadOnly(ref JobHandle jobHandle)
+    {
+        uint version = (uint)__group.GetCombinedComponentOrderVersion(true);
+        if (ChangeVersionUtility.DidChange(version, __version))
+        {
+            __version = version;
+            
+            Resize resize;
+            resize.entityType = __entityType;
+            resize.entities = __entities;
+            jobHandle = resize.ScheduleByRef(__group, jobHandle);
+        }
+
+        return new ReadOnly(__version, __entities);
+    }
+}
 
 [Serializable]
 public struct LevelStageOption
@@ -21,6 +172,7 @@ public struct LevelStageOption
     public enum Type
     {
         SpawnerTime = 11, 
+        SpawnerLayerMask = 12,
         SpawnerLayerMaskInclude = 1,
         SpawnerLayerMaskExclude = 2,
         SpawnerEntityRemaining = 7, 
@@ -46,9 +198,11 @@ public struct LevelStageOption
         in LevelStatus status, 
         in SpawnerLayerMaskOverride spawnerLayerMaskOverride, 
         in SpawnerSingleton spawnerSingleton, 
+        in LevelSpawners.ReadOnly spawners,
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
-        in ComponentLookup<SpawnerDefinitionData> spawners, 
+        in BufferLookup<SpawnerStatus> spawnerStates, 
+        in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions, 
         ref BlobArray<LevelDefinition.Area> areas, 
         ref LevelStageConditionStatus condition)
     {
@@ -66,6 +220,8 @@ public struct LevelStageOption
                 return value == status.stage;
             case Type.SpawnerTime:
                 return value <= spawnerTime;
+            case Type.SpawnerLayerMask:
+                return spawners.IsDone(value, spawnerDefinitions, spawnerStates);
             case Type.SpawnerLayerMaskInclude:
                 return (value & spawnerLayerMaskOverride.value) == value;
             case Type.SpawnerLayerMaskExclude:
@@ -83,7 +239,7 @@ public struct LevelStageOption
                         for (i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
-                            if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                            if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                                 continue;
 
                             ref var definition = ref spawnerDefinition.definition.Value;
@@ -119,7 +275,7 @@ public struct LevelStageOption
                         for(i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
-                            if (!spawners.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                            if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
                                 continue;
 
                             ref var definition = ref spawnerDefinition.definition.Value;
@@ -163,6 +319,7 @@ public struct LevelStageOption
     
     public void Apply(
         double time, 
+        ref BufferLookup<SpawnerStatus> spawnerStates, 
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref BlobArray<LevelDefinition.Area> areas, 
         ref float3 playerPosition, 
@@ -172,7 +329,7 @@ public struct LevelStageOption
         ref SpawnerLayerMaskInclude spawnerLayerMaskInclude, 
         ref SpawnerLayerMaskExclude spawnerLayerMaskExclude, 
         in SpawnerSingleton spawnerSingleton, 
-        //in NativeList<Entity> spawners, 
+        in LevelSpawners.ReadOnly spawners,
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
         in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions)
@@ -201,14 +358,13 @@ public struct LevelStageOption
                 
                 //spawnerStates.Clear();
                 break;
+            case Type.SpawnerLayerMask:
+                spawners.Clear(value, spawnerDefinitions, ref spawnerStates);
+                break;
             case Type.SpawnerLayerMaskInclude:
-                ++spawnerTime.version;
-                
                 spawnerLayerMaskInclude.value = value;
                 break;
             case Type.SpawnerLayerMaskExclude:
-                ++spawnerTime.version;
-                
                 spawnerLayerMaskExclude.value = value;
                 break;
             case Type.SpawnerEntityRemaining:

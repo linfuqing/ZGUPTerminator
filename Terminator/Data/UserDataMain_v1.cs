@@ -1958,6 +1958,7 @@ public partial class UserDataMain
             var stage = level.stages[targetStage];
 
             result.energy = stage.energy;
+            result.levelEnergy = level.energy;
             result.cache = UserData.GetStageCache(level.name, targetStage);
 
             int numStageRewards = stage.indirectRewards.Length;
