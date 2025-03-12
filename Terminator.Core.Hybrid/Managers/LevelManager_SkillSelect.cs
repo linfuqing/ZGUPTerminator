@@ -118,7 +118,7 @@ public partial class LevelManager
             }
         }
 
-        Time.timeScale = 0.0f;
+        TimeScale(0.0f);
     }
 
     public void SelectSkillEnd()
@@ -396,7 +396,7 @@ public partial class LevelManager
         selectedSkillSelectionIndex = -1;
         __skillSelectionStatus = 0;
         
-        Time.timeScale = 1.0f;
+        __ClearTimeScales();
 
         if (__resultSkillStyles != null)
         {
@@ -428,7 +428,7 @@ public partial class LevelManager
         {
             __skillSelectionStatus = 0;
                 
-            Time.timeScale = 1.0f;
+            __ClearTimeScales();
         }
     }
 

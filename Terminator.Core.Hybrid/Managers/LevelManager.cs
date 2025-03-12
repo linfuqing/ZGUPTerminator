@@ -63,6 +63,8 @@ public partial class LevelManager : MonoBehaviour
     
     private Coroutine __coroutine;
 
+    private List<int> __timeScaleIndices;
+
     private List<GameObject> __gameObjectsToDestroy;
 
     private Dictionary<(int, int), string> __skillActiveNames;
@@ -232,7 +234,10 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void TimeScale(float value)
     {
-        Time.timeScale = value;
+        if (__timeScaleIndices == null)
+            __timeScaleIndices = new List<int>();
+        
+        __timeScaleIndices.Add(TimeScaleUtility.Add(value));
     }
 
     [UnityEngine.Scripting.Preserve]
@@ -298,12 +303,23 @@ public partial class LevelManager : MonoBehaviour
     
     private void __OnQuit(bool result)
     {
-        Time.timeScale = 1.0f;
+        __ClearTimeScales();
         
         if (_onQuit != null)
             _onQuit.Invoke();
         
         IAnalytics.instance?.Quit();
+    }
+
+    private void __ClearTimeScales()
+    {
+        if (__timeScaleIndices != null)
+        {
+            foreach (var timeScaleIndex in __timeScaleIndices)
+                TimeScaleUtility.Remove(timeScaleIndex);
+            
+            __timeScaleIndices.Clear();
+        }
     }
 
     void Start()

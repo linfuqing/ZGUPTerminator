@@ -26,6 +26,7 @@ public class PlayerController : MonoBehaviour
     //internal float _minJumpVelocity = 0.01f;
 
     private bool __isDead;
+    private int __timeScaleIndex = -1;
     
     //private float __jumpHeight;
     
@@ -97,7 +98,9 @@ public class PlayerController : MonoBehaviour
         {
             __isDead = false;
 
-            Time.timeScale = 1.0f;
+            TimeScaleUtility.Remove(__timeScaleIndex);
+
+            __timeScaleIndex = -1;
             
             PlayerEvents.isActive = true;
         }
@@ -108,9 +111,16 @@ public class PlayerController : MonoBehaviour
         if (__isDead)
         {
             PlayerEvents.isActive = false;
-            
-            Time.timeScale = 0.0f;
+
+            __timeScaleIndex = TimeScaleUtility.Add(0.0f);
         }
+    }
+
+    void OnDestroy()
+    {
+        TimeScaleUtility.Remove(__timeScaleIndex);
+
+        __timeScaleIndex = -1;
     }
 
     void Update()
