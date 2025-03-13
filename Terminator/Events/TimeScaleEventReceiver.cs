@@ -6,7 +6,7 @@ using UnityEngine.Events;
 
 public class TimeScaleEventReceiver : MonoBehaviour
 {
-    public static float minInterval = 30.0f;
+    public static float minInterval = 10.0f;
     private static double __previousTime;
 
     [SerializeField] 
