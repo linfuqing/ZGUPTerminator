@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -16,10 +17,17 @@ public class TimeScaleEventReceiver : MonoBehaviour
     public void TimeScale()
     {
         __timeScaleIndex = TimeScaleUtility.Add(_value);
-        
-        Invoke(nameof(__ClearTimeScale), _time);
+
+        StartCoroutine(__WaitToClearTimeScale(_time));
         
         Handheld.Vibrate();
+    }
+
+    private IEnumerator __WaitToClearTimeScale(float time)
+    {
+        yield return new WaitForSecondsRealtime(time);
+
+        __ClearTimeScale();
     }
 
     private void __ClearTimeScale()
@@ -27,5 +35,10 @@ public class TimeScaleEventReceiver : MonoBehaviour
         TimeScaleUtility.Remove(__timeScaleIndex);
 
         __timeScaleIndex = -1;
+    }
+
+    void OnDisable()
+    {
+        __ClearTimeScale();
     }
 }
