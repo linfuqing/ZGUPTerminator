@@ -232,6 +232,18 @@ public partial class LevelManager : MonoBehaviour
     }
 
     [UnityEngine.Scripting.Preserve]
+    public void ClearTimeScales()
+    {
+        if (__timeScaleIndices != null)
+        {
+            foreach (var timeScaleIndex in __timeScaleIndices)
+                TimeScaleUtility.Remove(timeScaleIndex);
+            
+            __timeScaleIndices.Clear();
+        }
+    }
+
+    [UnityEngine.Scripting.Preserve]
     public void TimeScale(float value)
     {
         if (__timeScaleIndices == null)
@@ -303,23 +315,12 @@ public partial class LevelManager : MonoBehaviour
     
     private void __OnQuit(bool result)
     {
-        __ClearTimeScales();
+        ClearTimeScales();
         
         if (_onQuit != null)
             _onQuit.Invoke();
         
         IAnalytics.instance?.Quit();
-    }
-
-    private void __ClearTimeScales()
-    {
-        if (__timeScaleIndices != null)
-        {
-            foreach (var timeScaleIndex in __timeScaleIndices)
-                TimeScaleUtility.Remove(timeScaleIndex);
-            
-            __timeScaleIndices.Clear();
-        }
     }
 
     void Start()

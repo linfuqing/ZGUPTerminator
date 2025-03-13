@@ -396,7 +396,7 @@ public partial class LevelManager
         selectedSkillSelectionIndex = -1;
         __skillSelectionStatus = 0;
         
-        __ClearTimeScales();
+        ClearTimeScales();
 
         if (__resultSkillStyles != null)
         {
@@ -428,7 +428,7 @@ public partial class LevelManager
         {
             __skillSelectionStatus = 0;
                 
-            __ClearTimeScales();
+            ClearTimeScales();
         }
     }
 
