@@ -40,51 +40,51 @@ public partial class MessageSystem : SystemBase
             int numMessages = messages.Length;
             if (numMessages > 0)
             {
+                bool isNull;
                 int numParameters, i, j;
                 for (i = 0; i < numMessages; ++i)
                 {
                     ref var message = ref messages.ElementAt(i);
-                    if (message.value.GetHashCode() != 0 && times.TryAdd(message.value, time))
+                    isNull = message.value.GetHashCode() == 0;
+                    
+                    if (!isNull && times.TryAdd(message.value, time))
                         message.value.LoadAsync();
 
-                    switch (message.value.LoadingStatus)
+                    if (isNull || ObjectLoadingStatus.Completed == message.value.LoadingStatus)
                     {
-                        case ObjectLoadingStatus.None:
-                        case ObjectLoadingStatus.Completed:
-                            __Collect(entity, message, ref parameters);
+                        __Collect(entity, message, ref parameters);
 
-                            messages.RemoveAtSwapBack(i--);
+                        messages.RemoveAtSwapBack(i--);
 
-                            --numMessages;
-
-                            break;
-                        default:
-                            if (ObjectLoadingStatus.Error != message.value.LoadingStatus && 
-                                times.TryGetValue(message.value, out var oldTime) && 
-                                (float)(time - oldTime) < maxTime)
-                                break;
+                        --numMessages;
+                    }
+                    else
+                    {
+                        if (ObjectLoadingStatus.Error != message.value.LoadingStatus && 
+                            times.TryGetValue(message.value, out var oldTime) && 
+                            (float)(time - oldTime) < maxTime)
+                            continue;
                             
-                            Debug.LogError($"Message {message.name} Error!");
+                        Debug.LogError($"Message {message.name} Error!");
 
-                            if (message.key != 0)
+                        if (message.key != 0)
+                        {
+                            numParameters = parameters.IsCreated ? parameters.Length : 0;
+                            for (j = 0; j < numParameters; ++j)
                             {
-                                numParameters = parameters.IsCreated ? parameters.Length : 0;
-                                for (j = 0; j < numParameters; ++j)
-                                {
-                                    ref var parameter = ref parameters.ElementAt(j);
-                                    if (parameter.messageKey != message.key)
-                                        continue;
+                                ref var parameter = ref parameters.ElementAt(j);
+                                if (parameter.messageKey != message.key)
+                                    continue;
 
-                                    parameters.RemoveAt(j--);
+                                parameters.RemoveAt(j--);
 
-                                    --numParameters;
-                                }
+                                --numParameters;
                             }
+                        }
                             
-                            messages.RemoveAtSwapBack(i--);
+                        messages.RemoveAtSwapBack(i--);
 
-                            --numMessages;
-                            break;
+                        --numMessages;
                     }
                 }
             }
