@@ -19,7 +19,7 @@ public static class TimeScaleUtility
 
     public static void Remove(int index)
     {
-        if (!__values.RemoveAt(index))
+        if (__values == null || !__values.RemoveAt(index))
             return;
 
         float timeScale = 1.0f;
