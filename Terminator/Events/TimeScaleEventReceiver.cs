@@ -2,9 +2,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class TimeScaleEventReceiver : MonoBehaviour
 {
+    public static float minInterval = 30.0f;
+    private static double __previousTime;
+
+    [SerializeField] 
+    internal UnityEvent _onInvoke;
+    
     [SerializeField] 
     internal float _value = 0.2f;
     
@@ -16,10 +23,16 @@ public class TimeScaleEventReceiver : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void TimeScale()
     {
-        __timeScaleIndex = TimeScaleUtility.Add(_value);
+        double time = Time.timeAsDouble;
+        if (__previousTime > 0.0 ? (time > __previousTime + minInterval) : true)
+        {
+            __previousTime = time;
+            
+            __timeScaleIndex = TimeScaleUtility.Add(_value);
 
-        StartCoroutine(__WaitToClearTimeScale(_time));
-        
+            StartCoroutine(__WaitToClearTimeScale(_time));
+        }
+
         Handheld.Vibrate();
     }
 
