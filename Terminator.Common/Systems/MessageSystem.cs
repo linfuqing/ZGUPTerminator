@@ -45,7 +45,7 @@ public partial class MessageSystem : SystemBase
                 for (i = 0; i < numMessages; ++i)
                 {
                     ref var message = ref messages.ElementAt(i);
-                    isNull = message.value.GetHashCode() == 0;
+                    isNull = message.value.Equals(default);
                     
                     if (!isNull && times.TryAdd(message.value, time))
                         message.value.LoadAsync();
