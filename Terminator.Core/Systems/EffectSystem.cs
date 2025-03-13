@@ -414,12 +414,6 @@ public partial struct EffectSystem : ISystem
 
                         ref var damage = ref definition.damages[damageIndex];
 
-                        if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
-                            ++entityCount;
-
-                        statusTarget.entity = simulationEvent.entity;
-                        statusTargets.Add(statusTarget);
-
                         isResult = false;
 
                         if (delayDestroies.HasComponent(simulationEvent.entity))
@@ -488,12 +482,11 @@ public partial struct EffectSystem : ISystem
                             ref var characterBodyRW = ref characterBody.ValueRW;
                             if (!characterBodyRW.IsGrounded)
                             {
-                                if(damageValue == 0 && 
-                                   (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0))
-                                    --entityCount;
+                                if(damageValue == 0)
+                                    continue;
                             }
                             else if (damage.explosion > math.FLT_MIN_NORMAL ||
-                                 damage.spring > math.FLT_MIN_NORMAL)
+                                     damage.spring > math.FLT_MIN_NORMAL)
                             {
                                 forceResult = float3.zero;
                                 if ( /*effect.suction > math.FLT_MIN_NORMAL || */damage.explosion > math.FLT_MIN_NORMAL)
@@ -541,6 +534,12 @@ public partial struct EffectSystem : ISystem
                             instanceDamageParent, 
                             prefabs,
                             ref damage.prefabs);
+
+                        if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
+                            ++entityCount;
+
+                        statusTarget.entity = simulationEvent.entity;
+                        statusTargets.Add(statusTarget);
 
                         if (isResult)
                         {
