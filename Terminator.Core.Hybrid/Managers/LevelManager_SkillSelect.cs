@@ -293,8 +293,6 @@ public partial class LevelManager
             __skillStyles.Clear();
         }
 
-        __skillSelectionStatus |= SkillSelectionStatus.End;
-        
         __DestroyGameObjects();
 
         if (selectedSkillSelectionIndex == -1)
@@ -302,10 +300,7 @@ public partial class LevelManager
         else if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
             yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
 
-        /*if (__selectedSkillIndices == null)
-            __selectedSkillIndices = new List<int>();
-
-        __selectedSkillIndices.Add(value.selectIndex);*/
+        __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
     private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value)
@@ -323,17 +318,19 @@ public partial class LevelManager
             __skillStyles.Clear();
         }
 
-        if (__selectedSkillIndices == null)
-            __selectedSkillIndices = new List<int>();
-
-        __selectedSkillIndices.Add(value.selectIndex);
-        
-        if(isEnd)
-            __skillSelectionStatus |= SkillSelectionStatus.End;
-        
         if (selectedSkillSelectionIndex == -1)
+        {
             __CompleteSkillSelection();
+            
+            if (__selectedSkillIndices == null)
+                __selectedSkillIndices = new List<int>();
+
+            __selectedSkillIndices.Add(value.selectIndex);
         
+            if(isEnd)
+                __skillSelectionStatus |= SkillSelectionStatus.End;
+        }
+
         yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
@@ -365,6 +362,14 @@ public partial class LevelManager
 
             if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
                 yield return __FinishSkillSelection(selection);
+            
+            if (__selectedSkillIndices == null)
+                __selectedSkillIndices = new List<int>();
+
+            __selectedSkillIndices.Add(value.selectIndex);
+        
+            if(isEnd)
+                __skillSelectionStatus |= SkillSelectionStatus.End;
         }
     }
 
