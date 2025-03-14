@@ -12,10 +12,13 @@ public struct DropToDamage : IComponentData, IEnableableComponent
     {
         Interlocked.Add(ref this.value, value);
 
-        if (layerMask == 0 || layerMask == -1)
+        if (layerMask == -1)
             this.layerMask = -1;
         else
         {
+            if (layerMask == 0)
+                layerMask = 1;
+            
             int origin;
             do
             {

@@ -293,6 +293,8 @@ public partial class LevelManager
             __skillStyles.Clear();
         }
 
+        __skillSelectionStatus |= SkillSelectionStatus.End;
+        
         __DestroyGameObjects();
 
         if (selectedSkillSelectionIndex == -1)
@@ -300,7 +302,6 @@ public partial class LevelManager
         else if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
             yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
 
-        __skillSelectionStatus |= SkillSelectionStatus.End;
         /*if (__selectedSkillIndices == null)
             __selectedSkillIndices = new List<int>();
 
@@ -322,6 +323,14 @@ public partial class LevelManager
             __skillStyles.Clear();
         }
 
+        if (__selectedSkillIndices == null)
+            __selectedSkillIndices = new List<int>();
+
+        __selectedSkillIndices.Add(value.selectIndex);
+        
+        if(isEnd)
+            __skillSelectionStatus |= SkillSelectionStatus.End;
+        
         if (selectedSkillSelectionIndex == -1)
             __CompleteSkillSelection();
         
@@ -357,14 +366,6 @@ public partial class LevelManager
             if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
                 yield return __FinishSkillSelection(selection);
         }
-        
-        if (__selectedSkillIndices == null)
-            __selectedSkillIndices = new List<int>();
-
-        __selectedSkillIndices.Add(value.selectIndex);
-        
-        if(isEnd)
-            __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
     private IEnumerator __FinishSkillSelection(SkillSelection selection)
