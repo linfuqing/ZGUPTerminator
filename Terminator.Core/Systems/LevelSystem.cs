@@ -124,9 +124,25 @@ public partial struct LevelSystem : ISystem
                             stageConditionStates.ElementAt(conditionOffset - k - 1) = default;*/
                     }
                     
+                    for (k = j; k < numNextStageIndices; ++k)
+                    {
+                        ref var nextStageIndexTemp = ref stageDefinition.nextStageIndies[k];
+                        numConditions = definition.stages[nextStageIndexTemp].conditions.Length;
+                        if (numConditions > 0)
+                        {
+                            conditionOffset += numConditions;
+                            if (conditionOffset > stageConditionStates.Length)
+                            {
+                                conditionOffset = stageConditionStates.Length;
+                                
+                                break;
+                            }
+                        }
+                    }
+                    
                     for (k = stageConditionOffset; k < conditionOffset; ++k)
                         stageConditionStates.ElementAt(k) = default;
-                    
+
                     stage.value = nextStageIndex;
 
                     break;
