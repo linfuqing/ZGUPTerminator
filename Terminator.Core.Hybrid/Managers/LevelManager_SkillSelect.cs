@@ -301,6 +301,10 @@ public partial class LevelManager
             yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
 
         __skillSelectionStatus |= SkillSelectionStatus.End;
+        /*if (__selectedSkillIndices == null)
+            __selectedSkillIndices = new List<int>();
+
+        __selectedSkillIndices.Add(value.selectIndex);*/
     }
 
     private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value)
@@ -319,18 +323,8 @@ public partial class LevelManager
         }
 
         if (selectedSkillSelectionIndex == -1)
-        {
             __CompleteSkillSelection();
-            
-            if (__selectedSkillIndices == null)
-                __selectedSkillIndices = new List<int>();
-
-            __selectedSkillIndices.Add(value.selectIndex);
         
-            if(isEnd)
-                __skillSelectionStatus |= SkillSelectionStatus.End;
-        }
-
         yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
@@ -362,15 +356,15 @@ public partial class LevelManager
 
             if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
                 yield return __FinishSkillSelection(selection);
-            
-            if (__selectedSkillIndices == null)
-                __selectedSkillIndices = new List<int>();
-
-            __selectedSkillIndices.Add(value.selectIndex);
-        
-            if(isEnd)
-                __skillSelectionStatus |= SkillSelectionStatus.End;
         }
+        
+        if (__selectedSkillIndices == null)
+            __selectedSkillIndices = new List<int>();
+
+        __selectedSkillIndices.Add(value.selectIndex);
+        
+        if(isEnd)
+            __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
     private IEnumerator __FinishSkillSelection(SkillSelection selection)
@@ -400,7 +394,7 @@ public partial class LevelManager
         selection.onDisable.Invoke();
         
         selectedSkillSelectionIndex = -1;
-        __skillSelectionStatus &= ~SkillSelectionStatus.Complete;
+        __skillSelectionStatus = 0;
         
         ClearTimeScales();
 
@@ -432,7 +426,7 @@ public partial class LevelManager
     {
         if ((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
         {
-            __skillSelectionStatus &= ~SkillSelectionStatus.Complete;
+            __skillSelectionStatus = 0;
                 
             ClearTimeScales();
         }
