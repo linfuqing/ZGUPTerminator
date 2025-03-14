@@ -395,7 +395,7 @@ public partial class LevelManager
         selection.onDisable.Invoke();
         
         selectedSkillSelectionIndex = -1;
-        __skillSelectionStatus = 0;
+        __skillSelectionStatus &= ~SkillSelectionStatus.Complete;
         
         ClearTimeScales();
 
