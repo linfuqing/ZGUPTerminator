@@ -294,7 +294,7 @@ public struct LevelSkillDefinition
         weights.Dispose();
     }
 
-    private bool __IsInGroup(int groupIndex, in NativeArray<LevelSkillGroup> groups, out float damageScale)
+    private static bool __IsInGroup(int groupIndex, in NativeArray<LevelSkillGroup> groups, out float damageScale)
     {
         damageScale = 1.0f;
         

@@ -1,20 +1,28 @@
 using UnityEngine;
 
-public interface IVibrate
+public enum VibrationType
 {
-    public static IVibrate instance;
+    //Default,
+    Pop, 
+    Peek, 
+    Nope
+}
+
+public interface IVibration
+{
+    public static IVibration instance;
     
-    void Apply();
+    void Apply(VibrationType type);
 }
 
 public static class VibrateUtility
 {
-    public static void Apply()
+    public static void Apply(VibrationType type)
     {
-        var vibrate = IVibrate.instance;
-        if(vibrate == null)
+        var Vibration = IVibration.instance;
+        if(Vibration == null)
             Handheld.Vibrate();
         else
-            vibrate.Apply();
+            Vibration.Apply(type);
     }
 }

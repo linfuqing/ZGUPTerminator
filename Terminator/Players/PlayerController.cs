@@ -52,7 +52,7 @@ public class PlayerController : MonoBehaviour
             case "Hit":
                 LevelManager.instance.dataFlag |= (int)ILevelData.Flag.HasBeenDamaged;
                 
-                VibrateUtility.Apply();
+                VibrateUtility.Apply(VibrationType.Peek);
                 break;
             case "Die":
                 __isDead = true;
