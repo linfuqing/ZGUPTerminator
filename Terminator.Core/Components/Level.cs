@@ -354,11 +354,9 @@ public struct LevelStageOption
                 status.stage = value;
                 break;
             case Type.SpawnerTime:
-                ++spawnerTime.version;
+                //++spawnerTime.version;
 
                 spawnerTime.value = time + value * 1000.0f;
-                
-                //spawnerStates.Clear();
                 break;
             case Type.SpawnerLayerMask:
                 spawners.Clear(value, spawnerDefinitions, ref spawnerStates);

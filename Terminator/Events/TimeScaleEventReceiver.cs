@@ -24,16 +24,16 @@ public class TimeScaleEventReceiver : MonoBehaviour
     public void TimeScale()
     {
         double time = Time.timeAsDouble;
-        if (__previousTime > 0.0 ? (time > __previousTime + minInterval) : true)
-        {
-            __previousTime = time;
-            
-            __timeScaleIndex = TimeScaleUtility.Add(_value);
+        if (__previousTime > 0.0f && __previousTime + minInterval > time)
+            return;
+        
+        __previousTime = time;
+        
+        __timeScaleIndex = TimeScaleUtility.Add(_value);
 
-            StartCoroutine(__WaitToClearTimeScale(_time));
-        }
-
-        Handheld.Vibrate();
+        StartCoroutine(__WaitToClearTimeScale(_time));
+        
+        VibrateUtility.Apply();
     }
 
     private IEnumerator __WaitToClearTimeScale(float time)
