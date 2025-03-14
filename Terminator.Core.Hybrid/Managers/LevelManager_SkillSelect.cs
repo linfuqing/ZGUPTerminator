@@ -427,7 +427,7 @@ public partial class LevelManager
     {
         if ((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
         {
-            __skillSelectionStatus = 0;
+            __skillSelectionStatus &= ~SkillSelectionStatus.Complete;
                 
             ClearTimeScales();
         }
