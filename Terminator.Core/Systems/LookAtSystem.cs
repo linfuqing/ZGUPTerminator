@@ -172,7 +172,7 @@ public partial struct LookAtSystem : ISystem
                         instance.location, 
                         minDistance, 
                         maxDistance, 
-                        localTransform.Position, 
+                        float3.zero, 
                         cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
@@ -203,7 +203,7 @@ public partial struct LookAtSystem : ISystem
                         instance.location, 
                         instance.minDistance, 
                         instance.maxDistance,  
-                        localTransform.Position, 
+                        float3.zero, 
                         cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
