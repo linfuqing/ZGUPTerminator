@@ -114,7 +114,7 @@ public partial class LevelManager
             {
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() => StartCoroutine(__Start(selection.startTime)));
+                onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selection.startTime)));
             }
         }
 
@@ -323,8 +323,12 @@ public partial class LevelManager
         }
 
         if (selectedSkillSelectionIndex == -1)
+        {
             __CompleteSkillSelection();
-        
+            
+            __SetSkillSelection(isEnd, value.selectIndex);
+        }
+
         yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
@@ -356,15 +360,9 @@ public partial class LevelManager
 
             if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
                 yield return __FinishSkillSelection(selection);
+            
+            __SetSkillSelection(isEnd, value.selectIndex);
         }
-        
-        if (__selectedSkillIndices == null)
-            __selectedSkillIndices = new List<int>();
-
-        __selectedSkillIndices.Add(value.selectIndex);
-        
-        if(isEnd)
-            __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
     private IEnumerator __FinishSkillSelection(SkillSelection selection)
@@ -443,13 +441,24 @@ public partial class LevelManager
         }
     }
 
-    private IEnumerator __Start(float time)
+    private void __SetSkillSelection(bool isEnd, int selectedIndex)
+    {
+        if (__selectedSkillIndices == null)
+            __selectedSkillIndices = new List<int>();
+
+        __selectedSkillIndices.Add(selectedIndex);
+        
+        if(isEnd)
+            __skillSelectionStatus |= SkillSelectionStatus.End;
+    }
+
+    private IEnumerator __StartSkillSelection(float time)
     {
         yield return new WaitForSecondsRealtime(time);
         
         __skillSelectionStatus |= SkillSelectionStatus.Start;
     }
-    
+
     void OnDestroy()
     {
         if (__skillStyles != null)
