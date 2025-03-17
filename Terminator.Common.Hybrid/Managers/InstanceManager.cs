@@ -35,6 +35,69 @@ public sealed class InstanceManager : MonoBehaviour
         
     }
 
+    internal sealed class Disposable : MonoBehaviour
+    {
+        private struct Instance
+        {
+            public double time;
+            public GameObject gameObject;
+            public GameObject prefab;
+        }
+
+        private List<Instance> __instances;
+
+        private static Disposable __instance;
+
+        public static void Destroy(float time, GameObject gameObject, GameObject prefab)
+        {
+            if (time > Mathf.Epsilon)
+            {
+                if (__instance == null)
+                {
+                    var temp = new GameObject();
+                    temp.hideFlags = HideFlags.HideAndDontSave;
+                    DontDestroyOnLoad(temp);
+
+                    __instance = temp.AddComponent<Disposable>();
+                }
+
+                Instance instance;
+                instance.time = Time.timeAsDouble + time;
+                instance.gameObject = gameObject;
+                instance.prefab = prefab;
+
+                if (__instance.__instances == null)
+                    __instance.__instances = new List<Instance>();
+
+                __instance.__instances.Add(instance);
+            }
+            else
+                __Destroy(gameObject, prefab);
+        }
+
+        void Update()
+        {
+            int numInstances = __instances == null ? 0 : __instances.Count;
+            if (numInstances < 1)
+                return;
+            
+            double time = Time.timeAsDouble;
+            Instance instance;
+            for(int i = 0; i < numInstances; ++i)
+            {
+                instance = __instances[i];
+                if(instance.time > time)
+                    continue;
+                
+                __Destroy(instance.gameObject, instance.prefab);
+                
+                __instances.RemoveAtSwapBack(i--);
+
+                --numInstances;
+            }
+        }
+    }
+
     [SerializeField] 
     [UnityEngine.Serialization.FormerlySerializedAs("_onCount")]
     internal StringEvent _onAcitveCount;
@@ -72,7 +135,8 @@ public sealed class InstanceManager : MonoBehaviour
             return;
         }
 
-        instanceManager.StartCoroutine(instanceManager.__Destroy(instanceID, instance, isSendMessage));
+        instanceManager.__Destroy(instanceID, instance, isSendMessage);
+        //instanceManager.StartCoroutine(instanceManager.__Destroy(instanceID, instance, isSendMessage));
     }
     
     public static void Instantiate(
@@ -275,7 +339,7 @@ public sealed class InstanceManager : MonoBehaviour
             _onAcitveCount.Invoke(activeCount.ToString());
     }
 
-    private IEnumerator __Destroy(int instanceID, Instance instance, bool isSendMessage)
+    private void __Destroy(int instanceID, Instance instance, bool isSendMessage)
     {
         --activeCount;
 
@@ -284,21 +348,23 @@ public sealed class InstanceManager : MonoBehaviour
         
         var transform = Resources.InstanceIDToObject(instanceID) as Transform;
         var gameObject = transform == null ? null : transform.gameObject;
-        if(gameObject == null)
-            yield break;
+        if (gameObject == null)
+            return;
 
         if (isSendMessage)
         {
             if (!string.IsNullOrEmpty(instance.destroyMessageName))
                 gameObject.BroadcastMessage(instance.destroyMessageName, instance.destroyMessageValue);
 
-            yield return new WaitForSeconds(instance.destroyTime);
+            //yield return new WaitForSeconds(instance.destroyTime);
         }
+        
+        Disposable.Destroy(instance.destroyTime, gameObject, instance.prefab);
 
-        __Destroy(gameObject, instance.prefab);
+        //__Destroy(gameObject, instance.prefab);
     }
 
-    private void __Destroy(GameObject gameObject, GameObject prefab)
+    private static void __Destroy(GameObject gameObject, GameObject prefab)
     {
         if (__gameObjects == null)
             __gameObjects = new Dictionary<GameObject, List<GameObject>>();
