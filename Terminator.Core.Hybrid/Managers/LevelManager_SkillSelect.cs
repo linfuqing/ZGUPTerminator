@@ -114,7 +114,7 @@ public partial class LevelManager
             {
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() => StartCoroutine(__Start(selection.startTime)));
+                onClick.AddListener(() => __StartCoroutine(__Start(selection.startTime)));
             }
         }
 
@@ -133,7 +133,7 @@ public partial class LevelManager
             //&& __selectedSkillIndices != null && __selectedSkillIndices.Count > 0 
             //&& (__resultSkillStyles == null || __resultSkillStyles.Count < 1)
             )
-            StartCoroutine(__FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]));
+            __StartCoroutine(__FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]));
     }
 
     public void SelectSkills(int styleIndex, LevelSkillData[] skills)
@@ -145,7 +145,7 @@ public partial class LevelManager
         if(__selectedSkillIndices != null)
             __selectedSkillIndices.Clear();
 
-        StartCoroutine(__SelectSkills(styleIndex, skills));
+        __StartCoroutine(__SelectSkills(styleIndex, skills));
     }
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)
@@ -235,7 +235,7 @@ public partial class LevelManager
 
                             destination.onDisable.Invoke();
 
-                            StartCoroutine(__SelectSkill(true, destination.destroyTime, source));
+                            __StartCoroutine(__SelectSkill(true, destination.destroyTime, source));
                         });
                     }
 
@@ -419,7 +419,7 @@ public partial class LevelManager
     private void __CloseSkillSelectionRightNow()
     {
         if((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
-            StartCoroutine(__CloseSkillSelection());
+            __StartCoroutine(__CloseSkillSelection());
     }
 
     private void __CompleteSkillSelection()

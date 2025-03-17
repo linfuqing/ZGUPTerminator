@@ -74,7 +74,7 @@ public partial class LevelManager : MonoBehaviour
     private HashSet<int> __stages;
 
     private Dictionary<string, int> __stageIndices;
-
+    
     public bool debugLevelUp
     {
         get;
