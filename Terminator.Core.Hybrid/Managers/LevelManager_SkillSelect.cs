@@ -378,8 +378,8 @@ public partial class LevelManager
             foreach (var resultSkillStyle in __resultSkillStyles)
                 resultSkillStyle.onFinish.Invoke();
 
-            while (-1 != selectedSkillSelectionIndex)
-                yield return null;
+            /*while (-1 != selectedSkillSelectionIndex)
+                yield return null;*/
         }
         else
             yield return __CloseSkillSelection();
@@ -411,7 +411,7 @@ public partial class LevelManager
             __resultSkillStyles.Clear();
         }
         
-        yield return new WaitForSeconds(selection.destroyTime);
+        yield return new WaitForSecondsRealtime(selection.destroyTime);
 
         __DestroyGameObjects();
     }

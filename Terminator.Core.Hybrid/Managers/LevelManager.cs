@@ -301,6 +301,8 @@ public partial class LevelManager : MonoBehaviour
             yield return coroutine;
 
         yield return enumerator;
+
+        __coroutine = null;
     }
 
     private void __StartCoroutine(IEnumerator enumerator)
@@ -310,7 +312,7 @@ public partial class LevelManager : MonoBehaviour
 
     private void __OnStageChanged(bool result)
     {
-        __coroutine = null;
+        //__coroutine = null;
     }
     
     private void __OnQuit(bool result)
