@@ -76,21 +76,26 @@ public partial struct LookAtSystem : ISystem
             if (distance < __minDistance)
                 return false;
 
-            if ((__location & LookAtLocation.Camera) == LookAtLocation.Camera && 
-                math.dot(hit.Position - __position, __cameraDirection) < 0.0f)
-                return false;
+            var location = __location;
+            if ((location & LookAtLocation.Camera) == LookAtLocation.Camera)
+            {
+                if(math.dot(hit.Position - __position, __cameraDirection) < 0.0f)
+                    return false;
+
+                location &= ~LookAtLocation.Camera;
+            }
 
             if (hit.RigidBodyIndex >= __dynamicBodiesCount || 
                 __characterBodies.TryGetComponent(hit.Entity, out var characterBody) && 
                 __characterBodies.IsComponentEnabled(hit.Entity) && 
                 characterBody.IsGrounded)
             {
-                if (__location != 0 && (__location & LookAtLocation.Ground) != LookAtLocation.Ground)
+                if (location != 0 && (location & LookAtLocation.Ground) != LookAtLocation.Ground)
                     return false;
             }
             else
             {
-                if (__location != 0 && (__location & LookAtLocation.Air) != LookAtLocation.Air)
+                if (location != 0 && (location & LookAtLocation.Air) != LookAtLocation.Air)
                     return false;
             }
             
