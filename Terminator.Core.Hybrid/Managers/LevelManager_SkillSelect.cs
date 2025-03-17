@@ -114,7 +114,7 @@ public partial class LevelManager
             {
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() => __StartCoroutine(__Start(selection.startTime)));
+                onClick.AddListener(() => StartCoroutine(__Start(selection.startTime)));
             }
         }
 
