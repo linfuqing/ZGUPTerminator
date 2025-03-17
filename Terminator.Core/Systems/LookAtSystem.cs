@@ -20,6 +20,8 @@ public partial struct LookAtSystem : ISystem
         private int __dynamicBodiesCount;
         private LookAtLocation __location;
         private float __minDistance;
+        private float3 __position;
+        private float3 __cameraDirection;
         private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
         public bool EarlyOutOnFirstHit => false;
@@ -50,6 +52,8 @@ public partial struct LookAtSystem : ISystem
             LookAtLocation location, 
             float minDistance, 
             float maxDistance, 
+            in float3 position, 
+            in float3 cameraDirection, 
             in ComponentLookup<KinematicCharacterBody> characterBodies)
         {
             __dynamicBodiesCount = dynamicBodiesCount;
@@ -57,6 +61,9 @@ public partial struct LookAtSystem : ISystem
             __minDistance = minDistance;
             MaxFraction = maxDistance;
             NumHits = 0;
+
+            __position = position;
+            __cameraDirection = cameraDirection;
 
             __characterBodies = characterBodies;
 
@@ -67,6 +74,10 @@ public partial struct LookAtSystem : ISystem
         {
             float distance = hit.Distance;
             if (distance < __minDistance)
+                return false;
+
+            if ((__location & LookAtLocation.Camera) == LookAtLocation.Camera && 
+                math.dot(hit.Position - __position, __cameraDirection) < 0.0f)
                 return false;
 
             if (hit.RigidBodyIndex >= __dynamicBodiesCount || 
@@ -93,6 +104,8 @@ public partial struct LookAtSystem : ISystem
     }
     private struct Apply
     {
+        public float3 cameraDirection;
+        
         [ReadOnly]
         public CollisionWorld collisionWorld;
 
@@ -154,7 +167,14 @@ public partial struct LookAtSystem : ISystem
                 int rigidBodyIndex = target.entity == Entity.Null ? -1 : collisionWorld.GetRigidBodyIndex(target.entity);
                 if (rigidBodyIndex != -1)
                 {
-                    collector = new Collector(collisionWorld.NumDynamicBodies, instance.location, minDistance, maxDistance, characterBodies);
+                    collector = new Collector(
+                        collisionWorld.NumDynamicBodies, 
+                        instance.location, 
+                        minDistance, 
+                        maxDistance, 
+                        localTransform.Position, 
+                        cameraDirection, 
+                        characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
                 }
@@ -182,7 +202,9 @@ public partial struct LookAtSystem : ISystem
                         collisionWorld.NumDynamicBodies, 
                         instance.location, 
                         instance.minDistance, 
-                        instance.maxDistance, 
+                        instance.maxDistance,  
+                        localTransform.Position, 
+                        cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
@@ -195,7 +217,9 @@ public partial struct LookAtSystem : ISystem
                     collisionWorld.NumDynamicBodies, 
                     instance.location, 
                     instance.minDistance, 
-                    instance.maxDistance, 
+                    instance.maxDistance,  
+                    localTransform.Position, 
+                    cameraDirection, 
                     characterBodies);
                 if (collisionWorld.CalculateDistance(pointDistanceInput, ref collector))
                     closestHit = collector.closestHit;
@@ -286,6 +310,8 @@ public partial struct LookAtSystem : ISystem
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
+        public float3 cameraDirection;
+
         [ReadOnly]
         public CollisionWorld collisionWorld;
         
@@ -319,6 +345,7 @@ public partial struct LookAtSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
+            apply.cameraDirection = cameraDirection;
             apply.collisionWorld = collisionWorld;
             apply.characterBodies = characterBodies;
             apply.parents = parents;
@@ -380,6 +407,7 @@ public partial struct LookAtSystem : ISystem
                 .Build(ref state);
         
         state.RequireForUpdate<PhysicsWorldSingleton>();
+        state.RequireForUpdate<MainCameraTransform>();
     }
 
     [BurstCompile]
@@ -397,6 +425,7 @@ public partial struct LookAtSystem : ISystem
         __localTransformType.Update(ref state);
         
         ApplyEx apply;
+        apply.cameraDirection = math.forward(SystemAPI.GetSingleton<MainCameraTransform>().value.rot);
         apply.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         apply.entityType = __entityType;
         apply.parents = __parents;

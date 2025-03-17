@@ -700,7 +700,9 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             damageScale.value = authoring._damageScale;
             AddComponent(entity, damageScale);*/
 
-            AddComponent<BulletLayerMask>(entity);
+            BulletLayerMask layerMask;
+            layerMask.value = authoring._layerMask.value;
+            AddComponent(entity, layerMask);
             
             AddComponent<BulletStatus>(entity);
             AddComponent<BulletTargetStatus>(entity);
@@ -745,6 +747,9 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     
     [SerializeField] 
     internal float _maxAirSpeed = 0.1f;
+    
+    [SerializeField]
+    internal LayerMask _layerMask;
 
     //[SerializeField] 
     //internal float _damageScale = 1.0f;

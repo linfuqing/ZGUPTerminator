@@ -5,8 +5,8 @@ using Unity.Entities;
 public enum LookAtLocation
 {
     Ground = 0x01,
-    Air = 0x02//, 
-    //All = Ground | Air
+    Air = 0x02, 
+    Camera = 0x04
 }
 
 public struct LookAt : IComponentData
