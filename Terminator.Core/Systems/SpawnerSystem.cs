@@ -97,6 +97,7 @@ public partial struct SpawnerRecountSystem : ISystem
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __entityGroup = builder
                 .WithAll<SpawnerEntity>()
+                .WithOptions(EntityQueryOptions.IncludeDisabledEntities)
                 .Build(ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))

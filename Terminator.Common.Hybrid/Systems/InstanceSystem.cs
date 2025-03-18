@@ -234,7 +234,7 @@ public partial struct InstanceSystemUnmanaged : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             var ids = chunk.GetNativeArray(ref idType);
-            var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
                 this.ids.Add(ids[i].value);
             
