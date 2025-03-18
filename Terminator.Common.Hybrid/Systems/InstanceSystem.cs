@@ -288,7 +288,7 @@ public partial struct InstanceSystemUnmanaged : ISystem
             __groupToDestroy = builder
                 .WithAll<CopyMatrixToTransformInstanceID>()
                 .WithAbsent<Instance>()
-                //.WithNone<Message>()
+                .WithOptions(EntityQueryOptions.IncludeDisabledEntities)
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))

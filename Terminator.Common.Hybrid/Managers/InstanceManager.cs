@@ -303,6 +303,9 @@ public sealed class InstanceManager : MonoBehaviour
 
             entities[i--] = entities[--numEntities];
         }
+        
+        if(numEntities < 1)
+            yield break;
 
         system.EntityManager.AddComponent<CopyMatrixToTransformInstanceID>(entities.GetSubArray(0, numEntities));
 
