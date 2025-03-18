@@ -286,10 +286,14 @@ public sealed class InstanceManager : MonoBehaviour
             //Wait For LocalToWorld
             yield return null;
 
+        Entity entity;
         var entityManager = system.EntityManager;
         for (int i = 0; i < numEntities; ++i)
         {
-            if (entityManager.HasComponent<global::Instance>(entities[i]) && 
+            entity = entities[i];
+            if (entityManager.IsEnabled(entity) && 
+                entityManager.HasComponent<global::Instance>(entity) && 
+                entityManager.IsComponentEnabled<global::Instance>(entity) && 
                 results[i] != null)
                 continue;
 
@@ -310,7 +314,6 @@ public sealed class InstanceManager : MonoBehaviour
         GameObject gameObject;
         Transform transform;
         LocalToWorld localToWorld;
-        Entity entity;
         for (int i = 0; i < numEntities; ++i)
         {
             gameObject = results[i];
