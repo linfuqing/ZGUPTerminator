@@ -426,6 +426,8 @@ public partial struct InstanceSystemUnmanaged : ISystem
         
         if (!__groupToDestroy.IsEmpty)
         {
+            __idType.Update(ref state);
+
             CollectIDs collectIDs;
             collectIDs.idType = __idType;
             collectIDs.ids = __idsToDestroy;
