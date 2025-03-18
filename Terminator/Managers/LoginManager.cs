@@ -503,7 +503,7 @@ public sealed class LoginManager : MonoBehaviour
             __styles[index] = style;
         }
 
-        var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>();
+        var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if(scrollRect != null)
             scrollRect.MoveTo(userLevels.Length - 1);
         
