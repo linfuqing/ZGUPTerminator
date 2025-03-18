@@ -293,7 +293,7 @@ public sealed class InstanceManager : MonoBehaviour
             entity = entities[i];
             if (entityManager.IsEnabled(entity) && 
                 entityManager.HasComponent<global::Instance>(entity) && 
-                entityManager.IsComponentEnabled<global::Instance>(entity) && 
+                //entityManager.IsComponentEnabled<global::Instance>(entity) && 
                 results[i] != null)
                 continue;
 
