@@ -357,11 +357,10 @@ public sealed class InstanceManager : MonoBehaviour
                 gameObject.BroadcastMessage(instance.destroyMessageName, instance.destroyMessageValue);
 
             //yield return new WaitForSeconds(instance.destroyTime);
+            Disposable.Destroy(instance.destroyTime, gameObject, instance.prefab);
         }
-        
-        Disposable.Destroy(instance.destroyTime, gameObject, instance.prefab);
-
-        //__Destroy(gameObject, instance.prefab);
+        else
+            __Destroy(gameObject, instance.prefab);
     }
 
     private static void __Destroy(GameObject gameObject, GameObject prefab)
