@@ -93,7 +93,10 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onStart;
 
     [SerializeField]
-    internal ActiveEvent _onHot;
+    internal UnityEvent _onHotEnable;
+
+    [SerializeField]
+    internal UnityEvent _onHotDisable;
 
     [SerializeField]
     internal StringEvent _onGold;
@@ -506,9 +509,14 @@ public sealed class LoginManager : MonoBehaviour
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if(scrollRect != null)
             scrollRect.MoveTo(userLevels.Length - 1);
-        
-        if(_onHot != null)
-            _onHot.Invoke(isHot);
+
+        if (isHot)
+        {
+            if (_onHotEnable != null)
+                _onHotEnable.Invoke();
+        }
+        else if(_onHotDisable != null)
+            _onHotDisable.Invoke();
     }
 
     private void __ApplyLevel(Memory<UserReward> rewards)
