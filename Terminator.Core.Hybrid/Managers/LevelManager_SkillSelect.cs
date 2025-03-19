@@ -25,7 +25,6 @@ public partial class LevelManager
         End = 0x02, 
         Finish = 0x04, 
         Complete = 0x08,  
-        Close = 0x10, 
     }
     
     [Serializable]
@@ -348,11 +347,7 @@ public partial class LevelManager
                 style.SetAsset(value.value);
 
                 if (style.close == null)
-                {
                     Destroy(style.gameObject, selection.destroyTime);
-
-                    __skillSelectionStatus |= SkillSelectionStatus.Close;
-                }
                 else
                 {
                     var onClick = style.close.onClick;
@@ -384,10 +379,10 @@ public partial class LevelManager
         {
             foreach (var resultSkillStyle in __resultSkillStyles)
                 resultSkillStyle.onFinish.Invoke();
+            
+            while ((SkillSelectionStatus.Complete & __skillSelectionStatus) != SkillSelectionStatus.Complete)
+                yield return null;
         }
-        
-        while ((SkillSelectionStatus.Close & __skillSelectionStatus) != SkillSelectionStatus.Close)
-            yield return null;
         
         //UnityEngine.Assertions.Assert.IsTrue((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete);
         //UnityEngine.Assertions.Assert.AreNotEqual(-1, selectedSkillSelectionIndex);
@@ -476,7 +471,7 @@ public partial class LevelManager
 
     private void __CloseSkillSelectionRightNow()
     {
-        __skillSelectionStatus |= SkillSelectionStatus.Close;
+        __skillSelectionStatus |= SkillSelectionStatus.Complete;
     }
 
     private void __DestroyGameObjects()
