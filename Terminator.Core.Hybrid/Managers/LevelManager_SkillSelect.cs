@@ -81,8 +81,6 @@ public partial class LevelManager
 
     public bool isClear => __gameObjectsToDestroy == null || __gameObjectsToDestroy.Count < 1;
     
-    public bool isEndOfSkillSelection => (__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End;
-
     public int selectedSkillSelectionIndex
     {
         get;
@@ -90,7 +88,15 @@ public partial class LevelManager
         private set;
     } = -1;
 
-    public int[] selectedSkillIndices => __selectedSkillIndices == null ? null : __selectedSkillIndices.ToArray();
+    public int[] CollectSelectedSkillIndices()
+    {
+        if ((__skillSelectionStatus & SkillSelectionStatus.End) != SkillSelectionStatus.End)
+            return null;
+        
+        __skillSelectionStatus &= ~SkillSelectionStatus.End;
+
+        return __selectedSkillIndices == null ? Array.Empty<int>() : __selectedSkillIndices.ToArray();
+    }
 
     public void SelectSkillBegin(int selectionIndex)
     {
@@ -141,7 +147,7 @@ public partial class LevelManager
     {
         IAnalytics.instance?.SelectSkills(styleIndex, skills);
 
-        __skillSelectionStatus &= ~SkillSelectionStatus.End;
+        //__skillSelectionStatus &= ~SkillSelectionStatus.End;
         
         if(__selectedSkillIndices != null)
             __selectedSkillIndices.Clear();
@@ -296,12 +302,13 @@ public partial class LevelManager
 
         __DestroyGameObjects();
 
+        __skillSelectionStatus |= SkillSelectionStatus.End;
+        
         if (selectedSkillSelectionIndex == -1)
-            __CompleteSkillSelection();
+            yield return __CompleteSkillSelection();
         else if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
             yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
 
-        __skillSelectionStatus |= SkillSelectionStatus.End;
         /*if (__selectedSkillIndices == null)
             __selectedSkillIndices = new List<int>();
 
@@ -323,19 +330,15 @@ public partial class LevelManager
             __skillStyles.Clear();
         }
 
-        if (selectedSkillSelectionIndex == -1)
-        {
-            __CompleteSkillSelection();
-            
+        //if (selectedSkillSelectionIndex == -1)
             __SetSkillSelection(isEnd, value.selectIndex);
-        }
 
         yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
 
         if (selectedSkillSelectionIndex == -1)
-            __CompleteSkillSelection();
+            yield return __CompleteSkillSelection();
         else
         {
             var selection = _skillSelections[selectedSkillSelectionIndex];
@@ -362,7 +365,7 @@ public partial class LevelManager
             if ((SkillSelectionStatus.Finish & __skillSelectionStatus) != 0)
                 yield return __FinishSkillSelection(selection);
             
-            __SetSkillSelection(isEnd, value.selectIndex);
+            //__SetSkillSelection(isEnd, value.selectIndex);
         }
     }
 
@@ -386,16 +389,19 @@ public partial class LevelManager
 
     private IEnumerator __CloseSkillSelection()
     {
-        UnityEngine.Assertions.Assert.IsTrue((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete);
+        yield return __CompleteSkillSelection();
+        
+        //UnityEngine.Assertions.Assert.IsTrue((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete);
+        UnityEngine.Assertions.Assert.AreEqual((SkillSelectionStatus)0, __skillSelectionStatus);
         UnityEngine.Assertions.Assert.AreNotEqual(-1, selectedSkillSelectionIndex);
 
         var selection = _skillSelections[selectedSkillSelectionIndex];
         selection.onDisable.Invoke();
         
         selectedSkillSelectionIndex = -1;
-        __skillSelectionStatus = 0;
+        //__skillSelectionStatus = 0;
         
-        ClearTimeScales();
+        //ClearTimeScales();
 
         if (__resultSkillStyles != null)
         {
@@ -415,20 +421,20 @@ public partial class LevelManager
         __DestroyGameObjects();
     }
 
+    private IEnumerator __CompleteSkillSelection()
+    {
+        while ((SkillSelectionStatus.Complete & __skillSelectionStatus) != SkillSelectionStatus.Complete)
+            yield return null;
+        
+        __skillSelectionStatus = 0;
+        
+        ClearTimeScales();
+    }
+
     private void __CloseSkillSelectionRightNow()
     {
         if((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
             __StartCoroutine(__CloseSkillSelection());
-    }
-
-    private void __CompleteSkillSelection()
-    {
-        if ((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
-        {
-            __skillSelectionStatus = 0;
-                
-            ClearTimeScales();
-        }
     }
 
     private void __DestroyGameObjects()
@@ -458,8 +464,11 @@ public partial class LevelManager
         if(time > 0.0f)
             yield return new WaitForSecondsRealtime(time);
 
-        if (__coroutine != null)
-            yield return __coroutine;
+        //不行
+        //if (__coroutine != null)
+        //    yield return __coroutine;
+        while (0 != __skillSelectionStatus)
+            yield return null;
 
         UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
         UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);

@@ -405,49 +405,51 @@ public partial class LevelSystemManaged
             var skillVersion = SystemAPI.GetComponent<LevelSkillVersion>(entity);
             if (__skillSelection.version.Equals(skillVersion))
             {
-                if (SystemAPI.IsBufferEnabled<LevelSkill>(entity) && manager.isEndOfSkillSelection)
+                if (SystemAPI.IsBufferEnabled<LevelSkill>(entity))
                 {
-                    if (__skillSelection.status == SkillSelectionStatus.End)
-                        __skillSelection.status = SkillSelectionStatus.Finish;
-
-                    if (definition.IsCreated)
+                    var selectedSkillIndices = manager.CollectSelectedSkillIndices();
+                    if (selectedSkillIndices != null)
                     {
-                        var selectedSkillIndices = manager.selectedSkillIndices;
-                        int numSelectedSkillIndices =
-                            selectedSkillIndices == null ? 0 : selectedSkillIndices.Length;
-                        if (numSelectedSkillIndices > 0)
+                        if (__skillSelection.status == SkillSelectionStatus.End)
+                            __skillSelection.status = SkillSelectionStatus.Finish;
+
+                        if (definition.IsCreated)
                         {
-                            var skillIndices = new NativeList<int>(
-                                numSelectedSkillIndices * (activeIndices.Length + 1),
-                                Allocator.TempJob);
-                            skillIndices.CopyFromNBC(selectedSkillIndices);
+                            int numSelectedSkillIndices = selectedSkillIndices.Length;
+                            if (numSelectedSkillIndices > 0)
+                            {
+                                var skillIndices = new NativeList<int>(
+                                    numSelectedSkillIndices * (activeIndices.Length + 1),
+                                    Allocator.TempJob);
+                                skillIndices.CopyFromNBC(selectedSkillIndices);
 
-                            var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
-                            var bulletStates = SystemAPI.GetBuffer<BulletStatus>(player);
-                            LevelSkill.Apply(
-                                SystemAPI.Time.ElapsedTime,
-                                skillIndices,
-                                skills,
-                                ref activeIndices,
-                                ref bulletStates,
-                                ref SystemAPI.GetComponent<BulletDefinitionData>(player).definition.Value,
-                                ref definition.Value,
-                                ref skillIndices);
+                                var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
+                                var bulletStates = SystemAPI.GetBuffer<BulletStatus>(player);
+                                LevelSkill.Apply(
+                                    SystemAPI.Time.ElapsedTime,
+                                    skillIndices,
+                                    skills,
+                                    ref activeIndices,
+                                    ref bulletStates,
+                                    ref SystemAPI.GetComponent<BulletDefinitionData>(player).definition.Value,
+                                    ref definition.Value,
+                                    ref skillIndices);
 
-                            int numActiveSkillIndices = skillIndices.Length;
-                            if (numActiveSkillIndices > numSelectedSkillIndices)
-                                __skillSelection.UpdateBullets(
-                                    entity,
-                                    skillIndices.AsArray()
-                                        .GetSubArray(numSelectedSkillIndices,
-                                            numActiveSkillIndices - numSelectedSkillIndices),
-                                    this);
+                                int numActiveSkillIndices = skillIndices.Length;
+                                if (numActiveSkillIndices > numSelectedSkillIndices)
+                                    __skillSelection.UpdateBullets(
+                                        entity,
+                                        skillIndices.AsArray()
+                                            .GetSubArray(numSelectedSkillIndices,
+                                                numActiveSkillIndices - numSelectedSkillIndices),
+                                        this);
 
-                            skillIndices.Dispose();
+                                skillIndices.Dispose();
+                            }
                         }
-                    }
 
-                    SystemAPI.SetBufferEnabled<LevelSkill>(entity, false);
+                        SystemAPI.SetBufferEnabled<LevelSkill>(entity, false);
+                    }
                 }
             }
             else if(nameDefinition.IsCreated)
