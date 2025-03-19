@@ -95,7 +95,17 @@ public partial class LevelManager
         
         __skillSelectionStatus &= ~SkillSelectionStatus.End;
 
-        return __selectedSkillIndices == null ? Array.Empty<int>() : __selectedSkillIndices.ToArray();
+        int[] result;
+        if(__selectedSkillIndices == null)
+            result = Array.Empty<int>();
+        else
+        {
+            result = __selectedSkillIndices.ToArray();
+            
+            __selectedSkillIndices.Clear();
+        }
+
+        return result;
     }
 
     public void SelectSkillBegin(int selectionIndex)
@@ -477,9 +487,14 @@ public partial class LevelManager
             __selectedSkillIndices = new List<int>();
 
         __selectedSkillIndices.Add(selectedIndex);
-        
-        if(isEnd)
+
+        if (isEnd)
+        {
+            UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
+                __skillSelectionStatus & SkillSelectionStatus.End);
+            
             __skillSelectionStatus |= SkillSelectionStatus.End;
+        }
     }
 
     void OnDestroy()
