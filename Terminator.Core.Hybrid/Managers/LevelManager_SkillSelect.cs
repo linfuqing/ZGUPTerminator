@@ -24,7 +24,7 @@ public partial class LevelManager
         Start = 0x01, 
         End = 0x02, 
         Finish = 0x04, 
-        Complete = Start | Finish, 
+        Complete = 0x08, 
     }
     
     [Serializable]
@@ -371,23 +371,19 @@ public partial class LevelManager
             foreach (var resultSkillStyle in __resultSkillStyles)
                 resultSkillStyle.onFinish.Invoke();
 
-            /*while (-1 != selectedSkillSelectionIndex)
-                yield return null;*/
+            while ((SkillSelectionStatus.Complete & __skillSelectionStatus) != SkillSelectionStatus.Complete)
+                yield return null;
         }
-        else
-            yield return __CloseSkillSelection();
-    }
-
-    private IEnumerator __CloseSkillSelection()
-    {
-        yield return __CompleteSkillSelection();
         
         //UnityEngine.Assertions.Assert.IsTrue((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete);
-        UnityEngine.Assertions.Assert.AreEqual((SkillSelectionStatus)0, __skillSelectionStatus);
-        UnityEngine.Assertions.Assert.AreNotEqual(-1, selectedSkillSelectionIndex);
+        //UnityEngine.Assertions.Assert.AreNotEqual(-1, selectedSkillSelectionIndex);
 
-        var selection = _skillSelections[selectedSkillSelectionIndex];
+        //var selection = _skillSelections[selectedSkillSelectionIndex];
         selection.onDisable.Invoke();
+        
+        yield return __CompleteSkillSelection();
+
+        UnityEngine.Assertions.Assert.AreEqual((SkillSelectionStatus)0, __skillSelectionStatus);
         
         selectedSkillSelectionIndex = -1;
         //__skillSelectionStatus = 0;
@@ -414,7 +410,9 @@ public partial class LevelManager
 
     private IEnumerator __CompleteSkillSelection()
     {
-        while (SkillSelectionStatus.Complete != __skillSelectionStatus)
+        var status = SkillSelectionStatus.Start | SkillSelectionStatus.Finish;
+        while ((status & __skillSelectionStatus) != status ||
+               (SkillSelectionStatus.End & __skillSelectionStatus) != 0)
             yield return null;
         
         __skillSelectionStatus = 0;
@@ -450,7 +448,8 @@ public partial class LevelManager
 
     private IEnumerator __FinishSkillSelection()
     {
-        while ((__skillSelectionStatus & SkillSelectionStatus.Finish) == SkillSelectionStatus.Finish)
+        while ((__skillSelectionStatus & SkillSelectionStatus.Finish) == SkillSelectionStatus.Finish || 
+               (__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start)
             yield return null;
         
         __skillSelectionStatus |= SkillSelectionStatus.Finish;
@@ -458,7 +457,7 @@ public partial class LevelManager
 
     private void __CloseSkillSelectionRightNow()
     {
-        __StartCoroutine(__CloseSkillSelection());
+        __skillSelectionStatus |= SkillSelectionStatus.Complete;
     }
 
     private void __DestroyGameObjects()
