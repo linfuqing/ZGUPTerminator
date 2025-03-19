@@ -263,7 +263,7 @@ public partial class LevelSystemManaged
 
         private ComponentLookup<SkillDefinitionData> __skills;
 
-        public BufferLookup<BulletStatus> __bulletStates;
+        private BufferLookup<BulletStatus> __bulletStates;
 
         private EntityQuery __bulletGroup;
         private EntityQuery __bulletGroupUnmanaged;

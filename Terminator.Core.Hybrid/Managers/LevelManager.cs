@@ -63,6 +63,8 @@ public partial class LevelManager : MonoBehaviour
     
     private Coroutine __coroutine;
 
+    private Queue<IEnumerator> __coroutineEnumerators;
+
     private List<int> __timeScaleIndices;
 
     private List<GameObject> __gameObjectsToDestroy;
@@ -295,19 +297,23 @@ public partial class LevelManager : MonoBehaviour
         }
     }
 
-    private IEnumerator __Coroutine(Coroutine coroutine, IEnumerator enumerator)
+    private IEnumerator __Coroutine()
     {
-        if (coroutine != null)
-            yield return coroutine;
-
-        yield return enumerator;
+        while(__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
+            yield return coroutineEnumerator;
 
         __coroutine = null;
     }
 
     private void __StartCoroutine(IEnumerator enumerator)
     {
-        __coroutine = StartCoroutine(__Coroutine(__coroutine, enumerator));
+        if (__coroutineEnumerators == null)
+            __coroutineEnumerators = new Queue<IEnumerator>();
+        
+        __coroutineEnumerators.Enqueue(enumerator);
+        
+        if(__coroutine == null)
+            __coroutine = StartCoroutine(__Coroutine());
     }
 
     private void __OnStageChanged(bool result)
