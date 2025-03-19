@@ -133,8 +133,10 @@ public partial class LevelManager
     public void SelectSkillEnd()
     {
         IAnalytics.instance?.SelectSkillEnd();
-        
-        __skillSelectionStatus |= SkillSelectionStatus.Finish;
+
+        StartCoroutine(__FinishSkillSelection());
+
+        //__skillSelectionStatus |= SkillSelectionStatus.Finish;
     }
 
     public void SelectSkills(int styleIndex, LevelSkillData[] skills)
@@ -420,6 +422,40 @@ public partial class LevelManager
         ClearTimeScales();
     }
 
+    private IEnumerator __PauseToSkillSelection()
+    {
+        yield return null;
+        
+        TimeScale(0.0f);
+    }
+
+    private IEnumerator __StartSkillSelection(int selectionIndex, float time)
+    {
+        if(time > 0.0f)
+            yield return new WaitForSecondsRealtime(time);
+
+        //不行
+        //if (__coroutine != null)
+        //    yield return __coroutine;
+        while (0 != __skillSelectionStatus || selectedSkillSelectionIndex != -1)
+            yield return null;
+
+        UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
+        UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
+
+        selectedSkillSelectionIndex = selectionIndex;
+
+        __skillSelectionStatus |= SkillSelectionStatus.Start;
+    }
+
+    private IEnumerator __FinishSkillSelection()
+    {
+        while ((__skillSelectionStatus & SkillSelectionStatus.Finish) == SkillSelectionStatus.Finish)
+            yield return null;
+        
+        __skillSelectionStatus |= SkillSelectionStatus.Finish;
+    }
+
     private void __CloseSkillSelectionRightNow()
     {
         __StartCoroutine(__CloseSkillSelection());
@@ -445,32 +481,6 @@ public partial class LevelManager
         
         if(isEnd)
             __skillSelectionStatus |= SkillSelectionStatus.End;
-    }
-
-    private IEnumerator __PauseToSkillSelection()
-    {
-        yield return null;
-        
-        TimeScale(0.0f);
-    }
-
-    private IEnumerator __StartSkillSelection(int selectionIndex, float time)
-    {
-        if(time > 0.0f)
-            yield return new WaitForSecondsRealtime(time);
-
-        //不行
-        //if (__coroutine != null)
-        //    yield return __coroutine;
-        while (0 != __skillSelectionStatus)
-            yield return null;
-
-        UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
-        UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
-
-        selectedSkillSelectionIndex = selectionIndex;
-
-        __skillSelectionStatus |= SkillSelectionStatus.Start;
     }
 
     void OnDestroy()
