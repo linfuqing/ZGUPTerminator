@@ -96,25 +96,26 @@ public partial class LevelManager
     {
         IAnalytics.instance?.SelectSkillBegin(selectionIndex);
 
-        UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
-        UnityEngine.Assertions.Assert.AreEqual(0, (int)(__skillSelectionStatus & ~SkillSelectionStatus.End));
+        //UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
+        //UnityEngine.Assertions.Assert.AreEqual(0, (int)(__skillSelectionStatus & ~SkillSelectionStatus.End));
 
-        selectedSkillSelectionIndex = selectionIndex;
+        //selectedSkillSelectionIndex = selectionIndex;
 
         if (selectionIndex == -1)
-            __skillSelectionStatus |= SkillSelectionStatus.Start;
+            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f));//__skillSelectionStatus |= SkillSelectionStatus.Start;
         else
         {
             var selection = _skillSelections[selectionIndex];
             selection.onEnable.Invoke();
 
             if (selection.start == null)
-                __skillSelectionStatus |= SkillSelectionStatus.Start;
+                StartCoroutine(__StartSkillSelection(selectionIndex,
+                    selection.startTime)); //__skillSelectionStatus |= SkillSelectionStatus.Start;
             else
             {
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selection.startTime)));
+                onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selectionIndex, selection.startTime)));
             }
         }
 
@@ -452,10 +453,19 @@ public partial class LevelManager
             __skillSelectionStatus |= SkillSelectionStatus.End;
     }
 
-    private IEnumerator __StartSkillSelection(float time)
+    private IEnumerator __StartSkillSelection(int selectionIndex, float time)
     {
-        yield return new WaitForSecondsRealtime(time);
-        
+        if(time > 0.0f)
+            yield return new WaitForSecondsRealtime(time);
+
+        if (__coroutine != null)
+            yield return __coroutine;
+
+        UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
+        UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
+
+        selectedSkillSelectionIndex = selectionIndex;
+
         __skillSelectionStatus |= SkillSelectionStatus.Start;
     }
 
