@@ -144,7 +144,7 @@ public partial class LevelManager
     {
         IAnalytics.instance?.SelectSkillEnd();
 
-        StartCoroutine(__FinishSkillSelection());
+        __StartCoroutine(__FinishSkillSelection());
 
         //__skillSelectionStatus |= SkillSelectionStatus.Finish;
     }
@@ -312,7 +312,7 @@ public partial class LevelManager
         
         if (selectedSkillSelectionIndex == -1)
             yield return __CompleteSkillSelection();
-        else
+        else if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
             yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
     }
 
@@ -349,7 +349,11 @@ public partial class LevelManager
                 style.SetAsset(value.value);
 
                 if (style.close == null)
+                {
                     Destroy(style.gameObject, selection.destroyTime);
+
+                    __skillSelectionStatus |= SkillSelectionStatus.Complete;
+                }
                 else
                 {
                     var onClick = style.close.onClick;
@@ -363,14 +367,15 @@ public partial class LevelManager
                 }
             }
 
-            yield return __FinishSkillSelection(selection);
+            if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
+                yield return __FinishSkillSelection(selection);
         }
     }
 
     private IEnumerator __FinishSkillSelection(SkillSelection selection)
     {
-        while ((SkillSelectionStatus.Finish & __skillSelectionStatus) == 0)
-            yield return null;
+        /*while ((SkillSelectionStatus.Finish & __skillSelectionStatus) == 0)
+            yield return null;*/
         
         selection.onFinish.Invoke();
         
@@ -380,10 +385,10 @@ public partial class LevelManager
         {
             foreach (var resultSkillStyle in __resultSkillStyles)
                 resultSkillStyle.onFinish.Invoke();
-
-            while ((SkillSelectionStatus.Complete & __skillSelectionStatus) != SkillSelectionStatus.Complete)
-                yield return null;
         }
+        
+        while ((SkillSelectionStatus.Complete & __skillSelectionStatus) != SkillSelectionStatus.Complete)
+            yield return null;
         
         //UnityEngine.Assertions.Assert.IsTrue((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete);
         //UnityEngine.Assertions.Assert.AreNotEqual(-1, selectedSkillSelectionIndex);
@@ -463,11 +468,26 @@ public partial class LevelManager
             yield return null;
         
         __skillSelectionStatus |= SkillSelectionStatus.Finish;
+
+        if ((SkillSelectionStatus.Complete & __skillSelectionStatus) == SkillSelectionStatus.Complete)
+        {
+            int selectedSkillSelectionIndex = this.selectedSkillSelectionIndex;
+            if(selectedSkillSelectionIndex != -1)
+                yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
+        }
+    }
+
+    private IEnumerator __CloseSkillSelection()
+    {
+        __skillSelectionStatus |= SkillSelectionStatus.Complete;
+
+        if ((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
+            yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
     }
 
     private void __CloseSkillSelectionRightNow()
     {
-        __skillSelectionStatus |= SkillSelectionStatus.Complete;
+        __StartCoroutine(__CloseSkillSelection());
     }
 
     private void __DestroyGameObjects()
