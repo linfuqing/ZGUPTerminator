@@ -3,6 +3,22 @@ using UnityEngine;
 
 public partial class UserDataMain
 {
+    private Dictionary<string, int> __purchasePoolNameToIndices;
+    
+    private int __GetPurchasePoolIndex(string name)
+    {
+        if (__purchasePoolNameToIndices == null)
+        {
+            __purchasePoolNameToIndices = new Dictionary<string, int>();
+
+            int numPurchasePools = _purchasePools.Length;
+            for(int i = 0; i < numPurchasePools; ++i)
+                __purchasePoolNameToIndices.Add(_purchasePools[i].name, i);
+        }
+
+        return __purchasePoolNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+
     private Dictionary<string, string> __skillToGroupNames;
 
     private string __GetSkillGroupName(string skillName)
@@ -405,7 +421,7 @@ public partial class UserDataMain
                 if ((flag & Flag.PurchasesUnlock) == 0 && UserData.level > 0)
                     UserDataMain.flag |= Flag.PurchasesUnlock;
                 
-                id = 1;
+                id = __ToID(__GetPurchasePoolIndex(reward.name));
                 key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
                 break;
             case UserRewardType.CardsCapacity:
