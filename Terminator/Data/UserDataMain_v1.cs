@@ -48,6 +48,9 @@ public partial class UserDataMain
 
         [Tooltip("抽卡需要多少钻石")]
         public int diamond;
+
+        [Tooltip("抽一次可获得多少金币")]
+        public int gold;
     }
     
     [Serializable]
@@ -205,6 +208,7 @@ public partial class UserDataMain
             userPurchasePool.name = purchasePool.name;
             userPurchasePool.id = __ToID(i);
             userPurchasePool.diamond = purchasePool.diamond;
+            userPurchasePool.gold = purchasePool.gold;
             
             result.pools[i] = userPurchasePool;
         }
@@ -331,6 +335,9 @@ public partial class UserDataMain
             
             PlayerPrefs.SetInt(poolKey, keyCount);
         }
+
+        int gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold + purchasePool.gold);
 
         UserRewardData reward;
         reward.type = UserRewardType.Card;

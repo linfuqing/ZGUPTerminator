@@ -56,6 +56,9 @@ public struct UserPurchasePool
 
     //花费的钻石数量
     public int diamond;
+    
+    //抽一次获得多少金币
+    public int gold;
 }
 
 public struct UserCardStyle
