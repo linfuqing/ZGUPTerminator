@@ -205,6 +205,7 @@ public partial class LevelManager
                     recommendPriority = 0,
                     guideIndex = -1,
                     recommendIndex = -1;
+                LevelSkillData? skill = null;
                 LevelSkillStyle style;
                 for (int i = 0; i < numSkills; ++i)
                 {
@@ -244,7 +245,8 @@ public partial class LevelManager
 
                             destination.onDisable.Invoke();
 
-                            __StartCoroutine(__SelectSkill(true, destination.destroyTime, source));
+                            skill = source;
+                            //__StartCoroutine(__SelectSkill(true, destination.destroyTime, source));
                         });
                     }
 
@@ -283,6 +285,14 @@ public partial class LevelManager
                     if (_onSkillSelectionGuide != null)
                         _onSkillSelectionGuide.Invoke(Array.IndexOf(_skillSelectionGuides, skillName));
                 }
+
+                if (result)
+                {
+                    while (skill == null)
+                        yield return null;
+                    
+                    yield return __SelectSkill(true, destination.destroyTime, skill.Value);
+                }
             }
         }
 
@@ -317,9 +327,6 @@ public partial class LevelManager
 
     private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value)
     {
-        //等待队列
-        yield return null;
-        
         if (__skillStyles != null)
         {
             foreach (var skillStyle in __skillStyles.Values)
