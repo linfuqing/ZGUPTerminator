@@ -460,11 +460,7 @@ public partial class LevelManager
         {
             yield return null;
         }
-        //UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.Finish, SkillSelectionStatus.Finish & __skillSelectionStatus);
-        while ( //(__skillSelectionStatus & SkillSelectionStatus.Finish) == SkillSelectionStatus.Finish || 
-               (__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start);
-
-        //__skillSelectionStatus |= SkillSelectionStatus.Finish;
+        while ((__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start);
 
         if (selectedSkillSelectionIndex == -1)
             yield return __CompleteSkillSelection();
@@ -480,8 +476,6 @@ public partial class LevelManager
         UnityEngine.Assertions.Assert.AreEqual((SkillSelectionStatus)0, (SkillSelectionStatus.End & __skillSelectionStatus));
 
         __skillSelectionStatus = 0;
-        
-        //ClearTimeScales();
     }
 
     private void __CloseSkillSelectionRightNow()
