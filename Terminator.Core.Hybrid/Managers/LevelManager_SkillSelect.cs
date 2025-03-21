@@ -124,6 +124,9 @@ public partial class LevelManager
                     selection.startTime));
             else
             {
+                //放在这里无害，最后会被清理掉
+                TimeScale(0.0f);
+                
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
                 onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selectionIndex, selection.startTime)));

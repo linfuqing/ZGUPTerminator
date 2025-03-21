@@ -98,7 +98,17 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
                     prefabLoaders[source.receiverPrefab] = destination.entityPrefabReference;
                 }
+            }
 
+            if (authoring._attributeParameter != null)
+            {
+                EffectTargetMessage message;
+                message.layerMask = ~0u;
+                message.entityPrefabReference = default;
+                message.messageName = "UpdateAttribute";
+                message.messageValue = new WeakObjectReference<Object>(authoring._attributeParameter);
+
+                messages.Add(message);
             }
             
             AddComponent<EffectTargetHP>(entity);
