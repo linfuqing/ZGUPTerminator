@@ -201,6 +201,14 @@ public sealed partial class UserDataMain : MonoBehaviour
 
             yield break;
         }
+
+        var flag = UserDataMain.flag;
+        if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
+        {
+            flag |= Flag.RoleUnlock;
+
+            UserDataMain.flag = flag;
+        }
         
         //flag &= ~Flag.UnlockFirst;
         

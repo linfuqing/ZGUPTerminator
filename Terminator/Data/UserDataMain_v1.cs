@@ -1154,16 +1154,7 @@ public partial class UserDataMain
         if ((flag & Flag.RolesUnlockFirst) == Flag.RolesUnlockFirst)
             result.flag |= IUserData.Roles.Flag.UnlockFirst;
         else if ((flag & Flag.RolesUnlock) != 0)
-        {
             result.flag |= IUserData.Roles.Flag.Unlock;
-            
-            if ((flag & Flag.RoleUnlock) == 0)
-            {
-                flag |= Flag.RoleUnlock;
-
-                UserDataMain.flag = flag;
-            }
-        }
         
         if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
             result.flag |= IUserData.Roles.Flag.RoleUnlockFirst;

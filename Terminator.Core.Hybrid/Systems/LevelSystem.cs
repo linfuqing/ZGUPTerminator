@@ -108,6 +108,7 @@ public partial class LevelSystemManaged : SystemBase
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
                 .WithAll<LevelObject>()
+                .WithOptions(EntityQueryOptions.IncludeDisabledEntities)
                 .Build(this);
 
         //RequireForUpdate<LevelStatus>();

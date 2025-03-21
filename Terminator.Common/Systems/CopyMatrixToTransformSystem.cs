@@ -12,20 +12,24 @@ public partial struct CopyMatrixToTransformSystem : ISystem
     private struct Apply : IJobParallelForTransform
     {
         [ReadOnly] 
-        public NativeList<LocalToWorld> localToWorlds;
+        public NativeArray<int> indices;
+
+        [ReadOnly] 
+        public NativeArray<LocalToWorld> localToWorlds;
         
         public void Execute(int index, TransformAccess transform)
         {
             if (!transform.isValid)
                 return;
 
-            var localToWorld = localToWorlds[index];
+            var localToWorld = localToWorlds[indices[index]];
             transform.SetPositionAndRotation(localToWorld.Position, localToWorld.Rotation);
         }
     }
 
     private EntityQuery __group;
     private TransformAccessArray __transformAccessArray;
+    private NativeList<int> __indices;
     private uint __version;
 
     [BurstCompile]
@@ -35,11 +39,15 @@ public partial struct CopyMatrixToTransformSystem : ISystem
             __group = builder
                 .WithAll<CopyMatrixToTransformInstanceID, LocalToWorld>()
                 .Build(ref state);
+
+        __indices = new NativeList<int>(Allocator.Persistent);
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
+        __indices.Dispose();
+        
         if(__transformAccessArray.isCreated)
             __transformAccessArray.Dispose();
     }
@@ -49,8 +57,8 @@ public partial struct CopyMatrixToTransformSystem : ISystem
     {
         uint version = (uint)__group.GetCombinedComponentOrderVersion(false);//(uint)entityManager.GetComponentOrderVersion<CopyMatrixToTransformInstanceID>();
 
-        if (ChangeVersionUtility.DidChange(version, __version) || 
-            __group.CalculateEntityCount() != (__transformAccessArray.isCreated ? __transformAccessArray.length : 0))
+        if (ChangeVersionUtility.DidChange(version, __version)/* || 
+            __group.CalculateEntityCount() != (__transformAccessArray.isCreated ? __transformAccessArray.length : 0)*/)
         {
             __version = version;
             
@@ -59,19 +67,28 @@ public partial struct CopyMatrixToTransformSystem : ISystem
                 int numIDs = ids.Length;
 
                 if (__transformAccessArray.isCreated)
-                        __transformAccessArray.Dispose();
+                    __transformAccessArray.Dispose();
                 
                 __transformAccessArray = new TransformAccessArray(numIDs);
 
+                __indices.Clear();
                 for (int i = 0; i < numIDs; ++i)
+                {
                     __transformAccessArray.Add(ids[i].value);
+                    
+                    if(__transformAccessArray.length > __indices.Length)
+                        __indices.Add(i);
+                }
             }
         }
         
-        //UnityEngine.Assertions.Assert.AreEqual(__transformAccessArray.length, __group.CalculateEntityCount());
+        UnityEngine.Assertions.Assert.AreEqual(__transformAccessArray.length, __indices.Length);
         
         Apply apply;
-        apply.localToWorlds = __group.ToComponentDataListAsync<LocalToWorld>(state.WorldUpdateAllocator, out var localToWorldJobHandle);
+        apply.indices = __indices.AsArray();
+        apply.localToWorlds = __group
+            .ToComponentDataListAsync<LocalToWorld>(state.WorldUpdateAllocator, out var localToWorldJobHandle)
+            .AsDeferredJobArray();
         state.Dependency = apply.ScheduleByRef(__transformAccessArray, 
             JobHandle.CombineDependencies(localToWorldJobHandle, state.Dependency));
     }

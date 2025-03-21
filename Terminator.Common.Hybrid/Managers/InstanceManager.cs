@@ -320,10 +320,17 @@ public sealed class InstanceManager : MonoBehaviour
         for (int i = 0; i < numEntities; ++i)
         {
             gameObject = results[i];
+
+            UnityEngine.Assertions.Assert.IsTrue(gameObject.name.Contains(prefab.gameObject.name));
             
             transform = gameObject.transform;
 
             entity = entities[i];
+            
+#if UNITY_EDITOR
+            entityManager.SetName(entity, $"{gameObject.name}({transform.GetInstanceID()})");
+#endif
+            
             if (localToWorlds.TryGetComponent(entity, out localToWorld))
             {
                 transform.localPosition = localToWorld.Position;
