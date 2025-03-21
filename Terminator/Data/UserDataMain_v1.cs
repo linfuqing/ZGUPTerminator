@@ -336,9 +336,8 @@ public partial class UserDataMain
             PlayerPrefs.SetInt(poolKey, keyCount);
         }
 
-        int gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold + purchasePool.gold);
-
+        gold += purchasePool.gold;
+        
         UserRewardData reward;
         reward.type = UserRewardType.Card;
         
@@ -726,7 +725,7 @@ public partial class UserDataMain
         
         string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
         int count = PlayerPrefs.GetInt(countKey), 
-            gold = PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
+            gold = UserDataMain.gold;
 
         var cardLevel = _cardLevels[levelIndices[level]];
         if (cardLevel.count > count || cardLevel.gold > gold)
@@ -738,7 +737,8 @@ public partial class UserDataMain
 
         PlayerPrefs.SetInt(levelKey, ++level);
         PlayerPrefs.SetInt(countKey, count - cardLevel.count);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, gold - cardLevel.gold);
+
+        UserDataMain.gold = gold - cardLevel.gold;
         
         onComplete(true);
     }

@@ -282,6 +282,13 @@ public sealed partial class UserDataMain : MonoBehaviour
             __ApplyRewards(stage.directRewards, rewards);
         }
 
+        UserReward reward;
+        reward.name = null;
+        reward.id = 0;
+        reward.type = UserRewardType.Gold;
+        reward.count = gold;
+        rewards.Add(reward);
+
         __CollectLevelLegacy(isNextLevel, levelIndex, levelCache.stage);
         
         onComplete(rewards.ToArray());
