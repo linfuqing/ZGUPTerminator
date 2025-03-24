@@ -336,7 +336,7 @@ public partial class UserDataMain
             PlayerPrefs.SetInt(poolKey, keyCount);
         }
 
-        gold += purchasePool.gold;
+        gold += purchasePool.gold * times;
         
         UserRewardData reward;
         reward.type = UserRewardType.Card;

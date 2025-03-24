@@ -85,7 +85,8 @@ public partial struct DelayDestroySystem : ISystem
         apply.deltaTime = SystemAPI.Time.DeltaTime;
         apply.entityType = __entityType;
         apply.delayDestroyType = __delayDestroyType;
-        apply.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        apply.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
+            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         state.Dependency = apply.ScheduleParallelByRef(__group, state.Dependency);
 
         __fixedFrameCount = fixedFrameCount;
