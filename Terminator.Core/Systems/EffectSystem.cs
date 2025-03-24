@@ -416,19 +416,6 @@ public partial struct EffectSystem : ISystem
 
                         isResult = false;
 
-                        if (delayDestroies.HasComponent(simulationEvent.entity))
-                        {
-                            delayDestroyTime = damage.delayDestroyTime; // * damageScale;
-                            if (math.abs(delayDestroyTime) > math.FLT_MIN_NORMAL)
-                            {
-                                Math.InterlockedAdd(
-                                    ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
-                                    delayDestroyTime);
-
-                                isResult = true;
-                            }
-                        }
-
                         if (!localToWorlds.TryGetComponent(simulationEvent.entity, out destination))
                             destination.Value = float4x4.identity;
 
@@ -543,6 +530,15 @@ public partial struct EffectSystem : ISystem
 
                         if (isResult)
                         {
+                            if (delayDestroies.HasComponent(simulationEvent.entity))
+                            {
+                                delayDestroyTime = damage.delayDestroyTime; // * damageScale;
+                                if (math.abs(delayDestroyTime) > math.FLT_MIN_NORMAL)
+                                    Math.InterlockedAdd(
+                                        ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
+                                        delayDestroyTime);
+                            }
+
                             enabledFlags |= EnabledFlags.StatusTarget;
 
                             numMessageIndices = damage.messageIndices.Length;

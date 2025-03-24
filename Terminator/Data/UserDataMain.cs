@@ -296,8 +296,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     private bool __ApplyEnergy(int value)
     {
-        var timeUnix = DateTime.UtcNow - new DateTime(
-            1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        var timeUnix = DateTime.UtcNow - Utc1970;
         uint now = (uint)timeUnix.TotalSeconds, time = now;
         int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         if (_energy.uintTime > Mathf.Epsilon)
