@@ -359,7 +359,10 @@ public class LevelAuthoring : MonoBehaviour
                 var levelPrefabs = AddBuffer<LevelPrefab>(entity);
                 levelPrefabs.ResizeUninitialized(numPrefabs);
                 for (i = 0; i < numPrefabs; ++i)
+                {
+                    UnityEngine.Assertions.Assert.IsNotNull(authoring._prefabs[i], authoring.name);
                     levelPrefabs.ElementAt(i).reference = new EntityPrefabReference(authoring._prefabs[i]);
+                }
             }
         }
     }

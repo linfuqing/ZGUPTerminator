@@ -65,6 +65,8 @@ public struct PrefabLoader
 
         public bool TryGetOrLoadPrefabRoot(in EntityPrefabReference entityPrefabReference, out Entity entity)
         {
+            UnityEngine.Assertions.Assert.AreNotEqual(default, entityPrefabReference);
+            
             PrefabLoaderSingleton.Result result;
             result.entityPrefabReference = entityPrefabReference;
             if (__weakAssetReferenceLoadingData.LoadedPrefabs.TryGetValue(entityPrefabReference,
@@ -380,7 +382,7 @@ public partial struct PrefabLoaderSystem : ISystem
             Apply apply;
             apply.time = time + savedTime;
             apply.entityArray = entityArray;
-            apply.entityPrefabReferences = entityPrefabReferences;
+            apply.entityPrefabReferences = entityPrefabReferences.AsArray();
             apply.requestEntityPrefabLoadeds = __requestEntityPrefabLoadeds;
             apply.instances = __instances.AsParallelWriter();
 

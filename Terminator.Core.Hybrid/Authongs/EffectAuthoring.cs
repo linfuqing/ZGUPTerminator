@@ -216,6 +216,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         ref var destinationPrefab = ref prefabs[j];
                         destinationPrefab.space = sourcePrefab.space;
                         
+                        UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                         if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
                         {
                             destinationPrefab.index = prefabIndices.Count;
@@ -271,6 +272,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         ref var destinationPrefab = ref prefabs[j];
                         destinationPrefab.space = sourcePrefab.space;
                         
+                        UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                         if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
                         {
                             destinationPrefab.index = prefabIndices.Count;
@@ -284,16 +286,18 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);
             }
-            
-            if (prefabIndices.Count > 0)
+
+            int numPrefabIndices = prefabIndices.Count;
+            if (numPrefabIndices > 0)
             {
                 var prefabs = AddBuffer<EffectPrefab>(entity);
+                prefabs.Resize(numPrefabIndices, NativeArrayOptions.ClearMemory);
                 EffectPrefab prefab;
-                foreach (var gameObject in prefabIndices.Keys)
+                foreach (var prefabIndex in prefabIndices)
                 {
-                    prefab.entityPrefabReference = new EntityPrefabReference(gameObject);
+                    prefab.entityPrefabReference = new EntityPrefabReference(prefabIndex.Key);
 
-                    prefabs.Add(prefab);
+                    prefabs[prefabIndex.Value] = prefab;
                 }
             }
 
