@@ -352,8 +352,7 @@ public sealed class LoginManager : MonoBehaviour
 
             //if(style.onImage != null)
             //    style.onImage.Invoke(level.sprite);
-            if (level.prefab != null)
-                Instantiate(level.prefab, style.transform.parent);
+            Instantiate(level.prefab, style.root);
 
             style.toggle.onValueChanged.AddListener(x =>
             {

@@ -8,6 +8,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 {
     public StringEvent onEnergy;
     public StringEvent onTitle;
+
+    public Transform root;
     
     public Toggle toggle;
 
