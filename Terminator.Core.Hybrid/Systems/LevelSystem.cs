@@ -127,6 +127,8 @@ public partial class LevelSystemManaged : SystemBase
         base.OnDestroy();
     }
 
+    private Unity.Profiling.ProfilerMarker __restart;
+
     protected override void OnUpdate()
     {
         CompleteDependency();

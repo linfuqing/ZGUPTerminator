@@ -4,8 +4,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Entities.Serialization;
-using Unity.Scenes;
-using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 

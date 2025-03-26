@@ -64,7 +64,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         public string name;
         public string title;
-        public Sprite sprite;
+        public GameObject prefab;
     }
 
     [Serializable]
@@ -350,8 +350,10 @@ public sealed class LoginManager : MonoBehaviour
             if(style.onTitle != null)
                 style.onTitle.Invoke(level.title);
 
-            if(style.onImage != null)
-                style.onImage.Invoke(level.sprite);
+            //if(style.onImage != null)
+            //    style.onImage.Invoke(level.sprite);
+            if (level.prefab != null)
+                Instantiate(level.prefab, style.transform.parent);
 
             style.toggle.onValueChanged.AddListener(x =>
             {

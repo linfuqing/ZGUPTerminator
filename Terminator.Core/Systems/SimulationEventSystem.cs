@@ -315,6 +315,7 @@ public partial struct SimulationEventSystem : ISystem
         state.RequireForUpdate<PhysicsWorldSingleton>();
     }
 
+    [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         __instanceType.Update(ref state);
