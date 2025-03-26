@@ -761,6 +761,8 @@ public partial class UserDataMain
                 attributes.Add(attribute);
             }
             
+            ref var accessory = ref _accessories[accessoryInfo.index];
+            
             level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
             if (level > 0)
             {
@@ -772,11 +774,12 @@ public partial class UserDataMain
                 skill.damage = accessoryLevel.skillDamage;
             }
             else
-                skill.damage = 1.0f;
-            
-            ref var accessory = ref _accessories[accessoryInfo.index];
-            attribute.value += accessory.attributeValue;
-            
+            {
+                skill.damage = 0.0f;
+
+                attribute.value += accessory.attributeValue;
+            }
+
             attributes[j] = attribute;
 
             if (!string.IsNullOrEmpty(accessory.skillName))
@@ -1061,13 +1064,17 @@ public partial class UserDataMain
 
                         ref var accessoryLevel = ref _accessoryLevels[indices[level - 1]];
                         attribute.value += accessoryLevel.attributeValue;
-                        attributes[i] = attribute;
                         
                         skill.damage = accessoryLevel.skillDamage;
                     }
                     else
-                        skill.damage = 1.0f;
+                    {
+                        attribute.value += accessory.attributeValue;
+                        
+                        skill.damage = 0.0f;
+                    }
 
+                    attributes[i] = attribute;
                     skills.Add(skill);
 
                     skill.type = UserSkillType.Group;
