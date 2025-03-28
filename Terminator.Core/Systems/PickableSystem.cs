@@ -54,20 +54,20 @@ public partial struct PickableSystem : ISystem
 
                 status.time = time;
             }
-            else
+            else if(this.simulationEvents[index].Length > 0)
             {
-                if (!instance.startMessageName.IsEmpty && index < messages.Length)
-                {
-                    Message message;
-                    message.key = 0;
-                    message.name = instance.startMessageName;
-                    message.value = instance.startMessageValue;
-                    messages[index].Add(message);
-                }
-
                 status.time = time + instance.startTime;
                 if (status.time > time)
                 {
+                    if (!instance.startMessageName.IsEmpty && index < messages.Length)
+                    {
+                        Message message;
+                        message.key = 0;
+                        message.name = instance.startMessageName;
+                        message.value = instance.startMessageValue;
+                        messages[index].Add(message);
+                    }
+
                     status.value = PickableStatus.Value.Start;
                     states[index] = status;
 
