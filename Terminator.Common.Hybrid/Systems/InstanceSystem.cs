@@ -32,9 +32,10 @@ public struct InstanceSingleton : IComponentData
     }
     
     public void Update(
-        SystemBase system, 
-        in ComponentLookup<LocalToWorld> localToWorlds, 
-        ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs)
+        SystemBase system//, 
+        //in ComponentLookup<LocalToWorld> localToWorlds, 
+        //ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs
+        )
     {
         if (!__idsToDisable.IsEmpty)
         {
@@ -95,9 +96,10 @@ public struct InstanceSingleton : IComponentData
                     InstanceManager.Instantiate(
                         name.ToString(),
                         system,
-                        entities.AsArray(),
-                        localToWorlds,
-                        ref instanceIDs);
+                        entities.AsArray()//,
+                        //localToWorlds,
+                        //ref instanceIDs
+                        );
                 }
             }
 
@@ -513,21 +515,21 @@ public partial struct InstanceSystemUnmanaged : ISystem
  UpdateAfter(typeof(InstanceSystemUnmanaged))]
 public partial class InstanceSystem : SystemBase
 {
-    private ComponentLookup<LocalToWorld> __localToWorlds;
-    private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
+    //private ComponentLookup<LocalToWorld> __localToWorlds;
+    //private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
     
     protected override void OnCreate()
     {
         base.OnCreate();
         
-        __localToWorlds = GetComponentLookup<LocalToWorld>(true);
-        __instanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
+        //__localToWorlds = GetComponentLookup<LocalToWorld>(true);
+        //__instanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
         
         RequireForUpdate<InstanceSingleton>();
     }
     
     protected override void OnUpdate()
     {
-        SystemAPI.GetSingleton<InstanceSingleton>().Update(this, __localToWorlds, ref __instanceIDs);
+        SystemAPI.GetSingleton<InstanceSingleton>().Update(this);//, __localToWorlds, ref __instanceIDs);
     }
 }

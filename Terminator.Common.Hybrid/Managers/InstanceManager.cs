@@ -61,8 +61,6 @@ public sealed class InstanceManager : MonoBehaviour
             public int Submit(
                 int maxEntityCount, 
                 int startIndex, 
-                in ComponentLookup<LocalToWorld> localToWorlds, 
-                ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
                 ref NativeList<Entity> entities, 
                 List<GameObject> gameObjects, 
                 SystemBase system)
@@ -90,6 +88,8 @@ public sealed class InstanceManager : MonoBehaviour
                         int numResults = results == null ? 0 : results.Length;
                         if (numResults > 0)
                         {
+                            maxEntityCount = Mathf.Max(maxEntityCount, numResults);
+                            
                             GameObject result;
                             int entityIndex = startIndex + this.entityCount - 1;
                             for (int i = 0; i < numResults; ++i)
@@ -162,8 +162,9 @@ public sealed class InstanceManager : MonoBehaviour
                 system.EntityManager.AddComponent<CopyMatrixToTransformInstanceID>(
                     entities.AsArray().GetSubArray(startIndex, entityCount));
 
-                instanceIDs.Update(system);
-                localToWorlds.Update(system);
+                var instanceIDs = system.GetComponentLookup<CopyMatrixToTransformInstanceID>();
+                var localToWorlds = system.GetComponentLookup<LocalToWorld>(true);
+                
                 CopyMatrixToTransformInstanceID instanceID;
                 instanceID.isSendMessageOnDestroy = true;
 
@@ -172,11 +173,13 @@ public sealed class InstanceManager : MonoBehaviour
                 LocalToWorld localToWorld;
                 for (int i = 0; i < entityCount; ++i)
                 {
-                    gameObject = gameObjects[i];
+                    index = i + startIndex;
+                    
+                    gameObject = gameObjects[index];
 
                     transform = gameObject.transform;
 
-                    entity = entities[i];
+                    entity = entities[index];
 
 #if UNITY_EDITOR
                     entityManager.SetName(entity, $"{gameObject.name}({transform.GetInstanceID()})");
@@ -204,19 +207,13 @@ public sealed class InstanceManager : MonoBehaviour
         
         private class System
         {
-            private ComponentLookup<LocalToWorld> __localToWorlds;
-            private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
             private NativeList<Entity> __entities;
             private List<GameObject> __results; 
             private List<InstancesToCreate> __instances;
 
-            public System( 
-                in ComponentLookup<LocalToWorld> localToWorlds, 
-                ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs)
+            public System()
             {
-                __localToWorlds = localToWorlds;
-                __instanceIDs = instanceIDs;
-                __entities = new NativeList<Entity>(Allocator.Temp);
+                __entities = new NativeList<Entity>(Allocator.Persistent);
                 __results = new List<GameObject>();
                 __instances = new List<InstancesToCreate>();
             }
@@ -280,8 +277,6 @@ public sealed class InstanceManager : MonoBehaviour
                     count += instance.Submit(
                         maxEntityCount == int.MaxValue ? maxEntityCount : maxEntityCount - count, 
                         startIndex, 
-                        __localToWorlds, 
-                        ref __instanceIDs, 
                         ref __entities,
                         __results, 
                         system);
@@ -355,8 +350,6 @@ public sealed class InstanceManager : MonoBehaviour
 
         public void Create(
             in Instance instance,
-            ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
-            in ComponentLookup<LocalToWorld> localToWorlds, 
             in NativeArray<Entity> entities, 
             IEnumerable<GameObject> results, 
             AsyncInstantiateOperation<GameObject> asyncInstantiateOperation, 
@@ -365,7 +358,7 @@ public sealed class InstanceManager : MonoBehaviour
         {
             if (!__systems.TryGetValue(system, out var value))
             {
-                value = new System(localToWorlds, ref instanceIDs);
+                value = new System();
 
                 __systems[system] = value;
             }
@@ -403,7 +396,7 @@ public sealed class InstanceManager : MonoBehaviour
             long tick = DateTime.Now.Ticks;
             foreach (var system in __systems)
             {
-                while (system.Value.Submit(1, system.Key) > 0)
+                while (system.Value.Submit(16, system.Key) > 0)
                 {
                     if ((DateTime.Now.Ticks - tick) * 1.0f / TimeSpan.TicksPerSecond > deltaTime)
                         return;
@@ -475,9 +468,10 @@ public sealed class InstanceManager : MonoBehaviour
     public static void Instantiate(
         string name, 
         SystemBase system, 
-        in NativeArray<Entity> entities, 
-        in ComponentLookup<LocalToWorld> localToWorlds, 
-        ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs)
+        in NativeArray<Entity> entities//, 
+        //in ComponentLookup<LocalToWorld> localToWorlds, 
+        //ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs
+        )
     {
         if (!__prefabIndices.TryGetValue(name, out var prefabIndex))
         {
@@ -492,18 +486,20 @@ public sealed class InstanceManager : MonoBehaviour
             manager.__Instantiate(
             manager._prefabs[prefabIndex.Item2],
             system,
-            entities,
-            instanceIDs,
-            localToWorlds);
+            entities//,
+            //instanceIDs,
+            //localToWorlds
+            );
             //);
     }
 
     private void __Instantiate(
         Prefab prefab, 
         SystemBase system, 
-        NativeArray<Entity> entities, 
-        ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
-        ComponentLookup<LocalToWorld> localToWorlds)
+        NativeArray<Entity> entities 
+        //ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
+        //ComponentLookup<LocalToWorld> localToWorlds
+        )
     {
         int numGameObjects, numEntities = entities.Length, instanceID = prefab.gameObject.GetInstanceID();
         List<GameObject> results = null;
@@ -618,8 +614,6 @@ public sealed class InstanceManager : MonoBehaviour
 
         Factory.instance.Create(
             instance, 
-            ref instanceIDs, 
-            localToWorlds, 
             entities, 
             results, 
             asyncInstantiateOperation, 
