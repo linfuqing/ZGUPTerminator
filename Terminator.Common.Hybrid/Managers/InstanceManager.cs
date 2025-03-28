@@ -1,9 +1,9 @@
 using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.Events;
@@ -35,22 +35,184 @@ public sealed class InstanceManager : MonoBehaviour
         
     }
 
-    internal sealed class Disposable : MonoBehaviour
+    internal sealed class Factory : MonoBehaviour
     {
-        private struct Instance
+        private struct InstanceToDestroy
         {
             public double time;
             public GameObject gameObject;
             public GameObject prefab;
         }
 
-        private List<Instance> __instances;
-
-        private static Disposable __instance;
-
-        public static void Destroy(float time, GameObject gameObject, GameObject prefab)
+        private struct InstancesToCreate
         {
-            if (time > Mathf.Epsilon)
+            public int entityCount;
+            public GameObject prefab;
+            
+            public int Submit(
+                int maxEntityCount, 
+                int startIndex, 
+                in ComponentLookup<LocalToWorld> localToWorlds, 
+                ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
+                ref NativeList<Entity> entities, 
+                List<GameObject> results, 
+                SystemBase system)
+            {
+                int entityCount = Mathf.Min(this.entityCount, maxEntityCount), index;
+                Entity entity;
+                var entityManager = system.EntityManager;
+                for (int i = 0; i < entityCount; ++i)
+                {
+                    index = i + startIndex;
+                    entity = entities[index];
+                    if (entityManager.IsEnabled(entity) &&
+                        entityManager.HasComponent<global::Instance>(entity) &&
+                        //entityManager.IsComponentEnabled<global::Instance>(entity) && 
+                        results[index] != null)
+                        continue;
+
+                    __Destroy(results[index], prefab);
+
+                    results.RemoveAt(index);
+                    
+                    entities.RemoveAt(index);
+
+                    --entityCount;
+
+                    --this.entityCount;
+                }
+
+                if (entityCount < 1)
+                    return 0;
+
+                this.entityCount -= entityCount;
+
+                system.EntityManager.AddComponent<CopyMatrixToTransformInstanceID>(
+                    entities.AsArray().GetSubArray(startIndex, entityCount));
+
+                instanceIDs.Update(system);
+                localToWorlds.Update(system);
+                CopyMatrixToTransformInstanceID instanceID;
+                instanceID.isSendMessageOnDestroy = true;
+
+                GameObject gameObject;
+                Transform transform;
+                LocalToWorld localToWorld;
+                for (int i = 0; i < entityCount; ++i)
+                {
+                    gameObject = results[i];
+
+                    UnityEngine.Assertions.Assert.IsTrue(gameObject.name.Contains(prefab.name));
+
+                    transform = gameObject.transform;
+
+                    entity = entities[i];
+
+#if UNITY_EDITOR
+                    entityManager.SetName(entity, $"{gameObject.name}({transform.GetInstanceID()})");
+#endif
+
+                    if (localToWorlds.TryGetComponent(entity, out localToWorld))
+                    {
+                        transform.localPosition = localToWorld.Position;
+                        transform.localRotation = localToWorld.Rotation;
+                    }
+
+                    gameObject.SetActive(true);
+
+                    instanceID.value = transform.GetInstanceID();
+
+                    instanceIDs[entity] = instanceID;
+                }
+                
+                results.RemoveRange(startIndex, entityCount);
+                entities.RemoveRange(startIndex, entityCount);
+
+                return entityCount;
+            }
+        }
+        
+        private class System
+        {
+            private ComponentLookup<LocalToWorld> __localToWorlds;
+            private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
+            private NativeList<Entity> __entities;
+            private List<GameObject> __results; 
+            private List<InstancesToCreate> __instances;
+
+            public System( 
+                in ComponentLookup<LocalToWorld> localToWorlds, 
+                ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs)
+            {
+                __localToWorlds = localToWorlds;
+                __instanceIDs = instanceIDs;
+                __entities = new NativeList<Entity>(Allocator.Temp);
+                __results = new List<GameObject>();
+                __instances = new List<InstancesToCreate>();
+            }
+
+            public void Dispose()
+            {
+                __entities.Dispose();
+            }
+
+            public void Apply(
+                in NativeArray<Entity> entities, 
+                IEnumerable<GameObject> results, 
+                GameObject prefab)
+            {
+                __entities.AddRange(entities);
+                __results.AddRange(results);
+                
+                UnityEngine.Assertions.Assert.AreEqual(__results.Count, __entities.Length);
+                
+                InstancesToCreate instance;
+                instance.entityCount = entities.Length;
+                instance.prefab = prefab;
+                
+                __instances.Add(instance);
+            }
+
+            public int Submit(
+                int maxEntityCount, 
+                SystemBase system)
+            {
+                InstancesToCreate instance;
+                int startIndex = 0, count, numInstances = __instances.Count;
+                for (int i = 0; i < numInstances; ++i)
+                {
+                    instance = __instances[i];
+                    count = instance.Submit(
+                        maxEntityCount, 
+                        startIndex, 
+                        __localToWorlds, 
+                        ref __instanceIDs, 
+                        ref __entities,
+                        __results, 
+                        system);
+
+                    if (instance.entityCount < 1)
+                        __instances.RemoveAt(i);
+
+                    startIndex += count;
+
+                    if (startIndex == maxEntityCount)
+                        break;
+                }
+                
+                return startIndex;
+            }
+        }
+        
+        private List<InstanceToDestroy> __instancesToDestroy = new List<InstanceToDestroy>();
+        
+        private Dictionary<SystemBase, System> __systems = new Dictionary<SystemBase, System>();
+
+        private static Factory __instance;
+
+        public static Factory instance
+        {
+            get
             {
                 if (__instance == null)
                 {
@@ -58,18 +220,44 @@ public sealed class InstanceManager : MonoBehaviour
                     temp.hideFlags = HideFlags.HideAndDontSave;
                     DontDestroyOnLoad(temp);
 
-                    __instance = temp.AddComponent<Disposable>();
+                    __instance = temp.AddComponent<Factory>();
                 }
 
-                Instance instance;
+                return __instance;
+            }
+        }
+
+        public void Create(
+            ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
+            in ComponentLookup<LocalToWorld> localToWorlds, 
+            in NativeArray<Entity> entities, 
+            IEnumerable<GameObject> results, 
+            GameObject prefab, 
+            SystemBase system)
+        {
+            if (!__systems.TryGetValue(system, out var instance))
+            {
+                instance = new System(localToWorlds, ref instanceIDs);
+
+                __systems[system] = instance;
+            }
+            
+            instance.Apply(entities, results, prefab);
+        }
+        
+        public void Destroy(float time, GameObject gameObject, GameObject prefab)
+        {
+            if (time > Mathf.Epsilon)
+            {
+                InstanceToDestroy instance;
                 instance.time = Time.timeAsDouble + time;
                 instance.gameObject = gameObject;
                 instance.prefab = prefab;
 
-                if (__instance.__instances == null)
-                    __instance.__instances = new List<Instance>();
+                if (__instancesToDestroy == null)
+                    __instancesToDestroy = new List<InstanceToDestroy>();
 
-                __instance.__instances.Add(instance);
+                __instancesToDestroy.Add(instance);
             }
             else
                 __Destroy(gameObject, prefab);
@@ -77,23 +265,34 @@ public sealed class InstanceManager : MonoBehaviour
 
         void Update()
         {
-            int numInstances = __instances == null ? 0 : __instances.Count;
-            if (numInstances < 1)
-                return;
-            
-            double time = Time.timeAsDouble;
-            Instance instance;
-            for(int i = 0; i < numInstances; ++i)
+            float deltaTime = Time.maximumDeltaTime * 0.5f;
+            long tick = DateTime.Now.Ticks;
+            foreach (var system in __systems)
             {
-                instance = __instances[i];
-                if(instance.time > time)
-                    continue;
-                
-                __Destroy(instance.gameObject, instance.prefab);
-                
-                __instances.RemoveAtSwapBack(i--);
+                while (system.Value.Submit(1, system.Key) > 0)
+                {
+                    if ((DateTime.Now.Ticks - tick) * 1.0f / TimeSpan.TicksPerSecond > deltaTime)
+                        return;
+                }
+            }
+            
+            int numInstancesToDestroy = __instancesToDestroy == null ? 0 : __instancesToDestroy.Count;
+            if (numInstancesToDestroy > 0)
+            {
+                double time = Time.timeAsDouble;
+                InstanceToDestroy instance;
+                for (int i = 0; i < numInstancesToDestroy; ++i)
+                {
+                    instance = __instancesToDestroy[i];
+                    if (instance.time > time)
+                        continue;
 
-                --numInstances;
+                    __Destroy(instance.gameObject, instance.prefab);
+
+                    __instancesToDestroy.RemoveAtSwapBack(i--);
+
+                    --numInstancesToDestroy;
+                }
             }
         }
     }
@@ -158,7 +357,7 @@ public sealed class InstanceManager : MonoBehaviour
         manager.StartCoroutine(manager.__Instantiate(
             manager._prefabs[prefabIndex.Item2],
             system,
-            new NativeArray<Entity>(entities, Allocator.Persistent),
+            entities,
             instanceIDs,
             localToWorlds));
     }
@@ -204,10 +403,14 @@ public sealed class InstanceManager : MonoBehaviour
         else 
             numGameObjects = numEntities;
 
+        bool isCreated;
         if (numGameObjects > 0)
         {
-            if (numGameObjects > 1)
+            isCreated = numGameObjects > 1;
+            if (isCreated)
             {
+                entities = new NativeArray<Entity>(entities, Allocator.Persistent);
+                
                 var result = InstantiateAsync(prefab.gameObject, numGameObjects, this.transform);
 
                 if (__results == null)
@@ -279,21 +482,30 @@ public sealed class InstanceManager : MonoBehaviour
                 }
 
                 //Wait For LocalToWorld
-                yield return null;
+                yield return new WaitForEndOfFrame();
             }
         }
         else
+        {
+            isCreated = false;
+            
             //Wait For LocalToWorld
-            yield return null;
+            yield return new WaitForEndOfFrame();
+        }
 
-        Entity entity;
+        Factory.instance.Create(ref instanceIDs, localToWorlds, entities, results, prefab.gameObject, system);
+
+        if (isCreated)
+            entities.Dispose();
+
+        /*Entity entity;
         var entityManager = system.EntityManager;
         for (int i = 0; i < numEntities; ++i)
         {
             entity = entities[i];
-            if (entityManager.IsEnabled(entity) && 
-                entityManager.HasComponent<global::Instance>(entity) && 
-                //entityManager.IsComponentEnabled<global::Instance>(entity) && 
+            if (entityManager.IsEnabled(entity) &&
+                entityManager.HasComponent<global::Instance>(entity) &&
+                //entityManager.IsComponentEnabled<global::Instance>(entity) &&
                 results[i] != null)
                 continue;
 
@@ -303,7 +515,7 @@ public sealed class InstanceManager : MonoBehaviour
 
             entities[i--] = entities[--numEntities];
         }
-        
+
         if(numEntities < 1)
             yield break;
 
@@ -322,34 +534,34 @@ public sealed class InstanceManager : MonoBehaviour
             gameObject = results[i];
 
             UnityEngine.Assertions.Assert.IsTrue(gameObject.name.Contains(prefab.gameObject.name));
-            
+
             transform = gameObject.transform;
 
             entity = entities[i];
-            
+
 #if UNITY_EDITOR
             entityManager.SetName(entity, $"{gameObject.name}({transform.GetInstanceID()})");
 #endif
-            
+
             if (localToWorlds.TryGetComponent(entity, out localToWorld))
             {
                 transform.localPosition = localToWorld.Position;
                 transform.localRotation = localToWorld.Rotation;
             }
-            
+
             gameObject.SetActive(true);
-            
+
             instanceID.value = transform.GetInstanceID();
 
             instanceIDs[entity] = instanceID;
         }
-        
+
         entities.Dispose();
 
         activeCount += numEntities;
-        
+
         if(_onAcitveCount != null)
-            _onAcitveCount.Invoke(activeCount.ToString());
+            _onAcitveCount.Invoke(activeCount.ToString());*/
     }
 
     private void __Destroy(int instanceID, Instance instance, bool isSendMessage)
@@ -370,7 +582,7 @@ public sealed class InstanceManager : MonoBehaviour
                 gameObject.BroadcastMessage(instance.destroyMessageName, instance.destroyMessageValue);
 
             //yield return new WaitForSeconds(instance.destroyTime);
-            Disposable.Destroy(instance.destroyTime, gameObject, instance.prefab);
+            Factory.instance.Destroy(instance.destroyTime, gameObject, instance.prefab);
         }
         else
             __Destroy(gameObject, instance.prefab);

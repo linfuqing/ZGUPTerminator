@@ -1,9 +1,9 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Profiling;
 
 [RequireComponent(typeof(Renderer))]
 public class AnimatedSkinController : MonoBehaviour
@@ -64,9 +64,11 @@ public class AnimatedSkinController : MonoBehaviour
         {
             if (__transitionIndex < 0 || __transitionIndex >= __transitions.Count)
                 return true;
-
-            var transition = __transitions[__transitionIndex];
             
+            Profiler.BeginSample(controller.name);
+            var transition = __transitions[__transitionIndex];
+
+            bool result = false;
             if (__time > 0.0f)
             {
                 __time -= Time.deltaTime;
@@ -87,12 +89,14 @@ public class AnimatedSkinController : MonoBehaviour
 
                         //controller.__coroutine = null;
 
-                        return true;
+                        result = true;
                     }
-                    
-                    __time = 0.0f;
+                    else
+                    {
+                        __time = 0.0f;
 
-                    __animationIndex = -1;
+                        __animationIndex = -1;
+                    }
                 }
             }
             else if(__animationIndex == -1)
@@ -105,8 +109,9 @@ public class AnimatedSkinController : MonoBehaviour
                         controller._frameCountPerSecond - transition.offsetSeconds;
                 }
             }
-
-            return false;
+            Profiler.EndSample();
+            
+            return result;
         }
     }
 
@@ -174,6 +179,7 @@ public class AnimatedSkinController : MonoBehaviour
             if (__playables == null)
                 return;
 
+            Profiler.BeginSample("Play");
             AnimatedSkinController controller;
             foreach (var playable in __playables)
             {
@@ -186,7 +192,9 @@ public class AnimatedSkinController : MonoBehaviour
                 
                 __controllersToRemove.Add(controller);
             }
-
+            Profiler.EndSample();
+            
+            Profiler.BeginSample("Remove");
             if (__controllersToRemove != null)
             {
                 Playable playable;
@@ -203,6 +211,7 @@ public class AnimatedSkinController : MonoBehaviour
                 
                 __controllersToRemove.Clear();
             }
+            Profiler.EndSample();
         }
     }
     
