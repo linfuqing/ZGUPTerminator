@@ -56,6 +56,15 @@ public partial struct PickableSystem : ISystem
             }
             else
             {
+                if (!instance.startMessageName.IsEmpty && index < messages.Length)
+                {
+                    Message message;
+                    message.key = 0;
+                    message.name = instance.startMessageName;
+                    message.value = instance.startMessageValue;
+                    messages[index].Add(message);
+                }
+
                 status.time = time + instance.startTime;
                 if (status.time > time)
                 {

@@ -10,6 +10,9 @@ public struct Pickable : IComponentData, IEnableableComponent
 
     public FixedString128Bytes messageName;
     public WeakObjectReference<UnityEngine.Object> messageValue;
+    
+    public FixedString128Bytes startMessageName;
+    public WeakObjectReference<UnityEngine.Object> startMessageValue;
 }
 
 public struct PickableStatus : IComponentData, IEnableableComponent
