@@ -10,12 +10,12 @@ using UnityEngine.Events;
 
 public sealed class InstanceManager : MonoBehaviour
 {
-    private struct Instance
+    internal struct Instance
     {
+        public int instanceID;
         public float destroyTime;
         public string destroyMessageName;
         public UnityEngine.Object destroyMessageValue;
-        public GameObject prefab;
         //public InstanceManager manager;
     }
     
@@ -37,43 +37,115 @@ public sealed class InstanceManager : MonoBehaviour
 
     internal sealed class Factory : MonoBehaviour
     {
+        [Flags]
+        public enum InstancesFlag
+        {
+            New = 0x01
+        }
+
         private struct InstanceToDestroy
         {
+            public int instanceID;
             public double time;
             public GameObject gameObject;
-            public GameObject prefab;
         }
 
         private struct InstancesToCreate
         {
+            public InstancesFlag flag;
             public int entityCount;
-            public GameObject prefab;
-            
+            public Instance instance;
+            public AsyncInstantiateOperation<GameObject> asyncInstantiateOperation;
+            public InstanceManager instanceManager;
+
             public int Submit(
                 int maxEntityCount, 
                 int startIndex, 
                 in ComponentLookup<LocalToWorld> localToWorlds, 
                 ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
                 ref NativeList<Entity> entities, 
-                List<GameObject> results, 
+                List<GameObject> gameObjects, 
                 SystemBase system)
             {
-                int entityCount = Mathf.Min(this.entityCount, maxEntityCount), index;
+                if ((flag & InstancesFlag.New) == InstancesFlag.New)
+                {
+                    flag &= ~InstancesFlag.New;
+                    
+                    return 0;
+                }
+
+                if (asyncInstantiateOperation != null && asyncInstantiateOperation.isDone)
+                {
+                    bool isDone = asyncInstantiateOperation.isDone;
+                    if (!isDone && maxEntityCount == int.MaxValue)
+                    {
+                        isDone = true;
+                        
+                        asyncInstantiateOperation.WaitForCompletion();
+                    }
+
+                    if (isDone)
+                    {
+                        var results = asyncInstantiateOperation.Result;
+                        int numResults = results == null ? 0 : results.Length;
+                        if (numResults > 0)
+                        {
+                            GameObject result;
+                            int entityIndex = startIndex + this.entityCount - 1;
+                            for (int i = 0; i < numResults; ++i)
+                                gameObjects[entityIndex - i] = results[i];
+
+                            if (instanceManager != null)
+                            {
+                                if (__instanceManagers == null)
+                                    __instanceManagers = new Dictionary<int, InstanceManager>();
+
+                                if (instanceManager.__instances == null)
+                                    instanceManager.__instances = new Dictionary<int, Instance>();
+
+                                int transformInstanceID;
+                                for (int i = 0; i < numResults; ++i)
+                                {
+                                    result = results[i];
+                                    if (result == null)
+                                        continue;
+
+                                    transformInstanceID = result.transform.GetInstanceID();
+
+                                    __instanceManagers.Add(transformInstanceID, instanceManager);
+
+                                    instanceManager.__instances.Add(transformInstanceID, instance);
+                                }
+                            }
+                        }
+
+                        asyncInstantiateOperation = null;
+                    }
+                }
+                
+                int index, entityCount = Mathf.Min(this.entityCount, maxEntityCount);
                 Entity entity;
                 var entityManager = system.EntityManager;
                 for (int i = 0; i < entityCount; ++i)
                 {
                     index = i + startIndex;
+                    if (gameObjects[index] == null && asyncInstantiateOperation != null)
+                    {
+                        entityCount = i;
+
+                        break;
+                    }
+                    
                     entity = entities[index];
                     if (entityManager.IsEnabled(entity) &&
                         entityManager.HasComponent<global::Instance>(entity) &&
                         //entityManager.IsComponentEnabled<global::Instance>(entity) && 
-                        results[index] != null)
+                        gameObjects[index] != null)
                         continue;
 
-                    __Destroy(results[index], prefab);
+                    __Destroy(gameObjects[index], instance.instanceID);
 
-                    results.RemoveAt(index);
+                    gameObjects.RemoveAt(index);
                     
                     entities.RemoveAt(index);
 
@@ -100,9 +172,7 @@ public sealed class InstanceManager : MonoBehaviour
                 LocalToWorld localToWorld;
                 for (int i = 0; i < entityCount; ++i)
                 {
-                    gameObject = results[i];
-
-                    UnityEngine.Assertions.Assert.IsTrue(gameObject.name.Contains(prefab.name));
+                    gameObject = gameObjects[i];
 
                     transform = gameObject.transform;
 
@@ -125,7 +195,7 @@ public sealed class InstanceManager : MonoBehaviour
                     instanceIDs[entity] = instanceID;
                 }
                 
-                results.RemoveRange(startIndex, entityCount);
+                gameObjects.RemoveRange(startIndex, entityCount);
                 entities.RemoveRange(startIndex, entityCount);
 
                 return entityCount;
@@ -154,23 +224,48 @@ public sealed class InstanceManager : MonoBehaviour
             public void Dispose()
             {
                 __entities.Dispose();
+
+                foreach (var instance in __instances)
+                {
+                    if(instance.asyncInstantiateOperation == null)
+                        continue;
+
+                    if (instance.asyncInstantiateOperation.isDone)
+                    {
+                        foreach (var gameObject in instance.asyncInstantiateOperation.Result)
+                            DestroyImmediate(gameObject);
+                    }
+                    else
+                        instance.asyncInstantiateOperation.Cancel();
+                }
             }
 
             public void Apply(
+                in Instance instance, 
                 in NativeArray<Entity> entities, 
                 IEnumerable<GameObject> results, 
-                GameObject prefab)
+                AsyncInstantiateOperation<GameObject> asyncInstantiateOperation, 
+                InstanceManager instanceManager)
             {
                 __entities.AddRange(entities);
-                __results.AddRange(results);
+                
+                int numResults = __results.Count;
+                if(results != null)
+                    __results.AddRange(results);
+                
+                InstancesToCreate result;
+                result.entityCount = entities.Length;
+                for(int i = __results.Count - numResults; i < result.entityCount; ++i)
+                    __results.Add(null);
                 
                 UnityEngine.Assertions.Assert.AreEqual(__results.Count, __entities.Length);
                 
-                InstancesToCreate instance;
-                instance.entityCount = entities.Length;
-                instance.prefab = prefab;
+                result.flag = InstancesFlag.New;
+                result.instance = instance;
+                result.asyncInstantiateOperation = asyncInstantiateOperation;
+                result.instanceManager = instanceManager;
                 
-                __instances.Add(instance);
+                __instances.Add(result);
             }
 
             public int Submit(
@@ -178,12 +273,12 @@ public sealed class InstanceManager : MonoBehaviour
                 SystemBase system)
             {
                 InstancesToCreate instance;
-                int startIndex = 0, count, numInstances = __instances.Count;
+                int count = 0, startIndex = 0, numInstances = __instances.Count;
                 for (int i = 0; i < numInstances; ++i)
                 {
                     instance = __instances[i];
-                    count = instance.Submit(
-                        maxEntityCount, 
+                    count += instance.Submit(
+                        maxEntityCount == int.MaxValue ? maxEntityCount : maxEntityCount - count, 
                         startIndex, 
                         __localToWorlds, 
                         ref __instanceIDs, 
@@ -191,12 +286,18 @@ public sealed class InstanceManager : MonoBehaviour
                         __results, 
                         system);
 
+                    startIndex += instance.entityCount;
+
                     if (instance.entityCount < 1)
-                        __instances.RemoveAt(i);
+                    {
+                        __instances.RemoveAt(i--);
 
-                    startIndex += count;
+                        --numInstances;
+                    }
+                    else
+                        __instances[i] = instance;
 
-                    if (startIndex == maxEntityCount)
+                    if (count == maxEntityCount)
                         break;
                 }
                 
@@ -227,32 +328,59 @@ public sealed class InstanceManager : MonoBehaviour
             }
         }
 
+        public void WaitForCompletion()
+        {
+            foreach (var system in __systems)
+                system.Value.Submit(int.MaxValue, system.Key);
+            
+            int numInstancesToDestroy = __instancesToDestroy == null ? 0 : __instancesToDestroy.Count;
+            if (numInstancesToDestroy > 0)
+            {
+                double time = Time.timeAsDouble;
+                InstanceToDestroy instance;
+                for (int i = 0; i < numInstancesToDestroy; ++i)
+                {
+                    instance = __instancesToDestroy[i];
+                    if (instance.time > time)
+                        continue;
+
+                    __Destroy(instance.gameObject, instance.instanceID);
+
+                    __instancesToDestroy.RemoveAtSwapBack(i--);
+
+                    --numInstancesToDestroy;
+                }
+            }
+        }
+
         public void Create(
+            in Instance instance,
             ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
             in ComponentLookup<LocalToWorld> localToWorlds, 
             in NativeArray<Entity> entities, 
             IEnumerable<GameObject> results, 
-            GameObject prefab, 
+            AsyncInstantiateOperation<GameObject> asyncInstantiateOperation, 
+            InstanceManager instanceManager, 
             SystemBase system)
         {
-            if (!__systems.TryGetValue(system, out var instance))
+            if (!__systems.TryGetValue(system, out var value))
             {
-                instance = new System(localToWorlds, ref instanceIDs);
+                value = new System(localToWorlds, ref instanceIDs);
 
-                __systems[system] = instance;
+                __systems[system] = value;
             }
             
-            instance.Apply(entities, results, prefab);
+            value.Apply(instance, entities, results, asyncInstantiateOperation, instanceManager);
         }
         
-        public void Destroy(float time, GameObject gameObject, GameObject prefab)
+        public void Destroy(int instanceID, float time, GameObject gameObject)
         {
             if (time > Mathf.Epsilon)
             {
                 InstanceToDestroy instance;
+                instance.instanceID = instanceID;
                 instance.time = Time.timeAsDouble + time;
                 instance.gameObject = gameObject;
-                instance.prefab = prefab;
 
                 if (__instancesToDestroy == null)
                     __instancesToDestroy = new List<InstanceToDestroy>();
@@ -260,7 +388,13 @@ public sealed class InstanceManager : MonoBehaviour
                 __instancesToDestroy.Add(instance);
             }
             else
-                __Destroy(gameObject, prefab);
+                __Destroy(gameObject, instanceID);
+        }
+
+        void OnDestroy()
+        {
+            foreach (var system in __systems.Values)
+                system.Dispose();
         }
 
         void Update()
@@ -287,7 +421,7 @@ public sealed class InstanceManager : MonoBehaviour
                     if (instance.time > time)
                         continue;
 
-                    __Destroy(instance.gameObject, instance.prefab);
+                    __Destroy(instance.gameObject, instance.instanceID);
 
                     __instancesToDestroy.RemoveAtSwapBack(i--);
 
@@ -307,13 +441,13 @@ public sealed class InstanceManager : MonoBehaviour
 
     private static Dictionary<string, (InstanceManager, int)> __prefabIndices;
 
-    private static Dictionary<GameObject, List<GameObject>> __gameObjects;
+    private static Dictionary<int, List<GameObject>> __gameObjects;
 
     private static Dictionary<int, InstanceManager> __instanceManagers;
 
     private Dictionary<int, Instance> __instances;
 
-    private HashSet<AsyncInstantiateOperation<GameObject>> __results;
+    //private HashSet<AsyncInstantiateOperation<GameObject>> __results;
 
     public static int activeCount
     {
@@ -354,24 +488,26 @@ public sealed class InstanceManager : MonoBehaviour
 
         var manager = prefabIndex.Item1;
 
-        manager.StartCoroutine(manager.__Instantiate(
+        //manager.StartCoroutine(
+            manager.__Instantiate(
             manager._prefabs[prefabIndex.Item2],
             system,
             entities,
             instanceIDs,
-            localToWorlds));
+            localToWorlds);
+            //);
     }
 
-    private IEnumerator __Instantiate(
+    private void __Instantiate(
         Prefab prefab, 
         SystemBase system, 
         NativeArray<Entity> entities, 
         ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
         ComponentLookup<LocalToWorld> localToWorlds)
     {
-        int numEntities = entities.Length, numGameObjects;
+        int numGameObjects, numEntities = entities.Length, instanceID = prefab.gameObject.GetInstanceID();
         List<GameObject> results = null;
-        if (__gameObjects != null && __gameObjects.TryGetValue(prefab.gameObject, out var gameObjects))
+        if (__gameObjects != null && __gameObjects.TryGetValue(instanceID, out var gameObjects))
         {
             numGameObjects = gameObjects == null ? 0 : gameObjects.Count;
             if (numGameObjects > 0)
@@ -403,17 +539,20 @@ public sealed class InstanceManager : MonoBehaviour
         else 
             numGameObjects = numEntities;
 
-        bool isCreated;
+        Instance instance;
+        instance.instanceID = prefab.gameObject.GetInstanceID();
+        instance.destroyTime = prefab.destroyTime;
+        instance.destroyMessageName = prefab.destroyMessageName;
+        instance.destroyMessageValue = prefab.destroyMessageValue;
+
+        AsyncInstantiateOperation<GameObject> asyncInstantiateOperation = null;
         if (numGameObjects > 0)
         {
-            isCreated = numGameObjects > 1;
-            if (isCreated)
+            if (numGameObjects > 1)
             {
-                entities = new NativeArray<Entity>(entities, Allocator.Persistent);
-                
-                var result = InstantiateAsync(prefab.gameObject, numGameObjects, this.transform);
+                asyncInstantiateOperation = InstantiateAsync(prefab.gameObject, numGameObjects, this.transform);
 
-                if (__results == null)
+                /*if (__results == null)
                     __results = new HashSet<AsyncInstantiateOperation<GameObject>>();
 
                 __results.Add(result);
@@ -431,12 +570,6 @@ public sealed class InstanceManager : MonoBehaviour
                 if (results == null)
                     results = new List<GameObject>(numGameObjects);
 
-                Instance instance;
-                instance.destroyTime = prefab.destroyTime;
-                instance.destroyMessageName = prefab.destroyMessageName;
-                instance.destroyMessageValue = prefab.destroyMessageValue;
-                instance.prefab = prefab.gameObject;
-                
                 int transformInstanceID;
                 foreach (var temp in result.Result)
                 {
@@ -447,16 +580,10 @@ public sealed class InstanceManager : MonoBehaviour
                     __instances.Add(transformInstanceID, instance);
 
                     results.Add(temp);
-                }
+                }*/
             }
             else
             {
-                Instance instance;
-                instance.destroyTime = prefab.destroyTime;
-                instance.destroyMessageName = prefab.destroyMessageName;
-                instance.destroyMessageValue = prefab.destroyMessageValue;
-                instance.prefab = prefab.gameObject;
-
                 int transformInstanceID;
                 GameObject result;
                 for (int i = 0; i < numGameObjects; ++i)
@@ -482,21 +609,22 @@ public sealed class InstanceManager : MonoBehaviour
                 }
 
                 //Wait For LocalToWorld
-                yield return new WaitForEndOfFrame();
+                //yield return new WaitForEndOfFrame();
             }
         }
-        else
-        {
-            isCreated = false;
-            
+        //else
             //Wait For LocalToWorld
-            yield return new WaitForEndOfFrame();
-        }
+            //yield return new WaitForEndOfFrame();
 
-        Factory.instance.Create(ref instanceIDs, localToWorlds, entities, results, prefab.gameObject, system);
-
-        if (isCreated)
-            entities.Dispose();
+        Factory.instance.Create(
+            instance, 
+            ref instanceIDs, 
+            localToWorlds, 
+            entities, 
+            results, 
+            asyncInstantiateOperation, 
+            this, 
+            system);
 
         /*Entity entity;
         var entityManager = system.EntityManager;
@@ -582,25 +710,25 @@ public sealed class InstanceManager : MonoBehaviour
                 gameObject.BroadcastMessage(instance.destroyMessageName, instance.destroyMessageValue);
 
             //yield return new WaitForSeconds(instance.destroyTime);
-            Factory.instance.Destroy(instance.destroyTime, gameObject, instance.prefab);
+            Factory.instance.Destroy(instance.instanceID, instance.destroyTime, gameObject);
         }
         else
-            __Destroy(gameObject, instance.prefab);
+            __Destroy(gameObject, instance.instanceID);
     }
 
-    private static void __Destroy(GameObject gameObject, GameObject prefab)
+    private static void __Destroy(GameObject gameObject, int instanceID)
     {
         if (gameObject == null)
             return;
         
         if (__gameObjects == null)
-            __gameObjects = new Dictionary<GameObject, List<GameObject>>();
+            __gameObjects = new Dictionary<int, List<GameObject>>();
 
-        if (!__gameObjects.TryGetValue(prefab, out var gameObjects))
+        if (!__gameObjects.TryGetValue(instanceID, out var gameObjects))
         {
             gameObjects = new List<GameObject>();
 
-            __gameObjects[prefab] = gameObjects;
+            __gameObjects[instanceID] = gameObjects;
         }
 
         gameObject.SetActive(false);
@@ -627,46 +755,48 @@ public sealed class InstanceManager : MonoBehaviour
                 __prefabIndices.Remove(_prefabs[i].name);
         }
         
-        if (__results != null)
+        Factory.instance.WaitForCompletion();
+        
+        /*if (__results != null)
         {
             foreach (var result in __results)
                 result.Cancel();
             
             __results.Clear();
-        }
+        }*/
 
         if (__instances != null)
         {
-            int i, numGameObjects, instanceID;
+            int i, numGameObjects, gameObjectInstanceID, transformInstanceID;
             Transform transform;
             GameObject gameObject;
             List<GameObject> gameObjects;
             foreach (var pair in __instances)
             {
-                instanceID = pair.Key;
+                transformInstanceID = pair.Key;
 
-                __instanceManagers.Remove(instanceID);
+                __instanceManagers.Remove(transformInstanceID);
 
-                gameObject = pair.Value.prefab;
-                if (__gameObjects != null && __gameObjects.TryGetValue(gameObject, out gameObjects))
+                gameObjectInstanceID = pair.Value.instanceID;
+                if (__gameObjects != null && __gameObjects.TryGetValue(gameObjectInstanceID, out gameObjects))
                 {
                     numGameObjects = gameObjects.Count;
                     for (i = 0; i < numGameObjects; ++i)
                     {
                         gameObject = gameObjects[i];
-                        if (gameObject == null || gameObject.transform.GetInstanceID() == instanceID)
+                        if (gameObject == null || gameObject.transform.GetInstanceID() == transformInstanceID)
                         {
                             gameObjects.RemoveAt(i);
 
                             if (numGameObjects == 1)
-                                __gameObjects.Remove(gameObject);
+                                __gameObjects.Remove(gameObjectInstanceID);
 
                             break;
                         }
                     }
                 }
                 
-                transform = Resources.InstanceIDToObject(instanceID) as Transform;
+                transform = Resources.InstanceIDToObject(transformInstanceID) as Transform;
                 if(transform != null)
                     Destroy(transform.gameObject);
             }
