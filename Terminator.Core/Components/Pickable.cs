@@ -20,6 +20,7 @@ public struct PickableStatus : IComponentData, IEnableableComponent
     public enum Value
     {
         None, 
+        Start, 
         Move,
         Picked
     }

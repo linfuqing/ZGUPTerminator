@@ -68,6 +68,7 @@ public partial struct PickableSystem : ISystem
                 status.time = time + instance.startTime;
                 if (status.time > time)
                 {
+                    status.value = PickableStatus.Value.Start;
                     states[index] = status;
 
                     return status.value;
@@ -207,6 +208,12 @@ public partial struct PickableSystem : ISystem
             {
                 switch (pick.Execute(i))
                 {
+                    case PickableStatus.Value.Start:
+                        chunk.SetComponentEnabled(ref statusType, i, false);
+                        
+                        if(i < pick.messages.Length)
+                            chunk.SetComponentEnabled(ref messageType, i, true);
+                        break;
                     case PickableStatus.Value.Move:
                         chunk.SetComponentEnabled(ref statusType, i, true);
                         break;

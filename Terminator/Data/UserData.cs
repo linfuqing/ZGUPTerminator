@@ -363,8 +363,8 @@ public partial class UserData : MonoBehaviour, IUserData
                     PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
             }
 
-            PlayerPrefs.DeleteKey(stageCacheTimesKey);
-            PlayerPrefs.DeleteKey(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, i));
+            //PlayerPrefs.DeleteKey(stageCacheTimesKey);
+            //PlayerPrefs.DeleteKey(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, i));
         }
     }
 
