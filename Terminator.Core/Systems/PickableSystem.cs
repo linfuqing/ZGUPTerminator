@@ -43,6 +43,7 @@ public partial struct PickableSystem : ISystem
 
         public PickableStatus.Value Execute(int index)
         {
+            var simulationEvents = this.simulationEvents[index];
             var instance = instances[index];
             var status = states[index];
             if (status.time > math.DBL_MIN_NORMAL)
@@ -54,8 +55,10 @@ public partial struct PickableSystem : ISystem
 
                 status.time = time;
             }
-            else if(this.simulationEvents[index].Length > 0)
+            else if (simulationEvents.Length > 0)
             {
+                status.entity = simulationEvents[0].entity;
+                
                 status.time = time + instance.startTime;
                 if (status.time > time)
                 {
@@ -75,14 +78,11 @@ public partial struct PickableSystem : ISystem
                 }
 
                 //deltaTime = 0.0f;
-            }
-            
-            if (status.entity == Entity.Null)
-            {
-                var simulationEvents = this.simulationEvents[index];
-                status.entity = simulationEvents.Length > 0 ? simulationEvents[0].entity : Entity.Null;
-            }
+            } 
 
+            if(!localTransforms.HasComponent(status.entity) && simulationEvents.Length > 0)
+                status.entity = simulationEvents[0].entity;
+            
             if (localTransforms.TryGetComponent(status.entity, out var destination))
             {
                 if (index < physicsGravityFactors.Length)
@@ -209,7 +209,7 @@ public partial struct PickableSystem : ISystem
                 switch (pick.Execute(i))
                 {
                     case PickableStatus.Value.Start:
-                        chunk.SetComponentEnabled(ref statusType, i, false);
+                        chunk.SetComponentEnabled(ref statusType, i, true);
                         
                         if(i < pick.messages.Length)
                             chunk.SetComponentEnabled(ref messageType, i, true);
