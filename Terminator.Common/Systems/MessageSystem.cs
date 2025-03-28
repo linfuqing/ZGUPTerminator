@@ -321,7 +321,12 @@ public partial class MessageSystem : SystemBase
     private void __Send(in Message message, Transform transform)
     {
         var messageValue = message.value.Result;
-        if (message.key != 0)
+        if (message.key == 0)
+        {
+            if (messageValue is IMessage temp)
+                temp.Clear();
+        }
+        else
         {
             if (messageValue is IMessage temp)
             {

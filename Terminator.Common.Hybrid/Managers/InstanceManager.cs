@@ -149,6 +149,8 @@ public sealed class InstanceManager : MonoBehaviour
                     
                     entities.RemoveAt(index);
 
+                    --i;
+
                     --entityCount;
 
                     --this.entityCount;
