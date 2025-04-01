@@ -237,7 +237,7 @@ public class TimeActivatorController : MonoBehaviour
         {
             while (__Next())
             {
-                if(__isActivateRightNow)
+                if(!__isActivateRightNow)
                     yield return new WaitForSecondsRealtime(time);
             }
         }
