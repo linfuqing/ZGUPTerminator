@@ -32,7 +32,7 @@ public partial interface IUserData
             var random = new Unity.Mathematics.Random(hash);
 
             bool isContains;
-            int numRewards = rewards.Length;
+            int numRewards = rewards.Length, accessoryIndex = numRewards;
             long tick = Math.Min(DateTime.UtcNow.Ticks - this.tick, maxTime);
             UserRewardData result;
             var results = new Dictionary<int, UserRewardData>();
@@ -57,8 +57,11 @@ public partial interface IUserData
                     }
 
                     result.count += random.NextInt(reward.min, reward.max);
-                    
-                    results[i] = result;
+
+                    if (reward.type == UserRewardType.Accessory)
+                        results[accessoryIndex++] = result;
+                    else
+                        results[i] = result;
                 }
             } while (isContains);
 
