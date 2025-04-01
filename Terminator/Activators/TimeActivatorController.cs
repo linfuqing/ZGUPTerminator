@@ -89,6 +89,7 @@ public class TimeActivatorController : MonoBehaviour
     private bool __isActivateOnEnable;
     private bool __isActive;
     private int __index;
+    private bool __isActivateRightNow;
     private Coroutine __coroutine;
     private List<ITimeActivator> __buffer;
     private HashSet<ITimeActivator> __activators = new HashSet<ITimeActivator>();
@@ -126,6 +127,12 @@ public class TimeActivatorController : MonoBehaviour
 
             __isActive = value;
         }
+    }
+
+    [UnityEngine.Scripting.Preserve]
+    public void ActivateRightNow()
+    {
+        __isActivateRightNow = true;
     }
 
     public bool Refresh(ITimeActivator activator)
@@ -209,6 +216,8 @@ public class TimeActivatorController : MonoBehaviour
 
     private IEnumerator __Activate()
     {
+        __isActivateRightNow = false;
+        
         if (__buffer == null)
             __buffer = new List<ITimeActivator>(__activators.Count);
         else
@@ -227,7 +236,10 @@ public class TimeActivatorController : MonoBehaviour
         if (time > 0.0f)
         {
             while (__Next())
-                yield return new WaitForSecondsRealtime(time);
+            {
+                if(__isActivateRightNow)
+                    yield return new WaitForSecondsRealtime(time);
+            }
         }
         else
         {
