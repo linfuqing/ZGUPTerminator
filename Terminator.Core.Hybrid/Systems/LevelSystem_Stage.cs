@@ -20,8 +20,18 @@ public partial class LevelSystemManaged
             __values.Dispose();
         }
 
-        public void Clear()
+        public void Clear(LevelManager manager, ref LevelDefinition definition)
         {
+            int numValues = __values.Length;
+            for(int i = 0; i < numValues; ++i)
+            {
+                ref var value = ref __values.ElementAt(i);
+                if(value != -1)
+                    manager.DisableStage(definition.stages[value].name.ToString());
+            
+                __values[i] = -1;
+            }
+            
             __values.Clear();
         }
 
@@ -97,7 +107,7 @@ public partial class LevelSystemManaged
             if(SystemAPI.HasSingleton<SpawnerLayerMaskExclude>())
                 SystemAPI.SetSingleton(exclude);
             
-            __stage.Clear();
+            __stage.Clear(manager, ref definition);
         }
         
         __stage.Update(manager, stages, ref definition);

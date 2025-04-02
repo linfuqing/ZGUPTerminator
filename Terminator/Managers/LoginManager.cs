@@ -317,7 +317,7 @@ public sealed class LoginManager : MonoBehaviour
         {
             if(!levelIndices.TryGetValue(userLevel.name, out int index))
                 continue;
-            
+
             if (!isHot && userLevel.stages != null)
             {
                 foreach (var stage in userLevel.stages)
@@ -509,7 +509,7 @@ public sealed class LoginManager : MonoBehaviour
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if(scrollRect != null)
-            scrollRect.MoveTo(userLevels.Length - 1);
+            scrollRect.MoveTo(__styles.Count - 1);
 
         if (isHot)
         {
