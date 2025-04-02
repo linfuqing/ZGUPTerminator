@@ -75,26 +75,15 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
 
         public NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults;
 
-        private ArchetypeChunk __chunk;
-        [NativeDisableContainerSafetyRestriction]
-        private BufferAccessor<SimulationEvent> __simulationEvents;
-
-        void Execute([EntityIndexInQuery] int entityIndexInQuery, in Entity entity, ThirdPersonCharacterAspect characterAspect)
+        void Execute(
+            in Entity entity, 
+            ThirdPersonCharacterAspect characterAspect)
         {
-            var simulationEvents = entityIndexInQuery < __simulationEvents.Length
-                ? __simulationEvents[entityIndexInQuery]
-                : default;
-            int numSimulationEvents = simulationEvents.IsCreated ? simulationEvents.Length : 0;
-            characterAspect.PhysicsUpdate(entity, ref Context, ref BaseContext, ref simulationEvents, ref simulationEventResults);
-            if (numSimulationEvents == 0 && simulationEvents.IsCreated && simulationEvents.Length > 0)
-                __chunk.SetComponentEnabled(ref Context.simulationEventType, entityIndexInQuery, true);
+            characterAspect.PhysicsUpdate(entity, ref Context, ref BaseContext, ref simulationEventResults);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            __chunk = chunk;
-            __simulationEvents = chunk.GetBufferAccessor(ref Context.simulationEventType);
-            
             BaseContext.EnsureCreationOfTmpCollections();
             return true;
         }

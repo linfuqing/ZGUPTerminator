@@ -35,19 +35,15 @@ public struct ThirdPersonCharacterUpdateContext
     [ReadOnly]
     public ComponentLookup<CharacterFrictionSurface> characterFrictionSurfaceLookup;
 
-    [ReadOnly]
+    [NativeDisableParallelForRestriction]
     public BufferLookup<SimulationEvent> simulationEvents;
 
-    [NativeDisableUnsafePtrRestriction]
-    public BufferTypeHandle<SimulationEvent> simulationEventType;
-    
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
     // Here, you can get the component lookups.
     public void OnSystemCreate(ref SystemState state)
     {
         characterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
         simulationEvents = state.GetBufferLookup<SimulationEvent>();
-        simulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
     }
     
     // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
@@ -56,7 +52,6 @@ public struct ThirdPersonCharacterUpdateContext
     {
         characterFrictionSurfaceLookup.Update(ref state);
         simulationEvents.Update(ref state);
-        simulationEventType.Update(ref state);
     }
 }
 
@@ -74,7 +69,6 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         in Entity entity, 
         ref ThirdPersonCharacterUpdateContext context, 
         ref KinematicCharacterUpdateContext baseContext, 
-        ref DynamicBuffer<SimulationEvent> simulationEvents, 
         ref NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults)
     {
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
@@ -99,7 +93,7 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         CharacterAspect.Update_ProcessStatefulCharacterHits();
         
         ThirdPersonCharacterSimulationEventResult simulationEventResult;
-        if (simulationEvents.IsCreated)
+        if (context.simulationEvents.TryGetBuffer(entity, out var simulationEvents))
         {
             foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
             {
