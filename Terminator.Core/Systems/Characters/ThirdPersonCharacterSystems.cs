@@ -16,6 +16,9 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
     private EntityQuery _characterQuery;
     private ThirdPersonCharacterUpdateContext _context;
     private KinematicCharacterUpdateContext _baseContext;
+    
+    private NativeQueue<ThirdPersonCharacterSimulationEventResult> __simulationEventResults;
+
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -31,13 +34,17 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         _baseContext = new KinematicCharacterUpdateContext();
         _baseContext.OnSystemCreate(ref state);
 
+        __simulationEventResults = new NativeQueue<ThirdPersonCharacterSimulationEventResult>(Allocator.Persistent);
+
         state.RequireForUpdate(_characterQuery);
         state.RequireForUpdate<PhysicsWorldSingleton>();
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
-    { }
+    {
+        __simulationEventResults.Dispose();
+    }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
@@ -49,8 +56,14 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         {
             Context = _context,
             BaseContext = _baseContext,
+            simulationEventResults = __simulationEventResults.AsParallelWriter()
         };
         job.ScheduleParallelByRef(_characterQuery);
+
+        Apply apply;
+        apply.simulationEventResults = __simulationEventResults;
+        apply.simulationEvents = _context.simulationEvents;
+        state.Dependency = apply.ScheduleByRef(state.Dependency);
     }
 
     [BurstCompile]
@@ -60,25 +73,27 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         public ThirdPersonCharacterUpdateContext Context;
         public KinematicCharacterUpdateContext BaseContext;
 
+        public NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults;
+
         private ArchetypeChunk __chunk;
         [NativeDisableContainerSafetyRestriction]
         private BufferAccessor<SimulationEvent> __simulationEvents;
 
-        void Execute([EntityIndexInQuery] int entityIndexInQuery, ThirdPersonCharacterAspect characterAspect)
+        void Execute([EntityIndexInQuery] int entityIndexInQuery, in Entity entity, ThirdPersonCharacterAspect characterAspect)
         {
             var simulationEvents = entityIndexInQuery < __simulationEvents.Length
                 ? __simulationEvents[entityIndexInQuery]
                 : default;
             int numSimulationEvents = simulationEvents.IsCreated ? simulationEvents.Length : 0;
-            characterAspect.PhysicsUpdate(ref Context, ref BaseContext, ref simulationEvents);
+            characterAspect.PhysicsUpdate(entity, ref Context, ref BaseContext, ref simulationEvents, ref simulationEventResults);
             if (numSimulationEvents == 0 && simulationEvents.IsCreated && simulationEvents.Length > 0)
-                __chunk.SetComponentEnabled(ref Context.SimulationEventType, entityIndexInQuery, true);
+                __chunk.SetComponentEnabled(ref Context.simulationEventType, entityIndexInQuery, true);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             __chunk = chunk;
-            __simulationEvents = chunk.GetBufferAccessor(ref Context.SimulationEventType);
+            __simulationEvents = chunk.GetBufferAccessor(ref Context.simulationEventType);
             
             BaseContext.EnsureCreationOfTmpCollections();
             return true;
@@ -86,6 +101,20 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
 
         public void OnChunkEnd(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask, bool chunkWasExecuted)
         {
+        }
+    }
+    
+    [BurstCompile]
+    private struct Apply : IJob
+    {
+        public NativeQueue<ThirdPersonCharacterSimulationEventResult> simulationEventResults;
+        
+        public BufferLookup<SimulationEvent> simulationEvents;
+
+        public void Execute()
+        {
+            while (simulationEventResults.TryDequeue(out var result))
+                simulationEvents[result.entity].Add(result.value);
         }
     }
 }

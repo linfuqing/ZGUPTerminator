@@ -14,6 +14,13 @@ using Unity.Transforms;
 using Unity.CharacterController;
 using UnityEngine;
 
+public struct ThirdPersonCharacterSimulationEventResult
+{
+    public Entity entity;
+
+    public SimulationEvent value;
+}
+
 [Serializable]
 public struct CharacterFrictionSurface : IComponentData
 {
@@ -25,24 +32,29 @@ public struct ThirdPersonCharacterUpdateContext
     // Here, you may add additional global data for your character updates, such as ComponentLookups, Singletons, NativeCollections, etc...
     // The data you add here will be accessible in your character updates and all of your character "callbacks".
     [ReadOnly]
-    public ComponentLookup<CharacterFrictionSurface> CharacterFrictionSurfaceLookup;
+    public ComponentLookup<CharacterFrictionSurface> characterFrictionSurfaceLookup;
 
-    public BufferTypeHandle<SimulationEvent> SimulationEventType;
+    [ReadOnly]
+    public BufferLookup<SimulationEvent> simulationEvents;
 
+    public BufferTypeHandle<SimulationEvent> simulationEventType;
+    
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
     // Here, you can get the component lookups.
     public void OnSystemCreate(ref SystemState state)
     {
-        CharacterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
-        SimulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
+        characterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
+        simulationEvents = state.GetBufferLookup<SimulationEvent>();
+        simulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
     }
-
+    
     // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
     // Here, you can update the component lookups.
     public void OnSystemUpdate(ref SystemState state)
     {
-        CharacterFrictionSurfaceLookup.Update(ref state);
-        SimulationEventType.Update(ref state);
+        characterFrictionSurfaceLookup.Update(ref state);
+        simulationEvents.Update(ref state);
+        simulationEventType.Update(ref state);
     }
 }
 
@@ -57,9 +69,11 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
     public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
 
     public void PhysicsUpdate(
+        in Entity entity, 
         ref ThirdPersonCharacterUpdateContext context, 
         ref KinematicCharacterUpdateContext baseContext, 
-        ref DynamicBuffer<SimulationEvent> simulationEvents)
+        ref DynamicBuffer<SimulationEvent> simulationEvents, 
+        ref NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults)
     {
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
@@ -82,15 +96,27 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
         CharacterAspect.Update_ProcessStatefulCharacterHits();
         
+        ThirdPersonCharacterSimulationEventResult simulationEventResult;
         if (simulationEvents.IsCreated)
         {
-            SimulationEvent simulationEvent;
             foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
             {
-                simulationEvent.entity = characterHit.Entity;
-                simulationEvent.colliderKey = characterHit.ColliderKey;
-                SimulationEvent.Append(simulationEvents, simulationEvent);
+                simulationEventResult.value.entity = characterHit.Entity;
+                simulationEventResult.value.colliderKey = characterHit.ColliderKey;
+                SimulationEvent.Append(simulationEvents, simulationEventResult.value);
             }
+        }
+        
+        simulationEventResult.value.entity = entity;
+        foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
+        {
+            if(!context.simulationEvents.HasBuffer(characterHit.Entity))
+                continue;
+            
+            simulationEventResult.value.colliderKey = characterHit.ColliderKey;
+            simulationEventResult.entity = characterHit.Entity;
+
+            simulationEventResults.Enqueue(simulationEventResult);
         }
     }
 
@@ -120,7 +146,7 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
             }
             
             // Friction surfaces
-            if (context.CharacterFrictionSurfaceLookup.TryGetComponent(characterBody.GroundHit.Entity, out CharacterFrictionSurface frictionSurface))
+            if (context.characterFrictionSurfaceLookup.TryGetComponent(characterBody.GroundHit.Entity, out CharacterFrictionSurface frictionSurface))
             {
                 targetVelocity *= frictionSurface.VelocityFactor;
             }

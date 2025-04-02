@@ -94,7 +94,7 @@ public sealed class InstanceManager : MonoBehaviour
                         int numResults = results == null ? 0 : results.Length;
                         if (numResults > 0)
                         {
-                            //maxEntityCount = Mathf.Max(maxEntityCount, numResults);
+                            maxEntityCount = Mathf.Max(maxEntityCount, numResults);
                             
                             GameObject result;
                             int entityIndex = startIndex + this.entityCount - 1;
@@ -329,7 +329,7 @@ public sealed class InstanceManager : MonoBehaviour
                 }
                 
                 UnityEngine.Profiling.Profiler.EndSample();
-                return startIndex;
+                return count;
             }
         }
         
@@ -431,7 +431,7 @@ public sealed class InstanceManager : MonoBehaviour
             {
                 while (system.Value.Submit(4, system.Key) > 0)
                 {
-                    if ((DateTime.Now.Ticks - tick) * 1.0f / TimeSpan.TicksPerSecond > deltaTime)
+                    if ((DateTime.Now.Ticks - tick) * 1.0 / TimeSpan.TicksPerSecond > deltaTime)
                         return;
                 }
             }
