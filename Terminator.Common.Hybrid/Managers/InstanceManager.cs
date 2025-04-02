@@ -429,7 +429,7 @@ public sealed class InstanceManager : MonoBehaviour
             long tick = DateTime.Now.Ticks;
             foreach (var system in __systems)
             {
-                while (system.Value.Submit(4, system.Key) > 0)
+                while (system.Value.Submit(16, system.Key) > 0)
                 {
                     if ((DateTime.Now.Ticks - tick) * 1.0 / TimeSpan.TicksPerSecond > deltaTime)
                         return;

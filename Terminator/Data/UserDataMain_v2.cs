@@ -142,7 +142,7 @@ public partial class UserDataMain
             for (int i = 0; i < numRewards; ++i)
             {
                 ref var source = ref rewards[i];
-                if(source.minLevel > level || source.minLevel < source.maxLevel && source.maxLevel < level)
+                if(source.minLevel > level || source.minLevel < source.maxLevel && source.maxLevel <= level)
                     continue;
                 
                 ref var destination = ref result.rewards[i];
