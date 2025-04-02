@@ -79,16 +79,22 @@ public sealed class InstanceManager : MonoBehaviour
                     {
                         isDone = true;
                         
+                        UnityEngine.Profiling.Profiler.BeginSample("WaitForCompletion");
+
                         asyncInstantiateOperation.WaitForCompletion();
+                        
+                        UnityEngine.Profiling.Profiler.EndSample();
                     }
 
                     if (isDone)
                     {
+                        UnityEngine.Profiling.Profiler.BeginSample("AsyncInstantiateOperation Done");
+                        
                         var results = asyncInstantiateOperation.Result;
                         int numResults = results == null ? 0 : results.Length;
                         if (numResults > 0)
                         {
-                            maxEntityCount = Mathf.Max(maxEntityCount, numResults);
+                            //maxEntityCount = Mathf.Max(maxEntityCount, numResults);
                             
                             GameObject result;
                             int entityIndex = startIndex + this.entityCount - 1;
@@ -120,9 +126,13 @@ public sealed class InstanceManager : MonoBehaviour
                         }
 
                         asyncInstantiateOperation = null;
+                        
+                        UnityEngine.Profiling.Profiler.EndSample();
                     }
                 }
                 
+                UnityEngine.Profiling.Profiler.BeginSample("Check");
+
                 int index, entityCount = Mathf.Min(this.entityCount, maxEntityCount);
                 Entity entity;
                 var entityManager = system.EntityManager;
@@ -156,17 +166,29 @@ public sealed class InstanceManager : MonoBehaviour
                     --this.entityCount;
                 }
 
+                UnityEngine.Profiling.Profiler.EndSample();
+                
                 if (entityCount < 1)
                     return 0;
 
                 this.entityCount -= entityCount;
 
+                UnityEngine.Profiling.Profiler.BeginSample("AddComponent");
+
                 system.EntityManager.AddComponent<CopyMatrixToTransformInstanceID>(
                     entities.AsArray().GetSubArray(startIndex, entityCount));
+
+                UnityEngine.Profiling.Profiler.EndSample();
+
+                UnityEngine.Profiling.Profiler.BeginSample("GetComponentLookup");
 
                 var instanceIDs = system.GetComponentLookup<CopyMatrixToTransformInstanceID>();
                 var localToWorlds = system.GetComponentLookup<LocalToWorld>(true);
                 
+                UnityEngine.Profiling.Profiler.EndSample();
+
+                UnityEngine.Profiling.Profiler.BeginSample("Apply");
+
                 CopyMatrixToTransformInstanceID instanceID;
                 instanceID.isSendMessageOnDestroy = true;
 
@@ -200,8 +222,14 @@ public sealed class InstanceManager : MonoBehaviour
                     instanceIDs[entity] = instanceID;
                 }
                 
+                UnityEngine.Profiling.Profiler.EndSample();
+
+                UnityEngine.Profiling.Profiler.BeginSample("RemoveRange");
+
                 gameObjects.RemoveRange(startIndex, entityCount);
                 entities.RemoveRange(startIndex, entityCount);
+
+                UnityEngine.Profiling.Profiler.EndSample();
 
                 return entityCount;
             }
@@ -271,6 +299,8 @@ public sealed class InstanceManager : MonoBehaviour
                 int maxEntityCount, 
                 SystemBase system)
             {
+                UnityEngine.Profiling.Profiler.BeginSample("System Submit");
+                
                 InstancesToCreate instance;
                 int count = 0, startIndex = 0, numInstances = __instances.Count;
                 for (int i = 0; i < numInstances; ++i)
@@ -298,6 +328,7 @@ public sealed class InstanceManager : MonoBehaviour
                         break;
                 }
                 
+                UnityEngine.Profiling.Profiler.EndSample();
                 return startIndex;
             }
         }
