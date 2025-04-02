@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Entities.Content;
+using Unity.Physics;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -33,6 +34,9 @@ public class PickableAuthoring : MonoBehaviour
             
             AddComponent<PickableStatus>(entity);
             //SetComponentEnabled<PickableStatus>(entity, false);
+
+            if (GetComponent<Rigidbody>() == null)
+                AddComponent<PhysicsVelocity>(entity);
         }
     }
     
