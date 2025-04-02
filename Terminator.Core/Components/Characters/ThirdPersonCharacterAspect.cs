@@ -12,6 +12,7 @@ using Unity.Physics.Extensions;
 using Unity.Physics.Systems;
 using Unity.Transforms;
 using Unity.CharacterController;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 public struct ThirdPersonCharacterSimulationEventResult
@@ -37,6 +38,7 @@ public struct ThirdPersonCharacterUpdateContext
     [ReadOnly]
     public BufferLookup<SimulationEvent> simulationEvents;
 
+    [NativeDisableUnsafePtrRestriction]
     public BufferTypeHandle<SimulationEvent> simulationEventType;
     
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
