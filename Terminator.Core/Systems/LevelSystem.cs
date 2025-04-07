@@ -206,7 +206,7 @@ public partial struct LevelSystem : ISystem
                 this.spawnerLayerMaskInclude.ValueRW = spawnerLayerMaskInclude;
                 this.spawnerLayerMaskExclude.ValueRW = spawnerLayerMaskExclude;
 
-                playerEffectTarget.ValueRW.invincibleTime = deltaTime;
+                playerEffectTarget.ValueRW.invincibleTime = math.max(playerEffectTarget.ValueRW.invincibleTime, deltaTime);
                 playerTransform.ValueRW.Position = playerPosition;
             }
 
