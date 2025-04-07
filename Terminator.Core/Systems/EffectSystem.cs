@@ -949,7 +949,11 @@ public partial struct EffectSystem : ISystem
 
                     target.hp += targetHP.value;
 
-                    target.invincibleTime = instance.recoveryInvincibleTime;
+                    if (instance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
+                    {
+                        target.invincibleTime = instance.recoveryInvincibleTime;
+                        result |= EnabledFlags.Invincible;
+                    }
 
                     result |= EnabledFlags.Recovery;
                 }
@@ -998,7 +1002,12 @@ public partial struct EffectSystem : ISystem
 
                                 if (isInvulnerability)
                                 {
-                                    target.invincibleTime = invulnerablilitity.time;
+                                    if (invulnerablilitity.time > math.FLT_MIN_NORMAL)
+                                    {
+                                        target.invincibleTime = invulnerablilitity.time;
+                                        
+                                        result |= EnabledFlags.Invincible;
+                                    }
 
                                     ++targetInvulnerabilityStatus.count;
                                 }
@@ -1037,7 +1046,6 @@ public partial struct EffectSystem : ISystem
                                 ++targetInvulnerabilityStatus.index;
                             }
                         }
-
 
                         targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
                     }
@@ -1318,7 +1326,7 @@ public partial struct EffectSystem : ISystem
 
     private uint __frameCount;
 
-    private float __deltaTime;
+    private double __time;
     
     private ComponentLookup<PhysicsCollider> __physicsColliders;
 
@@ -1588,12 +1596,14 @@ public partial struct EffectSystem : ISystem
         __messageParameterType.Update(ref state);
 
         if (deltaTime > math.FLT_MIN_NORMAL)
-            __deltaTime = deltaTime;
-
-        ++__frameCount;
+            __time += deltaTime;
+        else if(__frameCount > 0)
+            __time += __time / __frameCount;
         
+        ++__frameCount;
+
         apply.frameCount = __frameCount;
-        apply.deltaTime = __deltaTime;
+        apply.deltaTime = (float)(__time / __frameCount);
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
         apply.targetMessageType = __targetMessageType;
