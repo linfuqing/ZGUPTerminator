@@ -74,10 +74,11 @@ public class PlayerController : MonoBehaviour
             var analytics = IAnalytics.instance as IAnalyticsEx;
             if ((value & Status.Dead) == Status.Dead)
             {
-                __timeScaleIndex = TimeScaleUtility.Add(0.0f);
-
                 if ((value & Status.Respawn) == Status.Respawn)
                 {
+                    if(__timeScaleIndex == -1)
+                        __timeScaleIndex = TimeScaleUtility.Add(0.0f);
+
                     PlayerEvents.Respawn();
                     
                     analytics?.RespawnPlayer();
@@ -125,7 +126,12 @@ public class PlayerController : MonoBehaviour
     private void OnDisable()
     {
         if ((__status & Status.Dead) == Status.Dead)
+        {
+            if(__timeScaleIndex == -1)
+                __timeScaleIndex = TimeScaleUtility.Add(0.0f);
+            
             PlayerEvents.isActive = false;
+        }
     }
 
     void OnDestroy()
