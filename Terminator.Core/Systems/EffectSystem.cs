@@ -1588,7 +1588,7 @@ public partial struct EffectSystem : ISystem
         __messageParameterType.Update(ref state);
 
         if (deltaTime > math.FLT_MIN_NORMAL)
-            __deltaTime = (__deltaTime + deltaTime) * 0.5f;
+            __deltaTime = deltaTime;
 
         ++__frameCount;
         
