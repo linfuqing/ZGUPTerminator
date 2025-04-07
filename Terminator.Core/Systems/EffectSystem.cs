@@ -1578,8 +1578,8 @@ public partial struct EffectSystem : ISystem
         __targetDamageScaleType.Update(ref state);
         __targetHPType.Update(ref state);
         __messageParameterType.Update(ref state);
-
-        apply.time = time;
+        
+        apply.time = SystemAPI.TryGetSingleton<FixedFrame>(out var fixedFrame) ? fixedFrame.time : time;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
         apply.targetMessageType = __targetMessageType;
