@@ -24,8 +24,6 @@ public partial struct LevelSystem : ISystem
         
         public RefRW<SpawnerTime> spawnerTime;
 
-        public RefRW<EffectTarget> playerEffectTarget;
-
         public RefRW<LocalTransform> playerTransform;
 
         public Random random;
@@ -59,7 +57,7 @@ public partial struct LevelSystem : ISystem
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
-        public void Execute(int index)
+        public bool Execute(int index)
         {
             var stages = this.stages[index];
             int numStages = stages.Length;
@@ -206,11 +204,12 @@ public partial struct LevelSystem : ISystem
                 this.spawnerLayerMaskInclude.ValueRW = spawnerLayerMaskInclude;
                 this.spawnerLayerMaskExclude.ValueRW = spawnerLayerMaskExclude;
 
-                playerEffectTarget.ValueRW.invincibleTime = math.max(playerEffectTarget.ValueRW.invincibleTime, deltaTime);
                 playerTransform.ValueRW.Position = playerPosition;
             }
 
             states[index] = status;
+
+            return isResultChanged;
         }
     }
 
@@ -280,6 +279,9 @@ public partial struct LevelSystem : ISystem
                 !spawnerLayerMaskOverrides.HasComponent(spawnerLayerMaskEntity) ||
                 !spawnerTimes.HasComponent(spawnerLayerMaskEntity))
                 return;
+
+            if (effectTargets[playerEntity].hp < 1)
+                return;
             
             long hash = math.aslong(time);
 
@@ -290,7 +292,6 @@ public partial struct LevelSystem : ISystem
             update.spawnerLayerMaskInclude = spawnerLayerMaskIncludes.GetRefRW(spawnerLayerMaskEntity);
             update.spawnerLayerMaskExclude = spawnerLayerMaskExcludes.GetRefRW(spawnerLayerMaskEntity);
             update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskEntity);
-            update.playerEffectTarget = effectTargets.GetRefRW(playerEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
@@ -306,9 +307,16 @@ public partial struct LevelSystem : ISystem
             update.spawnerStates = spawnerStates;
             update.entityManager = entityManager;
 
+            bool result = false;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
-                update.Execute(i);
+                result = update.Execute(i) || result;
+
+            if (result)
+            {
+                ref var playerEffectTarget = ref effectTargets.GetRefRW(playerEntity).ValueRW;
+                playerEffectTarget.invincibleTime = math.max(playerEffectTarget.invincibleTime, deltaTime);
+            }
         }
 
     }
