@@ -111,17 +111,23 @@ public class PlayerController : MonoBehaviour
         {
             var analytics = IAnalyticsEx.instance as IAnalyticsEx;
             if (analytics != null)
-            {
                 __attributeEventReceiver.onHPMaxChanged += analytics.SetPlayerHPMax;
-                __attributeEventReceiver.onHPChanged += __OnHPChanged;
+            
+            __attributeEventReceiver.onHPChanged += __OnHPChanged;
 
-                __attributeEventReceiver.onRageChanged += __OnRageChanged;
-            }
+            __attributeEventReceiver.onRageChanged += __OnRageChanged;
         }
     }
 
     void OnDestroy()
     {
+        if ((object)__attributeEventReceiver != null)
+        {
+            __attributeEventReceiver.onHPChanged -= __OnHPChanged;
+
+            __attributeEventReceiver.onRageChanged -= __OnRageChanged;
+        }
+        
         TimeScaleUtility.Remove(__timeScaleIndex);
 
         __timeScaleIndex = -1;
