@@ -873,7 +873,7 @@ public partial struct EffectSystem : ISystem
 
     private struct Apply
     {
-        public double time;
+        public float deltaTime;
 
         public quaternion inverseCameraRotation;
 
@@ -931,7 +931,10 @@ public partial struct EffectSystem : ISystem
         {
             EnabledFlags result = 0;
             var target = targets[index];
-            if (target.invincibleTime < time)
+            if (target.invincibleTime >= 0.0f)
+                target.invincibleTime -= deltaTime;
+            
+            if (target.invincibleTime < 0.0f)
             {
                 var instance = instances[index];
 
@@ -946,7 +949,7 @@ public partial struct EffectSystem : ISystem
 
                     target.hp += targetHP.value;
 
-                    target.invincibleTime = time + instance.recoveryInvincibleTime;
+                    target.invincibleTime = instance.recoveryInvincibleTime;
 
                     result |= EnabledFlags.Recovery;
                 }
@@ -995,7 +998,7 @@ public partial struct EffectSystem : ISystem
 
                                 if (isInvulnerability)
                                 {
-                                    target.invincibleTime = time + invulnerablilitity.time;
+                                    target.invincibleTime = invulnerablilitity.time;
 
                                     ++targetInvulnerabilityStatus.count;
                                 }
@@ -1152,7 +1155,7 @@ public partial struct EffectSystem : ISystem
 
                             --target.times;
 
-                            target.invincibleTime = time + instance.recoveryTime;
+                            target.invincibleTime = instance.recoveryTime;
                             target.hp = 0;
 
                             targetHP.value = instance.hpMax;
@@ -1180,14 +1183,14 @@ public partial struct EffectSystem : ISystem
                     }
                 }
 
-                targets[index] = target;
-
                 targetHPs[index] = targetHP;
             }
             else
                 result |= EnabledFlags.Invincible;
 
             targetDamages[index] = default;
+
+            targets[index] = target;
 
             return result;
         }
@@ -1196,7 +1199,8 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
-        public double time;
+        public uint frameCount;
+        public float deltaTime;
         
         public quaternion inverseCameraRotation;
         
@@ -1251,12 +1255,10 @@ public partial struct EffectSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            ulong hash = math.asulong(time);
-            
             Apply apply;
-            apply.time = time;
+            apply.deltaTime = deltaTime;
             apply.inverseCameraRotation = inverseCameraRotation;
-            apply.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
+            apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
             apply.targetMessages = chunk.GetBufferAccessor(ref targetMessageType);
             apply.children = chunk.GetBufferAccessor(ref childType);
@@ -1314,6 +1316,10 @@ public partial struct EffectSystem : ISystem
         }
     }
 
+    private uint __frameCount;
+
+    private float __deltaTime;
+    
     private ComponentLookup<PhysicsCollider> __physicsColliders;
 
     private ComponentLookup<KinematicCharacterProperties> __characterProperties;
@@ -1535,8 +1541,10 @@ public partial struct EffectSystem : ISystem
         quaternion inverseCameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
             ? math.inverse(mainCameraTransform.value.rot)
             : quaternion.identity;
+        float deltaTime = SystemAPI.Time.DeltaTime;
+        
         CollectEx collect;
-        collect.deltaTime = SystemAPI.Time.DeltaTime;
+        collect.deltaTime = deltaTime;
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
         collect.damageParents = __damageParents;
@@ -1578,8 +1586,14 @@ public partial struct EffectSystem : ISystem
         __targetDamageScaleType.Update(ref state);
         __targetHPType.Update(ref state);
         __messageParameterType.Update(ref state);
+
+        if (deltaTime > math.FLT_MIN_NORMAL)
+            __deltaTime = (__deltaTime + deltaTime) * 0.5f;
+
+        ++__frameCount;
         
-        apply.time = SystemAPI.TryGetSingleton<FixedFrame>(out var fixedFrame) ? fixedFrame.time : time;
+        apply.frameCount = __frameCount;
+        apply.deltaTime = __deltaTime;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
         apply.targetMessageType = __targetMessageType;

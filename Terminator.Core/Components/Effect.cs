@@ -199,7 +199,7 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 {
     public int times;
     public int hp;
-    public double invincibleTime;
+    public float invincibleTime;
 }
 
 public struct EffectTargetHP : IComponentData, IEnableableComponent

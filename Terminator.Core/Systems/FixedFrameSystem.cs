@@ -4,7 +4,6 @@ using Unity.Entities;
 public struct FixedFrame : IComponentData
 {
     public int count;
-    public double time;
 }
 
 [BurstCompile, UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
@@ -23,7 +22,6 @@ public partial struct FixedFrameSystem : ISystem
     {
         var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
         ++fixedFrame.count;
-        fixedFrame.time = SystemAPI.Time.ElapsedTime;
         
         SystemAPI.SetSingleton(fixedFrame);
     }
