@@ -15,6 +15,8 @@ public interface IAnalyticsEx : IAnalytics
     
     void DisablePlayer();
 
+    void RespawnPlayer();
+
     void SetPlayerHPMax(int value);
     
     void SetPlayerHP(int value);
@@ -67,6 +69,14 @@ public class Analytics : MonoBehaviour, IAnalyticsEx
         foreach (var instance in instances)
         {
             instance.DisablePlayer();
+        }
+    }
+
+    public void RespawnPlayer()
+    {
+        foreach (var instance in instances)
+        {
+            instance.RespawnPlayer();
         }
     }
 
@@ -229,6 +239,10 @@ public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
     }
 
     public virtual void DisablePlayer()
+    {
+    }
+
+    public virtual void RespawnPlayer()
     {
     }
 

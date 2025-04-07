@@ -26,15 +26,6 @@ public class PlayerEvents : MonoBehaviour
             if (value == __isActive)
                 return;
 
-            var analytics = IAnalytics.instance as IAnalyticsEx;
-            if (analytics != null)
-            {
-                if(value)
-                    analytics.EnablePlayer();
-                else
-                    analytics.DisablePlayer();
-            }
-            
             if (__instances != null)
             {
                 if (value)
