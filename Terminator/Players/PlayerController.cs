@@ -82,8 +82,6 @@ public class PlayerController : MonoBehaviour
                     
                     analytics?.RespawnPlayer();
                 }
-                else
-                    PlayerEvents.isActive = false;
 
                 analytics?.DisablePlayer();
             }
@@ -93,8 +91,6 @@ public class PlayerController : MonoBehaviour
 
                 __timeScaleIndex = -1;
             
-                PlayerEvents.isActive = true;
-                
                 analytics?.EnablePlayer();
             }
         }
@@ -117,6 +113,19 @@ public class PlayerController : MonoBehaviour
 
             __attributeEventReceiver.onRageChanged += __OnRageChanged;
         }
+    }
+
+    private void OnEnable()
+    {
+        __SetStatus(0);
+        
+        PlayerEvents.isActive = true;
+    }
+
+    private void OnDisable()
+    {
+        if ((__status & Status.Dead) == Status.Dead)
+            PlayerEvents.isActive = false;
     }
 
     void OnDestroy()
