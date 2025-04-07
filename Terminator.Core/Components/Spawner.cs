@@ -429,7 +429,7 @@ public struct SpawnerDefinition
                 EffectTarget effectTarget;
                 effectTarget.times = 0;
                 effectTarget.hp = math.min((int)math.round(attribute.hp + attribute.hpBuff * times), attribute.hpMax);
-                effectTarget.invincibleTime = 0.0;
+                effectTarget.invincibleTime = 0.0f;
                 entityManager.SetComponent(2, entity, effectTarget);
             }
 
