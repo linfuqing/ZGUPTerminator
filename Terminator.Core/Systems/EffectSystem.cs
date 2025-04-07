@@ -607,7 +607,9 @@ public partial struct EffectSystem : ISystem
                     }
                     else
                     {
-                        status.time += (effect.count - status.count) * effect.time;
+                        resultCount = effect.count - status.count;
+
+                        status.time += resultCount * effect.time;
                         status.count = 0;
 
                         if (++status.index == numEffects)
@@ -638,13 +640,13 @@ public partial struct EffectSystem : ISystem
                             status.time += definition.effects[status.index].startTime;
                         }
                     }
-                    
-                    for(int i = 0; i < resultCount; ++i)
+
+                    for (int i = 0; i < resultCount; ++i)
                         __Drop(
                             transform,
-                            entity, 
-                            instanceDamage, 
-                            instanceDamageParent, 
+                            entity,
+                            instanceDamage,
+                            instanceDamageParent,
                             prefabs,
                             ref effect.prefabs);
                 }
@@ -665,6 +667,10 @@ public partial struct EffectSystem : ISystem
             in DynamicBuffer<EffectPrefab> prefabs, 
             ref BlobArray<EffectDefinition.Prefab> prefabsDefinition)
         {
+            int numPrefabs = prefabsDefinition.Length;
+            if (numPrefabs < 1)
+                return;
+            
             Parent instanceParent;
             instanceParent.Value = parent;
             
@@ -674,7 +680,6 @@ public partial struct EffectSystem : ISystem
             damageInstance.entity = instanceDamageParent.entity;
             
             bool isContains = false;
-            int numPrefabs = prefabsDefinition.Length;
             float chance = random.NextFloat(), totalChance = 0.0f;
             Entity instance;
             for (int i = 0; i < numPrefabs; ++i)

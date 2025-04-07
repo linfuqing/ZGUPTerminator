@@ -255,14 +255,6 @@ public partial class UserData : MonoBehaviour, IUserData
     {
         yield return null;
 
-        LevelCache levelCache;
-        levelCache.name = string.Empty;
-        levelCache.id = 1;
-        levelCache.gold = 0;
-        levelCache.stage = 0;
-
-        UserData.levelCache = levelCache;
-
         onComplete(level > 0 ? IUserData.Status.Normal : IUserData.Status.Guide, id);
     }
     

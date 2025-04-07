@@ -373,7 +373,21 @@ public partial class UserData
         uint levelID,
         Action<IUserData.Property> onComplete)
     {
-        return UserDataMain.instance.ApplyLevel(userID, levelID, onComplete);
+        var userDataMain = UserDataMain.instance;
+        if (userDataMain == null)
+        {
+            yield return null;
+            
+            LevelCache levelCache;
+            levelCache.name = string.Empty;
+            levelCache.id = levelID;
+            levelCache.gold = 0;
+            levelCache.stage = 0;
+
+            UserData.levelCache = levelCache;
+        }
+        else
+            yield return userDataMain.ApplyLevel(userID, levelID, onComplete);
     }
 
     public IEnumerator CollectLevel(

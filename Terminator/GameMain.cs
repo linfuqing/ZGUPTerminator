@@ -224,6 +224,7 @@ public class GameMain : GameUser
 
     private IEnumerator __Init()
     {
+        uint userID = 0;
         string defaultSceneName = null;
         GameSceneActivation activation = null;
         yield return IUserData.instance.QueryUser(
@@ -240,8 +241,7 @@ public class GameMain : GameUser
 
                         activation = new GameSceneActivation();
                 
-                        var analytics = IAnalytics.instance as IAnalyticsEx;
-                        analytics?.StartLevel(defaultSceneName);
+                        userID = y;
                         break;
                     default:
                         defaultSceneName = GameConstantManager.Get(DefaultSceneName);
@@ -250,6 +250,16 @@ public class GameMain : GameUser
 
                 ILevelData.instance = new GameLevelData(y);
             });
+
+        if (userID != 0)
+        {
+            var analytics = IAnalytics.instance as IAnalyticsEx;
+            analytics?.StartLevel(defaultSceneName);
+
+            yield return IUserData.instance.ApplyLevel(userID, 1, null);
+
+            LevelPlayerShared.effectTargetRecovery = 1024.0f;
+        }
 
         yield return GameAssetManager.instance.Init(
             defaultSceneName, 

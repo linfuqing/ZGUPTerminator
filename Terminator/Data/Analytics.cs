@@ -18,6 +18,12 @@ public interface IAnalyticsEx : IAnalytics
     void SetPlayerHPMax(int value);
     
     void SetPlayerHP(int value);
+    
+    void BeginPage(string name);
+    
+    void EndPage(string name);
+    
+    void PageAction(string name);
 }
 
 public class Analytics : MonoBehaviour, IAnalyticsEx
@@ -80,6 +86,30 @@ public class Analytics : MonoBehaviour, IAnalyticsEx
         }
     }
 
+    public void BeginPage(string name)
+    {
+        foreach (var instance in instances)
+        {
+            instance.BeginPage(name);
+        }
+    }
+
+    public virtual void EndPage(string name)
+    {
+        foreach (var instance in instances)
+        {
+            instance.EndPage(name);
+        }
+    }
+
+    public virtual void PageAction(string name)
+    {
+        foreach (var instance in instances)
+        {
+            instance.PageAction(name);
+        }
+    }
+    
     public void Set(
         int value,
         int max,
@@ -207,6 +237,20 @@ public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
     }
 
     public virtual void SetPlayerHP(int value)
+    {
+    }
+
+    public virtual void BeginPage(string name)
+    {
+        
+    }
+
+    public virtual void EndPage(string name)
+    {
+        
+    }
+    
+    public virtual void PageAction(string name)
     {
     }
 
