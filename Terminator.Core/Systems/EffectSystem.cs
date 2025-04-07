@@ -1306,9 +1306,9 @@ public partial struct EffectSystem : ISystem
                 {
                     if(isCharacter && (result & EnabledFlags.Recovery) == EnabledFlags.Recovery)
                         chunk.SetComponentEnabled(ref characterBodyType, i, true);
-                    
-                    if((result & EnabledFlags.Invincible) != EnabledFlags.Invincible)
-                        chunk.SetComponentEnabled(ref targetHPType, i, false);
+
+                    chunk.SetComponentEnabled(ref targetHPType, i,
+                        (result & EnabledFlags.Invincible) == EnabledFlags.Invincible);
                 }
 
                 chunk.SetComponentEnabled(ref targetDamageType, i, false);
