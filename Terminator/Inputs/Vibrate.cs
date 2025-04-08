@@ -21,7 +21,10 @@ public static class VibrateUtility
     {
         var Vibration = IVibration.instance;
         if(Vibration == null)
-            Handheld.Vibrate();
+#if UNITY_ANDROID || UNITY_IOS
+            Handheld.Vibrate()
+#endif
+                ;
         else
             Vibration.Apply(type);
     }
