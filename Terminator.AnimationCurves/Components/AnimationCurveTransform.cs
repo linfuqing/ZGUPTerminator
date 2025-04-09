@@ -282,7 +282,7 @@ public struct AnimationCurveMessage : IBufferElementData
 {
     public float time;
     public FixedString128Bytes messageName;
-    public WeakObjectReference<Object> messageValue;
+    public UnityObjectRef<Object> messageValue;
 }
 
 public struct AnimationCurveEntity : IBufferElementData

@@ -145,7 +145,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     ref var destination = ref messages.ElementAt(i);
 
                     destination.name = source.messageName;
-                    destination.value = new WeakObjectReference<Object>(source.value);
+                    destination.value = source.value;
                     
                     if (source.receiverPrefab == null)
                         destination.entityPrefabReference = default;

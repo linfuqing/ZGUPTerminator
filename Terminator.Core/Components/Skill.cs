@@ -306,7 +306,7 @@ public struct SkillMessage : IBufferElementData
 {
     public SkillMessageType type;
     public FixedString128Bytes name;
-    public WeakObjectReference<Object> value;
+    public UnityObjectRef<Object> value;
 }
 
 public struct SkillActiveIndex : IBufferElementData

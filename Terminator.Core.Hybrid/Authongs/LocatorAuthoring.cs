@@ -124,7 +124,7 @@ public class LocatorAuthoring : MonoBehaviour
             {
                 LocatorMessage message;
                 message.name = "SetAxis";
-                message.value = new WeakObjectReference<Object>(authoring._parameters);
+                message.value = authoring._parameters;
 
                 AddBuffer<LocatorMessage>(entity).Add(message);
             }

@@ -13,10 +13,6 @@ public partial class MessageSystem : SystemBase
 {
     private struct Collect
     {
-        public float maxTime;
-        
-        public double time;
-        
         [ReadOnly]
         public NativeArray<Entity> entityArray;
         
@@ -24,73 +20,19 @@ public partial class MessageSystem : SystemBase
         
         public BufferAccessor<Message> inputMessages;
         
-        public NativeHashMap<WeakObjectReference<UnityEngine.Object>, double> times;
-
         public NativeParallelMultiHashMap<Entity, Message> outputMessages;
         
         public NativeParallelMultiHashMap<int, MessageParameter> outputParameters;
-
-        public NativeList<Entity> entitiesToDisable;
 
         public void Execute(int index)
         {
             Entity entity = entityArray[index];
             var parameters = index < inputParameters.Length ? inputParameters[index] : default;
             var messages = inputMessages[index];
-            int numMessages = messages.Length;
-            if (numMessages > 0)
-            {
-                bool isNull;
-                int numParameters, i, j;
-                for (i = 0; i < numMessages; ++i)
-                {
-                    ref var message = ref messages.ElementAt(i);
-                    isNull = message.value.Equals(default);
-                    
-                    if (!isNull && times.TryAdd(message.value, time))
-                        message.value.LoadAsync();
-
-                    if (isNull || ObjectLoadingStatus.Completed == message.value.LoadingStatus)
-                    {
-                        __Collect(entity, message, ref parameters);
-
-                        messages.RemoveAtSwapBack(i--);
-
-                        --numMessages;
-                    }
-                    else
-                    {
-                        if (ObjectLoadingStatus.Error != message.value.LoadingStatus && 
-                            times.TryGetValue(message.value, out var oldTime) && 
-                            (float)(time - oldTime) < maxTime)
-                            continue;
-                            
-                        Debug.LogError($"Message {message.name} Error!");
-
-                        if (message.key != 0)
-                        {
-                            numParameters = parameters.IsCreated ? parameters.Length : 0;
-                            for (j = 0; j < numParameters; ++j)
-                            {
-                                ref var parameter = ref parameters.ElementAt(j);
-                                if (parameter.messageKey != message.key)
-                                    continue;
-
-                                parameters.RemoveAt(j--);
-
-                                --numParameters;
-                            }
-                        }
-                            
-                        messages.RemoveAtSwapBack(i--);
-
-                        --numMessages;
-                    }
-                }
-            }
-
-            if(numMessages < 1)
-                entitiesToDisable.Add(entity);
+            foreach (var message in messages)
+                __Collect(entity, message, ref parameters);
+            
+            messages.Clear();
         }
 
         private void __Collect(in Entity entity, in Message message, ref DynamicBuffer<MessageParameter> parameters)
@@ -119,10 +61,6 @@ public partial class MessageSystem : SystemBase
     [BurstCompile]
     private struct CollectEx : IJobChunk
     {
-        public float maxTime;
-        
-        public double time;
-
         [ReadOnly]
         public EntityTypeHandle entityType;
         
@@ -130,13 +68,9 @@ public partial class MessageSystem : SystemBase
         
         public BufferTypeHandle<Message> inputMessageType;
         
-        public NativeHashMap<WeakObjectReference<UnityEngine.Object>, double> times;
-
         public NativeParallelMultiHashMap<Entity, Message> outputMessages;
         
         public NativeParallelMultiHashMap<int, MessageParameter> outputParameters;
-
-        public NativeList<Entity> entitiesToDisable;
 
         public void Execute(
             in ArchetypeChunk chunk, 
@@ -145,38 +79,21 @@ public partial class MessageSystem : SystemBase
             in v128 chunkEnabledMask)
         {
             Collect collect;
-            collect.maxTime = maxTime;
-            collect.time = time;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.inputParameters = chunk.GetBufferAccessor(ref inputParameterType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
-            collect.times = times;
             collect.outputMessages = outputMessages;
             collect.outputParameters = outputParameters;
-            collect.entitiesToDisable = entitiesToDisable;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
-            while(iterator.NextEntityIndex(out int i))
+            while (iterator.NextEntityIndex(out int i))
+            {
                 collect.Execute(i);
+                
+                chunk.SetComponentEnabled(ref inputMessageType, i, false);
+            }
         }
     }
-    
-    [BurstCompile]
-    private struct Disable : IJobParallelFor
-    {
-        [ReadOnly]
-        public NativeArray<Entity> entities;
-        
-        [NativeDisableParallelForRestriction]
-        public BufferLookup<Message> messages;
-
-        public void Execute(int index)
-        {
-            messages.SetBufferEnabled(entities[index], false);
-        }
-    }
-
-    public const float MAX_TIME = 3.0f;
     
     private EntityTypeHandle __entityType;
     
@@ -184,17 +101,11 @@ public partial class MessageSystem : SystemBase
 
     private ComponentLookup<MessageParent> __parents;
 
-    private BufferLookup<Message> __messages;
-    
     private BufferTypeHandle<Message> __instanceType;
 
     private BufferTypeHandle<MessageParameter> __parameterType;
         
     private EntityQuery __group;
-
-    private NativeList<Entity> __entitiesToDisable;
-    
-    private NativeHashMap<WeakObjectReference<UnityEngine.Object>, double> __times;
 
     private NativeParallelMultiHashMap<Entity, Message> __instances;
         
@@ -206,7 +117,6 @@ public partial class MessageSystem : SystemBase
 
         __instanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>(true);
         __parents = GetComponentLookup<MessageParent>(true);
-        __messages = GetBufferLookup<Message>();
         __instanceType = GetBufferTypeHandle<Message>();
         __parameterType = GetBufferTypeHandle<MessageParameter>();
 
@@ -217,8 +127,6 @@ public partial class MessageSystem : SystemBase
         
         //RequireForUpdate(__group);
 
-        __entitiesToDisable = new NativeList<Entity>(Allocator.Persistent);
-        __times = new NativeHashMap<WeakObjectReference<Object>, double>(1, Allocator.Persistent);
         __instances = new NativeParallelMultiHashMap<Entity, Message>(1, Allocator.Persistent);
         __parameters = new NativeParallelMultiHashMap<int, MessageParameter>(1, Allocator.Persistent);
     }
@@ -227,18 +135,12 @@ public partial class MessageSystem : SystemBase
     {
         base.OnDestroy();
 
-        __entitiesToDisable.Dispose();
-        __times.Dispose();
         __instances.Dispose();
         __parameters.Dispose();
     }
 
     protected override void OnUpdate()
     {
-        __entitiesToDisable.Clear();
-        //__instances.Clear();
-        //__parameters.Clear();
-        
         CompleteDependency();
 
         __entityType.Update(this);
@@ -246,15 +148,11 @@ public partial class MessageSystem : SystemBase
         __parameterType.Update(this);
         
         CollectEx collect;
-        collect.maxTime = MAX_TIME;
-        collect.time = SystemAPI.Time.ElapsedTime;
         collect.entityType = __entityType;
         collect.inputMessageType = __instanceType;
         collect.inputParameterType = __parameterType;
-        collect.times = __times;
         collect.outputMessages = __instances;
         collect.outputParameters = __parameters;
-        collect.entitiesToDisable = __entitiesToDisable;
         collect.RunByRef(__group);
 
         if (!__instances.IsEmpty)
@@ -306,21 +204,11 @@ public partial class MessageSystem : SystemBase
                 }
             }
         }
-
-        if (!__entitiesToDisable.IsEmpty)
-        {
-            __messages.Update(this);
-
-            Disable disable;
-            disable.entities = __entitiesToDisable.AsArray();
-            disable.messages = __messages;
-            Dependency = disable.ScheduleByRef(__entitiesToDisable.Length, 4, Dependency);
-        }
     }
 
     private void __Send(in Message message, Transform transform)
     {
-        var messageValue = message.value.Result;
+        var messageValue = message.value.Value;
         if (message.key == 0)
         {
             if (messageValue is IMessage temp)

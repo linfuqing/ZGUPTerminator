@@ -175,7 +175,7 @@ public struct EffectPrefab : IBufferElementData
 public struct EffectMessage : IBufferElementData
 {
     public FixedString128Bytes name;
-    public WeakObjectReference<Object> value;
+    public UnityObjectRef<Object> value;
     public EntityPrefabReference entityPrefabReference;
 }
 
@@ -192,7 +192,7 @@ public struct EffectTargetData : IComponentData
     public float recoveryInvincibleTime;
 
     public FixedString128Bytes recoveryMessageName;
-    public WeakObjectReference<Object> recoveryMessageValue;
+    public UnityObjectRef<Object> recoveryMessageValue;
 }
 
 public struct EffectTarget : IComponentData, IEnableableComponent
@@ -282,5 +282,5 @@ public struct EffectTargetMessage : IBufferElementData
     public uint layerMask;
     public EntityPrefabReference entityPrefabReference;
     public FixedString128Bytes messageName;
-    public WeakObjectReference<Object> messageValue;
+    public UnityObjectRef<Object> messageValue;
 }

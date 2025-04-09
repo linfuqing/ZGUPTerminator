@@ -15,9 +15,9 @@ public class AntigravityAuthoring : MonoBehaviour
 
             Antigravity instance;
             instance.startMessageName = authoring._startMessageName;
-            instance.startMessageValue = new WeakObjectReference<Object>(authoring._startMessageValue);
+            instance.startMessageValue = authoring._startMessageValue;
             instance.endMessageName = authoring._endMessageName;
-            instance.endMessageValue = new WeakObjectReference<Object>(authoring._endMessageValue);
+            instance.endMessageValue = authoring._endMessageValue;
             instance.cooldown = authoring._cooldown;
             instance.duration = authoring._duration;
             AddComponent(entity, instance);

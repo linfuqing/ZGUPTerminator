@@ -14,7 +14,7 @@ public struct Message : IBufferElementData, IEnableableComponent
 {
     public int key;
     public FixedString128Bytes name;
-    public WeakObjectReference<Object> value;
+    public UnityObjectRef<Object> value;
 }
 
 public struct MessageParameter : IBufferElementData

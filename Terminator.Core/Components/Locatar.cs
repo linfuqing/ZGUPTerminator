@@ -74,5 +74,5 @@ public struct LocatorMessage : IBufferElementData
 {
     public FixedString128Bytes name;
 
-    public WeakObjectReference<Object> value;
+    public UnityObjectRef<Object> value;
 }

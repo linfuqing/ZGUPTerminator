@@ -328,7 +328,7 @@ public static class AnimationCurveBakeUtility
             ref var destination = ref messages[i];
             destination.time = source.time;
             destination.messageName = source.functionName;
-            destination.messageValue = new WeakObjectReference<Object>(source.objectReferenceParameter);
+            destination.messageValue = source.objectReferenceParameter;
         }
 
         return messages;

@@ -393,7 +393,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                 {
                     DependsOn(source.messageValue);
                     
-                    destination.value = new WeakObjectReference<Object>(source.messageValue);
+                    destination.value = source.messageValue;
                 }
             }
 
@@ -402,7 +402,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                 SkillMessage message;
                 message.type = SkillMessageType.Running;
                 message.name = "UpdateAttribute";
-                message.value = new WeakObjectReference<Object>(authoring._attributeParameter);
+                message.value = authoring._attributeParameter;
                 
                 messages[numMessages] = message;
             }
@@ -449,7 +449,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
         Message message;
         message.key = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         message.name = "UpdateAttribute";
-        message.value = new WeakObjectReference<Object>(_attributeParameter);
+        message.value = _attributeParameter;
         messages.Add(message);
 
         MessageParameter parameter;

@@ -23,13 +23,9 @@ public class PickableAuthoring : MonoBehaviour
             pickable.startTime = authoring._startTime;
             pickable.speed = authoring._speed;
             pickable.messageName = authoring._messageName;
-            pickable.messageValue = authoring._messageValue == null
-                ? default
-                : new WeakObjectReference<Object>(authoring._messageValue);
+            pickable.messageValue = authoring._messageValue;
             pickable.startMessageName = authoring._startMessageName;
-            pickable.startMessageValue = authoring._startMessageValue == null
-                ? default
-                : new WeakObjectReference<Object>(authoring._startMessageValue);
+            pickable.startMessageValue = authoring._startMessageValue;
             AddComponent(entity, pickable);
             
             AddComponent<PickableStatus>(entity);

@@ -1223,7 +1223,7 @@ public struct BulletMessage : IBufferElementData
 
     public FixedString128Bytes name;
 
-    public WeakObjectReference<Object> value;
+    public UnityObjectRef<Object> value;
 }
 
 public struct BulletActiveIndex : IBufferElementData

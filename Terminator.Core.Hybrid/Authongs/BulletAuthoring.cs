@@ -637,9 +637,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                             {
                                 //destinationMessage.key = sourceMessage.name;
                                 destinationMessage.name = sourceMessage.messageName;
-                                destinationMessage.value = sourceMessage.messageValue == null
-                                    ? default
-                                    : new WeakObjectReference<Object>(sourceMessage.messageValue);
+                                destinationMessage.value = sourceMessage.messageValue;
 
                                 messageIndices[j] = messages.Length;
                                 messages.Add(destinationMessage);

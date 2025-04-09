@@ -57,9 +57,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             instance.recoveryTime = authoring._recoveryTime;
             instance.recoveryInvincibleTime = authoring._recoveryInvincibleTime;
             instance.recoveryMessageName = authoring._recoveryMessageName;
-            instance.recoveryMessageValue = authoring._recoveryMessageValue == null
-                ? default
-                : new WeakObjectReference<Object>(authoring._recoveryMessageValue);
+            instance.recoveryMessageValue = authoring._recoveryMessageValue;
             AddComponent(entity, instance);
 
             EffectTarget target;
@@ -88,7 +86,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
                 destination.layerMask = (uint)source.layerMask.value;
                 destination.messageName = source.messageName;
-                destination.messageValue = new WeakObjectReference<Object>(source.messageValue);
+                destination.messageValue = source.messageValue;
                 
                 if (source.receiverPrefab == null)
                     destination.entityPrefabReference = default;
@@ -106,7 +104,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                 message.layerMask = ~0u;
                 message.entityPrefabReference = default;
                 message.messageName = "UpdateAttribute";
-                message.messageValue = new WeakObjectReference<Object>(authoring._attributeParameter);
+                message.messageValue = authoring._attributeParameter;
 
                 messages.Add(message);
             }
@@ -201,7 +199,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         Message message;
         message.key = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         message.name = "UpdateAttribute";
-        message.value = new WeakObjectReference<Object>(_attributeParameter);
+        message.value = _attributeParameter;
         messages.Add(message);
 
         MessageParameter parameter;

@@ -6,10 +6,10 @@ using UnityEngine;
 public struct Antigravity : IComponentData
 {
     public FixedString128Bytes startMessageName;
-    public WeakObjectReference<Object> startMessageValue;
+    public UnityObjectRef<Object> startMessageValue;
 
     public FixedString128Bytes endMessageName;
-    public WeakObjectReference<Object> endMessageValue;
+    public UnityObjectRef<Object> endMessageValue;
 
     public float cooldown;
     public float duration;
