@@ -550,7 +550,7 @@ public partial class UserDataMain
         skillGroupDamage = 0.0f;
         foreach (var talent in _talents)
         {
-            if(talent.roleName != roleName)
+            if(!string.IsNullOrEmpty(talent.roleName) && talent.roleName != roleName)
                 continue;
                 
             if (((UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}") &

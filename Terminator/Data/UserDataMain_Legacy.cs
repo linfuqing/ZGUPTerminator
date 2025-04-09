@@ -333,65 +333,6 @@ public partial class UserDataMain
         onComplete(false);
     }
 
-    public IEnumerator QueryTalents(
-        uint userID,
-        Action<Memory<UserTalent>> onComplete)
-    {
-        yield return null;
-
-        int numTalents = _talents.Length;
-        Talent talent;
-        UserTalent userTalent;
-        var userTalents = new UserTalent[numTalents];
-        for (int i = 0; i < numTalents; ++i)
-        {
-            talent = _talents[i];
-            userTalent.name = talent.name;
-            userTalent.id = __ToID(i);
-            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
-            userTalent.gold = talent.gold;
-            userTalent.skillGroupDamage = talent.skillGroupDamage;
-            userTalent.attribute = talent.attribute;
-            userTalents[i] = userTalent;
-        }
-
-        onComplete(userTalents);
-    }
-
-    public IEnumerator CollectTalent(
-        uint userID,
-        uint talentID,
-        Action<bool> onComplete)
-    {
-        yield return null;
-
-        string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talentID}";
-        var flag = (UserTalent.Flag)PlayerPrefs.GetInt(key);
-        if ((flag & UserTalent.Flag.Collected) == UserTalent.Flag.Collected)
-        {
-            onComplete(false);
-            
-            yield break;
-        }
-
-        int gold = UserDataMain.gold;
-        
-        var talent = _talents[__ToIndex(talentID)];
-        if (talent.gold > gold)
-        {
-            onComplete(false);
-            
-            yield break;
-        }
-
-        UserDataMain.gold = gold - talent.gold;
-
-        flag |= UserTalent.Flag.Collected;
-        PlayerPrefs.SetInt(key, (int)flag);
-
-        onComplete(true);
-    }
-
     private void __CollectLevelLegacy(bool isNextLevel, int levelIndex, int stage)
     {
         var level = _levels[levelIndex];
@@ -461,13 +402,6 @@ public partial class UserData
         return UserDataMain.instance.QueryWeapons(userID, onComplete);
     }
 
-    public IEnumerator QueryTalents(
-        uint userID,
-        Action<Memory<UserTalent>> onComplete)
-    {
-        return UserDataMain.instance.QueryTalents(userID, onComplete);
-    }
-
     public IEnumerator QueryStages(
         uint userID,
         Action<Memory<UserStage_v0>> onComplete)
@@ -481,14 +415,6 @@ public partial class UserData
         Action<bool> onComplete)
     {
         return UserDataMain.instance.CollectStage(userID, stageID, onComplete);
-    }
-
-    public IEnumerator CollectTalent(
-        uint userID,
-        uint talentID,
-        Action<bool> onComplete)
-    {
-        return UserDataMain.instance.CollectTalent(userID, talentID, onComplete);
     }
 
     public IEnumerator SelectWeapon(

@@ -64,10 +64,6 @@ public partial interface IUserData
         uint userID, 
         Action<Memory<UserWeapon>> onComplete);
     
-    IEnumerator QueryTalents(
-        uint userID, 
-        Action<Memory<UserTalent>> onComplete);
-
     IEnumerator QueryStages(
         uint userID,
         Action<Memory<UserStage_v0>> onComplete);
