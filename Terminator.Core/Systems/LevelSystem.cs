@@ -139,8 +139,34 @@ public partial struct LevelSystem : ISystem
                             }
                         }
                     }
+
+                    conditionCount = stageConditionOffset;
                     
-                    for (k = stageConditionOffset; k < conditionOffset; ++k)
+                    ref var stageDefinitionTemp = ref definition.stages[nextStageIndex];
+                    numResults = stageDefinitionTemp.nextStageIndies.Length;
+                    for (k = 0; k < numResults; ++k)
+                    {
+                        ref var nextStageIndexTemp = ref stageDefinitionTemp.nextStageIndies[k];
+                        conditionCount += definition.stages[nextStageIndexTemp].conditions.Length;
+                    }
+
+                    if (conditionCount < conditionOffset)
+                        stageConditionStates.RemoveRange(conditionCount, conditionOffset - conditionCount);
+                    else if (conditionCount > conditionOffset)
+                    {
+                        if(conditionOffset == stageConditionStates.Length)
+                            stageConditionStates.Resize(conditionCount, NativeArrayOptions.ClearMemory);
+                        else
+                        {
+                            numResults = conditionCount - conditionOffset;
+                            for (k = 0; k < numResults; ++k)
+                                stageConditionStates.Insert(conditionOffset, default);
+                        }
+
+                        conditionCount = conditionOffset;
+                    }
+                    
+                    for (k = stageConditionOffset; k < conditionCount; ++k)
                         stageConditionStates.ElementAt(k) = default;
 
                     stage.value = nextStageIndex;
