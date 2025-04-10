@@ -146,7 +146,8 @@ public partial struct LevelSkillPickableSystem : ISystem
                     this.skillGroups.TryGetBuffer(result.entity, out skillGroups) ? skillGroups.AsNativeArray() : default,
                     ref skills, 
                     ref random, 
-                    out version.priority);
+                    out version.priority, 
+                    result.priorityToStyleIndex == 0 ? 0 : 1);
 
                 if (skills.Length < 1 && 
                     (result.count == 1 || result.index == 0 || result.version != version.entity))

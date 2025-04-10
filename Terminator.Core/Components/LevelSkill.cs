@@ -66,7 +66,8 @@ public struct LevelSkillDefinition
         in NativeArray<LevelSkillGroup> groups, 
         ref DynamicBuffer<LevelSkill> results, 
         ref Random random, 
-        out int priority)
+        out int priority, 
+        int maxResultCountOverride = 0)
     {
         priority = 0;
         foreach (var activeIndex in activeIndices)
@@ -215,14 +216,32 @@ public struct LevelSkillDefinition
         numWeights = groupSkillWeights.Length;
         if (numWeights > 0)
         {
+            int numResults = priority < priorities.Length ? math.max(priorities[priority].maxResultCount, 1) : int.MaxValue;
+            
+            if (priority == 0 && maxResultCountOverride > 0 && maxResultCountOverride < numResults)
+                numResults = maxResultCountOverride;
+
             groupSkillWeights.Sort();
 
             LevelSkill result;
             //result.priority = priority;
-            
-            int numSkillIndices, numResults = priority < priorities.Length ? priorities[priority].maxResultCount : int.MaxValue;
+            int numSkillIndices;
             if (numResults < numWeights)
             {
+                int minWeightIndex = numWeights - numResults;
+                float minWeight = groupSkillWeights[minWeightIndex].value.value, currentWeight;
+                for (i = 0; i < minWeightIndex; ++i)
+                {
+                    currentWeight = groupSkillWeights[i].value.value;
+                    if (currentWeight < minWeight)
+                        totalWeight -= currentWeight;
+                    else
+                        break;
+                }
+                
+                groupSkillWeights.RemoveRange(0, i);
+                numWeights = groupSkillWeights.Length;
+                
                 float chance;
                 for (i = 0; i < numResults; ++i)
                 {
