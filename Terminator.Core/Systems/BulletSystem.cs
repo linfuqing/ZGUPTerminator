@@ -448,6 +448,7 @@ public partial struct BulletSystem : ISystem
     private ComponentTypeHandle<BulletVersion> __versionType;
 
     private EntityQuery __group;
+    private EntityQuery __targetGroup;
 
     private PrefabLoader __prefabLoader;
 
@@ -482,6 +483,11 @@ public partial struct BulletSystem : ISystem
                 .WithAllRW<BulletInstance, BulletVersion>()
                 .Build(ref state);
 
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __targetGroup = builder
+                .WithAll<EffectTargetData>()
+                .Build(ref state);
+        
         __prefabLoader = new PrefabLoader(ref state);
 
         state.RequireForUpdate<MainCameraTransform>();
@@ -499,6 +505,9 @@ public partial struct BulletSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        if (__targetGroup.CalculateEntityCount() < 2)
+            return;
+        
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
         __physicsColliders.Update(ref state);

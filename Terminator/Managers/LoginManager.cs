@@ -686,6 +686,7 @@ public sealed class LoginManager : MonoBehaviour
         
         if(!__isStart && 
            __selectedLevelEnergy <= energy && 
+           __styles != null && 
            __styles.TryGetValue(__selectedLevelIndex, out var style) && 
            style.button != null)
             style.button.interactable = true;

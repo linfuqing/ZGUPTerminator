@@ -11,7 +11,6 @@ using Unity.Scenes;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
-
 public struct LevelSpawners
 {
     [BurstCompile]
