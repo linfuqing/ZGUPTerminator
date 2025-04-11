@@ -80,6 +80,9 @@ public sealed class LoginManager : MonoBehaviour
     
     public event Action<int> onEnergyChanged;
 
+    [SerializeField] 
+    internal float _startTime = 0.5f;
+
     [SerializeField]
     internal float _stageStyleDestroyTime;
     
@@ -244,20 +247,6 @@ public sealed class LoginManager : MonoBehaviour
         get;
 
         set;
-    }
-
-    [Preserve]
-    public void LoadScene()
-    {
-        var assetManager = GameAssetManager.instance;
-        if (assetManager == null)
-        {
-            var gameObject = new GameObject("GameAssetManager");
-            DontDestroyOnLoad(gameObject);
-            assetManager = gameObject.AddComponent<GameAssetManager>();
-        }
-
-        assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
     }
 
     public void ApplyStart(bool isRestart)
@@ -740,6 +729,19 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
+    private void __LoadScene()
+    {
+        var assetManager = GameAssetManager.instance;
+        if (assetManager == null)
+        {
+            var gameObject = new GameObject("GameAssetManager");
+            DontDestroyOnLoad(gameObject);
+            assetManager = gameObject.AddComponent<GameAssetManager>();
+        }
+
+        assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
+    }
+
     private IEnumerator __Start(bool isRestart)
     {
         __isStart = true;
@@ -774,6 +776,8 @@ public sealed class LoginManager : MonoBehaviour
         
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.StartLevel(_levels[__selectedLevelIndex].name);
+        
+        Invoke(nameof(__LoadScene), _startTime);
     }
 
     IEnumerator Start()
