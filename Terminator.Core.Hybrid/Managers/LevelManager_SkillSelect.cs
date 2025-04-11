@@ -30,11 +30,18 @@ public partial class LevelManager
     [Serializable]
     internal struct SkillSelection
     {
+        public enum Flag
+        {
+            DontPause = 0x01, 
+        }
+        
         public string name;
+
+        public Flag flag;
 
         public float startTime;
         public float destroyTime;
-        
+
         //public float finishTime;
         public UnityEvent onFinish;
         
@@ -113,23 +120,27 @@ public partial class LevelManager
         IAnalytics.instance?.SelectSkillBegin(selectionIndex);
 
         if (selectionIndex == -1)
-            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f));
+            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f, 0.0f));
         else
         {
             var selection = _skillSelections[selectionIndex];
             selection.onEnable.Invoke();
 
+            float timeScale = (selection.flag & SkillSelection.Flag.DontPause) == SkillSelection.Flag.DontPause ? 1.0f : 0.0f;
+
             if (selection.start == null)
-                StartCoroutine(__StartSkillSelection(selectionIndex,
-                    selection.startTime));
+                StartCoroutine(__StartSkillSelection(
+                    selectionIndex,
+                    selection.startTime, 
+                    timeScale));
             else
             {
                 //放在这里无害，最后会被清理掉
-                TimeScale(0.0f);
+                TimeScale(timeScale);
                 
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selectionIndex, selection.startTime)));
+                onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selectionIndex, selection.startTime, timeScale)));
             }
         }
     }
@@ -430,7 +441,7 @@ public partial class LevelManager
         __DestroyGameObjects();
     }
 
-    private IEnumerator __StartSkillSelection(int selectionIndex, float time)
+    private IEnumerator __StartSkillSelection(int selectionIndex, float time, float timeScale)
     {
         if(time > 0.0f)
             yield return new WaitForSecondsRealtime(time);
@@ -448,7 +459,7 @@ public partial class LevelManager
 
         __skillSelectionStatus |= SkillSelectionStatus.Start;
         
-        TimeScale(0.0f);
+        TimeScale(timeScale);
 
         while ((__skillSelectionStatus & SkillSelectionStatus.Complete) != SkillSelectionStatus.Complete)
             yield return null;
