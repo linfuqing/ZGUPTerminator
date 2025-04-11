@@ -33,7 +33,7 @@ public partial class LevelManager : MonoBehaviour
     //internal string _gameTimeFormat = "mm:ss"
     //
     [SerializeField] 
-    internal float _quitTime;
+    internal float _quitTime = 0.5f;
 
     [SerializeField] 
     internal UnityEvent _onQuit;
