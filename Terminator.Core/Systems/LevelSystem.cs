@@ -189,7 +189,7 @@ public partial struct LevelSystem : ISystem
                         conditionCount += nextStage.conditions.Length;
                         
                         numConditionInheritances = nextStage.conditionInheritances.Length;
-                        for (l = numConditionInheritances; l >= 0; --l)
+                        for (l = numConditionInheritances - 1; l >= 0; --l)
                         {
                             ref var conditionInheritance = ref nextStage.conditionInheritances[l];
 
