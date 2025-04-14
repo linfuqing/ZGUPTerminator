@@ -449,6 +449,13 @@ public struct LevelDefinition
         public int layerMaskExclude;
     }
     
+    public struct StageConditionInheritance
+    {
+        public FixedString128Bytes stageName;
+        public int previousConditionIndex;
+        public int currentConditionIndex;
+    }
+
     public struct Stage
     {
         //public int spawnerLayerMaskInclude;
@@ -457,9 +464,10 @@ public struct LevelDefinition
         //public int exp;
         public FixedString128Bytes name;
 
-        public BlobArray<LevelStageOption> conditions;
         public BlobArray<LevelStageOption> results;
+        public BlobArray<LevelStageOption> conditions;
         
+        public BlobArray<StageConditionInheritance> conditionInheritances;
         public BlobArray<int> nextStageIndies;
     }
 

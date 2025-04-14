@@ -66,7 +66,14 @@ public partial struct LevelSystem : ISystem
 
             var stageConditionStates = this.stageConditionStates[index];
             bool isResultChanged = stageConditionStates.Length < 1;
-            int conditionOffset = 0, conditionCount, numConditions, stageConditionOffset, numNextStageIndices, numResults, i, j, k;
+            int conditionOffset = 0,
+                conditionCount,
+                numConditions,
+                numConditionInheritances,
+                stageConditionOffset,
+                numNextStageIndices,
+                numResults,
+                i, j, k, l;
             float spawnerTime = (float)(time - this.spawnerTime.ValueRO.value);
             float3 playerPosition = this.playerTransform.ValueRO.Position;
             SpawnerLayerMaskInclude spawnerLayerMaskInclude;
@@ -141,34 +148,62 @@ public partial struct LevelSystem : ISystem
                     }
 
                     conditionCount = stageConditionOffset;
-                    
+
                     ref var stageDefinitionTemp = ref definition.stages[nextStageIndex];
                     numResults = stageDefinitionTemp.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextStageIndexTemp = ref stageDefinitionTemp.nextStageIndies[k];
-                        conditionCount += definition.stages[nextStageIndexTemp].conditions.Length;
+                        ref var nextStage = ref definition.stages[stageDefinitionTemp.nextStageIndies[k]];
+                        conditionCount += nextStage.conditions.Length;
+                        
+                        numConditionInheritances = nextStage.conditionInheritances.Length;
+                        for (l = 0; l < numConditionInheritances; ++l)
+                        {
+                            ref var conditionInheritance = ref nextStage.conditionInheritances[l];
+
+                            if (conditionInheritance.stageName != stageDefinitionTemp.name)
+                                continue;
+
+                            stageConditionStates.Add(stageConditionStates[conditionInheritance.previousConditionIndex]);
+                        }
                     }
 
                     if (conditionCount < conditionOffset)
                         stageConditionStates.RemoveRange(conditionCount, conditionOffset - conditionCount);
                     else if (conditionCount > conditionOffset)
                     {
-                        if(conditionOffset == stageConditionStates.Length)
-                            stageConditionStates.Resize(conditionCount, NativeArrayOptions.ClearMemory);
-                        else
-                        {
-                            numResults = conditionCount - conditionOffset;
-                            for (k = 0; k < numResults; ++k)
-                                stageConditionStates.Insert(conditionOffset, default);
-                        }
+                        numResults = conditionCount - conditionOffset;
+                        for (k = 0; k < numResults; ++k)
+                            stageConditionStates.Insert(conditionOffset, default);
 
                         conditionCount = conditionOffset;
                     }
-                    
+
                     for (k = stageConditionOffset; k < conditionCount; ++k)
                         stageConditionStates.ElementAt(k) = default;
+                    
+                    numResults = stageDefinitionTemp.nextStageIndies.Length;
+                    for (k = 0; k < numResults; ++k)
+                    {
+                        ref var nextStage = ref definition.stages[stageDefinitionTemp.nextStageIndies[k]];
+                        conditionCount += nextStage.conditions.Length;
+                        
+                        numConditionInheritances = nextStage.conditionInheritances.Length;
+                        for (l = numConditionInheritances; l >= 0; --l)
+                        {
+                            ref var conditionInheritance = ref nextStage.conditionInheritances[l];
 
+                            if (conditionInheritance.stageName != stageDefinitionTemp.name)
+                                continue;
+
+                            numConditions = stageConditionStates.Length - 1;
+                            stageConditionStates[conditionInheritance.currentConditionIndex] =
+                                stageConditionStates[numConditions];
+                            
+                            stageConditionStates.Resize(numConditions, NativeArrayOptions.UninitializedMemory);
+                        }
+                    }
+                    
                     stage.value = nextStageIndex;
 
                     break;

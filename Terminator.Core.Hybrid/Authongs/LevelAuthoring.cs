@@ -90,26 +90,29 @@ public class LevelAuthoring : MonoBehaviour
     }
     
     [Serializable]
+    public struct StageConditionInheritance
+    {
+        [Tooltip("前一个阶段名字")]
+        public string name;
+        [Tooltip("前一个阶段条件索引")]
+        public int previousConditionIndex;
+        [Tooltip("当前阶段条件索引")]
+        public int currentConditionIndex;
+    }
+
+    [Serializable]
     public struct Stage
     {
         public string name;
         
-        //[Tooltip("下一阶段，不填则没有")]
-        //public string nextStageName;
-        
-        //[Tooltip("阶段经验值满足后，激活刷怪标签并跳到下一阶段（如有）")]
-        //public int exp;
-        
-        //[Tooltip("阶段经验值满足后，激活该刷怪标签")]
-        //public LayerMask spawnerLayerMaskInclude;
-        //[Tooltip("阶段经验值满足后，剔除该刷怪标签")]
-        //public LayerMask spawnerLayerMaskExclude;
+        [Tooltip("完成该阶段执行的结果")]
+        public LevelStageOption[] results;
 
         [Tooltip("阶段所有条件满足后，激活刷怪标签并跳到下一阶段（如有）")]
         public LevelStageOption[] conditions;
-        
-        [Tooltip("完成该阶段执行的结果")]
-        public LevelStageOption[] results;
+
+        [Tooltip("阶段所有条件满足后，阶段状态的继承关系（如有）")]
+        public StageConditionInheritance[] conditionInheritances;
         
         [Tooltip("下一阶段，不填则没有")]
         public string[] nextStageNames;
@@ -142,6 +145,34 @@ public class LevelAuthoring : MonoBehaviour
         }
 
         [CSVField]
+        public string 阶段结果
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    results = null;
+
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length, index;
+
+                results = new LevelStageOption[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    ref var result = ref results[i];
+                    ref var parameter = ref parameters[i];
+
+                    index = parameter.IndexOf(':');
+                    result.type = (LevelStageOption.Type)int.Parse(parameter.Remove(index));
+                    result.value = (int)uint.Parse(parameter.Substring(index + 1));
+                }
+            }
+        }
+        
+        [CSVField]
         public string 阶段条件
         {
             set
@@ -170,29 +201,31 @@ public class LevelAuthoring : MonoBehaviour
         }
         
         [CSVField]
-        public string 阶段结果
+        public string 阶段条件继承关系
         {
             set
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    results = null;
+                    conditionInheritances = null;
 
                     return;
                 }
 
                 var parameters = value.Split('/');
-                int numParameters = parameters.Length, index;
+                int numParameters = parameters.Length, index, count;
 
-                results = new LevelStageOption[numParameters];
+                conditionInheritances = new StageConditionInheritance[numParameters];
                 for (int i = 0; i < numParameters; ++i)
                 {
-                    ref var result = ref results[i];
+                    ref var conditionInheritance = ref conditionInheritances[i];
                     ref var parameter = ref parameters[i];
 
                     index = parameter.IndexOf(':');
-                    result.type = (LevelStageOption.Type)int.Parse(parameter.Remove(index));
-                    result.value = (int)uint.Parse(parameter.Substring(index + 1));
+                    count = parameter.IndexOf(':', index + 1);
+                    conditionInheritance.name = parameter.Remove(index);
+                    conditionInheritance.previousConditionIndex = (int)uint.Parse(parameter.Substring(index + 1, count - index - 1));
+                    conditionInheritance.currentConditionIndex = (int)uint.Parse(parameter.Substring(count + 1));
                 }
             }
         }
@@ -248,9 +281,10 @@ public class LevelAuthoring : MonoBehaviour
                     destination.layerMaskExclude = 0;
                 }
 
-                int numNextStageNames, numOptions, k;
+                int numNextStageNames, numOptions, numConditionInheritances, k;
                 BlobBuilderArray<int> nextStageIndices;
                 BlobBuilderArray<LevelStageOption> options;
+                BlobBuilderArray<LevelDefinition.StageConditionInheritance> conditionInheritances;
                 var stages = builder.Allocate(ref root.stages, numStages);
                 for (i = 0; i < numStages; ++i)
                 {
@@ -259,20 +293,29 @@ public class LevelAuthoring : MonoBehaviour
 
                     destination.name = source.name;
 
-                    //destination.exp = source.exp;
-                    //destination.spawnerLayerMaskInclude = source.spawnerLayerMaskInclude.value;
-                    //destination.spawnerLayerMaskExclude = source.spawnerLayerMaskExclude.value;
-                    //destination.nextStage = -1;
+                    numOptions = source.results == null ? 0 : source.results.Length;
+                    options = builder.Allocate(ref destination.results, numOptions);
+                    for (j = 0; j < numOptions; ++j)
+                        options[j] = source.results[j];
 
                     numOptions = source.conditions == null ? 0 : source.conditions.Length;
                     options = builder.Allocate(ref destination.conditions, numOptions);
                     for (j = 0; j < numOptions; ++j)
                         options[j] = source.conditions[j];
                     
-                    numOptions = source.results == null ? 0 : source.results.Length;
-                    options = builder.Allocate(ref destination.results, numOptions);
-                    for (j = 0; j < numOptions; ++j)
-                        options[j] = source.results[j];
+                    numConditionInheritances = source.conditionInheritances == null ? 0 : source.conditionInheritances.Length;
+                    conditionInheritances = builder.Allocate(ref destination.conditionInheritances, numConditionInheritances);
+                    for (j = 0; j < numConditionInheritances; ++j)
+                    {
+                        ref var sourceConditionInheritance = ref source.conditionInheritances[j];
+                        ref var destinationConditionInheritance = ref destination.conditionInheritances[j];
+
+                        destinationConditionInheritance.stageName = sourceConditionInheritance.name;
+                        destinationConditionInheritance.previousConditionIndex =
+                            sourceConditionInheritance.previousConditionIndex;
+                        destinationConditionInheritance.currentConditionIndex =
+                            sourceConditionInheritance.currentConditionIndex;
+                    }
 
                     numNextStageNames = source.nextStageNames == null ? 0 : source.nextStageNames.Length;
                     nextStageIndices = builder.Allocate(ref destination.nextStageIndies, numNextStageNames);
