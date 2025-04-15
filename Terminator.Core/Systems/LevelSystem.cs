@@ -150,6 +150,8 @@ public partial struct LevelSystem : ISystem
 
                     conditionCount = stageConditionOffset;
 
+                    numConditions = stageConditionStates.Length;
+                    
                     numResults = nextStageDefinition.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
@@ -194,7 +196,8 @@ public partial struct LevelSystem : ISystem
                     
                     stageConditionOffsetTemp = stageConditionOffset;
 
-                    numConditions = conditionCount;
+                    conditionCount = numConditions;
+
                     numResults = nextStageDefinition.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
