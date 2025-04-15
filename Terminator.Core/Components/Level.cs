@@ -310,9 +310,16 @@ public struct LevelStageOption
             case Type.PlayerArea:
                 return areas[value].Contains(playerPosition);
             case Type.Millisecond:
-                condition.value += (int)(deltaTime * 1000);
+                if (value > 0)
+                {
+                    condition.value += (int)(deltaTime * 1000);
 
-                return condition.value >= value;
+                    return condition.value >= value;
+                }
+
+                //继承后倒计时
+                condition.value -= (int)(deltaTime * 1000);
+                return condition.value <= value;
         }
 
         return false;

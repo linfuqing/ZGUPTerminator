@@ -94,9 +94,9 @@ public partial struct LevelSystem : ISystem
                 for (j = 0; j < numNextStageIndices; ++j)
                 {
                     ref var nextStageIndex = ref stageDefinition.nextStageIndies[j];
-                    ref var conditions = ref definition.stages[nextStageIndex].conditions;
+                    ref var nextStageDefinition = ref definition.stages[nextStageIndex];
                     
-                    numConditions = conditions.Length;
+                    numConditions = nextStageDefinition.conditions.Length;
                     if (numConditions > 0)
                     {
                         conditionCount = conditionOffset + numConditions;
@@ -105,7 +105,7 @@ public partial struct LevelSystem : ISystem
 
                         for (k = 0; k < numConditions; ++k)
                         {
-                            if (!conditions[k].Judge(
+                            if (!nextStageDefinition.conditions[k].Judge(
                                     deltaTime,
                                     spawnerTime, 
                                     playerPosition,
@@ -149,11 +149,10 @@ public partial struct LevelSystem : ISystem
 
                     conditionCount = stageConditionOffset;
 
-                    ref var stageDefinitionTemp = ref definition.stages[nextStageIndex];
-                    numResults = stageDefinitionTemp.nextStageIndies.Length;
+                    numResults = nextStageDefinition.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextStage = ref definition.stages[stageDefinitionTemp.nextStageIndies[k]];
+                        ref var nextStage = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
                         conditionCount += nextStage.conditions.Length;
                         
                         numConditionInheritances = nextStage.conditionInheritances.Length;
@@ -161,7 +160,7 @@ public partial struct LevelSystem : ISystem
                         {
                             ref var conditionInheritance = ref nextStage.conditionInheritances[l];
 
-                            if (conditionInheritance.stageName != stageDefinitionTemp.name)
+                            if (conditionInheritance.stageName != stageDefinition.name)
                                 continue;
 
                             stageConditionStates.Add(stageConditionStates[conditionInheritance.previousConditionIndex]);
@@ -182,10 +181,10 @@ public partial struct LevelSystem : ISystem
                     for (k = stageConditionOffset; k < conditionCount; ++k)
                         stageConditionStates.ElementAt(k) = default;
                     
-                    numResults = stageDefinitionTemp.nextStageIndies.Length;
+                    numResults = nextStageDefinition.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextStage = ref definition.stages[stageDefinitionTemp.nextStageIndies[k]];
+                        ref var nextStage = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
                         conditionCount += nextStage.conditions.Length;
                         
                         numConditionInheritances = nextStage.conditionInheritances.Length;
@@ -193,7 +192,7 @@ public partial struct LevelSystem : ISystem
                         {
                             ref var conditionInheritance = ref nextStage.conditionInheritances[l];
 
-                            if (conditionInheritance.stageName != stageDefinitionTemp.name)
+                            if (conditionInheritance.stageName != stageDefinition.name)
                                 continue;
 
                             numConditions = stageConditionStates.Length - 1;
