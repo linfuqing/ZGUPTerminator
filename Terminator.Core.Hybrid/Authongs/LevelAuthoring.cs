@@ -308,7 +308,7 @@ public class LevelAuthoring : MonoBehaviour
                     for (j = 0; j < numConditionInheritances; ++j)
                     {
                         ref var sourceConditionInheritance = ref source.conditionInheritances[j];
-                        ref var destinationConditionInheritance = ref destination.conditionInheritances[j];
+                        ref var destinationConditionInheritance = ref conditionInheritances[j];
 
                         destinationConditionInheritance.stageName = sourceConditionInheritance.name;
                         destinationConditionInheritance.previousConditionIndex =
