@@ -71,9 +71,10 @@ public partial struct LevelSystem : ISystem
                 numConditions,
                 numConditionInheritances,
                 stageConditionOffset,
+                stageConditionOffsetTemp, 
                 numNextStageIndices,
                 numResults,
-                i, j, k, l;
+                i, j, k, l, m;
             float spawnerTime = (float)(time - this.spawnerTime.ValueRO.value);
             float3 playerPosition = this.playerTransform.ValueRO.Position;
             SpawnerLayerMaskInclude spawnerLayerMaskInclude;
@@ -152,56 +153,73 @@ public partial struct LevelSystem : ISystem
                     numResults = nextStageDefinition.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextStage = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
-                        conditionCount += nextStage.conditions.Length;
+                        ref var nextAndNextStageDefinition = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
+                        conditionCount += nextAndNextStageDefinition.conditions.Length;
                         
-                        numConditionInheritances = nextStage.conditionInheritances.Length;
+                        numConditionInheritances = nextAndNextStageDefinition.conditionInheritances.Length;
                         for (l = 0; l < numConditionInheritances; ++l)
                         {
-                            ref var conditionInheritance = ref nextStage.conditionInheritances[l];
+                            ref var conditionInheritance = ref nextAndNextStageDefinition.conditionInheritances[l];
 
-                            if (conditionInheritance.stageName != stageDefinition.name)
-                                continue;
+                            stageConditionOffsetTemp = stageConditionOffset;
+                            for (m = 0; m < numNextStageIndices; ++m)
+                            {
+                                ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStageIndies[m]];
+                                if (conditionInheritance.stageName == stageDefinitionTemp.name)
+                                    stageConditionStates.Add(
+                                        stageConditionStates[conditionInheritance.previousConditionIndex + stageConditionOffsetTemp]);
 
-                            stageConditionStates.Add(stageConditionStates[conditionInheritance.previousConditionIndex]);
+                                stageConditionOffsetTemp += stageDefinitionTemp.conditions.Length;
+                            }
                         }
                     }
 
                     if (conditionCount < conditionOffset)
+                    {
                         stageConditionStates.RemoveRange(conditionCount, conditionOffset - conditionCount);
+
+                        conditionOffset = conditionCount;
+                    }
                     else if (conditionCount > conditionOffset)
                     {
                         numResults = conditionCount - conditionOffset;
                         for (k = 0; k < numResults; ++k)
                             stageConditionStates.Insert(conditionOffset, default);
 
-                        conditionCount = conditionOffset;
+                        //conditionCount = conditionOffset;
                     }
 
-                    for (k = stageConditionOffset; k < conditionCount; ++k)
+                    for (k = stageConditionOffset; k < conditionOffset; ++k)
                         stageConditionStates.ElementAt(k) = default;
                     
+                    stageConditionOffsetTemp = stageConditionOffset;
+
+                    numConditions = conditionCount;
                     numResults = nextStageDefinition.nextStageIndies.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextStage = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
-                        conditionCount += nextStage.conditions.Length;
+                        ref var nextAndNextStageDefinition = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
                         
-                        numConditionInheritances = nextStage.conditionInheritances.Length;
-                        for (l = numConditionInheritances - 1; l >= 0; --l)
+                        numConditionInheritances = nextAndNextStageDefinition.conditionInheritances.Length;
+                        for (l = 0; l < numConditionInheritances; ++l)
                         {
-                            ref var conditionInheritance = ref nextStage.conditionInheritances[l];
+                            ref var conditionInheritance = ref nextAndNextStageDefinition.conditionInheritances[l];
 
-                            if (conditionInheritance.stageName != stageDefinition.name)
-                                continue;
-
-                            numConditions = stageConditionStates.Length - 1;
-                            stageConditionStates[conditionInheritance.currentConditionIndex] =
-                                stageConditionStates[numConditions];
-                            
-                            stageConditionStates.Resize(numConditions, NativeArrayOptions.UninitializedMemory);
+                            for (m = 0; m < numNextStageIndices; ++m)
+                            {
+                                ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStageIndies[m]];
+                                if (conditionInheritance.stageName != stageDefinitionTemp.name)
+                                    continue;
+                                
+                                stageConditionStates[stageConditionOffsetTemp + conditionInheritance.currentConditionIndex] =
+                                    stageConditionStates[numConditions++];
+                            }
                         }
+                        
+                        stageConditionOffsetTemp += nextAndNextStageDefinition.conditions.Length;
                     }
+                    
+                    stageConditionStates.Resize(conditionCount, NativeArrayOptions.UninitializedMemory);
                     
                     stage.value = nextStageIndex;
 
