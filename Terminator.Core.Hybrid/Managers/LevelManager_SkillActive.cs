@@ -11,7 +11,7 @@ public partial class LevelManager
     {
         //private ActiveSkillStyle[] __styles;
         private List<ActiveSkillStyle[]> __styles;
-
+        
         public SkillActive(
             int siblingIndex, 
             SkillActiveData[] instances)
@@ -34,11 +34,6 @@ public partial class LevelManager
 
             __styles = new List<ActiveSkillStyle[]>();
             __styles.Add(results);
-        }
-
-        public bool Contains(int level)
-        {
-            return __styles.Count > level;
         }
 
         public bool Dispose(int level)
@@ -108,6 +103,16 @@ public partial class LevelManager
             }*/
         }
         
+        public bool Contains(int level)
+        {
+            return __styles.Count > level;
+        }
+
+        public ActiveSkillStyle[] Get(int level)
+        {
+            return __styles[level];
+        }
+
         public void Set(int level, float cooldown, float elapsedTime)
         {
             if (__styles != null && __styles.Count > level)
@@ -149,6 +154,11 @@ public partial class LevelManager
         return __skillActives != null && 
                __skillActives.TryGetValue(index, out var activeSkill) &&
                activeSkill.Contains(level);
+    }
+
+    public ReadOnlySpan<ActiveSkillStyle> GetActiveSkill(int index, int level)
+    {
+        return __skillActives[index].Get(level);
     }
     
     public void SetActiveSkill(int index, int level, string name, in SkillAsset? value)

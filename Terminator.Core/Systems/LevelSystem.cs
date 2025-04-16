@@ -178,13 +178,20 @@ public partial struct LevelSystem : ISystem
 
                     if (conditionCount < conditionOffset)
                     {
-                        stageConditionStates.RemoveRange(conditionCount, conditionOffset - conditionCount);
+                        numResults = conditionOffset - conditionCount;
+
+                        numConditions -= numResults;
+                        
+                        stageConditionStates.RemoveRange(conditionCount, numResults);
 
                         conditionOffset = conditionCount;
                     }
                     else if (conditionCount > conditionOffset)
                     {
                         numResults = conditionCount - conditionOffset;
+                        
+                        numConditions += numResults;
+
                         for (k = 0; k < numResults; ++k)
                             stageConditionStates.Insert(conditionOffset, default);
 
