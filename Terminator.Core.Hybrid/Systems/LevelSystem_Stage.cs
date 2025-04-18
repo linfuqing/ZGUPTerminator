@@ -5,14 +5,17 @@ public partial class LevelSystemManaged
 {
     private struct Stage
     {
+        private int __managerInstanceID;
         private NativeList<int> __values;
 
-        public Stage(SystemBase system)
+        public Stage(in AllocatorManager.AllocatorHandle allocator)
         {
             //system.RequireForUpdate<LevelDefinitionData>();
             //system.RequireForUpdate<LevelStage>();
+
+            __managerInstanceID = 0;
             
-            __values = new NativeList<int>(Allocator.Persistent);
+            __values = new NativeList<int>(allocator);
         }
 
         public void Dispose()
@@ -22,14 +25,21 @@ public partial class LevelSystemManaged
 
         public void Clear(LevelManager manager, ref LevelDefinition definition)
         {
+            int managerInstanceID = manager == null ? 0 : manager.GetInstanceID();
+            if (managerInstanceID != __managerInstanceID)
+                manager = null;
+            
             int numValues = __values.Length;
             for(int i = 0; i < numValues; ++i)
             {
                 ref var value = ref __values.ElementAt(i);
-                if(value != -1)
-                    manager.DisableStage(definition.stages[value].name.ToString());
-            
-                __values[i] = -1;
+                if (value != -1)
+                {
+                    if(manager != null)
+                        manager.DisableStage(definition.stages[value].name.ToString());
+
+                    __values[i] = -1;
+                }
             }
             
             __values.Clear();
@@ -40,6 +50,14 @@ public partial class LevelSystemManaged
             in DynamicBuffer<LevelStage> stages, 
             ref LevelDefinition definition)
         {
+            int managerInstanceID = manager.GetInstanceID();
+            if (managerInstanceID != __managerInstanceID)
+            {
+                Clear(null, ref definition);
+                
+                __managerInstanceID = managerInstanceID;
+            }
+            
             int numStages = stages.Length, numValues = __values.Length;
             if (numValues < numStages)
             {

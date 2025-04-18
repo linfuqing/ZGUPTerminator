@@ -113,7 +113,7 @@ public partial class LevelSystemManaged : SystemBase
 
         //RequireForUpdate<LevelStatus>();
         
-        __stage = new Stage(this);
+        __stage = new Stage(Allocator.Persistent);
         __skillSelection = new SkillSelection(this);
         __skillActive = new SkillActive(Allocator.Persistent);
     }

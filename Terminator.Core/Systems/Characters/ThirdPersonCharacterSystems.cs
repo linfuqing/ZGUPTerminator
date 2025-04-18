@@ -102,8 +102,13 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
 
         public void Execute()
         {
+            DynamicBuffer<SimulationEvent> simulationEvents;
             while (simulationEventResults.TryDequeue(out var result))
-                simulationEvents[result.entity].Add(result.value);
+            {
+                simulationEvents = this.simulationEvents[result.entity];
+                if(SimulationEvent.AppendOrReplace(ref simulationEvents, result.value))
+                    this.simulationEvents.SetBufferEnabled(result.entity, true);
+            }
         }
     }
 }
