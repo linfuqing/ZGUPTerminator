@@ -249,6 +249,11 @@ public sealed class LoginManager : MonoBehaviour
         set;
     }
 
+    public void CollectAndQueryLevels()
+    {
+        StartCoroutine(__CollectAndQueryLevels());
+    }
+
     public void ApplyStart(bool isRestart)
     {
         StartCoroutine(__Start(isRestart));
@@ -293,6 +298,12 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevels(Memory<UserLevel> userLevels)
     {
+        if (__styles != null)
+        {
+            foreach (var style in __styles.Values)
+                Destroy(style.gameObject);
+        }
+        
         int numLevels = _levels.Length;
         var levelIndices = new Dictionary<string, int>(numLevels);
         for (int i = 0; i < numLevels; ++i)
@@ -742,6 +753,13 @@ public sealed class LoginManager : MonoBehaviour
         assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
     }
 
+    private IEnumerator __CollectAndQueryLevels()
+    {
+        var userData = IUserData.instance;
+        yield return userData.CollectLevel(userID.Value, __ApplyLevel);
+        yield return userData.QueryLevels(userID.Value, __ApplyLevels);
+    }
+
     private IEnumerator __Start(bool isRestart)
     {
         __isStart = true;
@@ -789,8 +807,7 @@ public sealed class LoginManager : MonoBehaviour
         
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
-        yield return userData.CollectLevel(userID.Value, __ApplyLevel);
-        yield return userData.QueryLevels(userID.Value, __ApplyLevels);
+        yield return __CollectAndQueryLevels();
     }
 
     void Update()

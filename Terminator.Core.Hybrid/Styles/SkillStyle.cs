@@ -1,7 +1,23 @@
+using System;
 using UnityEngine;
 
 public class SkillStyle : MonoBehaviour
 {
+    public enum ParentType
+    {
+        Main, 
+        Skill, 
+        Weapon
+    }
+    
+    [Serializable]
+    public struct ParentOverride
+    {
+        public ParentType type;
+        
+        public Transform transform;
+    }
+
     public StringEvent onName;
     public StringEvent onDetail;
 
@@ -16,6 +32,22 @@ public class SkillStyle : MonoBehaviour
     public GameObject[] levels;
     public GameObject[] rarities;
     
+    public ParentOverride[] parentOverrides;
+
+    public Transform GetParent(int flag)
+    {
+        if (parentOverrides != null)
+        {
+            foreach (var parentOverride in parentOverrides)
+            {
+                if (((int)parentOverride.type & flag) != 0)
+                    return parentOverride.transform;
+            }
+        }
+
+        return transform.parent;
+    }
+
     public void SetAsset(in SkillAsset value)
     {
         if(onName != null)
@@ -33,6 +65,10 @@ public class SkillStyle : MonoBehaviour
         __SetActive(levels, value.level);
         
         __SetActive(rarities, value.rarity);
+        
+        var parent = GetParent(value.flag);
+        if(parent != transform.parent)
+            transform.SetParent(parent);
         
         gameObject.SetActive(true);
     }
