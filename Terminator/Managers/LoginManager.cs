@@ -8,7 +8,7 @@ using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
 {
-    public class RewardData : IRewardData
+    private class RewardData : IRewardData
     {
         private uint __userID;
 
@@ -92,6 +92,9 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal string _energyTimeFormat = @"mm\'ss\'\'";
 
+    [SerializeField] 
+    internal UnityEvent _onStageFailed;
+
     [SerializeField]
     internal UnityEvent _onStart;
 
@@ -139,7 +142,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private int __energyMax;
 
-    private int __selectedLevelEnergy;
+    //private int __selectedLevelEnergy;
     private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
@@ -373,10 +376,10 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
-                    __selectedLevelEnergy = selectedLevel.energy;
+                    //__selectedLevelEnergy = selectedLevel.energy;
                     
-                    if (style.button != null)
-                        style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;
+                    /*if (style.button != null)
+                        style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
                     
                     __selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
@@ -567,6 +570,11 @@ public sealed class LoginManager : MonoBehaviour
         if (property.cache.skills == null)
         {
             __isStart = false;
+
+            //__styles[__selectedLevelIndex].button.interactable = true;
+            
+            if(_onStageFailed != null)
+                _onStageFailed.Invoke();
             
             return;
         }
@@ -684,12 +692,12 @@ public sealed class LoginManager : MonoBehaviour
     {
         energy = Mathf.Min(energy + 1, energyMax);
         
-        if(!__isStart && 
+        /*if(!__isStart && 
            __selectedLevelEnergy <= energy && 
            __styles != null && 
            __styles.TryGetValue(__selectedLevelIndex, out var style) && 
            style.button != null)
-            style.button.interactable = true;
+            style.button.interactable = true;*/
     }
     
     private void __CreateRewards(StageRewardStyle style, UserRewardData[] values)
@@ -762,13 +770,18 @@ public sealed class LoginManager : MonoBehaviour
 
     private IEnumerator __Start(bool isRestart)
     {
+        if(__isStart)
+            yield break;
+        
         __isStart = true;
         
-        foreach (var style in __styles.Values)
+        //__styles[__selectedLevelIndex].button.interactable = false;
+        
+        /*foreach (var style in __styles.Values)
         {
             if (style.button != null)
                 style.button.interactable = false;
-        }
+        }*/
 
         var userData = IUserData.instance;
 
