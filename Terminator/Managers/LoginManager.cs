@@ -105,6 +105,12 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onHotDisable;
 
     [SerializeField]
+    internal UnityEvent _onEnergyEnable;
+
+    [SerializeField]
+    internal UnityEvent _onEnergyDisable;
+
+    [SerializeField]
     internal StringEvent _onGold;
 
     [SerializeField]
@@ -143,11 +149,49 @@ public sealed class LoginManager : MonoBehaviour
     private int __energyMax;
 
     //private int __selectedLevelEnergy;
+    private int __selectedEnergy;
     private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
 
     private bool __isStart;
+    private bool __isEnergyActive;
+
+    public bool isEnergyActive
+    {
+        get => __isEnergyActive;
+
+        set
+        {
+            if (value == __isEnergyActive)
+                return;
+
+            if (value)
+            {
+                if(_onEnergyEnable != null)
+                    _onEnergyEnable.Invoke();
+            }
+            else
+            {
+                if(_onEnergyDisable != null)
+                    _onEnergyDisable.Invoke();
+            }
+            
+            __isEnergyActive = value;
+        }
+    }
+
+    public int selectedEnergy
+    {
+        get => __selectedEnergy;
+
+        private set
+        {
+            __selectedEnergy = value;
+            
+            isEnergyActive = value <= energy;
+        }
+    }
 
     public static uint? userID
     {
@@ -376,8 +420,8 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
-                    //__selectedLevelEnergy = selectedLevel.energy;
-                    
+                    selectedEnergy = selectedLevel.energy;
+
                     /*if (style.button != null)
                         style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
                     
@@ -478,6 +522,8 @@ public sealed class LoginManager : MonoBehaviour
                                                     result.id = stage.id;
                                                     onStageChanged.Invoke(result);
                                                 }
+                                                
+                                                selectedEnergy = stage.energy;
                                             }
                                         });
                                     }
@@ -691,11 +737,14 @@ public sealed class LoginManager : MonoBehaviour
     private void __IncreaseEnergy()
     {
         energy = Mathf.Min(energy + 1, energyMax);
+
+        if (__selectedEnergy == energy)
+            isEnergyActive = true;
         
-        /*if(!__isStart && 
-           __selectedLevelEnergy <= energy && 
-           __styles != null && 
-           __styles.TryGetValue(__selectedLevelIndex, out var style) && 
+        /*if(!__isStart &&
+           __selectedLevelEnergy <= energy &&
+           __styles != null &&
+           __styles.TryGetValue(__selectedLevelIndex, out var style) &&
            style.button != null)
             style.button.interactable = true;*/
     }

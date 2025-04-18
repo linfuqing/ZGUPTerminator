@@ -143,6 +143,7 @@ public sealed partial class UserDataMain : MonoBehaviour
                 stage = level.stages[j];
                 userStage.name = stage.name;
                 userStage.id = __ToID(stageIndex++);
+                userStage.energy = stage.energy;
                 
                 if (isUnlock)
                 {

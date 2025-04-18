@@ -319,6 +319,7 @@ public struct UserStage
     
     public string name;
     public uint id;
+    public int energy;
     public UserRewardData[] rewards;
     public UserStageReward.Flag[] rewardFlags;
     public RewardPool[] rewardPools;
