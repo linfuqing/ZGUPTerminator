@@ -354,6 +354,7 @@ public partial class UserDataMain
         string stageRewardName,
         string levelName, 
         int stage, 
+        int conditionValue, 
         UserStageReward.Condition condition, 
         out string key)
     {
@@ -378,6 +379,10 @@ public partial class UserDataMain
                     if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
                         flag |= UserStageReward.Flag.Unlock;
                     break;
+                case UserStageReward.Condition.KillCount:
+                    if (UserData.GetStageKillCount(levelName, stage) >= conditionValue)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
             }
         }
 
@@ -394,6 +399,7 @@ public partial class UserDataMain
             stageReward.name,
             levelName,
             stage,
+            stageReward.conditionValue, 
             stageReward.condition,
             out var key);
         if ((flag & UserStageReward.Flag.Unlock) != UserStageReward.Flag.Unlock ||
@@ -955,13 +961,68 @@ public partial class UserDataMain
     
     private IUserData.Property __ApplyProperty(uint userID, string[] cacheSkills)
     {
+        string cardGroupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
+        if(string.IsNullOrEmpty(cardGroupName))
+            cardGroupName = _cardGroups[0].name;
+        
+        string cardKeyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}";
+        
+        string roleGroupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+        if(string.IsNullOrEmpty(cardGroupName))
+            roleGroupName = _roleGroups[0].name;
+
+        string roleKeyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroupName}", 
+            accessoryKeyPrefix = $"{roleKeyPrefix}{UserData.SEPARATOR}";
+
+        bool isContains = true;
+        SkillInfo skillInfo;
+        foreach (var cacheSkill in cacheSkills)
+        {
+            if (!__TryGetSkill(cacheSkill, out skillInfo))
+                continue;
+
+            switch (skillInfo.belongTo)
+            {
+                case SkillInfo.BelongTo.Card:
+                    if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) == -1)
+                        isContains = false;
+                    break;
+                case SkillInfo.BelongTo.Role:
+                    if (PlayerPrefs.GetString(roleKeyPrefix) != _roles[skillInfo.index].name)
+                        isContains = false;
+                    break;
+                case SkillInfo.BelongTo.Accessory:
+                    AccessoryInfo accessoryInfo;
+                    int i, accessoryID, numAccessorySlots = _accessorySlots.Length;
+                    for (i = 0; i < numAccessorySlots; ++i)
+                    {
+                        ref var accessorySlot = ref _accessorySlots[i];
+                        accessoryID = PlayerPrefs.GetInt(
+                            $"{accessoryKeyPrefix}{accessorySlot.name}");
+
+                        if (!__TryGetAccessory((uint)accessoryID, out accessoryInfo))
+                            continue;
+                        
+                        if(accessoryInfo.index == skillInfo.index)
+                            break;
+                    }
+
+                    if (i == numAccessorySlots)
+                        isContains = false;
+
+                    break;
+            }
+        }
+
+        if (isContains)
+            return __ApplyProperty(userID);
+
         var skills = new List<IUserData.Skill>();
         var attributes = new List<UserAttributeData>();
         List<UserAccessory.Attribute> accessoryStageAttributes = null;
         List<UserAccessory.Skill> accessoryStageSkills = null;
         List<int> indices;
         IUserData.Skill skill;
-        SkillInfo skillInfo;
         UserAccessory.Property property;
         string instanceName = null;
         int level, styleIndex;

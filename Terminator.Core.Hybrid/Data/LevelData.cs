@@ -14,6 +14,7 @@ public interface ILevelData
     IEnumerator SubmitStage(
         Flag flag, 
         int stage, 
+        int killCount, 
         int gold, 
         int rage, 
         int exp, 
@@ -24,6 +25,7 @@ public interface ILevelData
     IEnumerator SubmitLevel(
         Flag flag, 
         int stage, 
+        int killCount, 
         int gold, 
         Action<bool> onComplete);
 }

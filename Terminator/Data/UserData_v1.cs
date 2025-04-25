@@ -15,20 +15,15 @@ public struct UserStageReward
     {
         Normal, 
         Once, 
-        NoDamage
+        NoDamage, 
+        KillCount
     }
     
-    [Serializable]
-    public struct PoolKey
-    {
-        public string name;
-        public int count;
-    }
-
     public string name;
     public uint id;
     public Flag flag;
     public Condition condition;
+    public int conditionValue;
     public UserRewardData[] values;
 }
 
@@ -642,6 +637,7 @@ public partial interface IUserData
         uint userID,
         StageFlag flag,
         int stage,
+        int killCount, 
         int gold,
         int rage, 
         int exp,

@@ -152,6 +152,7 @@ public partial interface IUserData : IGameUserData
         uint userID,
         StageFlag flag,
         int stage, 
+        int killCount, 
         int gold, 
         Action<bool> onComplete);
 
@@ -214,6 +215,7 @@ public partial class UserData : MonoBehaviour, IUserData
         set => PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, value);
     }
     
+    private const string NAME_SPACE_USER_STAGE_KILL_COUNT = "UserStageKillCount";
     private const string NAME_SPACE_USER_STAGE_CACHE = "UserStageCache";
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
     
@@ -248,6 +250,11 @@ public partial class UserData : MonoBehaviour, IUserData
             PlayerPrefs.GetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, stage)));
     }
 
+    public static int GetStageKillCount(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage));
+    }
+
     public IEnumerator QueryUser(
         string channelName,
         string channelUser,
@@ -262,6 +269,7 @@ public partial class UserData : MonoBehaviour, IUserData
         uint userID,
         IUserData.StageFlag flag,
         int stage,
+        int killCount, 
         int gold,
         Action<bool> onComplete)
     {
@@ -276,6 +284,8 @@ public partial class UserData : MonoBehaviour, IUserData
         var temp = levelCache.Value;
 
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+        
+        __SetStageKillCount(temp.name, temp.stage, killCount);
 
         temp.stage = stage;
         temp.gold = gold;
@@ -360,7 +370,11 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
-    private static void __SubmitStageFlag(IUserData.StageFlag value, string levelName, int fromStage, int toStage)
+    private static void __SubmitStageFlag(
+        IUserData.StageFlag value, 
+        string levelName, 
+        int fromStage, 
+        int toStage)
     {
         value |= IUserData.StageFlag.Normal;
         
@@ -372,6 +386,13 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
     
+    private static void __SetStageKillCount(string levelName, int stage, int value)
+    {
+        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage);
+        value = Mathf.Max(value, PlayerPrefs.GetInt(key));
+        PlayerPrefs.SetInt(key, value);
+    }
+
     void Awake()
     {
         IUserData.instance = this;

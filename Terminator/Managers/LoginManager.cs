@@ -155,7 +155,7 @@ public sealed class LoginManager : MonoBehaviour
     private uint __selectedUserStageID;
 
     private bool __isStart;
-    private bool __isEnergyActive;
+    private bool __isEnergyActive = true;
 
     public bool isEnergyActive
     {

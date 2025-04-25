@@ -157,6 +157,7 @@ public sealed partial class UserDataMain : MonoBehaviour
                             stageReward.name,
                             level.name,
                             j,
+                            stageReward.conditionValue, 
                             stageReward.condition,
                             out _);
                     }

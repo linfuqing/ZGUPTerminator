@@ -165,6 +165,7 @@ public partial class LevelManager : MonoBehaviour
                     __StartCoroutine(levelData.SubmitStage(
                         __dataFlag, 
                         stage,
+                        count, 
                         gold,
                         rage, 
                         exp,
@@ -295,6 +296,7 @@ public partial class LevelManager : MonoBehaviour
             __StartCoroutine(levelData.SubmitLevel(
                 __dataFlag, 
                 __stage,
+                __count, 
                 __gold,
                 __OnQuit));
         }

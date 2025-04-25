@@ -1924,6 +1924,7 @@ public partial class UserDataMain
     {
         public string name;
         public UserStageReward.Condition condition;
+        public int conditionValue;
         public UserRewardData[] values;
     }
 
@@ -1970,9 +1971,15 @@ public partial class UserDataMain
                 stageReward = stage.indirectRewards[i];
                 userStageReward.name = stageReward.name;
                 userStageReward.id = __ToID(rewardIndex + i);
-                userStageReward.flag = __GetStageRewardFlag(stageReward.name, level.name, targetStage,
-                    stageReward.condition, out _);
+                userStageReward.flag = __GetStageRewardFlag(
+                    stageReward.name, 
+                    level.name, 
+                    targetStage,
+                    stageReward.conditionValue, 
+                    stageReward.condition, 
+                    out _);
                 userStageReward.condition = stageReward.condition;
+                userStageReward.conditionValue = stageReward.conditionValue;
                 userStageReward.values = stageReward.values;
 
                 result.rewards[i] = userStageReward;
@@ -2325,6 +2332,7 @@ public partial class UserData
         uint userID,
         IUserData.StageFlag flag,
         int stage,
+        int killCount, 
         int gold, 
         int rage, 
         int exp, 
@@ -2343,6 +2351,8 @@ public partial class UserData
         var temp = levelCache.Value;
 
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+        
+        __SetStageKillCount(temp.name, temp.stage, killCount);
 
         IUserData.StageCache stageCache;
         stageCache.rage = rage;
