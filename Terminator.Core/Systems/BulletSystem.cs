@@ -121,6 +121,8 @@ public partial struct BulletSystem : ISystem
 {
     private struct Collect
     {
+        public bool isFire;
+
         public double time;
 
         public Random random;
@@ -216,12 +218,12 @@ public partial struct BulletSystem : ISystem
                 }
             }
             
-            int layerMask = EffectDamageParent.TryGetComponent(
+            int layerMask = isFire ? (EffectDamageParent.TryGetComponent(
                 entity,
                 effectDamageParents,
                 bulletLayerMasks,
                 out var bulletLayerMask, 
-                out _) ? bulletLayerMask.value : -1;
+                out _) ? bulletLayerMask.value : -1) : 0;
             float damageScale = EffectDamageParent.TryGetComponent(
                 entity,
                 effectDamageParents,
@@ -300,6 +302,8 @@ public partial struct BulletSystem : ISystem
     [BurstCompile]
     private struct CollectEx : IJobChunk
     {
+        public bool isFire;
+        
         public double time;
 
         public quaternion cameraRotation;
@@ -371,6 +375,7 @@ public partial struct BulletSystem : ISystem
             long hash = math.aslong(time);
             
             Collect collect;
+            collect.isFire = isFire;
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)((int)hash ^ (int)(hash >> 32) ^ unfilteredChunkIndex));
             collect.cameraRotation = cameraRotation;
@@ -505,9 +510,6 @@ public partial struct BulletSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        if (__targetGroup.CalculateEntityCount() < 2)
-            return;
-        
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
         __physicsColliders.Update(ref state);
@@ -531,6 +533,7 @@ public partial struct BulletSystem : ISystem
         //__prefabLoader.Update(ref state);
 
         CollectEx collect;
+        collect.isFire = !__targetGroup.IsEmpty;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
