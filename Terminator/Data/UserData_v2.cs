@@ -70,6 +70,20 @@ public partial interface IUserData
             return values;
         }
     }
+
+    public struct Talents
+    {
+        [Flags]
+        public enum Flag
+        {
+            Unlock = 0x01, 
+            UnlockFirst = 0x02 | Unlock
+        }
+
+        public Flag flag;
+
+        public UserTalent[] talents;
+    }
     
     IEnumerator QueryTip(
         uint userID, 
@@ -81,5 +95,5 @@ public partial interface IUserData
     
     IEnumerator QueryTalents(
         uint userID, 
-        Action<Memory<UserTalent>> onComplete);
+        Action<Talents> onComplete);
 }

@@ -203,30 +203,44 @@ public partial class UserDataMain
     
     public IEnumerator QueryTalents(
         uint userID,
-        Action<Memory<UserTalent>> onComplete)
+        Action<IUserData.Talents> onComplete)
     {
         yield return null;
 
-        int numTalents = _talents.Length;
-        Talent talent;
-        UserTalent userTalent;
-        var userTalents = new UserTalent[numTalents];
-        for (int i = 0; i < numTalents; ++i)
+        IUserData.Talents result;
+        result.flag = 0;
+        if ((flag & Flag.TalentsUnlockFirst) == Flag.TalentsUnlockFirst)
+            result.flag |= IUserData.Talents.Flag.UnlockFirst;
+        else if ((flag & Flag.TalentsUnlock) != 0)
+            result.flag |= IUserData.Talents.Flag.Unlock;
+
+        if (result.flag == 0)
+            result.talents = null;
+        else
         {
-            talent = _talents[i];
-            if(!string.IsNullOrEmpty(talent.roleName))
-                continue;
-            
-            userTalent.name = talent.name;
-            userTalent.id = __ToID(i);
-            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
-            userTalent.gold = talent.gold;
-            userTalent.skillGroupDamage = talent.skillGroupDamage;
-            userTalent.attribute = talent.attribute;
-            userTalents[i] = userTalent;
+            int numTalents = _talents.Length;
+            Talent talent;
+            UserTalent userTalent;
+            var userTalents = new UserTalent[numTalents];
+            for (int i = 0; i < numTalents; ++i)
+            {
+                talent = _talents[i];
+                if (!string.IsNullOrEmpty(talent.roleName))
+                    continue;
+
+                userTalent.name = talent.name;
+                userTalent.id = __ToID(i);
+                userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
+                userTalent.gold = talent.gold;
+                userTalent.skillGroupDamage = talent.skillGroupDamage;
+                userTalent.attribute = talent.attribute;
+                userTalents[i] = userTalent;
+            }
+
+            result.talents = userTalents;
         }
 
-        onComplete(userTalents);
+        onComplete(result);
     }
 
     public IEnumerator CollectTalent(
@@ -259,6 +273,8 @@ public partial class UserDataMain
 
         flag |= UserTalent.Flag.Collected;
         PlayerPrefs.SetInt(key, (int)flag);
+        
+        UserDataMain.flag &= ~Flag.TalentsUnlockFirst;
 
         onComplete(true);
     }
@@ -282,7 +298,7 @@ public partial class UserData
     
     public IEnumerator QueryTalents(
         uint userID,
-        Action<Memory<UserTalent>> onComplete)
+        Action<IUserData.Talents> onComplete)
     {
         return UserDataMain.instance.QueryTalents(userID, onComplete);
     }
