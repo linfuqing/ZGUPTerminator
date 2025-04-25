@@ -209,6 +209,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
 
+        bool isDirty = false;
         var flag = UserDataMain.flag;
         if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
         {

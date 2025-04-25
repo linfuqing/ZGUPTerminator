@@ -2022,7 +2022,17 @@ public partial class UserDataMain
 
             yield break;
         }
+
+        var flag = UserDataMain.flag;
+        if ((flag & Flag.TalentsUnlock) == 0 && PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3)
+        {
+            flag |= Flag.TalentsUnlock;
+
+            UserDataMain.flag = flag;
+        }
         
+        UserDataMain.flag |= Flag.TalentsUnlock;
+
         UserData.ApplyStageFlag(level.name, stage);
 
         //flag &= ~Flag.UnlockFirst;
