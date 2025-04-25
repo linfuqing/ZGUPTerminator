@@ -474,10 +474,10 @@ public sealed class LoginManager : MonoBehaviour
                                         break;
                                 }
                                 
-                                if(j < numScenes)
+                                if(j == numScenes)
                                     continue;
                                 
-                                if(style.scenes == null || style.scenes.Length < j)
+                                if(style.scenes == null || style.scenes.Length <= j)
                                     continue;
 
                                 int sceneIndex = j;
