@@ -24,8 +24,8 @@ public partial struct EffectSystem : ISystem
         Message = 0x01,
         StatusTarget = 0x02, 
         Destroyed = 0x04, 
-        Drop = 0x08,
-        Die = 0x10,
+        Die = 0x08,
+        Drop = 0x10 | Die,
         Recovery = 0x20, 
         Invincible = 0x40
     }
