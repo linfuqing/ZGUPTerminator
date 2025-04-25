@@ -308,9 +308,19 @@ public sealed class LoginManager : MonoBehaviour
         set;
     }
 
-    public void RefreshStage()
+    [Preserve]
+    public void RefreshStages()
     {
-        
+        StageStyle stageStyle;
+        int numStageStyles = __stageStyles.Count;
+        for (int i = numStageStyles - 1; i >= 0; --i)
+        {
+            stageStyle = __stageStyles[i];
+            if(stageStyle == null || !stageStyle.isActiveAndEnabled)
+                continue;
+
+            stageStyle.toggle.isOn = true;
+        }
     }
 
     public void CollectAndQueryLevels()

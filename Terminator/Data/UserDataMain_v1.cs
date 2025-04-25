@@ -507,6 +507,9 @@ public partial class UserDataMain
         else if ((flag & Flag.CardsUnlock) != 0)
             result.flag |= IUserData.Cards.Flag.Unlock;
         
+        if ((flag & Flag.CardUnlockFirst) == Flag.CardUnlockFirst)
+            result.flag |= IUserData.Cards.Flag.CardFirst;
+        
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
 
         result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
@@ -703,7 +706,7 @@ public partial class UserDataMain
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
         PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
         
-        flag &= ~Flag.CardsUnlockFirst;
+        flag &= ~Flag.CardUnlockFirst;
         
         onComplete(true);
     }
@@ -2024,15 +2027,20 @@ public partial class UserDataMain
         }
 
         var flag = UserDataMain.flag;
+        bool isDirty = (flag & Flag.CardUnlockFirst) == Flag.CardUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.CardUnlockFirst;
+
         if ((flag & Flag.TalentsUnlock) == 0 && PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3)
         {
             flag |= Flag.TalentsUnlock;
 
-            UserDataMain.flag = flag;
+            isDirty = true;
         }
         
-        UserDataMain.flag |= Flag.TalentsUnlock;
-
+        if(isDirty)
+            UserDataMain.flag = flag;
+        
         UserData.ApplyStageFlag(level.name, stage);
 
         //flag &= ~Flag.UnlockFirst;

@@ -19,12 +19,15 @@ public sealed partial class UserDataMain : MonoBehaviour
         CardsUnlockFirst = 0x0020, 
         CardsUnlock = 0x0040 | CardsUnlockFirst, 
         
-        RolesCreated = 0x0080, 
-        RolesUnlockFirst = 0x0100, 
-        RolesUnlock = 0x0200 | RolesUnlockFirst, 
+        CardUnlockFirst = 0x0080, 
+        CardUnlock = 0x0100 | CardUnlockFirst, 
+
+        RolesCreated = 0x0200, 
+        RolesUnlockFirst = 0x0400, 
+        RolesUnlock = 0x0800 | RolesUnlockFirst, 
         
-        RoleUnlockFirst = 0x0400, 
-        RoleUnlock = 0x0800 | RoleUnlockFirst, 
+        RoleUnlockFirst = 0x1000, 
+        RoleUnlock = 0x2000 | RoleUnlockFirst, 
         
         UnlockFirst = PurchasesUnlockFirst | TalentsUnlockFirst | CardsUnlockFirst | RolesUnlockFirst | RoleUnlockFirst
     }

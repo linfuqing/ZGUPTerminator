@@ -366,7 +366,9 @@ public partial interface IUserData
         public enum Flag
         {
             Unlock = 0x01, 
-            UnlockFirst = 0x02 | Unlock
+            UnlockFirst = 0x02 | Unlock, 
+            
+            CardFirst = 0x04
         }
 
         /// <summary>

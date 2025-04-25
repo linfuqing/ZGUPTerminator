@@ -431,6 +431,9 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
                 break;
             case UserRewardType.CardsCapacity:
+                if ((flag & Flag.CardUnlock) == 0)
+                    UserDataMain.flag |= Flag.CardUnlock;
+
                 id = 1;
                 count = 3;
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
@@ -438,9 +441,10 @@ public partial class UserDataMain
             case UserRewardType.Card:
                 if ((flag & Flag.CardsUnlock) == 0/* && UserData.level > 0*/)//(flag & Flag.CardsCreated) == 0)
                     UserDataMain.flag |= Flag.CardsUnlock;
-                
+
                 id = __ToID(__GetCardIndex(reward.name));
                 key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
+                
                 
                 string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{reward.name}";
                 int level = PlayerPrefs.GetInt(levelKey, -1);
