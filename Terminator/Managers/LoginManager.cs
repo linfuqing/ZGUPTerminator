@@ -60,11 +60,21 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     [Serializable]
+    internal struct Scene
+    {
+        public string name;
+        
+        public int[] stageIndices;
+    }
+
+    [Serializable]
     internal struct Level
     {
         public string name;
         public string title;
         public GameObject prefab;
+        
+        public Scene[] scenes;
     }
 
     [Serializable]
@@ -139,6 +149,8 @@ public sealed class LoginManager : MonoBehaviour
     private Dictionary<int, LevelStyle> __styles;
     private Dictionary<string, int> __rewardIndices;
 
+    private string __sceneName;
+
     private float __energyNextTime;
     private float __energyUnitTime;
 
@@ -150,7 +162,7 @@ public sealed class LoginManager : MonoBehaviour
 
     //private int __selectedLevelEnergy;
     private int __selectedEnergy;
-    private int __selectedLevelIndex;
+    //private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
 
@@ -425,18 +437,16 @@ public sealed class LoginManager : MonoBehaviour
                     /*if (style.button != null)
                         style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
                     
-                    __selectedLevelIndex = index;
+                    //__selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
 
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
                     {
-                        if (style.stageStyle == null)
-                        {
-                            foreach (var stage in selectedLevel.stages)
-                                __CreateRewards(style.rewardStyle, stage.rewards);
-                        }
-                        else
+                        int numScenes = Mathf.Min(
+                            style.scenes == null ? 0 : style.scenes.Length,
+                            level.scenes.Length);
+                        if (numScenes > 0)
                         {
                             if (__stageStyles == null)
                                 __stageStyles = new List<StageStyle>();
@@ -447,7 +457,8 @@ public sealed class LoginManager : MonoBehaviour
                                 numRanks,
                                 numRewardFlags,
                                 stageStyleStartIndex = __stageStyles.Count,
-                                selectedStageIndex = 0;
+                                selectedStageIndex = 0, 
+                                selectedSceneIndex = 0;
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
@@ -455,7 +466,25 @@ public sealed class LoginManager : MonoBehaviour
                             {
                                 var stage = selectedLevel.stages[i];
 
-                                stageStyle = style.stageStyle;
+                                for (j = 0; j < numScenes; ++j)
+                                {
+                                    ref var levelScene = ref level.scenes[j];
+
+                                    if (Array.IndexOf(levelScene.stageIndices, i) != -1)
+                                        break;
+                                }
+                                
+                                if(j < numScenes)
+                                    continue;
+                                
+                                if(style.scenes == null || style.scenes.Length < j)
+                                    continue;
+
+                                int sceneIndex = j;
+                                
+                                var styleScene = style.scenes[sceneIndex];
+
+                                stageStyle = styleScene.stageStyle;
                                 stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
                                 if (stageStyle.onTitle != null)
@@ -508,11 +537,12 @@ public sealed class LoginManager : MonoBehaviour
                                             
                                             if (x)
                                             {
+                                                __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;
 
                                                 LevelShared.stage = stageIndex;
 
-                                                __CreateRewards(style.rewardStyle, stage.rewards);
+                                                __CreateRewards(styleScene.stageRewardStyle, stage.rewards);
 
                                                 if (onStageChanged != null)
                                                 {
@@ -529,11 +559,14 @@ public sealed class LoginManager : MonoBehaviour
                                     }
 
                                     selectedStageIndex = __stageStyles.Count;
+                                    selectedSceneIndex = sceneIndex;
                                 }
                                 //stageStyle.gameObject.SetActive(true);
 
                                 __stageStyles.Add(stageStyle);
                             }
+
+                            style.scenes[selectedSceneIndex].onActive.Invoke();
 
                             __stageStyles[selectedStageIndex].toggle.isOn = true;
 
@@ -807,7 +840,7 @@ public sealed class LoginManager : MonoBehaviour
             assetManager = gameObject.AddComponent<GameAssetManager>();
         }
 
-        assetManager.LoadScene(_levels[__selectedLevelIndex].name, null, new GameSceneActivation());
+        assetManager.LoadScene(__sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
     }
 
     private IEnumerator __CollectAndQueryLevels()
@@ -855,7 +888,7 @@ public sealed class LoginManager : MonoBehaviour
         _onStart.Invoke();
         
         var analytics = IAnalytics.instance as IAnalyticsEx;
-        analytics?.StartLevel(_levels[__selectedLevelIndex].name);
+        analytics?.StartLevel(__sceneName/*_levels[__selectedLevelIndex].name*/);
         
         Invoke(nameof(__LoadScene), _startTime);
     }
