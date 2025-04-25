@@ -1018,8 +1018,8 @@ public partial class UserDataMain
             }
         }
 
-        if (isContains)
-            return __ApplyProperty(userID);
+        //if (isContains)
+            //return __ApplyProperty(userID);
 
         var skills = new List<IUserData.Skill>();
         var attributes = new List<UserAttributeData>();
