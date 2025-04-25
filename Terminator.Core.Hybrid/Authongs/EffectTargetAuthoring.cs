@@ -102,6 +102,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             {
                 EffectTargetMessage message;
                 message.layerMask = ~0u;
+                message.delayTime = 0.0f;
                 message.entityPrefabReference = default;
                 message.messageName = "UpdateAttribute";
                 message.messageValue = authoring._attributeParameter;

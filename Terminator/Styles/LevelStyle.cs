@@ -12,7 +12,7 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     public struct Scene
     {
         public UnityEvent onActive;
-        
+
         public StageStyle stageStyle;
         
         public StageRewardStyle stageRewardStyle;

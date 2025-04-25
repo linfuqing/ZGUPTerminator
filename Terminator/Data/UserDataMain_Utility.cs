@@ -436,7 +436,7 @@ public partial class UserDataMain
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
                 break;
             case UserRewardType.Card:
-                if ((flag & Flag.CardsUnlock) == 0 && UserData.level > 0)//(flag & Flag.CardsCreated) == 0)
+                if ((flag & Flag.CardsUnlock) == 0/* && UserData.level > 0*/)//(flag & Flag.CardsCreated) == 0)
                     UserDataMain.flag |= Flag.CardsUnlock;
                 
                 id = __ToID(__GetCardIndex(reward.name));

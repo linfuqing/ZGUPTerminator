@@ -280,6 +280,7 @@ public struct EffectTargetInvulnerabilityStatus : IComponentData
 public struct EffectTargetMessage : IBufferElementData
 {
     public uint layerMask;
+    public float delayTime;
     public EntityPrefabReference entityPrefabReference;
     public FixedString128Bytes messageName;
     public UnityObjectRef<Object> messageValue;

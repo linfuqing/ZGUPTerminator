@@ -1053,6 +1053,7 @@ public partial struct EffectSystem : ISystem
                     target.hp += -damage;
                 }
 
+                float delayTime = 0.0f;
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
@@ -1071,6 +1072,8 @@ public partial struct EffectSystem : ISystem
                         if (targetMessage.layerMask == 0 ||
                             (targetMessage.layerMask & (targetHP.layerMask | damageLayerMask)) != 0)
                         {
+                            delayTime = math.max(delayTime, targetMessage.delayTime);
+                            
                             message.key = random.NextInt();
                             message.name = targetMessage.messageName;
                             message.value = targetMessage.messageValue;
@@ -1140,18 +1143,29 @@ public partial struct EffectSystem : ISystem
                         Interlocked.Increment(ref levelStatus.count);
                     }
 
-                    if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
+                    if (index < characterBodies.Length)
                     {
-                        result |= EnabledFlags.Drop;
-
-                        if (index < characterGravityFactors.Length)
+                        if (delayTime > math.FLT_MIN_NORMAL)
                         {
-                            ThirdPersionCharacterGravityFactor characterGravityFactor;
-                            characterGravityFactor.value = 1.0f;
-                            characterGravityFactors[index] = characterGravityFactor;
-                        }
+                            result |= EnabledFlags.Die;
 
-                        entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
+                            DelayDestroy delayDestroy;
+                            delayDestroy.time = delayTime;
+                            entityManager.AddComponent(0, entityArray[index], delayDestroy);
+                        }
+                        else if (!characterBodies[index].IsGrounded)
+                        {
+                            result |= EnabledFlags.Drop;
+
+                            if (index < characterGravityFactors.Length)
+                            {
+                                ThirdPersionCharacterGravityFactor characterGravityFactor;
+                                characterGravityFactor.value = 1.0f;
+                                characterGravityFactors[index] = characterGravityFactor;
+                            }
+
+                            entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
+                        }
                     }
                     else
                     {
@@ -1296,8 +1310,8 @@ public partial struct EffectSystem : ISystem
                 
                 if((result & EnabledFlags.Message) == EnabledFlags.Message)
                     chunk.SetComponentEnabled(ref messageType, i, true);
-                
-                if((result & EnabledFlags.Drop) == EnabledFlags.Drop)
+
+                if ((result & EnabledFlags.Drop) == EnabledFlags.Drop)
                     chunk.SetComponentEnabled(ref targetType, i, false);
                 
                 if ((result & EnabledFlags.Die) == EnabledFlags.Die)

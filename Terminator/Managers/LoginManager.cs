@@ -308,6 +308,11 @@ public sealed class LoginManager : MonoBehaviour
         set;
     }
 
+    public void RefreshStage()
+    {
+        
+    }
+
     public void CollectAndQueryLevels()
     {
         StartCoroutine(__CollectAndQueryLevels());
