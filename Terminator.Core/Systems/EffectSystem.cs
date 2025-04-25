@@ -1167,7 +1167,8 @@ public partial struct EffectSystem : ISystem
                             entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
                         }
                     }
-                    else
+                    
+                    if((result & EnabledFlags.Die) != EnabledFlags.Die)
                     {
                         result |= EnabledFlags.Die;
 
@@ -1313,8 +1314,7 @@ public partial struct EffectSystem : ISystem
 
                 if ((result & EnabledFlags.Drop) == EnabledFlags.Drop)
                     chunk.SetComponentEnabled(ref targetType, i, false);
-                
-                if ((result & EnabledFlags.Die) == EnabledFlags.Die)
+                else if ((result & EnabledFlags.Die) == EnabledFlags.Die)
                 {
                     if(isCharacter)
                         chunk.SetComponentEnabled(ref characterBodyType, i, false);

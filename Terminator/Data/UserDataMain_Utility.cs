@@ -972,7 +972,7 @@ public partial class UserDataMain
         string cardKeyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}";
         
         string roleGroupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
-        if(string.IsNullOrEmpty(cardGroupName))
+        if(string.IsNullOrEmpty(roleGroupName))
             roleGroupName = _roleGroups[0].name;
 
         string roleKeyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroupName}", 

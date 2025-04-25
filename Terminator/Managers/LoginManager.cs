@@ -320,6 +320,8 @@ public sealed class LoginManager : MonoBehaviour
                 continue;
 
             stageStyle.toggle.isOn = true;
+
+            break;
         }
     }
 
