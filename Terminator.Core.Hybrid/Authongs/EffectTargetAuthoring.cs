@@ -85,6 +85,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                 ref var destination = ref messages.ElementAt(i);
 
                 destination.layerMask = (uint)source.layerMask.value;
+                destination.delayTime = 0.0f;
                 destination.messageName = source.messageName;
                 destination.messageValue = source.messageValue;
                 
