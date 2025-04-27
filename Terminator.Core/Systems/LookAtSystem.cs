@@ -431,7 +431,7 @@ public partial struct LookAtSystem : ISystem
         __localTransformType.Update(ref state);
         
         ApplyEx apply;
-        apply.cameraDirection = math.forward(SystemAPI.GetSingleton<MainCameraTransform>().value.rot);
+        apply.cameraDirection = math.forward(SystemAPI.GetSingleton<MainCameraTransform>().rotation);
         apply.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         apply.entityType = __entityType;
         apply.parents = __parents;
