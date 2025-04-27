@@ -81,7 +81,7 @@ public partial struct LookAtSystem : ISystem
             if ((location & LookAtLocation.Camera) == LookAtLocation.Camera)
             {
                 float dot = math.dot(hit.Position - __position, __cameraDirection);
-                if(dot < __minDot)
+                if(dot < __minDot * math.max(distance, 0.0f))
                     return false;
 
                 distance = dot;
