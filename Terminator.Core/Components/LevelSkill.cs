@@ -241,6 +241,9 @@ public struct LevelSkillDefinition
                 ++i;
                 groupSkillWeights.RemoveRange(i, numWeights - i);
                 numWeights = groupSkillWeights.Length;
+
+                //For groupSkillWeight.value.value > math.min(chance, minWeight)
+                totalWeight -= math.FLT_MIN_NORMAL;
                 
                 float chance;
                 for (i = 0; i < numResults; ++i)
@@ -252,9 +255,7 @@ public struct LevelSkillDefinition
                         if (!weights.ContainsKey(groupSkillWeight.groupIndex))
                             continue;
 
-                        if (groupSkillWeight.value.value < chance)
-                            chance -= groupSkillWeight.value.value;
-                        else
+                        if(groupSkillWeight.value.value > math.min(chance, minWeight))
                         {
                             result.damageScale = groupSkillWeight.value.damageScale;
                             result.activeIndex = groupSkillWeight.value.activeIndex;
@@ -279,6 +280,8 @@ public struct LevelSkillDefinition
 
                             break;
                         }
+                        
+                        chance -= groupSkillWeight.value.value;
                     }
                 }
             }
