@@ -13,6 +13,8 @@ public struct LookAt : IComponentData
 {
     public LookAtLocation location;
     public int layerMask;
+
+    public float minDot;
     
     public float minDistance;
     public float maxDistance;

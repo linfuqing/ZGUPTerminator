@@ -14,6 +14,8 @@ public class LookAtAuthoring : MonoBehaviour
             LookAt instance;
             instance.location = authoring._location;
             instance.layerMask = authoring._layerMask.value;
+            instance.minDot = Mathf.Cos(authoring._maxAngle * Mathf.Deg2Rad);
+            instance.minDistance = authoring._minDistance;
             instance.minDistance = authoring._minDistance;
             instance.maxDistance = authoring._maxDistance;
             AddComponent(entity, instance);
@@ -28,6 +30,8 @@ public class LookAtAuthoring : MonoBehaviour
     internal LookAtLocation _location;
     [SerializeField]
     internal LayerMask _layerMask;
+    [SerializeField] 
+    internal float _maxAngle = 60.0f;
     [SerializeField] 
     internal float _minDistance;
     [SerializeField] 

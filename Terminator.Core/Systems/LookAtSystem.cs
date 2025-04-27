@@ -17,6 +17,7 @@ public partial struct LookAtSystem : ISystem
     {
         private int __dynamicBodiesCount;
         private LookAtLocation __location;
+        private float __minDot;
         private float __minDistance;
         private float3 __position;
         private float3 __cameraDirection;
@@ -48,6 +49,7 @@ public partial struct LookAtSystem : ISystem
         public Collector(
             int dynamicBodiesCount, 
             LookAtLocation location, 
+            float minDot, 
             float minDistance, 
             float maxDistance, 
             in float3 position, 
@@ -56,6 +58,7 @@ public partial struct LookAtSystem : ISystem
         {
             __dynamicBodiesCount = dynamicBodiesCount;
             __location = location;
+            __minDot = minDot;
             __minDistance = minDistance;
             MaxFraction = maxDistance;
             NumHits = 0;
@@ -78,7 +81,7 @@ public partial struct LookAtSystem : ISystem
             if ((location & LookAtLocation.Camera) == LookAtLocation.Camera)
             {
                 float dot = math.dot(hit.Position - __position, __cameraDirection);
-                if(dot < 0.0f)
+                if(dot < __minDot)
                     return false;
 
                 distance = dot;
@@ -176,6 +179,7 @@ public partial struct LookAtSystem : ISystem
                     collector = new Collector(
                         collisionWorld.NumDynamicBodies, 
                         instance.location, 
+                        instance.minDot, 
                         minDistance, 
                         maxDistance, 
                         localTransform.Position, 
@@ -207,6 +211,7 @@ public partial struct LookAtSystem : ISystem
                     collector = new Collector(
                         collisionWorld.NumDynamicBodies, 
                         instance.location, 
+                        instance.minDot, 
                         instance.minDistance, 
                         instance.maxDistance,  
                         localTransform.Position, 
@@ -222,6 +227,7 @@ public partial struct LookAtSystem : ISystem
                 collector = new Collector(
                     collisionWorld.NumDynamicBodies, 
                     instance.location, 
+                    instance.minDot, 
                     instance.minDistance, 
                     instance.maxDistance,  
                     localTransform.Position, 
