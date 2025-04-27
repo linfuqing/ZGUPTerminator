@@ -212,16 +212,20 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
 
-        bool isDirty = false;
         var flag = UserDataMain.flag;
+        bool isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.CardsUnlockFirst;
+
         if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
         {
             flag |= Flag.RoleUnlock;
 
-            UserDataMain.flag = flag;
+            isDirty = true;
         }
         
-        //flag &= ~Flag.UnlockFirst;
+        if(isDirty)
+            UserDataMain.flag = flag;
         
         UserData.LevelCache levelCache;
         levelCache.name = level.name;

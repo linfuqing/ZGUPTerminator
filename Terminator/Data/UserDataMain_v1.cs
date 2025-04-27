@@ -2027,9 +2027,9 @@ public partial class UserDataMain
         }
 
         var flag = UserDataMain.flag;
-        bool isDirty = (flag & Flag.CardUnlockFirst) == Flag.CardUnlockFirst;
+        bool isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
         if(isDirty)
-            flag &= ~Flag.CardUnlockFirst;
+            flag &= ~Flag.CardsUnlockFirst;
 
         if ((flag & Flag.TalentsUnlock) == 0 && PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3)
         {
