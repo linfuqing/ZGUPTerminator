@@ -158,6 +158,24 @@ public struct LevelSpawners
 
         return new ReadOnly(__version, __entities);
     }
+    
+    public ReadOnly AsReadOnly(SystemBase system, ref JobHandle jobHandle)
+    {
+        uint version = (uint)__group.GetCombinedComponentOrderVersion(true);
+        if (ChangeVersionUtility.DidChange(version, __version))
+        {
+            __version = version;
+            
+            __entityType.Update(system);
+            
+            Resize resize;
+            resize.entityType = __entityType;
+            resize.entities = __entities;
+            jobHandle = resize.ScheduleByRef(__group, jobHandle);
+        }
+
+        return new ReadOnly(__version, __entities);
+    }
 }
 
 [Serializable]
