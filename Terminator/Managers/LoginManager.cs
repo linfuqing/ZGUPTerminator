@@ -386,7 +386,6 @@ public sealed class LoginManager : MonoBehaviour
             levelIndices[_levels[i].name] = i;
 
         bool isHot = false;
-        Level level;
         Transform parent = _style.transform.parent;
         __styles = new Dictionary<int, LevelStyle>(userLevels.Length);
         foreach (var userLevel in userLevels.Span)
@@ -421,7 +420,7 @@ public sealed class LoginManager : MonoBehaviour
             if(style.onEnergy != null)
                 style.onEnergy.Invoke(selectedLevel.energy.ToString());
 
-            level = _levels[index];
+            var level = _levels[index];
             
             if(style.onTitle != null)
                 style.onTitle.Invoke(level.title);
