@@ -671,44 +671,11 @@ public partial class UserDataMain
     {
         IUserData.Skill skill;
 
-        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
-        if(string.IsNullOrEmpty(groupName))
-            groupName = _cardGroups[0].name;
-        
-        var skills = new List<IUserData.Skill>();
-        string keyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{groupName}{UserData.SEPARATOR}";
-        int i, level, styleIndex, numCards = _cards.Length;
-        List<int> indices;
-        for (i = 0; i < numCards; ++i)
-        {
-            ref var card = ref _cards[i];
-            if (PlayerPrefs.GetInt($"{keyPrefix}{card.name}", -1) == -1)
-                continue;
-
-            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
-            if (level > 0)
-            {
-                styleIndex = __GetCardStyleIndex(card.styleName);
-                indices = __GetCardLevelIndices(styleIndex);
-                skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
-            }
-            else
-                skill.damage = card.skillGroupDamage;
-
-            skill.type = UserSkillType.Individual;
-            skill.name = card.skillName;
-            skills.Add(skill);
-
-            skill.type = UserSkillType.Group;
-            skill.name = __GetSkillGroupName(card.skillName);
-            skills.Add(skill);
-        }
-
-        groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
         if(string.IsNullOrEmpty(groupName))
             groupName = _roleGroups[0].name;
         
-        keyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}";
+        string keyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}";
 
         string roleName = PlayerPrefs.GetString(keyPrefix);
         int roleIndex = __GetRoleIndex(roleName);
@@ -719,6 +686,7 @@ public partial class UserDataMain
             new List<UserAttributeData>(), 
             out skill.damage);
 
+        var skills = new List<IUserData.Skill>();
         foreach (var skillName in role.skillNames)
         {
             skill.name = skillName;
@@ -735,14 +703,14 @@ public partial class UserDataMain
         
         keyPrefix = $"{keyPrefix}{UserData.SEPARATOR}";
         
-        int j, 
-            numSkills = skills.Count, 
+        int i, j, styleIndex, level, 
             numAttributes = attributes.Count, 
             numAccessorySlots = _accessorySlots.Length;
         uint accessoryID;
         AccessoryInfo accessoryInfo;
         UserAttributeData attribute;
         UserAccessory.Property property;
+        List<int> indices;
         List<UserAccessory.Attribute> accessoryStageAttributes = null;
         List<UserAccessory.Skill> accessoryStageSkills = null;
         for (i = 0; i < numAccessorySlots; ++i)
@@ -800,7 +768,7 @@ public partial class UserDataMain
                 skill.type = UserSkillType.Individual;
                 skills.Add(skill);
                 
-                ++numSkills;
+                //++numSkills;
             }
             
             skill.name = __GetSkillGroupName(accessory.skillName);
@@ -809,7 +777,7 @@ public partial class UserDataMain
                 skill.type = UserSkillType.Group;
                 skills.Add(skill);
                 
-                ++numSkills;
+                //++numSkills;
             }
 
             if (accessoryInfo.stage > 0)
@@ -841,6 +809,38 @@ public partial class UserDataMain
         if(accessoryStageAttributes != null)
             __ApplyAttributes(attributes, accessoryStageAttributes);
         
+        groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
+        if(string.IsNullOrEmpty(groupName))
+            groupName = _cardGroups[0].name;
+        
+        keyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{groupName}{UserData.SEPARATOR}";
+        
+        int numCards = _cards.Length;
+        for (i = 0; i < numCards; ++i)
+        {
+            ref var card = ref _cards[i];
+            if (PlayerPrefs.GetInt($"{keyPrefix}{card.name}", -1) == -1)
+                continue;
+
+            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
+            if (level > 0)
+            {
+                styleIndex = __GetCardStyleIndex(card.styleName);
+                indices = __GetCardLevelIndices(styleIndex);
+                skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
+            }
+            else
+                skill.damage = card.skillGroupDamage;
+
+            skill.type = UserSkillType.Individual;
+            skill.name = card.skillName;
+            skills.Add(skill);
+
+            skill.type = UserSkillType.Group;
+            skill.name = __GetSkillGroupName(card.skillName);
+            skills.Add(skill);
+        }
+
         if(accessoryStageSkills != null)
             __ApplySkills(skills, accessoryStageSkills);
 

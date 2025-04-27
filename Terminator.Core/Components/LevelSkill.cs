@@ -21,7 +21,7 @@ public struct LevelSkillDefinition
 
         public int CompareTo(GroupSkillWeight other)
         {
-            return value.value.CompareTo(other.value.value);
+            return other.value.value.CompareTo(value.value);
         }
 
     }
@@ -228,9 +228,8 @@ public struct LevelSkillDefinition
             int numSkillIndices;
             if (numResults < numWeights)
             {
-                int minWeightIndex = numWeights - numResults;
-                float minWeight = groupSkillWeights[minWeightIndex].value.value, currentWeight;
-                for (i = 0; i < minWeightIndex; ++i)
+                float minWeight = groupSkillWeights[numResults - 1].value.value, currentWeight;
+                for (i = numWeights - 1; i >= numResults; --i)
                 {
                     currentWeight = groupSkillWeights[i].value.value;
                     if (currentWeight < minWeight)
@@ -238,8 +237,9 @@ public struct LevelSkillDefinition
                     else
                         break;
                 }
-                
-                groupSkillWeights.RemoveRange(0, i);
+
+                ++i;
+                groupSkillWeights.RemoveRange(i, numWeights - i);
                 numWeights = groupSkillWeights.Length;
                 
                 float chance;
