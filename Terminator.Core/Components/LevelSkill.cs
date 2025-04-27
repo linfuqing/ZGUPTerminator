@@ -228,60 +228,94 @@ public struct LevelSkillDefinition
             int numSkillIndices;
             if (numResults < numWeights)
             {
-                float minWeight = groupSkillWeights[numResults - 1].value.value, currentWeight;
-                for (i = numWeights - 1; i >= numResults; --i)
+                float minWeight = groupSkillWeights[numResults - 1].value.value;
+                for (i = 0; i < numResults; ++i)
                 {
-                    currentWeight = groupSkillWeights[i].value.value;
-                    if (currentWeight < minWeight)
-                        totalWeight -= currentWeight;
+                    groupSkillWeight = groupSkillWeights[i];
+                    if (groupSkillWeight.value.value > minWeight)
+                    {
+                        result.damageScale = groupSkillWeight.value.damageScale;
+                        result.activeIndex = groupSkillWeight.value.activeIndex;
+                        result.originIndex =
+                            result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
+                        ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
+                            result.originIndex);
+                        numSkillIndices = math.min(skillIndices.Length, numResults - i);
+                        for (j = 0; j < numSkillIndices; ++j)
+                        {
+                            result.index = skillIndices[j];
+
+                            results.Add(result);
+                        }
+
+                        numResults -= numSkillIndices - 1;
+                        if (numResults > i)
+                        {
+                            weights.Remove(groupSkillWeight.groupIndex);
+                            totalWeight -= groupSkillWeight.value.value;
+                        }
+                    }
                     else
                         break;
                 }
 
-                ++i;
-                groupSkillWeights.RemoveRange(i, numWeights - i);
-                numWeights = groupSkillWeights.Length;
-
-                //For groupSkillWeight.value.value > math.min(chance, minWeight)
-                totalWeight -= math.FLT_MIN_NORMAL;
-                
-                float chance;
-                for (i = 0; i < numResults; ++i)
+                numResults -= i;
+                if (numResults > 0)
                 {
-                    chance = random.NextFloat() * totalWeight;
-                    for (j = 0; j < numWeights; ++j)
+                    /*float currentWeight;
+                    for (i = numWeights - 1; i >= numResults; --i)
                     {
-                        groupSkillWeight = groupSkillWeights[j];
-                        if (!weights.ContainsKey(groupSkillWeight.groupIndex))
-                            continue;
-
-                        if(groupSkillWeight.value.value > math.min(chance, minWeight))
-                        {
-                            result.damageScale = groupSkillWeight.value.damageScale;
-                            result.activeIndex = groupSkillWeight.value.activeIndex;
-                            result.originIndex =
-                                result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
-                            ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
-                                result.originIndex);
-                            numSkillIndices = math.min(skillIndices.Length, numResults - i);
-                            for (k = 0; k < numSkillIndices; ++k)
-                            {
-                                result.index = skillIndices[k];
-
-                                results.Add(result);
-                            }
-
-                            numResults -= numSkillIndices - 1;
-                            if (numResults > i)
-                            {
-                                weights.Remove(groupSkillWeight.groupIndex);
-                                totalWeight -= groupSkillWeight.value.value;
-                            }
-
+                        currentWeight = groupSkillWeights[i].value.value;
+                        if (currentWeight < minWeight)
+                            totalWeight -= currentWeight;
+                        else
                             break;
+                    }
+
+                    ++i;
+                    groupSkillWeights.RemoveRange(i, numWeights - i);
+                    numWeights = groupSkillWeights.Length;*/
+
+                    float chance;
+                    for (i = 0; i < numResults; ++i)
+                    {
+                        chance = random.NextFloat() * totalWeight;
+                        for (j = 0; j < numWeights; ++j)
+                        {
+                            groupSkillWeight = groupSkillWeights[j];
+                            if (!weights.ContainsKey(groupSkillWeight.groupIndex))
+                                continue;
+
+                            if (groupSkillWeight.value.value < chance)
+                                chance -= groupSkillWeight.value.value;
+                            else
+                            {
+                                result.damageScale = groupSkillWeight.value.damageScale;
+                                result.activeIndex = groupSkillWeight.value.activeIndex;
+                                result.originIndex =
+                                    result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
+                                ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
+                                    result.originIndex);
+                                numSkillIndices = math.min(skillIndices.Length, numResults - i);
+                                for (k = 0; k < numSkillIndices; ++k)
+                                {
+                                    result.index = skillIndices[k];
+
+                                    results.Add(result);
+                                }
+
+                                numResults -= numSkillIndices - 1;
+                                if (numResults > i)
+                                {
+                                    weights.Remove(groupSkillWeight.groupIndex);
+                                    totalWeight -= groupSkillWeight.value.value;
+                                }
+
+                                break;
+                            }
                         }
-                        
-                        chance -= groupSkillWeight.value.value;
+
+                        UnityEngine.Assertions.Assert.IsTrue(j < numWeights);
                     }
                 }
             }
