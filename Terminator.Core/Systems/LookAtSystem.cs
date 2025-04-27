@@ -167,7 +167,7 @@ public partial struct LookAtSystem : ISystem
 
             DistanceHit closestHit = default;
             Collector collector;
-            if (index < targets.Length && (instance.location & LookAtLocation.Camera) != LookAtLocation.Camera)
+            if (index < targets.Length)
             {
                 var target = targets[index];
                 int rigidBodyIndex = target.entity == Entity.Null ? -1 : collisionWorld.GetRigidBodyIndex(target.entity);

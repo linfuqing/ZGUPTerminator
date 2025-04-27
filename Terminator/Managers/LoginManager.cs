@@ -316,7 +316,7 @@ public sealed class LoginManager : MonoBehaviour
         for (int i = numStageStyles - 1; i >= 0; --i)
         {
             stageStyle = __stageStyles[i];
-            if(stageStyle == null || !stageStyle.isActiveAndEnabled)
+            if(stageStyle == null || !stageStyle.isActiveAndEnabled || !stageStyle.toggle.interactable)
                 continue;
 
             stageStyle.toggle.isOn = true;
