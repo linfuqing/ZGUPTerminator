@@ -77,11 +77,11 @@ public partial struct LookAtSystem : ISystem
             var location = __location;
             if ((location & LookAtLocation.Camera) == LookAtLocation.Camera)
             {
-                float dot = math.dot(math.normalizesafe(hit.Position - __position), __cameraDirection);
+                float dot = math.dot(hit.Position - __position, __cameraDirection);
                 if(dot < 0.0f)
                     return false;
 
-                distance *= 1.0f - dot;
+                distance = dot;
 
                 location &= ~LookAtLocation.Camera;
             }
