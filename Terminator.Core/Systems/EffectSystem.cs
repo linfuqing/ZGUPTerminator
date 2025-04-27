@@ -1072,8 +1072,14 @@ public partial struct EffectSystem : ISystem
                         if (targetMessage.layerMask == 0 ||
                             (targetMessage.layerMask & (targetHP.layerMask | damageLayerMask)) != 0)
                         {
-                            delayTime = math.max(delayTime, targetMessage.delayTime);
-                            
+                            if (targetMessage.delayTime > math.FLT_MIN_NORMAL)
+                            {
+                                if(target.hp > 0)
+                                    continue;
+                                
+                                delayTime = math.max(delayTime, targetMessage.delayTime);
+                            }
+
                             message.key = random.NextInt();
                             message.name = targetMessage.messageName;
                             message.value = targetMessage.messageValue;
