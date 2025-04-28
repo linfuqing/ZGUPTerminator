@@ -135,6 +135,19 @@ public struct LevelSpawners
 
         __entities = new NativeList<Entity>(Allocator.Persistent);
     }
+    
+    public LevelSpawners(SystemBase system)
+    {
+        __version = 0;
+        __entityType = system.GetEntityTypeHandle();
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __group = builder
+                .WithAll<SpawnerStatus>()
+                .Build(system);
+
+        __entities = new NativeList<Entity>(Allocator.Persistent);
+    }
 
     public void Dispose()
     {
