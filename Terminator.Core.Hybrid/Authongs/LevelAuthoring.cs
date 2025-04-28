@@ -167,7 +167,7 @@ public class LevelAuthoring : MonoBehaviour
 
                     index = parameter.IndexOf(':');
                     result.type = (LevelStageOption.Type)int.Parse(parameter.Remove(index));
-                    result.value = (int)uint.Parse(parameter.Substring(index + 1));
+                    result.value = (int)long.Parse(parameter.Substring(index + 1));
                 }
             }
         }
@@ -195,7 +195,7 @@ public class LevelAuthoring : MonoBehaviour
 
                     index = parameter.IndexOf(':');
                     condition.type = (LevelStageOption.Type)int.Parse(parameter.Remove(index));
-                    condition.value = (int)uint.Parse(parameter.Substring(index + 1));
+                    condition.value = (int)long.Parse(parameter.Substring(index + 1));
                 }
             }
         }
