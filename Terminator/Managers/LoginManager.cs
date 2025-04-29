@@ -597,6 +597,13 @@ public sealed class LoginManager : MonoBehaviour
                                         (levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
                                         __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
+                                        if (__isSceneActiveFirst && (levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
+                                        {
+                                            levels.flag = 0;
+
+                                            __isSceneActiveFirst = false;
+                                        }
+
                                         selectedStageIndex = __stageStyles.Count;
                                         selectedSceneIndex = sceneIndex;
                                     }
@@ -606,7 +613,7 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
-                            if(__isSceneActiveFirst && (levels.flag & IUserData.Levels.Flag.UnlockFirst) == IUserData.Levels.Flag.UnlockFirst || 
+                            if(__isSceneActiveFirst || 
                                __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
                                 style.scenes[selectedSceneIndex].onActive.Invoke();
                             else
