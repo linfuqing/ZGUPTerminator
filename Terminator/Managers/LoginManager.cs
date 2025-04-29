@@ -83,6 +83,8 @@ public sealed class LoginManager : MonoBehaviour
         public string name;
         public Sprite sprite;
     }
+    
+    public const string NAME_SPACE_SCENE = "LoginManagerScene";
 
     public static event Action<Memory<UserRewardData>> onAwake;
     
@@ -146,7 +148,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private List<StageRewardStyle> __rewardStyles;
     private List<StageStyle> __stageStyles;
-    private Dictionary<int, LevelStyle> __styles;
+    private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
 
     private string __sceneName;
@@ -309,6 +311,20 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     [Preserve]
+    public void RefreshLevel()
+    {
+        foreach (var levelStyle in __levelStyles.Values)
+        {
+            if (levelStyle.toggle.isOn)
+            {
+                levelStyle.toggle.onValueChanged.Invoke(true);
+                
+                break;
+            }
+        }
+    }
+    
+    [Preserve]
     public void RefreshStages()
     {
         StageStyle stageStyle;
@@ -372,11 +388,11 @@ public sealed class LoginManager : MonoBehaviour
     }
 #endif
     
-    private void __ApplyLevels(Memory<UserLevel> userLevels)
+    private void __ApplyLevels(IUserData.Levels levels)
     {
-        if (__styles != null)
+        if (__levelStyles != null)
         {
-            foreach (var style in __styles.Values)
+            foreach (var style in __levelStyles.Values)
                 Destroy(style.gameObject);
         }
         
@@ -387,8 +403,8 @@ public sealed class LoginManager : MonoBehaviour
 
         bool isHot = false;
         Transform parent = _style.transform.parent;
-        __styles = new Dictionary<int, LevelStyle>(userLevels.Length);
-        foreach (var userLevel in userLevels.Span)
+        __levelStyles = new Dictionary<int, LevelStyle>(levels.levels.Length);
+        foreach (var userLevel in levels.levels)
         {
             if(!levelIndices.TryGetValue(userLevel.name, out int index))
                 continue;
@@ -574,15 +590,22 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    selectedStageIndex = __stageStyles.Count;
-                                    selectedSceneIndex = sceneIndex;
+                                    if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
+                                        PlayerPrefs.GetInt(NAME_SPACE_SCENE + level.scenes[sceneIndex].name) > 0)
+                                    {
+                                        selectedStageIndex = __stageStyles.Count;
+                                        selectedSceneIndex = sceneIndex;
+                                    }
                                 }
                                 //stageStyle.gameObject.SetActive(true);
 
                                 __stageStyles.Add(stageStyle);
                             }
 
-                            style.scenes[selectedSceneIndex].onActive.Invoke();
+                            if(PlayerPrefs.GetInt(NAME_SPACE_SCENE + level.scenes[selectedSceneIndex].name) > 0)
+                                style.scenes[selectedSceneIndex].onActive.Invoke();
+                            else
+                                style.scenes[selectedSceneIndex].onActiveFirst.Invoke();
 
                             __stageStyles[selectedStageIndex].toggle.isOn = true;
 
@@ -602,12 +625,12 @@ public sealed class LoginManager : MonoBehaviour
 
             style.gameObject.SetActive(true);
             
-            __styles[index] = style;
+            __levelStyles[index] = style;
         }
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if(scrollRect != null)
-            scrollRect.MoveTo(__styles.Count - 1);
+            scrollRect.MoveTo(__levelStyles.Count - 1);
 
         if (isHot)
         {

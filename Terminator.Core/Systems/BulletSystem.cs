@@ -533,7 +533,7 @@ public partial struct BulletSystem : ISystem
         //__prefabLoader.Update(ref state);
 
         CollectEx collect;
-        collect.isFire = !__targetGroup.IsEmpty;
+        collect.isFire = __targetGroup.CalculateEntityCount() > 1;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;

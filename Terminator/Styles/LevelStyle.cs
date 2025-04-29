@@ -11,6 +11,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     [Serializable]
     public struct Scene
     {
+        public UnityEvent onActiveFirst;
+
         public UnityEvent onActive;
 
         public StageStyle stageStyle;

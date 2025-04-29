@@ -113,6 +113,19 @@ public partial interface IUserData : IGameUserData
         NoDamage = 0x04 | Normal
     }
 
+    public struct Levels
+    {
+        [Flags]
+        public enum Flag
+        {
+            UnlockFirst = 0x01
+        }
+
+        public Flag flag;
+        
+        public UserLevel[] levels;
+    }
+
     public struct Skill
     {
         public UserSkillType type;
@@ -141,7 +154,7 @@ public partial interface IUserData : IGameUserData
     
     IEnumerator QueryLevels(
         uint userID, 
-        Action<Memory<UserLevel>> onComplete);
+        Action<Levels> onComplete);
     
     IEnumerator ApplyLevel(
         uint userID,

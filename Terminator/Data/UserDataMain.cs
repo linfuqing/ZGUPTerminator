@@ -120,7 +120,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     public IEnumerator QueryLevels(
         uint userID,
-        Action<Memory<UserLevel>> onComplete)
+        Action<IUserData.Levels> onComplete)
     {
         yield return null;
 
@@ -185,8 +185,12 @@ public sealed partial class UserDataMain : MonoBehaviour
 
             userLevels[i] = userLevel;
         }
+
+        IUserData.Levels result;
+        result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.Levels.Flag.UnlockFirst;
+        result.levels = userLevels;
         
-        onComplete(userLevels);
+        onComplete(result);
     }
 
     public IEnumerator ApplyLevel(
@@ -378,7 +382,7 @@ public partial class UserData
 
     public IEnumerator QueryLevels(
         uint userID,
-        Action<Memory<UserLevel>> onComplete)
+        Action<IUserData.Levels> onComplete)
     {
         return UserDataMain.instance.QueryLevels(userID, onComplete);
     }
