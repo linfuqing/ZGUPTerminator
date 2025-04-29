@@ -507,7 +507,7 @@ public partial class UserDataMain
         else if ((flag & Flag.CardsUnlock) != 0)
             result.flag |= IUserData.Cards.Flag.Unlock;
         
-        if ((flag & Flag.CardUnlockFirst) == Flag.CardUnlockFirst)
+        if ((flag & Flag.UnlockFirst) == Flag.CardUnlockFirst)
             result.flag |= IUserData.Cards.Flag.CardFirst;
         
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
