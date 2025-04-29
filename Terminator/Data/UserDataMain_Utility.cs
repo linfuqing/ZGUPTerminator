@@ -382,7 +382,8 @@ public partial class UserDataMain
                         flag |= UserStageReward.Flag.Unlock;
                     break;
                 case UserStageReward.Condition.KillCount:
-                    if (UserData.GetStageKillCount(levelName, stage) >= conditionValue)
+                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                        UserData.GetStageKillCount(levelName, stage) >= conditionValue)
                         flag |= UserStageReward.Flag.Unlock;
                     break;
             }
