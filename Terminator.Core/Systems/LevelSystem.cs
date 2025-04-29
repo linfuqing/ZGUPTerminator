@@ -220,9 +220,14 @@ public partial struct LevelSystem : ISystem
                                 ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStageIndies[m]];
                                 if (conditionInheritance.stageName != stageDefinitionTemp.name)
                                     continue;
+
+                                ref var stageConditionState =
+                                    ref stageConditionStates.ElementAt(stageConditionOffsetTemp +
+                                                                       conditionInheritance.currentConditionIndex);
                                 
-                                stageConditionStates[stageConditionOffsetTemp + conditionInheritance.currentConditionIndex] =
-                                    stageConditionStates[numConditions++];
+                                stageConditionState = stageConditionStates[numConditions++];
+
+                                stageConditionState.value = (int)math.round(stageConditionState.value * conditionInheritance.scale);
                             }
                         }
                         

@@ -98,6 +98,9 @@ public class LevelAuthoring : MonoBehaviour
         public int previousConditionIndex;
         [Tooltip("当前阶段条件索引")]
         public int currentConditionIndex;
+
+        [Tooltip("继承倍率")]
+        public float scale;
     }
 
     [Serializable]
@@ -213,7 +216,7 @@ public class LevelAuthoring : MonoBehaviour
                 }
 
                 var parameters = value.Split('/');
-                int numParameters = parameters.Length, index, count;
+                int numParameters = parameters.Length, index1, index2, index3;
 
                 conditionInheritances = new StageConditionInheritance[numParameters];
                 for (int i = 0; i < numParameters; ++i)
@@ -221,11 +224,14 @@ public class LevelAuthoring : MonoBehaviour
                     ref var conditionInheritance = ref conditionInheritances[i];
                     ref var parameter = ref parameters[i];
 
-                    index = parameter.IndexOf(':');
-                    count = parameter.IndexOf(':', index + 1);
-                    conditionInheritance.name = parameter.Remove(index);
-                    conditionInheritance.previousConditionIndex = (int)uint.Parse(parameter.Substring(index + 1, count - index - 1));
-                    conditionInheritance.currentConditionIndex = (int)uint.Parse(parameter.Substring(count + 1));
+                    index1 = parameter.IndexOf(':');
+                    index2 = parameter.IndexOf(':', index1 + 1);
+                    index3 = parameter.IndexOf(':', index2 + 1);
+                    index3 = index3 == -1 ? parameter.Length : index3;
+                    conditionInheritance.name = parameter.Remove(index1);
+                    conditionInheritance.previousConditionIndex = (int)uint.Parse(parameter.Substring(index1 + 1, index2 - index1 - 1));
+                    conditionInheritance.currentConditionIndex = (int)uint.Parse(parameter.Substring(index2 + 1, index3 - index2 - 1));
+                    conditionInheritance.scale = index3 < parameter.Length ? float.Parse(parameter.Substring(index3 + 1)) : 1.0f;
                 }
             }
         }
@@ -315,6 +321,8 @@ public class LevelAuthoring : MonoBehaviour
                             sourceConditionInheritance.previousConditionIndex;
                         destinationConditionInheritance.currentConditionIndex =
                             sourceConditionInheritance.currentConditionIndex;
+                        
+                        destinationConditionInheritance.scale = sourceConditionInheritance.scale;
                     }
 
                     numNextStageNames = source.nextStageNames == null ? 0 : source.nextStageNames.Length;

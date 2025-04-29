@@ -388,6 +388,7 @@ public struct LevelStageOption
                 status.exp = value;
                 break;
             case Type.Stage:
+                status.count = 0;
                 status.stage = value;
                 break;
             case Type.SpawnerTime:
@@ -492,6 +493,7 @@ public struct LevelDefinition
         public FixedString128Bytes stageName;
         public int previousConditionIndex;
         public int currentConditionIndex;
+        public float scale;
     }
 
     public struct Stage

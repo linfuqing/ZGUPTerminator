@@ -168,6 +168,7 @@ public sealed class LoginManager : MonoBehaviour
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
 
+    private bool __isSceneActiveFirst;
     private bool __isStart;
     private bool __isEnergyActive = true;
 
@@ -602,10 +603,14 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
-                            if(__GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
+                            if(__isSceneActiveFirst || __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
                                 style.scenes[selectedSceneIndex].onActive.Invoke();
                             else
+                            {
                                 style.scenes[selectedSceneIndex].onActiveFirst.Invoke();
+
+                                __isSceneActiveFirst = true;
+                            }
 
                             __stageStyles[selectedStageIndex].toggle.isOn = true;
 
