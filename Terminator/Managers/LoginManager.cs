@@ -591,7 +591,7 @@ public sealed class LoginManager : MonoBehaviour
                                     }
 
                                     if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
-                                        PlayerPrefs.GetInt(NAME_SPACE_SCENE + level.scenes[sceneIndex].name) > 0)
+                                        __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
                                         selectedStageIndex = __stageStyles.Count;
                                         selectedSceneIndex = sceneIndex;
@@ -602,7 +602,7 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
-                            if(PlayerPrefs.GetInt(NAME_SPACE_SCENE + level.scenes[selectedSceneIndex].name) > 0)
+                            if(__GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
                                 style.scenes[selectedSceneIndex].onActive.Invoke();
                             else
                                 style.scenes[selectedSceneIndex].onActiveFirst.Invoke();
@@ -871,6 +871,8 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __LoadScene()
     {
+        PlayerPrefs.SetInt(__GetSceneNameSpace(__sceneName), __GetSceneTimes(__sceneName) + 1);
+        
         var assetManager = GameAssetManager.instance;
         if (assetManager == null)
         {
@@ -882,6 +884,16 @@ public sealed class LoginManager : MonoBehaviour
         assetManager.LoadScene(__sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
     }
 
+    private int __GetSceneTimes(string sceneName)
+    {
+        return PlayerPrefs.GetInt(__GetSceneNameSpace(sceneName));
+    }
+
+    private string __GetSceneNameSpace(string sceneName)
+    {
+        return NAME_SPACE_SCENE + sceneName;
+    }
+    
     private IEnumerator __CollectAndQueryLevels()
     {
         var userData = IUserData.instance;
