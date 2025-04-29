@@ -209,10 +209,13 @@ public partial class UserDataMain
 
         IUserData.Talents result;
         result.flag = 0;
-        if ((flag & Flag.TalentsUnlockFirst) == Flag.TalentsUnlockFirst)
-            result.flag |= IUserData.Talents.Flag.UnlockFirst;
-        else if ((flag & Flag.TalentsUnlock) != 0)
-            result.flag |= IUserData.Talents.Flag.Unlock;
+        if ((flag & Flag.TalentsUnlock) != 0)
+        {
+            if ((flag & Flag.UnlockFirst) == Flag.TalentsUnlockFirst)
+                result.flag |= IUserData.Talents.Flag.UnlockFirst;
+            else
+                result.flag |= IUserData.Talents.Flag.Unlock;
+        }
 
         if (result.flag == 0)
             result.talents = null;
