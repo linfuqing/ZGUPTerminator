@@ -118,7 +118,35 @@ public partial class LevelManager : MonoBehaviour
         int stage)
     {
         IAnalytics.instance?.Set(value, max, maxExp, exp, count, gold, stage);
-        
+
+        if (stage != __stage)
+        {
+            if (!isRestart && stage > __stage)
+            {
+                int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
+                var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
+                if(numSkillActiveNames > 0)
+                    __skillActiveNames.Values.CopyTo(skillActiveNames, 0);
+
+                var levelData = ILevelData.instance;
+                if (levelData != null)
+                    __StartCoroutine(levelData.SubmitStage(
+                        __dataFlag, 
+                        stage,
+                        __count, 
+                        gold,
+                        rage, 
+                        exp,
+                        maxExp,
+                        skillActiveNames,
+                        __OnStageChanged));
+            }
+
+            __dataFlag = 0;
+
+            __stage = stage;
+        }
+
         if (__stages != null)
         {
             foreach (var stageIndex in __stages)
@@ -149,34 +177,6 @@ public partial class LevelManager : MonoBehaviour
                 _onGoldCount.Invoke(__gold.ToString());
             
             __gold = gold;
-        }
-
-        if (stage != __stage)
-        {
-            if (!isRestart && stage > __stage)
-            {
-                int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
-                var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
-                if(numSkillActiveNames > 0)
-                    __skillActiveNames.Values.CopyTo(skillActiveNames, 0);
-
-                var levelData = ILevelData.instance;
-                if (levelData != null)
-                    __StartCoroutine(levelData.SubmitStage(
-                        __dataFlag, 
-                        stage,
-                        count, 
-                        gold,
-                        rage, 
-                        exp,
-                        maxExp,
-                        skillActiveNames,
-                        __OnStageChanged));
-            }
-
-            __dataFlag = 0;
-
-            __stage = stage;
         }
 
         if (isRestart)
