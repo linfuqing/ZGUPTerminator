@@ -705,8 +705,12 @@ public partial class UserDataMain
 
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
         PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
-        
+
+        var flag = UserDataMain.flag;
+        flag &= ~Flag.CardsUnlockFirst;
         flag &= ~Flag.CardUnlockFirst;
+
+        UserDataMain.flag = flag;
         
         onComplete(true);
     }
