@@ -314,6 +314,8 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void RefreshLevel()
     {
+        __isSceneActiveFirst = true;
+        
         foreach (var levelStyle in __levelStyles.Values)
         {
             if (levelStyle.toggle.isOn)
@@ -591,7 +593,8 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
+                                    if (__isSceneActiveFirst || 
+                                        (levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
                                         __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
                                         selectedStageIndex = __stageStyles.Count;
@@ -603,7 +606,8 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
-                            if(__isSceneActiveFirst || __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
+                            if(__isSceneActiveFirst && (levels.flag & IUserData.Levels.Flag.UnlockFirst) == IUserData.Levels.Flag.UnlockFirst || 
+                               __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
                                 style.scenes[selectedSceneIndex].onActive.Invoke();
                             else
                             {

@@ -233,7 +233,7 @@ public partial class UserDataMain
 
                 userTalent.name = talent.name;
                 userTalent.id = __ToID(i);
-                userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{userTalent.id}");
+                userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
                 userTalent.gold = talent.gold;
                 userTalent.skillGroupDamage = talent.skillGroupDamage;
                 userTalent.attribute = talent.attribute;
@@ -253,7 +253,8 @@ public partial class UserDataMain
     {
         yield return null;
 
-        string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talentID}";
+        var talent = _talents[__ToIndex(talentID)];
+        string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}";
         var flag = (UserTalent.Flag)PlayerPrefs.GetInt(key);
         if ((flag & UserTalent.Flag.Collected) == UserTalent.Flag.Collected)
         {
@@ -264,7 +265,6 @@ public partial class UserDataMain
 
         int gold = UserDataMain.gold;
         
-        var talent = _talents[__ToIndex(talentID)];
         if (talent.gold > gold)
         {
             onComplete(false);
