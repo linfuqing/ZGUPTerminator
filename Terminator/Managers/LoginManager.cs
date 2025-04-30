@@ -342,6 +342,15 @@ public sealed class LoginManager : MonoBehaviour
 
             break;
         }
+        
+        for (int i = 0; i < numStageStyles; ++i)
+        {
+            stageStyle = __stageStyles[i];
+            if(stageStyle == null || stageStyle.isActiveAndEnabled)
+                continue;
+
+            stageStyle.toggle.isOn = false;
+        }
     }
 
     public void CollectAndQueryLevels()
@@ -563,6 +572,8 @@ public sealed class LoginManager : MonoBehaviour
                                     if (stageStyle.toggle != null)
                                     {
                                         int stageIndex = i;
+                                        
+                                        var onSelected = stageStyle.onSelected;
 
                                         stageStyle.toggle.isOn = false;
                                         stageStyle.toggle.interactable = true;
@@ -572,6 +583,9 @@ public sealed class LoginManager : MonoBehaviour
                                             
                                             if (x)
                                             {
+                                                if(onSelected != null)
+                                                    onSelected.Invoke();
+                                                
                                                 __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;
 

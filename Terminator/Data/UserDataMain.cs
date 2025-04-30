@@ -379,6 +379,9 @@ public sealed partial class UserDataMain : MonoBehaviour
 
 public partial class UserData
 {
+    [SerializeField]
+    internal string _defaultSceneName = "S1";
+    
     public IEnumerator QueryUser(
         string channelName, 
         string channelUser, 
@@ -405,7 +408,7 @@ public partial class UserData
             yield return null;
             
             LevelCache levelCache;
-            levelCache.name = string.Empty;
+            levelCache.name = _defaultSceneName;
             levelCache.id = levelID;
             levelCache.gold = 0;
             levelCache.stage = 0;

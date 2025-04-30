@@ -167,7 +167,7 @@ public class GameMain : GameUser
             if (bytes == null)
                 return false;
 
-            UnityEngine.Object.DestroyImmediate(text, true);
+            DestroyImmediate(text, true);
 
             File.WriteAllBytes(Path.Combine(__path, filename), bytes);
 
@@ -216,10 +216,10 @@ public class GameMain : GameUser
 
                             downloadHandler(
                                 assetIterator.assetName,
-                                index * 1.0f / count,
+                                1.0f,
                                 0,
-                                0,
-                                0,
+                                (ulong)index,
+                                (ulong)count,
                                 index,
                                 count);
                         }
@@ -266,6 +266,8 @@ public class GameMain : GameUser
     public static readonly string DefaultLevelSceneName = "DefaultLevelSceneName";
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
+
+    private bool __isActivated;
 
     public IAssetBundleFactory factory
     {
@@ -383,6 +385,8 @@ public class GameMain : GameUser
     private void __OnActivated()
     {
         Shared.onActivated -= __OnActivated;
+
+        __isActivated = true;
         
         //__defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
 
@@ -413,11 +417,17 @@ public class GameMain : GameUser
                 switch (x)
                 {
                     case IUserData.Status.Guide:
-                        defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
+                        if (__isActivated)
+                        {
+                            defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
 
-                        activation = new GameSceneActivation();
-                
-                        userID = y;
+                            activation = new GameSceneActivation();
+
+                            userID = y;
+                        }
+                        else
+                            defaultSceneName = GameConstantManager.Get(DefaultSceneName);
+
                         break;
                     default:
                         defaultSceneName = GameConstantManager.Get(DefaultSceneName);
@@ -434,7 +444,7 @@ public class GameMain : GameUser
 
             yield return IUserData.instance.ApplyLevel(userID, 1, null);
 
-            LevelPlayerShared.effectTargetRecovery = 1024.0f;
+            //LevelPlayerShared.effectTargetRecovery = 1024.0f;
         }
 
         var assetPaths = new GameAssetManager.AssetPath[2];
