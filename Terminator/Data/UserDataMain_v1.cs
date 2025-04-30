@@ -1967,9 +1967,15 @@ public partial class UserDataMain
             result.levelEnergy = level.energy;
             result.cache = UserData.GetStageCache(level.name, targetStage);
 
+            /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
+            result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
+
+            for (i = 0; i < numSkillNames; ++i)
+                result.skillGroupNames[i] = __GetSkillGroupName(result.cache.skills[i]);*/
+            
             int numStageRewards = stage.indirectRewards.Length;
             result.rewards = new UserStageReward[numStageRewards];
-
+            
             int i;
             StageReward stageReward;
             UserStageReward userStageReward;
@@ -2360,12 +2366,12 @@ public partial class UserData
         int exp, 
         int expMax, 
         string[] skills,
-        Action<bool> onComplete)
+        Action<int> onComplete)
     {
         var levelCache = UserData.levelCache;
         if (levelCache == null)
         {
-            onComplete(false);
+            onComplete(0);
             
             yield break;
         }
@@ -2375,6 +2381,8 @@ public partial class UserData
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
+
+        int result = (int)GetStageFlag(temp.name, temp.stage);
 
         IUserData.StageCache stageCache;
         stageCache.rage = rage;
@@ -2387,7 +2395,7 @@ public partial class UserData
         temp.gold = gold;
         UserData.levelCache = temp;
         
-        onComplete(true);
+        onComplete(result);
     }
     
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)

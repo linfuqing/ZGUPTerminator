@@ -20,7 +20,7 @@ public interface ILevelData
         int exp, 
         int expMax, 
         string[] skills,
-        Action<bool> onComplete);
+        Action<int> onComplete);
     
     IEnumerator SubmitLevel(
         Flag flag, 

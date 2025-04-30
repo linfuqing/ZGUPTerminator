@@ -43,7 +43,7 @@ public class GameLevelData : ILevelData
         int exp, 
         int expMax, 
         string[] skills,
-        Action<bool> onComplete)
+        Action<int> onComplete)
     {
         return IUserData.instance.SubmitStage(
             __userID, 

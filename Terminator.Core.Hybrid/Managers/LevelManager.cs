@@ -50,6 +50,9 @@ public partial class LevelManager : MonoBehaviour
     internal ZG.UI.Progressbar _expProgressbar;
 
     [SerializeField] 
+    internal GameObject[] _ranks;
+
+    [SerializeField] 
     internal Stage[] _stages;
 
     private int __count;
@@ -321,8 +324,12 @@ public partial class LevelManager : MonoBehaviour
             __coroutine = StartCoroutine(__Coroutine());
     }
 
-    private void __OnStageChanged(bool result)
+    private void __OnStageChanged(int rankFlag)
     {
+        int numRanks = _ranks == null ? 0 : _ranks.Length;
+        for (int i = 0; i < numRanks; ++i)
+            _ranks[i].SetActive((rankFlag & (1 << i)) != 0);
+        
         //__coroutine = null;
     }
     

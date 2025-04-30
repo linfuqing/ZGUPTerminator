@@ -645,7 +645,7 @@ public partial interface IUserData
         int exp,
         int expMax,
         string[] skills,
-        Action<bool> onComplete);
+        Action<int> onComplete);
     
     /// <summary>
     /// 收集关卡奖励

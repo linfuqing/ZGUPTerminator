@@ -391,7 +391,7 @@ public partial class UserDataMain
 
         return flag;
     }
-    
+
     private bool __ApplyStageRewards(
         string levelName, 
         int stage, 
