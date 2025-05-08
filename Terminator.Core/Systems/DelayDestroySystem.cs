@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using ZG;
 
 [BurstCompile]
 public partial struct DelayDestroySystem : ISystem

@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.Entities.Serialization;
-using Unity.Scenes;
 using UnityEngine;
+using ZG;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR

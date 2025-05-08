@@ -3,8 +3,8 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Physics;
 using Unity.Transforms;
+using ZG;
 
 public partial struct LocatorSystem : ISystem
 {

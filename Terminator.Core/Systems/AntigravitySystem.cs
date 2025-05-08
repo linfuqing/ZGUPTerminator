@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.CharacterController;
+using ZG;
 
 [BurstCompile, UpdateInGroup(typeof(KinematicCharacterPhysicsUpdateGroup), OrderFirst = true)]
 public partial struct AntigravitySystem : ISystem

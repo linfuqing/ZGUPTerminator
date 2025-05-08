@@ -221,7 +221,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         if(isDirty)
             flag &= ~Flag.CardsUnlockFirst;
 
-        if ((flag & Flag.TalentsUnlock) == 0 && PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3)
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
         {
             flag |= Flag.TalentsUnlock;
 

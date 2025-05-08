@@ -9,8 +9,9 @@ using Unity.Entities.Content;
 using Unity.Mathematics;
 using Unity.Scenes;
 using Unity.Transforms;
-using Random = Unity.Mathematics.Random;
 using UnityEngine;
+using ZG;
+using Random = Unity.Mathematics.Random;
 
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class LevelSystemManaged : SystemBase

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 [CreateAssetMenu(menuName = "Parameters", fileName = "Parameters")]
 public class Parameters : ScriptableObject, IMessage

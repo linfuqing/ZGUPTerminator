@@ -3,7 +3,7 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
-
+using ZG;
 
 [BurstCompile, UpdateAfter(typeof(TransformSystemGroup))]
 public partial struct AnimationCurveUpdateSystem : ISystem

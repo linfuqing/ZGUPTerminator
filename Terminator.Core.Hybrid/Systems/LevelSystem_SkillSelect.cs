@@ -5,9 +5,7 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Collections.NotBurstCompatible;
 using Unity.Entities;
-using Unity.Entities.Content;
-using Unity.Scenes;
-using UnityEngine;
+using ZG;
 
 public partial class LevelSystemManaged
 {

@@ -571,7 +571,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                     if (stageStyle.toggle != null)
                                     {
-                                        int stageIndex = i;
+                                        int stageIndex = i, stageListIndex = __stageStyles.Count;
                                         
                                         var onSelected = stageStyle.onSelected;
 
@@ -583,9 +583,12 @@ public sealed class LoginManager : MonoBehaviour
                                             
                                             if (x)
                                             {
-                                                if(onSelected != null)
-                                                    onSelected.Invoke();
-                                                
+                                                if (selectedStageIndex != stageListIndex)
+                                                {
+                                                    if (onSelected != null)
+                                                        onSelected.Invoke();
+                                                }
+
                                                 __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;
 

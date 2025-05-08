@@ -10,6 +10,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
+using ZG;
 using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
 
