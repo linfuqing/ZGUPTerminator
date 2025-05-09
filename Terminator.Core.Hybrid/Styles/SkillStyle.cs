@@ -41,7 +41,7 @@ public class SkillStyle : MonoBehaviour
         {
             foreach (var parentOverride in parentOverrides)
             {
-                if (((int)parentOverride.type & flag) != 0)
+                if ((int)parentOverride.type == flag)
                     return parentOverride.transform;
             }
         }
