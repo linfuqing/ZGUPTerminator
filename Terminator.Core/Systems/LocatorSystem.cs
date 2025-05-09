@@ -54,6 +54,8 @@ public partial struct LocatorSystem : ISystem
             {
                 LocatorVelocity velocity;
 
+                velocity.up = action.up;
+
                 int numAreaIndices = action.areaIndices.Length;
                 if (numAreaIndices > 0)
                 {
@@ -239,10 +241,18 @@ public partial struct LocatorSystem : ISystem
             var localTransform = localTransforms[index];
             float3 distance = velocity.value * (float)(nextTime - time.value);
 
-            //var matrix = math.float3x3(math.mul(localTransform.ToMatrix(), math.inverse(localToWorlds[index].Value)));
-            //distance = math.mul(matrix, distance);
+            if (LocatorDirection.DontCare != velocity.direction)
+            {
+                float3 up = velocity.up,
+                    forward = LocatorDirection.Backward == velocity.direction ? -distance : distance;
+                if (math.lengthsq(up) > math.FLT_MIN_NORMAL)
+                    forward -= math.project(forward, up);
+                else
+                    up = math.up();
 
-            localTransform.Rotation = quaternion.LookRotationSafe(velocity.direction == LocatorDirection.Backward ? -distance : distance, math.up());
+                localTransform.Rotation = quaternion.LookRotationSafe(forward, up);
+            }
+
             localTransform.Position += distance;
             localTransforms[index] = localTransform;
             

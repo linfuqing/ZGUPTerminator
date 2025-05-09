@@ -470,7 +470,8 @@ public struct LevelStageOption
                 }
                 break;
             case Type.PlayerArea:
-                ZG.Mathematics.Math.InterlockedAdd(ref playerPosition, areas[value].GetPosition(ref random));
+                playerPosition = areas[value].GetPosition(ref random);
+                //ZG.Mathematics.Math.InterlockedAdd(ref playerPosition, areas[value].GetPosition(ref random));
                 break;
             case Type.Millisecond:
                 //status.time += value * 1000.0f;

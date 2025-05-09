@@ -11,6 +11,8 @@ public class RewardStyle : MonoBehaviour
 
     public StringEvent onCount;
 
+    public GameObject[] ranks;
+
     private void OnDisable()
     {
         if(isDestroyOnDisable)

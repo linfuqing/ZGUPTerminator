@@ -11,6 +11,8 @@ public class RewardManager : MonoBehaviour
         public string name;
 
         public Sprite sprite;
+
+        public int rank;
     }
 
     [Serializable]
@@ -111,6 +113,7 @@ public class RewardManager : MonoBehaviour
                 
                 ref var reward = ref _rewards[rewardIndex];
 
+                int numRanks;
                 foreach (var style in pool.styles)
                 {
                     rewardStyle = Instantiate(style.value, style.value.transform.parent);
@@ -118,6 +121,10 @@ public class RewardManager : MonoBehaviour
                     rewardStyle.onSprite?.Invoke(reward.sprite);
                     rewardStyle.onTitle?.Invoke(reward.name);
                     rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
+
+                    numRanks = rewardStyle.ranks == null ? 0 : rewardStyle.ranks.Length;
+                    for(int i = 0; i < numRanks; ++i)
+                        rewardStyle.ranks[i].SetActive(i == reward.rank);
 
                     rewardStyle.gameObject.SetActive(true);
 

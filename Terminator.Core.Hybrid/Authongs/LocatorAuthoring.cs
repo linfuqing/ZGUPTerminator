@@ -27,6 +27,9 @@ public class LocatorAuthoring : MonoBehaviour
         public float time;
         [Tooltip("开始时间")]
         public float startTime;
+        
+        [Tooltip("填写后可决定位移时候的上方向")]
+        public float3 up;
 
         public LocatorDirection direction;
     }
@@ -75,6 +78,8 @@ public class LocatorAuthoring : MonoBehaviour
                         if(destination.startTime < 0.0f)
                             Debug.LogError($"The error startTime of action {source.name}!");
                     }
+                    
+                    destination.up = source.up;
 
                     numAreaNames = source.areaNames == null ? 0 : source.areaNames.Length;
 

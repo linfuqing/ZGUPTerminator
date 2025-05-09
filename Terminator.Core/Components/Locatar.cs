@@ -7,7 +7,8 @@ using UnityEngine;
 public enum LocatorDirection
 {
     Forward, 
-    Backward
+    Backward, 
+    DontCare
 }
 
 public struct LocatorDefinition
@@ -26,6 +27,8 @@ public struct LocatorDefinition
         public float time;
         
         public float startTime;
+
+        public float3 up;
         
         public BlobArray<int> areaIndices;
     }
@@ -56,6 +59,8 @@ public struct LocatorVelocity : IComponentData, IEnableableComponent
     public double time;
     
     public float3 value;
+
+    public float3 up;
 }
 
 public struct LocatorTime : IComponentData, IEnableableComponent
