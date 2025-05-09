@@ -6,6 +6,7 @@ public class SkillStyle : MonoBehaviour
     public enum ParentType
     {
         Main, 
+        Extend, 
         Skill, 
         Weapon
     }
