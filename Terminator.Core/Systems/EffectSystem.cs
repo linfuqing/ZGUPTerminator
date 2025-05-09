@@ -950,7 +950,8 @@ public partial struct EffectSystem : ISystem
 
                     target.hp += targetHP.value;
 
-                    if (instance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
+                    if (targetHP.value >= instance.hpMax && 
+                        instance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
                     {
                         target.invincibleTime = instance.recoveryInvincibleTime;
                         result |= EnabledFlags.Invincible;

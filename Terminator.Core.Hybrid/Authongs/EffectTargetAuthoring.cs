@@ -13,15 +13,18 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [Serializable]
     public struct MessageData
     {
-        [Tooltip("根据伤害类型决定播放哪一个动画")]
-        public LayerMask layerMask;
-
         [Tooltip("填Play")]
         public string messageName;
         [Tooltip("受击Transition")]
         public Object messageValue;
         
         public GameObject receiverPrefab;
+        
+        [Tooltip("根据伤害类型决定播放哪一个动画")]
+        public LayerMask layerMask;
+
+        [Tooltip("做为死亡消息时等待时间")]
+        public float delayTime;
     }
 
     [Serializable]
@@ -84,7 +87,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                 ref var destination = ref messages.ElementAt(i);
 
                 destination.layerMask = (uint)source.layerMask.value;
-                destination.delayTime = 0.0f;
+                destination.delayTime = source.delayTime;
                 destination.messageName = source.messageName;
                 destination.messageValue = source.messageValue;
                 
