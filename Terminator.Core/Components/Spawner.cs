@@ -342,10 +342,10 @@ public struct SpawnerDefinition
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref Spawner data)
     {
-        int areaIndex = -1, attributeIndex = -1, numAreaIndices = data.areaIndices.Length, i;
+        int areaIndex = -1, attributeIndex = -1, numAreaIndices = data.areaIndices.Length, randomOffset = random.NextInt(0, numAreaIndices), i;
         for (i = 0; i < numAreaIndices; ++i)
         {
-            ref var temp = ref data.areaIndices[i];
+            ref var temp = ref data.areaIndices[(i + randomOffset) % numAreaIndices];
             if((layerMask & temp.layerMask) != temp.layerMask)
                 continue;
             
