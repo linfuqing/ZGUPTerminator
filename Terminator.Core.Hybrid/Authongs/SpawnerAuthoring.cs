@@ -651,7 +651,7 @@ public class SpawnerAuthoring : MonoBehaviour
                         ref var destinationLoaderIndex = ref loaderIndices[j];
                         destinationLoaderIndex.chance = sourcePrefab.chance;
 
-                        UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
+                        UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, source.name);
                         if (!prefabEntities.TryGetValue(sourcePrefab.gameObject, out destinationLoaderIndex.value))
                         {
                             destinationLoaderIndex.value = prefabLoaders.Length;
