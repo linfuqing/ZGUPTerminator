@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
-using UnityEngine;
+using System.Collections.Generic;
+using ZG;
 
 public struct UserStageReward
 {
@@ -302,6 +303,15 @@ public struct UserStage
         public float chance;
         
         public UserRewardData value;
+
+        public RewardPoolOption(string value)
+        {
+            var parameters = value.Split(':');
+            this.value.name = parameters[0];
+            this.value.type = (UserRewardType)int.Parse(parameters[1]);
+            this.value.count = 2 < parameters.Length ? int.Parse(parameters[2]) : 1;
+            chance = 3 < parameters.Length ? float.Parse(parameters[3]) : 1.0f;
+        }
     }
     
     [Serializable]
@@ -310,6 +320,28 @@ public struct UserStage
         public string name;
         
         public RewardPoolOption[] options;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 奖池名字
+        {
+            set => name = value;
+        }
+
+        [CSVField]
+        public string 奖池选项
+        {
+            set
+            {
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                options = new RewardPoolOption[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    options[i] = new RewardPoolOption(parameters[i]);
+            }
+        }
+#endif
     }
     
     public string name;
@@ -317,7 +349,7 @@ public struct UserStage
     public int energy;
     public UserRewardData[] rewards;
     public UserStageReward.Flag[] rewardFlags;
-    public RewardPool[] rewardPools;
+    //public RewardPool[] rewardPools;
 }
 
 public partial struct UserLevel
@@ -658,4 +690,47 @@ public partial interface IUserData
     IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete);
 
     IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete);
+}
+
+public partial class UserData
+{
+    public static readonly List<UserRewardData> Rewards = new List<UserRewardData>();
+
+    public static void ApplyReward(
+        string poolName, 
+        UserStage.RewardPool[] rewardPools)
+    {
+        bool isSelected;
+        float chance, total;
+        foreach (var rewardPool in rewardPools)
+        {
+            if (rewardPool.name == poolName)
+            {
+                isSelected = false;
+                chance = UnityEngine.Random.value;
+                total = 0.0f;
+                foreach (var option in rewardPool.options)
+                {
+                    total += option.chance;
+                    if (total > 1.0f)
+                    {
+                        total -= 1.0f;
+                        
+                        chance = UnityEngine.Random.value;
+
+                        isSelected = false;
+                    }
+                    
+                    if(isSelected || total < chance)
+                        continue;
+
+                    isSelected = true;
+
+                    Rewards.Add(option.value);
+                }
+                
+                break;
+            }
+        }
+    }
 }

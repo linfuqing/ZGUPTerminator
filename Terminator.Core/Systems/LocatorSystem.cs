@@ -25,9 +25,11 @@ public partial struct LocatorSystem : ISystem
         
         public NativeArray<LocatorVelocity> velocities;
 
+        public NativeArray<LocatorStatus> states;
+
         public NativeArray<LocatorTime> times;
         
-        public NativeArray<LocatorStatus> states;
+        public BufferAccessor<DelayTime> delayTimes;
 
         public BufferAccessor<MessageParameter> messageParameters;
 
@@ -39,6 +41,19 @@ public partial struct LocatorSystem : ISystem
         public bool Execute(int index)
         {
             var status = states[index];
+            if (math.max(status.time, velocities[index].time) > time)
+                return false;
+            
+            var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
+            if (DelayTime.IsDelay(ref delayTimes, time, out float delayTime))
+            {
+                status.time += delayTime;
+
+                states[index] = status;
+
+                return false;
+            }
+
             ref var definition = ref instances[index].definition.Value;
             int numActions = definition.actions.Length;
             if (numActions <= status.actionIndex)
@@ -46,22 +61,20 @@ public partial struct LocatorSystem : ISystem
             
             ref var action = ref definition.actions[status.actionIndex];
 
-            if (status.time > time)
-                return false;
-
             bool result = false;
             if (status.time > math.FLT_MIN_NORMAL)
             {
                 LocatorVelocity velocity;
 
                 velocity.up = action.up;
+                velocity.value = float3.zero;
 
+                float speed = speeds[index].value;
                 int numAreaIndices = action.areaIndices.Length;
                 if (numAreaIndices > 0)
                 {
                     int areaIndex = action.areaIndices[random.NextInt(numAreaIndices)];
                     ref var aabb = ref definition.areas[areaIndex].aabb;
-                    float speed = speeds[index].value;
                     float3 position = random.NextFloat3(aabb.Min, aabb.Max);
                     var localToWorld = localToWorlds[index];
                     velocity.value = position - localToWorld.Position;
@@ -85,37 +98,8 @@ public partial struct LocatorSystem : ISystem
                             velocity.value = float3.zero;
                     }
 
-                    velocity.messageIndex = action.messageIndex;
-                    if (velocity.messageIndex >= 0 && index < inputMessages.Length && 
-                        index < outputMessages.Length && 
-                        index < messageParameters.Length)
-                    {
-                        var inputMessages = this.inputMessages[index];
-                        if (inputMessages.Length > velocity.messageIndex)
-                        {
-                            var inputMessage = inputMessages[velocity.messageIndex];
-                            
-                            Message outputMessage;
-                            outputMessage.key = random.NextInt();
-                            outputMessage.name = inputMessage.name;
-                            outputMessage.value = inputMessage.value;
-                            outputMessages[index].Add(outputMessage);
-
-                            var messageParameters = this.messageParameters[index];
-                            MessageParameter messageParameter;
-                            messageParameter.messageKey = outputMessage.key;
-
-                            var axis = math.float2(velocity.value.x, velocity.value.z) / speed;
-                            messageParameter.value = math.asint(axis.x);
-                            messageParameter.id = 0;
-                            messageParameters.Add(messageParameter);
-                            
-                            messageParameter.value = math.asint(axis.y);
-                            messageParameter.id = 1;
-                            messageParameters.Add(messageParameter);
-                        }
-                    }
-
+                    velocity.actionIndex = status.actionIndex;//action.messageIndex;
+                    
                     LocatorTime time;
                     time.value = status.time;
                     times[index] = time;
@@ -137,6 +121,45 @@ public partial struct LocatorSystem : ISystem
 
                     result = true;
                 }
+                
+                int numMessageIndices = action.messageIndices.Length;
+                    if (numMessageIndices > 0 && 
+                        index < outputMessages.Length && 
+                        index < messageParameters.Length)
+                    {
+                        var messageParameters = this.messageParameters[index];
+                        var inputMessages = this.inputMessages[index];
+                        LocatorMessage inputMessage;
+                        Message outputMessage;
+                        MessageParameter messageParameter;
+                        int numInputMessages = inputMessages.Length, messageIndex;
+                        for (int i = 0; i < numMessageIndices; ++i)
+                        {
+                            messageIndex = action.messageIndices[i];
+                            if (messageIndex >= numInputMessages)
+                                continue;
+
+                            inputMessage = inputMessages[messageIndex];
+                            if ((LocatorMessageType.Start & inputMessage.type) != LocatorMessageType.Start)
+                                continue;
+
+                            outputMessage.key = random.NextInt();
+                            outputMessage.name = inputMessage.name;
+                            outputMessage.value = inputMessage.value;
+                            outputMessages[index].Add(outputMessage);
+
+                            messageParameter.messageKey = outputMessage.key;
+
+                            var axis = math.float2(velocity.value.x, velocity.value.z) / speed;
+                            messageParameter.value = math.asint(axis.x);
+                            messageParameter.id = 0;
+                            messageParameters.Add(messageParameter);
+
+                            messageParameter.value = math.asint(axis.y);
+                            messageParameter.id = 1;
+                            messageParameters.Add(messageParameter);
+                        }
+                    }
             }
             else
                 status.time = time + action.startTime;
@@ -169,6 +192,8 @@ public partial struct LocatorSystem : ISystem
         
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
 
+        public BufferTypeHandle<DelayTime> delayTimeType;
+
         public BufferTypeHandle<MessageParameter> messageParameterType;
 
         public BufferTypeHandle<Message> outputMessageType;
@@ -189,6 +214,7 @@ public partial struct LocatorSystem : ISystem
             locate.velocities = chunk.GetNativeArray(ref velocityType);
             locate.times = chunk.GetNativeArray(ref timeType);
             locate.states = chunk.GetNativeArray(ref statusType);
+            locate.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             locate.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             locate.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             locate.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
@@ -220,11 +246,16 @@ public partial struct LocatorSystem : ISystem
         //public NativeArray<LocalToWorld> localToWorlds;
 
         [ReadOnly]
+        public NativeArray<LocatorDefinitionData> instances;
+
+        [ReadOnly]
         public NativeArray<LocatorVelocity> velocities;
 
         public NativeArray<LocatorTime> times;
 
         public NativeArray<LocalTransform> localTransforms;
+
+        public BufferAccessor<DelayTime> delayTimes;
 
         public BufferAccessor<LocatorMessage> inputMessages;
         
@@ -234,10 +265,25 @@ public partial struct LocatorSystem : ISystem
 
         public bool Execute(int index)
         {
-            var velocity = velocities[index];
-            double nextTime = math.min(velocity.time, this.time);
-            
             var time = times[index];
+            if (time.value > this.time)
+                return true;
+            
+            var velocity = velocities[index];
+            var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
+            if (DelayTime.IsDelay(ref delayTimes, this.time, out float delayTime))
+            {
+                velocity.time += delayTime;
+                velocities[index] = velocity;
+                
+                time.value += delayTime;
+                times[index] = time;
+                
+                return true;
+            }
+
+            double nextTime = math.min(velocity.time, this.time);
+
             var localTransform = localTransforms[index];
             float3 distance = velocity.value * (float)(nextTime - time.value);
 
@@ -264,29 +310,39 @@ public partial struct LocatorSystem : ISystem
                 return true;
             }
 
-            if (velocity.messageIndex >= 0 && index < inputMessages.Length && 
+            ref var action = ref instances[index].definition.Value.actions[velocity.actionIndex];
+            int numMessageIndices = action.messageIndices.Length;
+            if (numMessageIndices > 0 && 
                 index < outputMessages.Length && 
                 index < messageParameters.Length)
             {
+                var messageParameters = this.messageParameters[index];
                 var inputMessages = this.inputMessages[index];
-                if (inputMessages.Length > velocity.messageIndex)
+                LocatorMessage inputMessage;
+                Message outputMessage;
+                MessageParameter messageParameter;
+                int numInputMessages = inputMessages.Length, messageIndex;
+                for (int i = 0; i < numMessageIndices; ++i)
                 {
-                    var inputMessage = inputMessages[velocity.messageIndex];
-                            
-                    Message outputMessage;
+                    messageIndex = action.messageIndices[i];
+                    if (messageIndex >= numInputMessages)
+                        continue;
+
+                    inputMessage = inputMessages[messageIndex];
+                    if ((LocatorMessageType.End & inputMessage.type) != LocatorMessageType.End)
+                        continue;
+
                     outputMessage.key = random.NextInt();
                     outputMessage.name = inputMessage.name;
                     outputMessage.value = inputMessage.value;
                     outputMessages[index].Add(outputMessage);
 
-                    var messageParameters = this.messageParameters[index];
-                    MessageParameter messageParameter;
                     messageParameter.messageKey = outputMessage.key;
-                    
+
                     messageParameter.value = 0;
                     messageParameter.id = 0;
                     messageParameters.Add(messageParameter);
-                            
+
                     messageParameter.value = 0;
                     messageParameter.id = 1;
                     messageParameters.Add(messageParameter);
@@ -305,6 +361,9 @@ public partial struct LocatorSystem : ISystem
         //[ReadOnly]
         //public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
+        [ReadOnly]
+        public ComponentTypeHandle<LocatorDefinitionData> instanceType;
+
         public ComponentTypeHandle<LocatorVelocity> velocityType;
 
         public ComponentTypeHandle<LocatorTime> timeType;
@@ -312,6 +371,8 @@ public partial struct LocatorSystem : ISystem
         public ComponentTypeHandle<LocalTransform> localTransformType;
 
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
+
+        public BufferTypeHandle<DelayTime> delayTimeType;
 
         public BufferTypeHandle<MessageParameter> messageParameterType;
 
@@ -328,9 +389,11 @@ public partial struct LocatorSystem : ISystem
             update.time = time;
             update.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             //update.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
+            update.instances = chunk.GetNativeArray(ref instanceType);
             update.velocities = chunk.GetNativeArray(ref velocityType);
             update.times = chunk.GetNativeArray(ref timeType);
             update.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            update.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             update.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             update.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             update.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
@@ -369,6 +432,8 @@ public partial struct LocatorSystem : ISystem
 
     private ComponentTypeHandle<LookAtTarget> __lookAtTargetType;
 
+    private BufferTypeHandle<DelayTime> __delayTimeType;
+
     private BufferTypeHandle<MessageParameter> __messageParameterType;
 
     private BufferTypeHandle<Message> __outputMessageType;
@@ -390,6 +455,7 @@ public partial struct LocatorSystem : ISystem
         __timeType = state.GetComponentTypeHandle<LocatorTime>();
         __statusType = state.GetComponentTypeHandle<LocatorStatus>();
         __lookAtTargetType = state.GetComponentTypeHandle<LookAtTarget>();
+        __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __inputMessageType = state.GetBufferTypeHandle<LocatorMessage>(true);
@@ -403,7 +469,7 @@ public partial struct LocatorSystem : ISystem
         
         using (var builder = new EntityQueryBuilder(Allocator.Persistent))
             __groupToUpdate = builder
-                    .WithAll<LocalToWorld, LocatorVelocity>()
+                    .WithAll<LocalToWorld, LocatorDefinitionData, LocatorVelocity>()
                     .WithAllRW<LocalTransform, LocatorTime>()
                     .Build(ref state);
     }
@@ -418,6 +484,7 @@ public partial struct LocatorSystem : ISystem
         __timeType.Update(ref state);
         __statusType.Update(ref state);
         __lookAtTargetType.Update(ref state);
+        __delayTimeType.Update(ref state);
         __messageParameterType.Update(ref state);
         __outputMessageType.Update(ref state);
         __inputMessageType.Update(ref state);
@@ -433,6 +500,7 @@ public partial struct LocatorSystem : ISystem
         locate.timeType = __timeType;
         locate.statusType = __statusType;
         locate.lookAtTargetType = __lookAtTargetType;
+        locate.delayTimeType = __delayTimeType;
         locate.messageParameterType = __messageParameterType;
         locate.outputMessageType = __outputMessageType;
         locate.inputMessageType = __inputMessageType;
@@ -443,10 +511,12 @@ public partial struct LocatorSystem : ISystem
         UpdateEx update;
         update.time = time;
         //update.localToWorldType = __localToWorldType;
+        update.instanceType = __instanceType;
         update.velocityType = __velocityType;
         update.timeType = __timeType;
         update.localTransformType = __localTransformType;
         update.lookAtTargetType = __lookAtTargetType;
+        update.delayTimeType = __delayTimeType;
         update.messageParameterType = __messageParameterType;
         update.outputMessageType = __outputMessageType;
         update.inputMessageType = __inputMessageType;

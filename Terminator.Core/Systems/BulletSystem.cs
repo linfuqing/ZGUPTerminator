@@ -180,6 +180,8 @@ public partial struct BulletSystem : ISystem
 
         public BufferAccessor<Message> outputMessages;
 
+        public BufferAccessor<DelayTime> delayTimes;
+
         public BufferAccessor<BulletStatus> states;
 
         public BufferAccessor<BulletTargetStatus> targetStates;
@@ -218,7 +220,18 @@ public partial struct BulletSystem : ISystem
                         location = BulletLocation.Air;
                 }
             }
+
+            bool isFire = this.isFire;
             
+            var instances = this.instances[index];
+            var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
+            if (DelayTime.IsDelay(ref delayTimes, time, out _))
+            {
+                instances.Clear();
+                
+                isFire = false;
+            }
+
             int layerMask = isFire ? (EffectDamageParent.TryGetComponent(
                 entity,
                 effectDamageParents,
@@ -236,7 +249,6 @@ public partial struct BulletSystem : ISystem
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var targetStates = this.targetStates[index];
             var states = this.states[index];
-            var instances = this.instances[index];
             var version = versions[index];
             definition.Update(
                 location, 
@@ -359,6 +371,8 @@ public partial struct BulletSystem : ISystem
 
         public BufferTypeHandle<Message> outputMessageType;
 
+        public BufferTypeHandle<DelayTime> delayTimeType;
+
         public BufferTypeHandle<BulletStatus> statusType;
 
         public BufferTypeHandle<BulletTargetStatus> targetStatusType;
@@ -397,6 +411,7 @@ public partial struct BulletSystem : ISystem
             collect.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
+            collect.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.targetStates = chunk.GetBufferAccessor(ref targetStatusType);
             collect.instances = chunk.GetBufferAccessor(ref instanceType);
@@ -451,6 +466,8 @@ public partial struct BulletSystem : ISystem
 
     private BufferTypeHandle<Message> __outputMessageType;
 
+    private BufferTypeHandle<DelayTime> __delayTimeType;
+
     private ComponentTypeHandle<BulletVersion> __versionType;
 
     private EntityQuery __group;
@@ -480,6 +497,7 @@ public partial struct BulletSystem : ISystem
         __targetStatusType = state.GetBufferTypeHandle<BulletTargetStatus>();
         __inputMessageType = state.GetBufferTypeHandle<BulletMessage>(true);
         __outputMessageType = state.GetBufferTypeHandle<Message>();
+        __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __versionType = state.GetComponentTypeHandle<BulletVersion>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -530,6 +548,7 @@ public partial struct BulletSystem : ISystem
         __targetStatusType.Update(ref state);
         __inputMessageType.Update(ref state);
         __outputMessageType.Update(ref state);
+        __delayTimeType.Update(ref state);
         __versionType.Update(ref state);
         //__prefabLoader.Update(ref state);
 
@@ -557,6 +576,7 @@ public partial struct BulletSystem : ISystem
         collect.targetStatusType = __targetStatusType;
         collect.inputMessageType = __inputMessageType;
         collect.outputMessageType = __outputMessageType;
+        collect.delayTimeType = __delayTimeType;
         collect.versionType = __versionType;
         collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         collect.prefabLoader = __prefabLoader.AsParallelWriter();

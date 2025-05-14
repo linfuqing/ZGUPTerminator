@@ -1062,6 +1062,8 @@ public partial struct EffectSystem : ISystem
                     (targetHP.value != 0 && targetHP.layerMask != 0 ||
                      damage != 0 && damageLayerMask != 0))
                 {
+                    bool isSelected = false;
+                    float chance = random.NextFloat(), totalChance = 0.0f;
                     float3 position = localToWorlds[index].Position;
                     Entity messageReceiver;
                     MessageParameter messageParameter;
@@ -1074,6 +1076,24 @@ public partial struct EffectSystem : ISystem
                         if (targetMessage.layerMask == 0 ||
                             (targetMessage.layerMask & (targetHP.layerMask | damageLayerMask)) != 0)
                         {
+                            totalChance += targetMessage.chance;
+                            if (totalChance > 1.0f)
+                            {
+                                totalChance -= 1.0f;
+                                
+                                chance = random.NextFloat();
+
+                                isSelected = false;
+                            }
+                            
+                            if(isSelected)
+                                continue;
+
+                            if (totalChance > chance)
+                                isSelected = true;
+                            else
+                                continue;
+                            
                             if (targetMessage.delayTime > math.FLT_MIN_NORMAL)
                             {
                                 if(target.hp > 0)

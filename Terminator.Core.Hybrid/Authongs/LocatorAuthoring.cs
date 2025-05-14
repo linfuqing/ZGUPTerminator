@@ -8,6 +8,18 @@ using UnityEngine;
 public class LocatorAuthoring : MonoBehaviour
 {
     [System.Serializable]
+    internal struct MessageData
+    {
+        public string name;
+        
+        public LocatorMessageType type;
+        
+        public string messageName;
+        
+        public Object messageValue;
+    }
+
+    [System.Serializable]
     internal struct AreaData
     {
         public string name;
@@ -22,6 +34,9 @@ public class LocatorAuthoring : MonoBehaviour
 
         [Tooltip("对应区域名")]
         public string[] areaNames;
+
+        [Tooltip("消息")]
+        public string[] messageNames;
         
         [Tooltip("行动时间,该时间决定行走速度，不填则为原始速度")]
         public float time;
@@ -40,6 +55,26 @@ public class LocatorAuthoring : MonoBehaviour
         {
             Entity entity = GetEntity(TransformUsageFlags.Dynamic);
 
+            int numMessages = authoring._messages == null ? 0 : authoring._messages.Length;
+            if (numMessages > 0 || authoring._parameters != null)
+            {
+                var messages = AddBuffer<LocatorMessage>(entity);
+                
+                LocatorMessage message;
+                message.type = LocatorMessageType.Bold;
+                message.name = "SetAxis";
+                message.value = authoring._parameters;
+                messages.Add(message);
+
+                foreach (var messageTemp in authoring._messages)
+                {
+                    message.type = messageTemp.type;
+                    message.name = messageTemp.messageName;
+                    message.value = messageTemp.messageValue;
+                    messages.Add(message);
+                }
+            }
+            
             LocatorDefinitionData instance;
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
@@ -57,17 +92,19 @@ public class LocatorAuthoring : MonoBehaviour
                     destination.aabb.Extents = source.bounds.extents;
                 }
 
-                int j, k, numAreaNames, numActions = authoring._actions == null ? 0 : authoring._actions.Length;
-                BlobBuilderArray<int> areaIndices;
+                int j, k, numAreaNames, 
+                    numMessageNames, 
+                    messageOffset = authoring._parameters == null ? 0 : 1, 
+                    numActions = authoring._actions == null ? 0 : authoring._actions.Length;
+                BlobBuilderArray<int> areaIndices, messageIndices;
                 var actions = builder.Allocate(ref root.actions, numActions);
-                string areaName;
+                string areaName, messageName;
                 for (i = 0; i < numActions; ++i)
                 {
                     ref var source = ref authoring._actions[i];
                     ref var destination = ref actions[i];
-
+                    
                     destination.direction = source.direction;
-                    destination.messageIndex = authoring._parameters == null ? -1 : 0;
                     destination.time = source.time;
                     destination.startTime = source.startTime;
                     if (i > 0)
@@ -103,7 +140,29 @@ public class LocatorAuthoring : MonoBehaviour
                             Debug.LogError($"Area {areaName} of action {source.name} can not been found!");
                     }
 
-                    instance.definition = builder.CreateBlobAssetReference<LocatorDefinition>(Allocator.Persistent);
+                    numMessageNames = source.messageNames == null ? 0 : source.messageNames.Length;
+                    messageIndices = builder.Allocate(ref destination.messageIndices, numMessageNames + messageOffset);
+                    if (messageOffset > 0)
+                        messageIndices[0] = 0;
+                    
+                    for (j = 0; j < numMessageNames; ++j)
+                    {
+                        messageIndices[messageOffset + j] = -1;
+                        
+                        messageName = source.messageNames[j];
+                        for (k = 0; k < numMessageNames; ++k)
+                        {
+                            if (authoring._messages[k].name == messageName)
+                            {
+                                messageIndices[messageOffset + j] = k;
+                                
+                                break;
+                            }
+                        }
+                        
+                        if(messageIndices[messageOffset + j] == -1)
+                            Debug.LogError($"Message {messageName} of action {source.name} can not been found!");
+                    }
                 }
 
                 instance.definition = builder.CreateBlobAssetReference<LocatorDefinition>(Allocator.Persistent);
@@ -124,15 +183,6 @@ public class LocatorAuthoring : MonoBehaviour
             AddComponent<LocatorTime>(entity);
             
             AddComponent<LocatorStatus>(entity);
-
-            if (authoring._parameters != null)
-            {
-                LocatorMessage message;
-                message.name = "SetAxis";
-                message.value = authoring._parameters;
-
-                AddBuffer<LocatorMessage>(entity).Add(message);
-            }
         }
     }
 
@@ -144,6 +194,9 @@ public class LocatorAuthoring : MonoBehaviour
     
     [SerializeField]
     internal AreaData[] _areas;
+
+    [SerializeField] 
+    internal MessageData[] _messages;
     
     [SerializeField]
     internal ActionData[] _actions;

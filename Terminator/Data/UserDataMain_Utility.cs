@@ -500,11 +500,11 @@ public partial class UserDataMain
     }
 
     private void __ApplyRewards(
-        UserRewardData[] rewards, 
+        //UserRewardData[] rewards, 
         List<UserReward> outRewards)
     {
         UserReward outReward;
-        foreach (var reward in rewards)
+        foreach (var reward in UserData.Rewards)
         {
             outReward.id = __ApplyReward(reward);
             if(outReward.id == 0)
@@ -516,6 +516,15 @@ public partial class UserDataMain
             
             outRewards.Add(outReward);
         }
+        
+        UserData.Rewards.Clear();
+    }
+
+    private void __ApplyRewards(UserRewardData[] rewards, List<UserReward> outRewards)
+    {
+        UserData.Rewards.AddRange(rewards);
+
+        __ApplyRewards(outRewards);
     }
     
     private bool __TryGetStage(uint stageID, out int stage, out int levelIndex, out int rewardIndex)

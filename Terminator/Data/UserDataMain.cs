@@ -178,7 +178,7 @@ public sealed partial class UserDataMain : MonoBehaviour
                     userStage.rewardFlags = null;
                 }
 
-                userStage.rewardPools = stage.rewardPools;
+                //userStage.rewardPools = stage.rewardPools;
 
                 userLevel.stages[j] = userStage;
             }

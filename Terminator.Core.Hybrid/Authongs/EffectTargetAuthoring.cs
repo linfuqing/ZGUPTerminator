@@ -25,6 +25,9 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
         [Tooltip("做为死亡消息时等待时间")]
         public float delayTime;
+
+        [Tooltip("概率，0则为1")]
+        public float chance;
     }
 
     [Serializable]
@@ -87,6 +90,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                 ref var destination = ref messages.ElementAt(i);
 
                 destination.layerMask = (uint)source.layerMask.value;
+                destination.chance = source.chance > Mathf.Epsilon ? source.chance : 1.0f;
                 destination.delayTime = source.delayTime;
                 destination.messageName = source.messageName;
                 destination.messageValue = source.messageValue;
@@ -105,6 +109,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             {
                 EffectTargetMessage message;
                 message.layerMask = ~0u;
+                message.chance = 1.0f;
                 message.delayTime = 0.0f;
                 message.entityPrefabReference = default;
                 message.messageName = "UpdateAttribute";

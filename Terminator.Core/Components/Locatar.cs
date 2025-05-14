@@ -1,14 +1,23 @@
+using System;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Mathematics;
-using UnityEngine;
+using Object = UnityEngine.Object;
 
 public enum LocatorDirection
 {
     Forward, 
     Backward, 
     DontCare
+}
+
+[Flags]
+public enum LocatorMessageType
+{
+    Start = 0x01, 
+    End = 0x02, 
+    Bold = Start | End, 
 }
 
 public struct LocatorDefinition
@@ -22,8 +31,6 @@ public struct LocatorDefinition
     {
         public LocatorDirection direction;
         
-        public int messageIndex;
-
         public float time;
         
         public float startTime;
@@ -31,6 +38,7 @@ public struct LocatorDefinition
         public float3 up;
         
         public BlobArray<int> areaIndices;
+        public BlobArray<int> messageIndices;
     }
 
     public float cooldown;
@@ -54,7 +62,7 @@ public struct LocatorVelocity : IComponentData, IEnableableComponent
 {
     public LocatorDirection direction;
     
-    public int messageIndex;
+    public int actionIndex;
     
     public double time;
     
@@ -77,6 +85,8 @@ public struct LocatorStatus : IComponentData
 
 public struct LocatorMessage : IBufferElementData
 {
+    public LocatorMessageType type;
+    
     public FixedString128Bytes name;
 
     public UnityObjectRef<Object> value;

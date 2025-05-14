@@ -1945,8 +1945,6 @@ public partial class UserDataMain
         public UserRewardData[] directRewards;
         
         public StageReward[] indirectRewards;
-        
-        public UserStage.RewardPool[] rewardPools;
     }
 
     public IEnumerator QueryStage(
@@ -2158,22 +2156,22 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
+    [SerializeField]
+    internal UserStage.RewardPool[] _rewardPools;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_rewardPools", guidIndex = -1, nameIndex = 0)] 
+    internal string _rewardPoolsPath;
+#endif
+
     public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
-        var levelCache = UserData.levelCache;
-        if (levelCache == null)
-            yield break;
-
-        var temp = levelCache.Value;
-        var level = _levels[__ToIndex(temp.id)];
-
-        bool isSelected;
+        /*bool isSelected;
         float chance, total;
-        var stage = level.stages[Mathf.Min(temp.stage, level.stages.Length - 1)];
         var results = new List<UserRewardData>();
-        foreach (var rewardPool in stage.rewardPools)
+        foreach (var rewardPool in _rewardPools)
         {
             if (rewardPool.name == poolName)
             {
@@ -2202,17 +2200,15 @@ public partial class UserDataMain
                 
                 break;
             }
-        }
+        }*/
+        
+        UserData.ApplyReward(poolName, _rewardPools);
 
-        if (results.Count > 0)
-        {
-            var rewards = new List<UserReward>();
-            __ApplyRewards(results.ToArray(), rewards);
-
-            onComplete(rewards.ToArray());
-        }
-        else
-            onComplete(null);
+        var rewards = new List<UserReward>();
+        
+        __ApplyRewards(rewards);
+        
+        onComplete(rewards.Count > 0 ? rewards.ToArray() : null);
     }
 }
 
