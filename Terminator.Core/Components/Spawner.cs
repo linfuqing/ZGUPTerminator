@@ -310,9 +310,13 @@ public struct SpawnerDefinition
 
                     if(data.interval > math.FLT_MIN_NORMAL)
                         status.cooldown = time + data.interval;
-
+                    
                     result = true;
                 }
+                else if(data.interval > math.FLT_MIN_NORMAL)
+                    status.cooldown = time + data.interval;
+                else
+                    ++status.count;
             }
             else if ((data.times < 1 || status.times + 1 < data.times) && data.minCountToNextTime >= entityCount)
             {
