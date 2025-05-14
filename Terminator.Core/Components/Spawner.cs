@@ -288,11 +288,6 @@ public struct SpawnerDefinition
                 if (data.maxCount > 0 && instanceCount > data.maxCount)
                     break;
 
-                ++status.count;
-
-                if(data.interval > math.FLT_MIN_NORMAL)
-                    status.cooldown = time + data.interval;
-
                 if (__Apply(
                         layerMask,
                         currentTime, 
@@ -311,6 +306,11 @@ public struct SpawnerDefinition
                     
                     ++count.value;
                     
+                    ++status.count;
+
+                    if(data.interval > math.FLT_MIN_NORMAL)
+                        status.cooldown = time + data.interval;
+
                     result = true;
                 }
             }
