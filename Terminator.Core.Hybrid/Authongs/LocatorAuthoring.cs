@@ -154,7 +154,7 @@ public class LocatorAuthoring : MonoBehaviour
                         {
                             if (authoring._messages[k].name == messageName)
                             {
-                                messageIndices[messageOffset + j] = k;
+                                messageIndices[messageOffset + j] = k + messageOffset;
                                 
                                 break;
                             }
