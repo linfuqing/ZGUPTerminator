@@ -874,6 +874,8 @@ public partial struct EffectSystem : ISystem
 
     private struct Apply
     {
+        public bool isFallToDestroy;
+        
         public float deltaTime;
 
         public double time;
@@ -1159,7 +1161,7 @@ public partial struct EffectSystem : ISystem
                 }
 
                 targetHP.value = 0;
-                if (target.hp > 0)
+                if (target.hp > 0 && !isFallToDestroy)
                 {
                     if (delayTime > math.FLT_MIN_NORMAL)
                     {
@@ -1169,18 +1171,6 @@ public partial struct EffectSystem : ISystem
                 }
                 else
                 {
-                    if (index < targetLevels.Length && this.levelStatus.IsValid)
-                    {
-                        var targetLevel = targetLevels[index];
-
-                        ref var levelStatus = ref this.levelStatus.ValueRW;
-                        Interlocked.Add(ref levelStatus.value, targetLevel.value);
-                        Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                        Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
-
-                        Interlocked.Increment(ref levelStatus.count);
-                    }
-
                     if (index < characterBodies.Length)
                     {
                         if (deadTime > math.FLT_MIN_NORMAL)
@@ -1242,6 +1232,18 @@ public partial struct EffectSystem : ISystem
                             entityManager.DestroyEntity(int.MaxValue, entityArray[index]);
                         }
                     }
+                    
+                    if ((result & EnabledFlags.Drop) != EnabledFlags.Drop && index < targetLevels.Length && this.levelStatus.IsValid)
+                    {
+                        var targetLevel = targetLevels[index];
+
+                        ref var levelStatus = ref this.levelStatus.ValueRW;
+                        Interlocked.Add(ref levelStatus.value, targetLevel.value);
+                        Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
+                        Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+
+                        Interlocked.Increment(ref levelStatus.count);
+                    }
                 }
 
                 targetHPs[index] = targetHP;
@@ -1284,6 +1286,9 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
         [ReadOnly]
+        public ComponentTypeHandle<FallToDestroy> fallToDestroyType;
+
+        [ReadOnly]
         public ComponentTypeHandle<EffectTargetData> instanceType;
 
         [ReadOnly]
@@ -1320,6 +1325,7 @@ public partial struct EffectSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
+            apply.isFallToDestroy = chunk.Has(ref fallToDestroyType);
             apply.deltaTime = deltaTime;
             apply.time = time;
             apply.inverseCameraRotation = inverseCameraRotation;
@@ -1401,6 +1407,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
+    private ComponentTypeHandle<FallToDestroy> __fallToDestroyType;
+
     private ComponentTypeHandle<EffectDamageParent> __damageParentType;
 
     private ComponentTypeHandle<EffectDefinitionData> __instanceType;
@@ -1479,6 +1487,7 @@ public partial struct EffectSystem : ISystem
         __entityType = state.GetEntityTypeHandle();
         __childType = state.GetBufferTypeHandle<Child>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
+        __fallToDestroyType = state.GetComponentTypeHandle<FallToDestroy>(true);
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
         __instanceType = state.GetComponentTypeHandle<EffectDefinitionData>(true);
         __targetInstanceType = state.GetComponentTypeHandle<EffectTargetData>(true);
@@ -1644,6 +1653,7 @@ public partial struct EffectSystem : ISystem
         SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
+        __fallToDestroyType.Update(ref state);
         __childType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
         __targetInstanceType.Update(ref state);
@@ -1672,6 +1682,7 @@ public partial struct EffectSystem : ISystem
         apply.childType = __childType;
         apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
+        apply.fallToDestroyType = __fallToDestroyType;
         apply.instanceType = __targetInstanceType;
         apply.targetLevelType = __targetLevelType;
         apply.targetDamageScaleType = __targetDamageScaleType;
