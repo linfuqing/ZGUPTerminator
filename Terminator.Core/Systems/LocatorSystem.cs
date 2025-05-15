@@ -3,9 +3,11 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Physics;
 using Unity.Transforms;
 using ZG;
 
+[UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true)]
 public partial struct LocatorSystem : ISystem
 {
     private struct Locate
@@ -255,6 +257,11 @@ public partial struct LocatorSystem : ISystem
 
         public NativeArray<LocalTransform> localTransforms;
 
+        public NativeArray<PhysicsVelocity> physicsVelocities;
+
+        public NativeArray<ThirdPersonCharacterControl> characterControls;
+        public NativeArray<ThirdPersonCharacterLookAt> characterLookAts;
+        
         public BufferAccessor<DelayTime> delayTimes;
 
         public BufferAccessor<LocatorMessage> inputMessages;
@@ -279,29 +286,94 @@ public partial struct LocatorSystem : ISystem
                 time.value += delayTime;
                 times[index] = time;
                 
+                __ClearVelocity(index);
+
                 return true;
             }
-
+            
             double nextTime = math.min(velocity.time, this.time);
 
-            var localTransform = localTransforms[index];
-            float3 distance = velocity.value * (float)(nextTime - time.value);
-
+            quaternion rotation = default;
             if (LocatorDirection.DontCare != velocity.direction)
             {
                 float3 up = velocity.up,
-                    forward = LocatorDirection.Backward == velocity.direction ? -distance : distance;
+                    forward = LocatorDirection.Backward == velocity.direction ? -velocity.value : velocity.value;
                 if (math.lengthsq(up) > math.FLT_MIN_NORMAL)
                     forward -= math.project(forward, up);
                 else
                     up = math.up();
 
-                localTransform.Rotation = quaternion.LookRotationSafe(forward, up);
+                rotation = quaternion.LookRotationSafe(forward, up);
+            }
+            
+            if (index < characterControls.Length)
+            {
+                var characterControl = characterControls[index];
+
+                characterControl.MoveVector = velocity.value;
+
+                characterControls[index] = characterControl;
+
+                if (!rotation.Equals(default))
+                {
+                    if (index < characterLookAts.Length)
+                    {
+                        ThirdPersonCharacterLookAt lookAt;
+                        lookAt.direction = rotation;
+                        characterLookAts[index] = lookAt;
+                    }
+                    else
+                    {
+                        var localTransform = localTransforms[index];
+                        localTransform.Rotation = rotation;
+                        localTransforms[index] = localTransform;
+                    }
+                }
+            }
+            else
+            {
+                bool isTransform;
+                LocalTransform localTransform;
+                if (rotation.Equals(default))
+                {
+                    isTransform = true;
+
+                    localTransform = localTransforms[index];
+                    localTransform.Rotation = rotation;
+                }
+                else
+                {
+                    isTransform = false;
+                    
+                    localTransform = default;
+                }
+
+                if (index < physicsVelocities.Length)
+                {
+                    PhysicsVelocity physicsVelocity;
+                    physicsVelocity.Angular = float3.zero;
+                    physicsVelocity.Linear = velocity.value;
+                    
+                    physicsVelocities[index] = physicsVelocity;
+                }
+                else
+                {
+                    if (!isTransform)
+                    {
+                        isTransform = true;
+                        
+                        localTransform = localTransforms[index];
+                    }
+                    
+                    float3 distance = velocity.value * (float)(nextTime - time.value);
+
+                    localTransform.Position += distance;
+                }
+                
+                if(isTransform)
+                    localTransforms[index] = localTransform;
             }
 
-            localTransform.Position += distance;
-            localTransforms[index] = localTransform;
-            
             if (nextTime < velocity.time)
             {
                 time.value = nextTime;
@@ -349,7 +421,26 @@ public partial struct LocatorSystem : ISystem
                 }
             }
 
+            __ClearVelocity(index);
+
             return false;
+        }
+
+        private void __ClearVelocity(int index)
+        {
+            if (index < characterControls.Length)
+            {
+                var characterControl = characterControls[index];
+
+                characterControl.MoveVector = float3.zero;
+
+                characterControls[index] = characterControl;
+
+                if (index < characterLookAts.Length)
+                    characterLookAts[index] = default;
+            }
+            else if(index < physicsVelocities.Length)
+                physicsVelocities[index] = default;
         }
     }
 
@@ -369,6 +460,11 @@ public partial struct LocatorSystem : ISystem
         public ComponentTypeHandle<LocatorTime> timeType;
 
         public ComponentTypeHandle<LocalTransform> localTransformType;
+
+        public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
+
+        public ComponentTypeHandle<ThirdPersonCharacterControl> characterControlType;
+        public ComponentTypeHandle<ThirdPersonCharacterLookAt> characterLookAtType;
 
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
 
@@ -393,6 +489,9 @@ public partial struct LocatorSystem : ISystem
             update.velocities = chunk.GetNativeArray(ref velocityType);
             update.times = chunk.GetNativeArray(ref timeType);
             update.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            update.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
+            update.characterControls = chunk.GetNativeArray(ref characterControlType);
+            update.characterLookAts = chunk.GetNativeArray(ref characterLookAtType);
             update.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             update.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             update.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
@@ -415,10 +514,14 @@ public partial struct LocatorSystem : ISystem
         }
     }
     
-    
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
+
+    private ComponentTypeHandle<PhysicsVelocity> __physicsVelocityType;
+
+    private ComponentTypeHandle<ThirdPersonCharacterControl> __characterControlType;
+    private ComponentTypeHandle<ThirdPersonCharacterLookAt> __characterLookAtType;
 
     private ComponentTypeHandle<LocatorDefinitionData> __instanceType;
 
@@ -449,6 +552,9 @@ public partial struct LocatorSystem : ISystem
     {
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
+        __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
+        __characterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
+        __characterLookAtType = state.GetComponentTypeHandle<ThirdPersonCharacterLookAt>();
         __instanceType = state.GetComponentTypeHandle<LocatorDefinitionData>(true);
         __speedType = state.GetComponentTypeHandle<LocatorSpeed>(true);
         __velocityType = state.GetComponentTypeHandle<LocatorVelocity>();
@@ -507,6 +613,9 @@ public partial struct LocatorSystem : ISystem
         var jobHandle = locate.ScheduleParallelByRef(__groupToLocate, state.Dependency);
 
         __localTransformType.Update(ref state);
+        __physicsVelocityType.Update(ref state);
+        __characterControlType.Update(ref state);
+        __characterLookAtType.Update(ref state);
         
         UpdateEx update;
         update.time = time;
@@ -515,6 +624,9 @@ public partial struct LocatorSystem : ISystem
         update.velocityType = __velocityType;
         update.timeType = __timeType;
         update.localTransformType = __localTransformType;
+        update.physicsVelocityType = __physicsVelocityType;
+        update.characterControlType = __characterControlType;
+        update.characterLookAtType = __characterLookAtType;
         update.lookAtTargetType = __lookAtTargetType;
         update.delayTimeType = __delayTimeType;
         update.messageParameterType = __messageParameterType;
