@@ -314,7 +314,7 @@ public partial struct LocatorSystem : ISystem
 
                 characterControls[index] = characterControl;
 
-                if (!rotation.Equals(default))
+                if (LocatorDirection.DontCare != velocity.direction)
                 {
                     if (index < characterLookAts.Length)
                     {
@@ -334,18 +334,18 @@ public partial struct LocatorSystem : ISystem
             {
                 bool isTransform;
                 LocalTransform localTransform;
-                if (rotation.Equals(default))
+                if (LocatorDirection.DontCare == velocity.direction)
+                {
+                    isTransform = false;
+                    
+                    localTransform = default;
+                }
+                else
                 {
                     isTransform = true;
 
                     localTransform = localTransforms[index];
                     localTransform.Rotation = rotation;
-                }
-                else
-                {
-                    isTransform = false;
-                    
-                    localTransform = default;
                 }
 
                 if (index < physicsVelocities.Length)
