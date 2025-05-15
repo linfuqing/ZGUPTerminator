@@ -3,6 +3,8 @@ using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Mathematics;
 using UnityEngine;
+using ZG;
+using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 public class LocatorAuthoring : MonoBehaviour
@@ -44,9 +46,63 @@ public class LocatorAuthoring : MonoBehaviour
         public float startTime;
         
         [Tooltip("填写后可决定位移时候的上方向")]
-        public float3 up;
+        public Vector3 up;
 
         public LocatorDirection direction;
+
+        [CSVField]
+        public string 定位器行为名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public float 定位器行为时间
+        {
+            set => time = value;
+        }
+        
+        [CSVField]
+        public float 定位器行为开始时间
+        {
+            set => startTime = value;
+        }
+        
+        [CSVField]
+        public string 定位器行为上方向
+        {
+            set
+            {
+                if(string.IsNullOrEmpty(value))
+                    up = float3.zero;
+                else
+                {
+                    var parameters = value.Split('/');
+                    
+                    up.x = float.Parse(parameters[0]);
+                    up.y = float.Parse(parameters[1]);
+                    up.z = float.Parse(parameters[2]);
+                }
+            }
+        }
+        
+        [CSVField]
+        public int 定位器行为方向
+        {
+            set => direction = (LocatorDirection)value;
+        }
+        
+        [CSVField]
+        public string 定位器行为区域名
+        {
+            set => areaNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
+        }
+        
+        [CSVField]
+        public string 定位器行为消息名
+        {
+            set => messageNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
+        }
     }
 
     class Baker : Baker<LocatorAuthoring>
@@ -200,6 +256,9 @@ public class LocatorAuthoring : MonoBehaviour
     
     [SerializeField]
     internal ActionData[] _actions;
+
+    [SerializeField, CSV("_actions", guidIndex = -1, nameIndex = 0)] 
+    internal string _actionsPath;
 
     [SerializeField]
     internal Parameters _parameters;

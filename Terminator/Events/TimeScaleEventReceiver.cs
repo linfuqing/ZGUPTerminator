@@ -1,13 +1,12 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class TimeScaleEventReceiver : MonoBehaviour
 {
-    public static float minInterval = 10.0f;
-    private static double __previousTime;
+    //public static float minInterval = 10.0f;
+    //private static double __previousTime;
 
     [SerializeField] 
     internal UnityEvent _onInvoke;
@@ -23,11 +22,11 @@ public class TimeScaleEventReceiver : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void TimeScale()
     {
-        double time = Time.timeAsDouble;
+        /*double time = Time.timeAsDouble;
         if (__previousTime > 0.0f && __previousTime + minInterval > time)
             return;
         
-        __previousTime = time;
+        __previousTime = time;*/
         
         __timeScaleIndex = TimeScaleUtility.Add(_value);
 
