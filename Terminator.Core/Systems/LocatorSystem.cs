@@ -58,7 +58,7 @@ public partial struct LocatorSystem : ISystem
             var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
             if (DelayTime.IsDelay(ref delayTimes, time, out float delayTime))
             {
-                status.time += delayTime;
+                status.time = math.max(status.time, time) + delayTime;
 
                 states[index] = status;
 
@@ -297,7 +297,7 @@ public partial struct LocatorSystem : ISystem
             var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
             if (DelayTime.IsDelay(ref delayTimes, this.time, out float delayTime))
             {
-                velocity.time += delayTime;
+                velocity.time = math.max(velocity.time, this.time) + delayTime;
                 velocities[index] = velocity;
                 
                 time.value += delayTime;
