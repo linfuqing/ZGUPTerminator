@@ -1,3 +1,4 @@
+using System;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -6,10 +7,18 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
 using ZG;
+using Random = Unity.Mathematics.Random;
 
 [UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true)]
 public partial struct LocatorSystem : ISystem
 {
+    [Flags]
+    private enum EnableFlag
+    {
+        Move = 0x01, 
+        Message = 0x02
+    }
+    
     private struct Locate
     {
         public double time;
@@ -40,11 +49,11 @@ public partial struct LocatorSystem : ISystem
         [ReadOnly]
         public BufferAccessor<LocatorMessage> inputMessages;
 
-        public bool Execute(int index)
+        public EnableFlag Execute(int index)
         {
             var status = states[index];
             if (math.max(status.time, velocities[index].time) > time)
-                return false;
+                return 0;
             
             var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
             if (DelayTime.IsDelay(ref delayTimes, time, out float delayTime))
@@ -53,17 +62,17 @@ public partial struct LocatorSystem : ISystem
 
                 states[index] = status;
 
-                return false;
+                return 0;
             }
 
             ref var definition = ref instances[index].definition.Value;
             int numActions = definition.actions.Length;
             if (numActions <= status.actionIndex)
-                return false;
+                return 0;
             
             ref var action = ref definition.actions[status.actionIndex];
 
-            bool result = false;
+            EnableFlag result = 0;
             if (status.time > math.FLT_MIN_NORMAL)
             {
                 LocatorVelocity velocity;
@@ -121,7 +130,7 @@ public partial struct LocatorSystem : ISystem
 
                     status.time += definition.actions[status.actionIndex].startTime;
 
-                    result = true;
+                    result |= EnableFlag.Move;
                 }
                 
                 int numMessageIndices = action.messageIndices.Length;
@@ -160,6 +169,9 @@ public partial struct LocatorSystem : ISystem
                             messageParameter.value = math.asint(axis.y);
                             messageParameter.id = 1;
                             messageParameters.Add(messageParameter);
+                            
+                            
+                            result |= EnableFlag.Message;
                         }
                     }
             }
@@ -222,18 +234,21 @@ public partial struct LocatorSystem : ISystem
             locate.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
 
             bool hasLookAtTarget = chunk.Has(ref lookAtTargetType);
+            EnableFlag result;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
-                if (locate.Execute(i))
+                result = locate.Execute(i);
+                if ((result & EnableFlag.Move) == EnableFlag.Move)
                 {
                     chunk.SetComponentEnabled(ref velocityType, i, true);
                     
                     if(hasLookAtTarget)
                         chunk.SetComponentEnabled(ref lookAtTargetType, i, false);
-                    
-                    chunk.SetComponentEnabled(ref outputMessageType, i, true);
                 }
+                
+                if ((result & EnableFlag.Message) == EnableFlag.Message)
+                    chunk.SetComponentEnabled(ref outputMessageType, i, true);
             }
         }
     }
