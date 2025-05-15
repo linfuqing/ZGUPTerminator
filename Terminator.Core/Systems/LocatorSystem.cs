@@ -80,6 +80,10 @@ public partial struct LocatorSystem : ISystem
                 velocity.up = action.up;
                 velocity.value = float3.zero;
 
+                LocatorTime time;
+                time.value = status.time;
+                times[index] = time;
+
                 float speed = speeds[index].value;
                 int numAreaIndices = action.areaIndices.Length;
                 if (numAreaIndices > 0)
@@ -109,11 +113,7 @@ public partial struct LocatorSystem : ISystem
                             velocity.value = float3.zero;
                     }
 
-                    velocity.actionIndex = status.actionIndex;//action.messageIndex;
-                    
-                    LocatorTime time;
-                    time.value = status.time;
-                    times[index] = time;
+                    velocity.actionIndex = status.actionIndex; //action.messageIndex;
 
                     status.time += velocity.time;
 
@@ -121,18 +121,20 @@ public partial struct LocatorSystem : ISystem
                     velocity.direction = action.direction;
                     velocities[index] = velocity;
 
-                    if (++status.actionIndex == numActions)
-                    {
-                        status.actionIndex = 0;
-
-                        status.time += definition.cooldown;
-                    }
-
-                    status.time += definition.actions[status.actionIndex].startTime;
-
                     result |= EnableFlag.Move;
                 }
+                else
+                    status.time += action.time;
                 
+                if (++status.actionIndex == numActions)
+                {
+                    status.actionIndex = 0;
+
+                    status.time += definition.cooldown;
+                }
+
+                status.time += definition.actions[status.actionIndex].startTime;
+
                 int numMessageIndices = action.messageIndices.Length;
                     if (numMessageIndices > 0 && 
                         index < outputMessages.Length && 
