@@ -1,9 +1,7 @@
 using System.Threading;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.Entities.Serialization;
-using Unity.Transforms;
 using Object = UnityEngine.Object;
 
 public enum EffectAttributeID
@@ -282,6 +280,7 @@ public struct EffectTargetMessage : IBufferElementData
     public uint layerMask;
     public float chance;
     public float delayTime;
+    public float deadTime;
     public EntityPrefabReference entityPrefabReference;
     public FixedString128Bytes messageName;
     public UnityObjectRef<Object> messageValue;

@@ -23,9 +23,11 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         [Tooltip("根据伤害类型决定播放哪一个动画")]
         public LayerMask layerMask;
 
-        [Tooltip("做为死亡消息时等待时间")]
         public float delayTime;
 
+        [Tooltip("做为死亡消息时等待时间")] 
+        public float deadTime;
+        
         [Tooltip("概率，0则为1")]
         public float chance;
     }
@@ -82,16 +84,20 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             int numMessages = authoring._messages.Length;
             
             messages.Resize(numMessages, NativeArrayOptions.UninitializedMemory);
-            
+
+            float delayTime = 0.0f;
             var prefabLoaders = new Dictionary<GameObject, EntityPrefabReference>();
             for (int i = 0; i < numMessages; ++i)
             {
                 ref var source = ref authoring._messages[i];
                 ref var destination = ref messages.ElementAt(i);
+                
+                delayTime = Mathf.Max(delayTime, source.delayTime);
 
                 destination.layerMask = (uint)source.layerMask.value;
                 destination.chance = source.chance > Mathf.Epsilon ? source.chance : 1.0f;
                 destination.delayTime = source.delayTime;
+                destination.deadTime = source.deadTime;
                 destination.messageName = source.messageName;
                 destination.messageValue = source.messageValue;
                 
@@ -105,12 +111,16 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
                 }
             }
 
+            if (delayTime > 0.0f)
+                AddBuffer<DelayTime>(entity);
+
             if (authoring._attributeParameter != null)
             {
                 EffectTargetMessage message;
                 message.layerMask = ~0u;
                 message.chance = 1.0f;
                 message.delayTime = 0.0f;
+                message.deadTime = 0.0f;
                 message.entityPrefabReference = default;
                 message.messageName = "UpdateAttribute";
                 message.messageValue = authoring._attributeParameter;

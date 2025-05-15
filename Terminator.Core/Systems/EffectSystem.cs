@@ -876,6 +876,8 @@ public partial struct EffectSystem : ISystem
     {
         public float deltaTime;
 
+        public double time;
+
         public quaternion inverseCameraRotation;
 
         public Random random;
@@ -919,6 +921,8 @@ public partial struct EffectSystem : ISystem
         public NativeArray<EffectTarget> targets;
 
         public NativeArray<ThirdPersionCharacterGravityFactor> characterGravityFactors;
+
+        public BufferAccessor<DelayTime> delayTimes;
 
         public BufferAccessor<Message> messages;
 
@@ -1055,7 +1059,7 @@ public partial struct EffectSystem : ISystem
                     target.hp += -damage;
                 }
 
-                float delayTime = 0.0f;
+                float delayTime = 0.0f, deadTime = 0.0f;
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
@@ -1094,13 +1098,11 @@ public partial struct EffectSystem : ISystem
                             else
                                 continue;
                             
-                            if (targetMessage.delayTime > math.FLT_MIN_NORMAL)
-                            {
-                                if(target.hp > 0)
-                                    continue;
-                                
-                                delayTime = math.max(delayTime, targetMessage.delayTime);
-                            }
+                            if (targetMessage.deadTime > math.FLT_MIN_NORMAL && target.hp > 0)
+                                continue;
+
+                            deadTime = math.max(deadTime, targetMessage.deadTime);
+                            delayTime = math.max(delayTime, targetMessage.delayTime);
 
                             message.key = random.NextInt();
                             message.name = targetMessage.messageName;
@@ -1157,7 +1159,15 @@ public partial struct EffectSystem : ISystem
                 }
 
                 targetHP.value = 0;
-                if (target.hp <= 0)
+                if (target.hp > 0)
+                {
+                    if (delayTime > math.FLT_MIN_NORMAL)
+                    {
+                        var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
+                        DelayTime.Append(ref delayTimes, time, delayTime);
+                    }
+                }
+                else
                 {
                     if (index < targetLevels.Length && this.levelStatus.IsValid)
                     {
@@ -1173,12 +1183,12 @@ public partial struct EffectSystem : ISystem
 
                     if (index < characterBodies.Length)
                     {
-                        if (delayTime > math.FLT_MIN_NORMAL)
+                        if (deadTime > math.FLT_MIN_NORMAL)
                         {
                             result |= EnabledFlags.Die;
 
                             DelayDestroy delayDestroy;
-                            delayDestroy.time = delayTime;
+                            delayDestroy.time = deadTime;
                             entityManager.AddComponent(0, entityArray[index], delayDestroy);
                         }
                         else if (!characterBodies[index].IsGrounded)
@@ -1252,6 +1262,7 @@ public partial struct EffectSystem : ISystem
     {
         public uint frameCount;
         public float deltaTime;
+        public double time;
         
         public quaternion inverseCameraRotation;
         
@@ -1296,6 +1307,8 @@ public partial struct EffectSystem : ISystem
 
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
 
+        public BufferTypeHandle<DelayTime> delayTimeType;
+
         public BufferTypeHandle<Message> messageType;
 
         public BufferTypeHandle<MessageParameter> messageParameterType;
@@ -1308,6 +1321,7 @@ public partial struct EffectSystem : ISystem
         {
             Apply apply;
             apply.deltaTime = deltaTime;
+            apply.time = time;
             apply.inverseCameraRotation = inverseCameraRotation;
             apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
@@ -1325,6 +1339,7 @@ public partial struct EffectSystem : ISystem
             apply.targetDamages = chunk.GetNativeArray(ref targetDamageType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.characterGravityFactors = chunk.GetNativeArray(ref characterGravityFactorType);
+            apply.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             apply.messages = chunk.GetBufferAccessor(ref messageType);
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             apply.entityManager = entityManager;
@@ -1395,6 +1410,8 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<SimulationCollision> __simulationCollisionType;
 
     private BufferTypeHandle<SimulationEvent> __simulationEventType;
+
+    private BufferTypeHandle<DelayTime> __delayTimeType;
 
     private BufferTypeHandle<MessageParameter> __messageParameterType;
 
@@ -1467,6 +1484,7 @@ public partial struct EffectSystem : ISystem
         __targetInstanceType = state.GetComponentTypeHandle<EffectTargetData>(true);
         __simulationCollisionType = state.GetComponentTypeHandle<SimulationCollision>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
+        __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __inputMessageType = state.GetBufferTypeHandle<EffectMessage>(true);
@@ -1636,6 +1654,7 @@ public partial struct EffectSystem : ISystem
         __targetDamageScaleType.Update(ref state);
         __targetHPType.Update(ref state);
         __messageParameterType.Update(ref state);
+        __delayTimeType.Update(ref state);
 
         if (deltaTime > math.FLT_MIN_NORMAL)
             __time += deltaTime;
@@ -1646,6 +1665,7 @@ public partial struct EffectSystem : ISystem
 
         apply.frameCount = __frameCount;
         apply.deltaTime = (float)(__time / __frameCount);
+        apply.time = time;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
         apply.targetMessageType = __targetMessageType;
@@ -1662,6 +1682,7 @@ public partial struct EffectSystem : ISystem
         apply.targetType = __targetType;
         apply.characterBodyType = __characterBodyType;
         apply.characterGravityFactorType = __characterGravityFactorType;
+        apply.delayTimeType = __delayTimeType;
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;
         apply.entityManager = entityManager;
