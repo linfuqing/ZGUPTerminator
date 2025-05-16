@@ -6,18 +6,6 @@ using UnityEngine.Scripting;
 public class RewardManager : MonoBehaviour
 {
     [Serializable]
-    internal struct Reward
-    {
-        public string name;
-
-        public string title;
-
-        public Sprite sprite;
-
-        public int rank;
-    }
-
-    [Serializable]
     internal struct Style
     {
         public string name;
@@ -39,9 +27,6 @@ public class RewardManager : MonoBehaviour
         public List<RewardStyle> styles;
     }
     
-    [SerializeField]
-    internal Reward[] _rewards;
-
     [SerializeField] 
     internal RewardDatabase _database;
     
