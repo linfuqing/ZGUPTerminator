@@ -506,6 +506,7 @@ public sealed class LoginManager : MonoBehaviour
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
+                            HashSet<int> sceneIndices = null;
                             for (i = 0; i < numStages; ++i)
                             {
                                 var stage = selectedLevel.stages[i];
@@ -525,6 +526,11 @@ public sealed class LoginManager : MonoBehaviour
                                     continue;
 
                                 int sceneIndex = j;
+
+                                if (sceneIndices == null)
+                                    sceneIndices = new HashSet<int>();
+                                
+                                sceneIndices.Add(sceneIndex);
                                 
                                 var styleScene = style.scenes[sceneIndex];
 
@@ -630,6 +636,17 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
+                            for (i = 0; i < numScenes; ++i)
+                            {
+                                ref var styleScene = ref style.scenes[i];
+
+                                if (styleScene.toggle != null)
+                                {
+                                    styleScene.toggle.interactable = sceneIndices != null && sceneIndices.Contains(i);
+                                    styleScene.toggle.isOn = i == selectedSceneIndex;
+                                }
+                            }
+                            
                             if(__isSceneActiveFirst || 
                                __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
                                 style.scenes[selectedSceneIndex].onActive.Invoke();

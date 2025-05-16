@@ -15,6 +15,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 
         public UnityEvent onActive;
 
+        public Toggle toggle;
+
         public StageStyle stageStyle;
         
         public StageRewardStyle stageRewardStyle;
