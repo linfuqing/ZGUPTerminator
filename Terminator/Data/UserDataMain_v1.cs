@@ -2404,8 +2404,38 @@ public partial class UserData
         return UserDataMain.instance.CollectStageRewards(userID, onComplete);
     }
 
+    [SerializeField]
+    internal UserStage.RewardPool[] _rewardPools;
+
     public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.ApplyReward(userID, poolName, onComplete);
+        var main = UserDataMain.instance;
+        if (main == null)
+        {
+            yield return null;
+            
+            int startRewardIndex = Rewards.Count;
+            
+            ApplyReward(poolName, _rewardPools);
+
+            int numRewards = Rewards.Count;
+            UserRewardData source;
+            UserReward destination;
+            var rewards = new UserReward[numRewards];
+            for (int i = startRewardIndex; i < numRewards; ++i)
+            {
+                source = Rewards[i];
+
+                destination = rewards[i - startRewardIndex];
+                destination.name = source.name;
+                destination.id = 0;
+                destination.type = source.type;
+                destination.count = source.count;
+            }
+            
+            onComplete(rewards);
+        }
+        else
+            yield return main.ApplyReward(userID, poolName, onComplete);
     }
 }

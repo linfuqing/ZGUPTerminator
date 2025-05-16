@@ -109,7 +109,7 @@ public class RewardManager : MonoBehaviour
                     rewardStyle = Instantiate(style.value, style.value.transform.parent);
 
                     rewardStyle.onSprite?.Invoke(reward.sprite);
-                    rewardStyle.onTitle?.Invoke(reward.name);
+                    rewardStyle.onTitle?.Invoke(reward.title);
                     rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
 
                     numRanks = rewardStyle.ranks == null ? 0 : rewardStyle.ranks.Length;
