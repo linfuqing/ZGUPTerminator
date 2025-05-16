@@ -2410,7 +2410,7 @@ public partial class UserData
     public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
     {
         var main = UserDataMain.instance;
-        if (main == null)
+        if (null == (object)main)
         {
             yield return null;
             
