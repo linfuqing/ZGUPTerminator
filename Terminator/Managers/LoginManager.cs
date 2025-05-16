@@ -647,11 +647,21 @@ public sealed class LoginManager : MonoBehaviour
                                     onValueChanged = styleScene.toggle.onValueChanged;
                                     onValueChanged.RemoveAllListeners();
 
-                                    var stageIndices = level.scenes[i].stageIndices;
+                                    int sceneIndex = i;
                                     onValueChanged.AddListener(x =>
                                     {
-                                        foreach (var stageIndex in stageIndices)
-                                            __stageStyles[stageIndex + stageStyleStartIndex].gameObject.SetActive(x);
+                                        if (x)
+                                        {
+                                            if (__isSceneActiveFirst ||
+                                                __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
+                                                style.scenes[selectedSceneIndex].onActive.Invoke();
+                                            else
+                                            {
+                                                style.scenes[sceneIndex].onActiveFirst.Invoke();
+
+                                                __isSceneActiveFirst = true;
+                                            }
+                                        }
                                     });
                                     
                                     styleScene.toggle.isOn = i == selectedSceneIndex;
@@ -660,7 +670,7 @@ public sealed class LoginManager : MonoBehaviour
                                 }
                             }
                             
-                            if(__isSceneActiveFirst || 
+                            /*if(__isSceneActiveFirst || 
                                __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
                                 style.scenes[selectedSceneIndex].onActive.Invoke();
                             else
@@ -668,7 +678,7 @@ public sealed class LoginManager : MonoBehaviour
                                 style.scenes[selectedSceneIndex].onActiveFirst.Invoke();
 
                                 __isSceneActiveFirst = true;
-                            }
+                            }*/
 
                             __stageStyles[selectedStageIndex].toggle.isOn = true;
 
