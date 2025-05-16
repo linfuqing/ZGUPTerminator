@@ -528,11 +528,6 @@ public sealed class LoginManager : MonoBehaviour
 
                                 int sceneIndex = j;
 
-                                if (sceneIndices == null)
-                                    sceneIndices = new HashSet<int>();
-                                
-                                sceneIndices.Add(sceneIndex);
-                                
                                 var styleScene = style.scenes[sceneIndex];
 
                                 stageStyle = styleScene.stageStyle;
@@ -557,6 +552,11 @@ public sealed class LoginManager : MonoBehaviour
                                 }
                                 else
                                 {
+                                    if (sceneIndices == null)
+                                        sceneIndices = new HashSet<int>();
+                                
+                                    sceneIndices.Add(sceneIndex);
+
                                     isHot = false;
                                     numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
                                     numRewardFlags = stage.rewardFlags.Length;
