@@ -647,26 +647,34 @@ public sealed class LoginManager : MonoBehaviour
                                     onValueChanged = styleScene.toggle.onValueChanged;
                                     onValueChanged.RemoveAllListeners();
 
-                                    int sceneIndex = i;
+                                    int currentSceneIndex = i;
                                     onValueChanged.AddListener(x =>
                                     {
                                         if (x)
                                         {
                                             if (__isSceneActiveFirst ||
-                                                __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
-                                                style.scenes[sceneIndex].onActive.Invoke();
+                                                __GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
+                                                style.scenes[currentSceneIndex].onActive.Invoke();
                                             else
                                             {
-                                                style.scenes[sceneIndex].onActiveFirst.Invoke();
+                                                style.scenes[currentSceneIndex].onActiveFirst.Invoke();
 
                                                 __isSceneActiveFirst = true;
+                                            }
+
+                                            Toggle toggle;
+                                            foreach (var sceneIndex in sceneIndices)
+                                            {
+                                                toggle = style.scenes[sceneIndex].toggle;
+                                                if(toggle == null)
+                                                    continue;
+                                                
+                                                toggle.interactable = sceneIndex != currentSceneIndex;
                                             }
                                         }
                                     });
                                     
                                     styleScene.toggle.isOn = i == selectedSceneIndex;
-                                    
-                                    styleScene.toggle.interactable = sceneIndices != null && sceneIndices.Contains(i);
                                 }
                             }
                             
