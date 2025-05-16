@@ -87,7 +87,6 @@ public class GameLevelData : ILevelData
 
 public class GameMain : GameUser
 {
-    
     private class AssetIterator : IDisposable
     {
         private string __path;

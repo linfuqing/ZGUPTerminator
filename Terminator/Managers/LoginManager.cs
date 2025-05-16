@@ -548,7 +548,7 @@ public sealed class LoginManager : MonoBehaviour
                                         stageStyle.toggle.isOn = false;
                                     }
                                     
-                                    __CreateRewards(styleScene.stageRewardStyle, stage.rewards);
+                                    __CreateRewards(stageStyle.rewardStyle, stage.rewards);
                                 }
                                 else
                                 {

@@ -18,8 +18,6 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
         public Toggle toggle;
 
         public StageStyle stageStyle;
-        
-        public StageRewardStyle stageRewardStyle;
     }
     
     public StringEvent onEnergy;
