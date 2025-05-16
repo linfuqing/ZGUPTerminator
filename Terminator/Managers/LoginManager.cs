@@ -637,6 +637,7 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
+                            UnityAction<bool> handler;
                             Toggle.ToggleEvent onValueChanged;
                             for (i = 0; i < numScenes; ++i)
                             {
@@ -648,7 +649,7 @@ public sealed class LoginManager : MonoBehaviour
                                     onValueChanged.RemoveAllListeners();
 
                                     int currentSceneIndex = i;
-                                    onValueChanged.AddListener(x =>
+                                    handler = x =>
                                     {
                                         if (x)
                                         {
@@ -672,9 +673,17 @@ public sealed class LoginManager : MonoBehaviour
                                                 toggle.interactable = sceneIndex != currentSceneIndex;
                                             }
                                         }
-                                    });
+                                    };
                                     
-                                    styleScene.toggle.isOn = i == selectedSceneIndex;
+                                    onValueChanged.AddListener(handler);
+
+                                    if (i == selectedSceneIndex)
+                                    {
+                                        if (styleScene.toggle.isOn)
+                                            handler(true);
+                                        else
+                                            styleScene.toggle.isOn = true;
+                                    }
                                 }
                             }
                             

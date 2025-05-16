@@ -2431,6 +2431,8 @@ public partial class UserData
                 destination.id = 0;
                 destination.type = source.type;
                 destination.count = source.count;
+
+                rewards[i] = destination;
             }
             
             onComplete(rewards);
