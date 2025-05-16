@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Scripting;
+using UnityEngine.UI;
 using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
@@ -636,14 +637,26 @@ public sealed class LoginManager : MonoBehaviour
                                 __stageStyles.Add(stageStyle);
                             }
 
+                            Toggle.ToggleEvent onValueChanged;
                             for (i = 0; i < numScenes; ++i)
                             {
                                 ref var styleScene = ref style.scenes[i];
 
                                 if (styleScene.toggle != null)
                                 {
-                                    styleScene.toggle.interactable = sceneIndices != null && sceneIndices.Contains(i);
+                                    onValueChanged = styleScene.toggle.onValueChanged;
+                                    onValueChanged.RemoveAllListeners();
+
+                                    var stageIndices = level.scenes[i].stageIndices;
+                                    onValueChanged.AddListener(x =>
+                                    {
+                                        foreach (var stageIndex in stageIndices)
+                                            __stageStyles[stageIndex + stageStyleStartIndex].gameObject.SetActive(x);
+                                    });
+                                    
                                     styleScene.toggle.isOn = i == selectedSceneIndex;
+                                    
+                                    styleScene.toggle.interactable = sceneIndices != null && sceneIndices.Contains(i);
                                 }
                             }
                             

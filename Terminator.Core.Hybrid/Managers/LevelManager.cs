@@ -169,7 +169,7 @@ public partial class LevelManager : MonoBehaviour
         if (count != __count)
         {
             if (_onKillCount != null)
-                _onKillCount.Invoke(__count.ToString());
+                _onKillCount.Invoke(count.ToString());
 
             __count = count;
         }
@@ -177,7 +177,7 @@ public partial class LevelManager : MonoBehaviour
         if (gold != __gold)
         {
             if (_onGoldCount != null)
-                _onGoldCount.Invoke(__gold.ToString());
+                _onGoldCount.Invoke(gold.ToString());
             
             __gold = gold;
         }
