@@ -654,7 +654,7 @@ public sealed class LoginManager : MonoBehaviour
                                         {
                                             if (__isSceneActiveFirst ||
                                                 __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
-                                                style.scenes[selectedSceneIndex].onActive.Invoke();
+                                                style.scenes[sceneIndex].onActive.Invoke();
                                             else
                                             {
                                                 style.scenes[sceneIndex].onActiveFirst.Invoke();
