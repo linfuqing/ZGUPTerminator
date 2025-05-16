@@ -10,6 +10,8 @@ public class RewardManager : MonoBehaviour
     {
         public string name;
 
+        public string title;
+
         public Sprite sprite;
 
         public int rank;
@@ -39,6 +41,9 @@ public class RewardManager : MonoBehaviour
     
     [SerializeField]
     internal Reward[] _rewards;
+
+    [SerializeField] 
+    internal RewardDatabase _database;
     
     [SerializeField]
     internal Pool[] _pools;
@@ -82,9 +87,9 @@ public class RewardManager : MonoBehaviour
         {
             __rewardIndices = new Dictionary<string, int>();
 
-            int numRewards = _rewards.Length;
+            int numRewards = _database._rewards.Length;
             for(int i = 0; i < numRewards; ++i)
-                __rewardIndices[_rewards[i].name] = i;
+                __rewardIndices[_database._rewards[i].name] = i;
         }
 
         int rewardIndex;
@@ -111,7 +116,7 @@ public class RewardManager : MonoBehaviour
             {
                 instance.styles = null;
                 
-                ref var reward = ref _rewards[rewardIndex];
+                ref var reward = ref _database._rewards[rewardIndex];
 
                 int numRanks;
                 foreach (var style in pool.styles)
