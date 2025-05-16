@@ -552,6 +552,8 @@ public sealed class LoginManager : MonoBehaviour
 
                                         stageStyle.toggle.isOn = false;
                                     }
+                                    
+                                    __CreateRewards(styleScene.stageRewardStyle, stage.rewards);
                                 }
                                 else
                                 {
@@ -586,7 +588,7 @@ public sealed class LoginManager : MonoBehaviour
                                         stageStyle.toggle.interactable = true;
                                         stageStyle.toggle.onValueChanged.AddListener(x =>
                                         {
-                                            __DestroyRewards();
+                                            //__DestroyRewards();
                                             
                                             if (x)
                                             {
@@ -600,8 +602,6 @@ public sealed class LoginManager : MonoBehaviour
                                                 __selectedUserStageID = stage.id;
 
                                                 LevelShared.stage = stageIndex;
-
-                                                __CreateRewards(styleScene.stageRewardStyle, stage.rewards);
 
                                                 if (onStageChanged != null)
                                                 {
@@ -910,10 +910,14 @@ public sealed class LoginManager : MonoBehaviour
             if (__rewardStyles == null)
                 __rewardStyles = new List<StageRewardStyle>();
 
+            int rewardIndex;
             StageRewardStyle rewardStyle;
             foreach (var value in values)
             {
-                ref var reward = ref _rewards[__rewardIndices[value.name]];
+                if(!__rewardIndices.TryGetValue(value.name, out rewardIndex))
+                    continue;
+                
+                ref var reward = ref _rewards[rewardIndex];
                 rewardStyle = Instantiate(style, style.transform.parent);
 
                 if (rewardStyle.onSprite != null)
