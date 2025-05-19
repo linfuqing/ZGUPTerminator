@@ -2419,23 +2419,32 @@ public partial class UserData
             ApplyReward(poolName, _rewardPools);
 
             int numRewards = Rewards.Count;
-            UserRewardData source;
-            UserReward destination;
-            var rewards = new UserReward[numRewards];
-            for (int i = startRewardIndex; i < numRewards; ++i)
+
+            if (numRewards > startRewardIndex)
             {
-                source = Rewards[i];
+                int index;
+                UserRewardData source;
+                UserReward destination;
+                var rewards = new UserReward[numRewards - startRewardIndex];
+                for (int i = startRewardIndex; i < numRewards; ++i)
+                {
+                    source = Rewards[i];
 
-                destination = rewards[i - startRewardIndex];
-                destination.name = source.name;
-                destination.id = 0;
-                destination.type = source.type;
-                destination.count = source.count;
+                    index = i - startRewardIndex;
 
-                rewards[i] = destination;
+                    destination = rewards[index];
+                    destination.name = source.name;
+                    destination.id = 0;
+                    destination.type = source.type;
+                    destination.count = source.count;
+
+                    rewards[index] = destination;
+                }
+
+                onComplete(rewards);
             }
-            
-            onComplete(rewards);
+            else
+                onComplete(null);
         }
         else
             yield return main.ApplyReward(userID, poolName, onComplete);

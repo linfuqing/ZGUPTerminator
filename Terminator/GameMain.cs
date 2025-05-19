@@ -7,6 +7,50 @@ using Unity.Entities.Content;
 using UnityEngine;
 using ZG;
 
+public class GameRewardData : IRewardData
+{
+    private uint __userID;
+
+    public GameRewardData(uint userID)
+    {
+        __userID = userID;
+    }
+
+    public IEnumerator ApplyReward(
+        string poolName, 
+        Action<IRewardData.Rewards> onComplete)
+    {
+        return IUserData.instance.ApplyReward(
+            __userID,
+            poolName,
+            x =>
+            {
+                if (x.IsEmpty)
+                {
+                    onComplete(default);
+                        
+                    return;
+                }
+                    
+                IRewardData.Rewards result;
+                result.poolName = poolName;
+
+                int numValues = x.Length;
+                result.values = new IRewardData.Reward[numValues];
+                for (int i = 0; i < numValues; ++i)
+                {
+                    ref var source = ref x.Span[i];
+                    ref var destination = ref result.values[i];
+                        
+                    destination.name = source.name;
+                    destination.count = source.count;
+                }
+
+                onComplete(result);
+            });
+    }
+}
+
 public class GameSceneActivation : IEnumerator
 {
     public bool MoveNext()
@@ -286,7 +330,7 @@ public class GameMain : GameUser
 
                     if (!string.IsNullOrEmpty(folder) && folders.Add(folder))
                     {
-                        string path = Path.Combine(folder, folder);
+                        string path = Path.Combine(folder, folder).ToLower();
                         Debug.Log($"Asset manager load from {path}");
                         
                         assetManager.LoadFrom(path);
@@ -503,6 +547,7 @@ public class GameMain : GameUser
 
             yield return IUserData.instance.ApplyLevel(userID, 1, null);
 
+            IRewardData.instance = new GameRewardData(userID);
             //LevelPlayerShared.effectTargetRecovery = 1024.0f;
         }
 

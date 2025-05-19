@@ -88,49 +88,51 @@ public class RewardManager : MonoBehaviour
             if (__instances == null)
                 __instances = new Dictionary<int, Instance>();
 
-            if (__instances.TryGetValue(rewardIndex, out instance))
+            if (!__instances.TryGetValue(rewardIndex, out instance))
             {
+                instance.styles = null;
+
+                instance.count = 0;
+            }
+            
+            ref var reward = ref _database._rewards[rewardIndex];
+
+            int numRanks;
+            foreach (var style in pool.styles)
+            {
+                rewardStyle = Instantiate(style.value, style.value.transform.parent);
+
+                rewardStyle.onSprite?.Invoke(reward.sprite);
+                rewardStyle.onTitle?.Invoke(reward.title);
+                rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
+
+                numRanks = rewardStyle.ranks == null ? 0 : rewardStyle.ranks.Length;
+                for(int i = 0; i < numRanks; ++i)
+                    rewardStyle.ranks[i].SetActive(i == reward.rank);
+
+                rewardStyle.gameObject.SetActive(true);
+
+                if (rewardStyle.isDestroyOnDisable)
+                    continue;
+
+                if(instance.styles == null)
+                    instance.styles = new List<RewardStyle>();
+
+                instance.styles.Add(rewardStyle);
+            }
+            
+            instance.count += rewardValue.count;
+            
+            __instances[rewardIndex] = instance;
+            
+            /*{
                 instance.count += rewardValue.count;
 
                 foreach (var style in instance.styles)
                     style.onCount?.Invoke(instance.count.ToString());
                 
                 __instances[rewardIndex] = instance;
-            }
-            else
-            {
-                instance.styles = null;
-                
-                ref var reward = ref _database._rewards[rewardIndex];
-
-                int numRanks;
-                foreach (var style in pool.styles)
-                {
-                    rewardStyle = Instantiate(style.value, style.value.transform.parent);
-
-                    rewardStyle.onSprite?.Invoke(reward.sprite);
-                    rewardStyle.onTitle?.Invoke(reward.title);
-                    rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
-
-                    numRanks = rewardStyle.ranks == null ? 0 : rewardStyle.ranks.Length;
-                    for(int i = 0; i < numRanks; ++i)
-                        rewardStyle.ranks[i].SetActive(i == reward.rank);
-
-                    rewardStyle.gameObject.SetActive(true);
-
-                    if (rewardStyle.isDestroyOnDisable)
-                        continue;
-
-                    if(instance.styles == null)
-                        instance.styles = new List<RewardStyle>();
-
-                    instance.styles.Add(rewardStyle);
-                }
-                
-                instance.count = rewardValue.count;
-
-                __instances[rewardIndex] = instance;
-            }
+            }*/
         }
     }
 

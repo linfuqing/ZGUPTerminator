@@ -9,50 +9,6 @@ using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
 {
-    private class RewardData : IRewardData
-    {
-        private uint __userID;
-
-        public RewardData(uint userID)
-        {
-            __userID = userID;
-        }
-
-        public IEnumerator ApplyReward(
-            string poolName, 
-            Action<IRewardData.Rewards> onComplete)
-        {
-            return IUserData.instance.ApplyReward(
-                __userID,
-                poolName,
-                x =>
-                {
-                    if (x.IsEmpty)
-                    {
-                        onComplete(default);
-                        
-                        return;
-                    }
-                    
-                    IRewardData.Rewards result;
-                    result.poolName = poolName;
-
-                    int numValues = x.Length;
-                    result.values = new IRewardData.Reward[numValues];
-                    for (int i = 0; i < numValues; ++i)
-                    {
-                        ref var source = ref x.Span[i];
-                        ref var destination = ref result.values[i];
-                        
-                        destination.name = source.name;
-                        destination.count = source.count;
-                    }
-
-                    onComplete(result);
-                });
-        }
-    }
-
     public struct Stage
     {
         public string name;
@@ -868,7 +824,7 @@ public sealed class LoginManager : MonoBehaviour
         
         ILevelData.instance = new GameLevelData(userID);
 
-        IRewardData.instance = new RewardData(userID);
+        IRewardData.instance = new GameRewardData(userID);
     }
     
     private void __ApplyEnergy(User user, UserEnergy userEnergy)
