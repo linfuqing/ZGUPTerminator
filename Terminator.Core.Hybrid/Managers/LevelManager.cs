@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -75,7 +76,7 @@ public partial class LevelManager : MonoBehaviour
 
     private List<GameObject> __gameObjectsToDestroy;
 
-    private Dictionary<(int, int), string> __skillActiveNames;
+    private Dictionary<(int, int), FixedString128Bytes> __skillActiveNames;
     
     private HashSet<string> __skillSelectionGuideNames;
 
@@ -128,8 +129,12 @@ public partial class LevelManager : MonoBehaviour
             {
                 int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
                 var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
-                if(numSkillActiveNames > 0)
-                    __skillActiveNames.Values.CopyTo(skillActiveNames, 0);
+                if (numSkillActiveNames > 0)
+                {
+                    numSkillActiveNames = 0;
+                    foreach (var skillActiveName in __skillActiveNames.Values)
+                        skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
+                }
 
                 var levelData = ILevelData.instance;
                 if (levelData != null)

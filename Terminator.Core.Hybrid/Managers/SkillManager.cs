@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using ZG;
 
@@ -178,13 +179,18 @@ public class SkillManager : MonoBehaviour
     internal string _skillsPath;
     #endregion
 
-    private static Dictionary<string, SkillAsset> __assets = new Dictionary<string, SkillAsset>();
+    private static Dictionary<FixedString128Bytes, SkillAsset> __assets = new Dictionary<FixedString128Bytes, SkillAsset>();
 
     public static bool TryGetAsset(string name, out SkillAsset result)
     {
         return __assets.TryGetValue(name, out result);
     }
 
+    public static bool TryGetAsset(in FixedString128Bytes name, out SkillAsset result)
+    {
+        return __assets.TryGetValue(name, out result);
+    }
+    
     void OnEnable()
     {
         foreach (var skill in _skills)

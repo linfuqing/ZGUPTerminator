@@ -924,6 +924,8 @@ public partial struct EffectSystem : ISystem
 
         public NativeArray<ThirdPersionCharacterGravityFactor> characterGravityFactors;
 
+        public NativeArray<DelayDestroy> delayDestroys;
+
         public BufferAccessor<DelayTime> delayTimes;
 
         public BufferAccessor<Message> messages;
@@ -1179,7 +1181,10 @@ public partial struct EffectSystem : ISystem
 
                             DelayDestroy delayDestroy;
                             delayDestroy.time = deadTime;
-                            entityManager.AddComponent(0, entityArray[index], delayDestroy);
+                            if (index < delayDestroys.Length)
+                                delayDestroys[index] = delayDestroy;
+                            else
+                                entityManager.AddComponent(0, entityArray[index], delayDestroy);
                         }
                         else if (!characterBodies[index].IsGrounded)
                         {
@@ -1220,7 +1225,7 @@ public partial struct EffectSystem : ISystem
                                 messages.Add(message);
                             }
                         }
-                        else
+                        else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
                         {
                             if (index < children.Length)
                             {
@@ -1312,6 +1317,8 @@ public partial struct EffectSystem : ISystem
 
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
 
+        public ComponentTypeHandle<DelayDestroy> delayDestroyType;
+
         public BufferTypeHandle<DelayTime> delayTimeType;
 
         public BufferTypeHandle<Message> messageType;
@@ -1345,6 +1352,7 @@ public partial struct EffectSystem : ISystem
             apply.targetDamages = chunk.GetNativeArray(ref targetDamageType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.characterGravityFactors = chunk.GetNativeArray(ref characterGravityFactorType);
+            apply.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
             apply.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             apply.messages = chunk.GetBufferAccessor(ref messageType);
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
@@ -1414,6 +1422,8 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<EffectDefinitionData> __instanceType;
 
     private ComponentTypeHandle<EffectTargetData> __targetInstanceType;
+
+    private ComponentTypeHandle<DelayDestroy> __delayDestroyType;
 
     private ComponentTypeHandle<SimulationCollision> __simulationCollisionType;
 
@@ -1491,6 +1501,7 @@ public partial struct EffectSystem : ISystem
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
         __instanceType = state.GetComponentTypeHandle<EffectDefinitionData>(true);
         __targetInstanceType = state.GetComponentTypeHandle<EffectTargetData>(true);
+        __delayDestroyType = state.GetComponentTypeHandle<DelayDestroy>();
         __simulationCollisionType = state.GetComponentTypeHandle<SimulationCollision>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
@@ -1656,6 +1667,7 @@ public partial struct EffectSystem : ISystem
         __fallToDestroyType.Update(ref state);
         __childType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
+        __delayDestroyType.Update(ref state);
         __targetInstanceType.Update(ref state);
         __targetLevelType.Update(ref state);
         __targetInvulnerabilityType.Update(ref state);
@@ -1693,6 +1705,7 @@ public partial struct EffectSystem : ISystem
         apply.targetType = __targetType;
         apply.characterBodyType = __characterBodyType;
         apply.characterGravityFactorType = __characterGravityFactorType;
+        apply.delayDestroyType = __delayDestroyType;
         apply.delayTimeType = __delayTimeType;
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;

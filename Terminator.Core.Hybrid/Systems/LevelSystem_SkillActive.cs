@@ -212,7 +212,7 @@ public partial class LevelSystemManaged
             {
                 bool result = false, isCompleted = true;
                 int temp, level;
-                string skillName;
+                FixedString128Bytes skillName;
                 SkillAsset asset;
                 //LevelSkillDesc desc;
                 foreach (var key in keys)
@@ -225,7 +225,7 @@ public partial class LevelSystemManaged
                     if(level == -1)
                         continue;
 
-                    skillName = skillNames[key].ToString();
+                    skillName = skillNames[key];
                     if (!SkillManager.TryGetAsset(skillName, out asset))
                     {
                         isCompleted = false;

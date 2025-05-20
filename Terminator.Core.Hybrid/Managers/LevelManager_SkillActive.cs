@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using ZG;
@@ -161,7 +162,7 @@ public partial class LevelManager
         return __skillActives[index].Get(level);
     }
     
-    public void SetActiveSkill(int index, int level, string name, in SkillAsset? value)
+    public void SetActiveSkill(int index, int level, in FixedString128Bytes name, in SkillAsset? value)
     {
         if (value == null)
         {
@@ -178,7 +179,7 @@ public partial class LevelManager
         else
         {
             if (__skillActiveNames == null)
-                __skillActiveNames = new Dictionary<(int, int), string>();
+                __skillActiveNames = new Dictionary<(int, int), FixedString128Bytes>();
 
             __skillActiveNames[(index, level)] = name;
 
