@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Scripting;
 
 public class MessageEventReceiver : MonoBehaviour
 {
@@ -22,6 +23,7 @@ public class MessageEventReceiver : MonoBehaviour
 
     private Dictionary<string, int> __indices;
     
+    [Preserve]
     public void Call(MessageEvent messageEvent)
     {
         if (__indices == null)

@@ -65,7 +65,7 @@ public class AnimatedSkinController : MonoBehaviour
             if (__transitionIndex < 0 || __transitionIndex >= __transitions.Count)
                 return true;
             
-            Profiler.BeginSample(controller.name);
+            Profiler.BeginSample("Update");
             var transition = __transitions[__transitionIndex];
 
             bool result = false;

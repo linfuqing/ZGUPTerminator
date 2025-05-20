@@ -1173,34 +1173,31 @@ public partial struct EffectSystem : ISystem
                 }
                 else
                 {
-                    if (index < characterBodies.Length)
+                    if (deadTime > math.FLT_MIN_NORMAL)
                     {
-                        if (deadTime > math.FLT_MIN_NORMAL)
-                        {
-                            result |= EnabledFlags.Die;
+                        result |= EnabledFlags.Die;
 
-                            DelayDestroy delayDestroy;
-                            delayDestroy.time = deadTime;
-                            if (index < delayDestroys.Length)
-                                delayDestroys[index] = delayDestroy;
-                            else
-                                entityManager.AddComponent(0, entityArray[index], delayDestroy);
-                        }
-                        else if (!characterBodies[index].IsGrounded)
-                        {
-                            result |= EnabledFlags.Drop;
-
-                            if (index < characterGravityFactors.Length)
-                            {
-                                ThirdPersionCharacterGravityFactor characterGravityFactor;
-                                characterGravityFactor.value = 1.0f;
-                                characterGravityFactors[index] = characterGravityFactor;
-                            }
-
-                            entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
-                        }
+                        DelayDestroy delayDestroy;
+                        delayDestroy.time = deadTime;
+                        if (index < delayDestroys.Length)
+                            delayDestroys[index] = delayDestroy;
+                        else
+                            entityManager.AddComponent(0, entityArray[index], delayDestroy);
                     }
-                    
+                    else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
+                    {
+                        result |= EnabledFlags.Drop;
+
+                        if (index < characterGravityFactors.Length)
+                        {
+                            ThirdPersionCharacterGravityFactor characterGravityFactor;
+                            characterGravityFactor.value = 1.0f;
+                            characterGravityFactors[index] = characterGravityFactor;
+                        }
+
+                        entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
+                    }
+
                     if((result & EnabledFlags.Die) != EnabledFlags.Die)
                     {
                         result |= EnabledFlags.Die;
