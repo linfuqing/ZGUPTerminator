@@ -41,8 +41,6 @@ public sealed class LoginManager : MonoBehaviour
         public Sprite sprite;
     }
     
-    public const string NAME_SPACE_SCENE = "LoginManagerScene";
-
     public static event Action<Memory<UserRewardData>> onAwake;
     
     public static event Action<Stage> onStageChanged;
@@ -575,7 +573,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                     if (__isSceneActiveFirst || 
                                         (levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
-                                        __GetSceneTimes(level.scenes[sceneIndex].name) > 0)
+                                        GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
                                         if (__isSceneActiveFirst && (levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
                                         {
@@ -610,7 +608,7 @@ public sealed class LoginManager : MonoBehaviour
                                         if (x)
                                         {
                                             if (__isSceneActiveFirst ||
-                                                __GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
+                                                GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                                 style.scenes[currentSceneIndex].onActive.Invoke();
                                             else
                                             {
@@ -921,7 +919,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __LoadScene()
     {
-        PlayerPrefs.SetInt(__GetSceneNameSpace(__sceneName), __GetSceneTimes(__sceneName) + 1);
+        GameMain.IncrementSceneTimes(__sceneName);
         
         var assetManager = GameAssetManager.instance;
         if (assetManager == null)
@@ -934,16 +932,6 @@ public sealed class LoginManager : MonoBehaviour
         assetManager.LoadScene(__sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
     }
 
-    private int __GetSceneTimes(string sceneName)
-    {
-        return PlayerPrefs.GetInt(__GetSceneNameSpace(sceneName));
-    }
-
-    private string __GetSceneNameSpace(string sceneName)
-    {
-        return NAME_SPACE_SCENE + sceneName;
-    }
-    
     private IEnumerator __CollectAndQueryLevels()
     {
         var userData = IUserData.instance;

@@ -32,7 +32,7 @@ public class TimeScaleEventReceiver : MonoBehaviour
 
         StartCoroutine(__WaitToClearTimeScale(_time));
         
-        VibrateUtility.Apply(VibrationType.Nope);
+        //VibrateUtility.Apply(VibrationType.Nope);
     }
 
     private IEnumerator __WaitToClearTimeScale(float time)

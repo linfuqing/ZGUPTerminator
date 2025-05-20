@@ -1,5 +1,6 @@
 using Unity.Burst;
 using Unity.Entities;
+using Unity.Physics;
 
 public struct FixedFrame : IComponentData
 {
@@ -15,6 +16,11 @@ public partial struct FixedFrameSystem : ISystem
         state.EntityManager.CreateSingleton<FixedFrame>();
         
         state.RequireForUpdate<FixedFrame>();
+
+        var physicsStep = PhysicsStep.Default;
+        physicsStep.SolverIterationCount = 1;
+        physicsStep.SolverStabilizationHeuristicSettings = default;
+        state.EntityManager.CreateSingleton(physicsStep);
     }
 
     [BurstCompile]

@@ -7,6 +7,7 @@ using Unity.Collections.NotBurstCompatible;
 using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Mathematics;
+using Unity.Profiling;
 using Unity.Scenes;
 using Unity.Transforms;
 using UnityEngine;
@@ -128,7 +129,12 @@ public partial class LevelSystemManaged : SystemBase
         base.OnDestroy();
     }
 
-    private Unity.Profiling.ProfilerMarker __restart;
+    private static ProfilerMarker __restart = new ProfilerMarker("Restart");
+    private static ProfilerMarker __set = new ProfilerMarker("Set");
+    private static ProfilerMarker __updateStage = new ProfilerMarker("UpdateStage");
+    private static ProfilerMarker __skills = new ProfilerMarker("Skills");
+    private static ProfilerMarker __updateSkillActive = new ProfilerMarker("UpdateSkillActive");
+    private static ProfilerMarker __updateSkillSelection = new ProfilerMarker("UpdateSkillSelection");
 
     protected override void OnUpdate()
     {
@@ -138,7 +144,7 @@ public partial class LevelSystemManaged : SystemBase
         if (manager == null || !SystemAPI.TryGetSingleton<LevelStatus>(out var status))
         {
             __DestroyEntities(__group);
-            
+
             return;
         }
 
@@ -146,31 +152,34 @@ public partial class LevelSystemManaged : SystemBase
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
         {
-            //manager.Pause();
-            __DestroyEntities(__group);
-
-            status.exp = LevelShared.exp;
-            status.expMax = LevelShared.expMax;
-            status.count = 0;
-            if (SystemAPI.Exists(player))
+            using (__restart.Auto())
             {
-                if (SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
-                {
-                    var instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player);
-                    instanceID.isSendMessageOnDestroy = false;
-                    SystemAPI.SetComponent(player, instanceID);
-                }
-                
-                EntityManager.DestroyEntity(player);
-            }
-            /*else
-                status.gold = 0;*/
+                //manager.Pause();
+                __DestroyEntities(__group);
 
-            status.stage = LevelShared.stage;
-            SystemAPI.SetSingleton(status);
-            
-            if(thirdPersonPlayerEntity != Entity.Null)
-                EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
+                status.exp = LevelShared.exp;
+                status.expMax = LevelShared.expMax;
+                status.count = 0;
+                if (SystemAPI.Exists(player))
+                {
+                    if (SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
+                    {
+                        var instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player);
+                        instanceID.isSendMessageOnDestroy = false;
+                        SystemAPI.SetComponent(player, instanceID);
+                    }
+
+                    EntityManager.DestroyEntity(player);
+                }
+                /*else
+                    status.gold = 0;*/
+
+                status.stage = LevelShared.stage;
+                SystemAPI.SetSingleton(status);
+
+                if (thirdPersonPlayerEntity != Entity.Null)
+                    EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
+            }
         }
         /*else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))
         {
@@ -179,36 +188,44 @@ public partial class LevelSystemManaged : SystemBase
             return;
         }*/
 
-        manager.Set(
-            status.value, 
-            status.max, 
-            status.expMax, 
-            status.exp, 
-            status.count, 
-            status.gold, 
-            status.stage);
+        using(__set.Auto())
+            manager.Set(
+                status.value, 
+                status.max, 
+                status.expMax, 
+                status.exp, 
+                status.count, 
+                status.gold, 
+                status.stage);
         
-        __UpdateStage(manager);
+        using(__updateStage.Auto())
+            __UpdateStage(manager);
+
+        using (__skills.Auto())
+        {
+            __GetSkill(player,
+                out var skillDefinition,
+                out var skillNameDefinition,
+                out var activeIndices,
+                out var skillStates /*,
+                out var skillDescs*/);
+            
+            using (__updateSkillActive.Auto())
+                __UpdateSkillActive(skillDefinition, skillNameDefinition, activeIndices, skillStates, /*skillDescs, */
+                    manager);
+
+            using (__updateSkillSelection.Auto())
+                __UpdateSkillSelection(
+                    ref activeIndices,
+                    skillStates,
+                    //skillDescs, 
+                    skillDefinition,
+                    skillNameDefinition,
+                    player,
+                    status.stage,
+                    manager);
+        }
         
-        __GetSkill(player, 
-            out var skillDefinition, 
-            out var skillNameDefinition, 
-            out var activeIndices, 
-            out var skillStates/*,
-            out var skillDescs*/);
-
-        __UpdateSkillActive(skillDefinition, skillNameDefinition, activeIndices, skillStates, /*skillDescs, */manager);
-
-        __UpdateSkillSelection(
-            ref activeIndices, 
-            skillStates, 
-            //skillDescs, 
-            skillDefinition, 
-            skillNameDefinition, 
-            player, 
-            status.stage, 
-            manager);
-
 #if DEBUG
         if (manager.debugLevelUp)
         {

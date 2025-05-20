@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using Unity.Entities.Content;
+using UnityEditor;
 using UnityEngine;
 using ZG;
 
@@ -370,6 +371,8 @@ public class GameMain : GameUser
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
 
+    public const string NAME_SPACE_SCENE = "GameMainScene";
+
     private bool __isActivated;
 
     public IAssetBundleFactory factory
@@ -380,9 +383,25 @@ public class GameMain : GameUser
     }
 
     public override IGameUserData userData => IUserData.instance;
+    
+    public static int GetSceneTimes(string sceneName)
+    {
+        return PlayerPrefs.GetInt(__GetSceneNameSpace(sceneName));
+    }
+
+    public static void IncrementSceneTimes(string sceneName)
+    {
+        PlayerPrefs.SetInt(__GetSceneNameSpace(sceneName), GetSceneTimes(sceneName) + 1);
+    }
+
+    private static string __GetSceneNameSpace(string sceneName)
+    {
+        return NAME_SPACE_SCENE + sceneName;
+    }
 
     IEnumerator Start()
     {
+        //PlayerSettings.WebGL.threadsSupport
         Application.targetFrameRate = 60;
         
         while(!GameConstantManager.isInit)
@@ -523,6 +542,8 @@ public class GameMain : GameUser
                         if (__isActivated)
                         {
                             defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
+
+                            IncrementSceneTimes(defaultSceneName);
 
                             activation = new GameSceneActivation();
 
