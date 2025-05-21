@@ -237,10 +237,10 @@ public partial struct PrefabLoaderSystem : ISystem
 
                     entities.Add(instance.entity);
 
-                    continue;
+                    //continue;
                 }
 
-                break;
+                //break;
             }
 
             int destination = entityPrefabReferences.Length;
