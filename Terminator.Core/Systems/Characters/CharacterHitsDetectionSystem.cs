@@ -3,7 +3,7 @@ using Unity.Entities;
 using Unity.CharacterController;
 using Unity.Physics.Systems;
 
-[UpdateInGroup(typeof(AfterPhysicsSystemGroup))]
+/*[UpdateInGroup(typeof(AfterPhysicsSystemGroup))]
 [UpdateAfter(typeof(KinematicCharacterPhysicsUpdateGroup))]
 public partial class CharacterHitsDetectionSystem : SystemBase
 {
@@ -39,4 +39,4 @@ public partial class CharacterHitsDetectionSystem : SystemBase
             }
         }
     }
-}
+}*/

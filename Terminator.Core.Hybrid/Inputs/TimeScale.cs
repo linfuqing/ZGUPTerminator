@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,6 +10,9 @@ public static class TimeScaleUtility
     
     public static int Add(float value)
     {
+        if(value < 1.0f)
+            GC.Collect();
+        
         Time.timeScale *= value;
         
         if (__values == null)

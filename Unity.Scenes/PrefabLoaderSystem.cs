@@ -347,8 +347,8 @@ public partial struct PrefabLoaderSystem : ISystem
         state.CompleteDependency();
 
         int count = __results.Count;
-        //if (count < 1)
-        //    return;
+        if (count < 1)
+            return;
         
         var worldUpdateAllocator = state.WorldUpdateAllocator;
         var entityPrefabReferences = new NativeList<EntityPrefabReference>(count, worldUpdateAllocator);

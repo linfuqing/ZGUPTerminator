@@ -273,8 +273,6 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public BufferAccessor<EffectMessage> inputMessages;
 
-        public BufferAccessor<Message> outputMessages;
-
         public BufferAccessor<EffectStatusTarget> statusTargets;
 
         public NativeArray<EffectStatus> states;
@@ -296,6 +294,9 @@ public partial struct EffectSystem : ISystem
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<EffectDamageStatistic> damageStatistics;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<Message> outputMessages;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
@@ -354,8 +355,16 @@ public partial struct EffectSystem : ISystem
                 var statusTargets = this.statusTargets[index];
                 if (result)
                 {
+                    Entity messageEntity = this.outputMessages.HasBuffer(entity)
+                        ? entity
+                        : (instanceDamageParent.entity != entity &&
+                           this.outputMessages.HasBuffer(instanceDamageParent.entity)
+                            ? instanceDamageParent.entity
+                            : Entity.Null);
                     var inputMessages = index < this.inputMessages.Length ? this.inputMessages[index] : default;
-                    var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
+                    var outputMessages = messageEntity == Entity.Null
+                        ? default
+                        : this.outputMessages[messageEntity];
                     var simulationEvents = this.simulationEvents[index];
                     EffectStatusTarget statusTarget;
                     PhysicsCollider physicsCollider;
@@ -552,9 +561,14 @@ public partial struct EffectSystem : ISystem
 
                                 if (inputMessage.entityPrefabReference.Equals(default))
                                 {
-                                    enabledFlags |= EnabledFlags.Message;
+                                    if (outputMessages.IsCreated)
+                                    {
+                                        enabledFlags |= EnabledFlags.Message;
 
-                                    outputMessages.Add(outputMessage);
+                                        outputMessages.Add(outputMessage);
+
+                                        this.outputMessages.SetBufferEnabled(messageEntity, true);
+                                    }
                                 }
                                 else if ((damageValue != 0 || outputMessage.name.IsEmpty) &&
                                          prefabLoader.TryGetOrLoadPrefabRoot(
@@ -792,8 +806,6 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public BufferTypeHandle<EffectMessage> inputMessageType;
 
-        public BufferTypeHandle<Message> outputMessageType;
-
         public BufferTypeHandle<EffectStatusTarget> statusTargetType;
 
         public ComponentTypeHandle<EffectStatus> statusType;
@@ -815,6 +827,9 @@ public partial struct EffectSystem : ISystem
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<EffectDamageStatistic> damageStatistics;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<Message> outputMessages;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -842,7 +857,6 @@ public partial struct EffectSystem : ISystem
             collect.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
-            collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
             collect.states = chunk.GetNativeArray(ref statusType);
             collect.targetDamages = targetDamages;
@@ -851,6 +865,7 @@ public partial struct EffectSystem : ISystem
             collect.characterBodies = characterBodies;
             collect.localToWorlds = localToWorlds;
             collect.damageStatistics = damageStatistics;
+            collect.outputMessages = outputMessages;
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
             collect.damageInstances = damageInstances;
@@ -863,8 +878,8 @@ public partial struct EffectSystem : ISystem
                 if((enabledFlags & EnabledFlags.Destroyed) == EnabledFlags.Destroyed)
                     chunk.SetComponentEnabled(ref statusType, i, false);
                 
-                if((enabledFlags & EnabledFlags.Message) == EnabledFlags.Message)
-                    chunk.SetComponentEnabled(ref outputMessageType, i, true);
+                //if((enabledFlags & EnabledFlags.Message) == EnabledFlags.Message)
+                //    chunk.SetComponentEnabled(ref outputMessageType, i, true);
                 
                 if((enabledFlags & EnabledFlags.StatusTarget) == EnabledFlags.StatusTarget)
                     chunk.SetComponentEnabled(ref statusTargetType, i, true);
@@ -1469,6 +1484,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<LocalToWorld> __localToWorlds;
 
+    private BufferLookup<Message> __outputMessages;
+
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
 
     private EntityQuery __groupToDestroy;
@@ -1523,6 +1540,7 @@ public partial struct EffectSystem : ISystem
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
+        __outputMessages = state.GetBufferLookup<Message>();
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1612,13 +1630,13 @@ public partial struct EffectSystem : ISystem
         __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
         __prefabType.Update(ref state);
-        __outputMessageType.Update(ref state);
         __inputMessageType.Update(ref state);
         __targetDamages.Update(ref state);
         __delayDestroies.Update(ref state);
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
+        __outputMessages.Update(ref state);
         __damageStatistics.Update(ref state);
         
         var prefabLoader = __prefabLoader.AsParallelWriter();
@@ -1642,7 +1660,7 @@ public partial struct EffectSystem : ISystem
         collect.simulationCollisionType = __simulationCollisionType;
         collect.simulationEventType = __simulationEventType;
         collect.prefabType = __prefabType;
-        collect.outputMessageType = __outputMessageType;
+        collect.outputMessages = __outputMessages;
         collect.inputMessageType = __inputMessageType;
         collect.statusTargetType = __statusTargetType;
         collect.statusType = __statusType;
@@ -1672,6 +1690,7 @@ public partial struct EffectSystem : ISystem
         __targetMessageType.Update(ref state);
         __targetDamageScaleType.Update(ref state);
         __targetHPType.Update(ref state);
+        __outputMessageType.Update(ref state);
         __messageParameterType.Update(ref state);
         __delayTimeType.Update(ref state);
 
