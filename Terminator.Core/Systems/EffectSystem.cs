@@ -455,7 +455,7 @@ public partial struct EffectSystem : ISystem
                                 if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
                                     isResult = true;
-                                    
+
                                     totalDamageValue += dropDamageValue;
 
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
@@ -479,7 +479,7 @@ public partial struct EffectSystem : ISystem
                             ref var characterBodyRW = ref characterBody.ValueRW;
                             if (!characterBodyRW.IsGrounded)
                             {
-                                if(!isResult)
+                                if (!isResult)
                                     continue;
                             }
                             else if (damage.explosion > math.FLT_MIN_NORMAL ||
@@ -527,8 +527,8 @@ public partial struct EffectSystem : ISystem
                         __Drop(
                             math.RigidTransform(destination.Value),
                             simulationEvent.entity,
-                            instanceDamage, 
-                            instanceDamageParent, 
+                            instanceDamage,
+                            instanceDamageParent,
                             prefabs,
                             ref damage.prefabs);
 
@@ -550,49 +550,50 @@ public partial struct EffectSystem : ISystem
                             }
 
                             enabledFlags |= EnabledFlags.StatusTarget;
+                        }
 
-                            numMessageIndices = damage.messageIndices.Length;
-                            for (i = 0; i < numMessageIndices; ++i)
+
+                        numMessageIndices = damage.messageIndices.Length;
+                        for (i = 0; i < numMessageIndices; ++i)
+                        {
+                            inputMessage = inputMessages[damage.messageIndices[i]];
+                            outputMessage.key = random.NextInt();
+                            outputMessage.name = inputMessage.name;
+                            outputMessage.value = inputMessage.value;
+
+                            if (inputMessage.entityPrefabReference.Equals(default))
                             {
-                                inputMessage = inputMessages[damage.messageIndices[i]];
-                                outputMessage.key = random.NextInt();
-                                outputMessage.name = inputMessage.name;
-                                outputMessage.value = inputMessage.value;
-
-                                if (inputMessage.entityPrefabReference.Equals(default))
+                                if (outputMessages.IsCreated)
                                 {
-                                    if (outputMessages.IsCreated)
-                                    {
-                                        enabledFlags |= EnabledFlags.Message;
+                                    enabledFlags |= EnabledFlags.Message;
 
-                                        outputMessages.Add(outputMessage);
+                                    outputMessages.Add(outputMessage);
 
-                                        this.outputMessages.SetBufferEnabled(messageEntity, true);
-                                    }
+                                    this.outputMessages.SetBufferEnabled(messageEntity, true);
                                 }
-                                else if ((damageValue != 0 || outputMessage.name.IsEmpty) &&
-                                         prefabLoader.TryGetOrLoadPrefabRoot(
-                                             inputMessage.entityPrefabReference,
-                                             out instance))
+                            }
+                            else if ((damageValue != 0 || outputMessage.name.IsEmpty) &&
+                                     prefabLoader.TryGetOrLoadPrefabRoot(
+                                         inputMessage.entityPrefabReference,
+                                         out instance))
+                            {
+                                instance = entityManager.Instantiate(0, instance);
+
+                                if (!outputMessage.name.IsEmpty)
                                 {
-                                    instance = entityManager.Instantiate(0, instance);
+                                    entityManager.SetBuffer<Message>(1, instance).Add(outputMessage);
+                                    entityManager.SetComponentEnabled<Message>(1, instance, true);
 
-                                    if (!outputMessage.name.IsEmpty)
-                                    {
-                                        entityManager.SetBuffer<Message>(1, instance).Add(outputMessage);
-                                        entityManager.SetComponentEnabled<Message>(1, instance, true);
-
-                                        messageParameter.messageKey = outputMessage.key;
-                                        messageParameter.value = -damageValue;
-                                        messageParameter.id = (int)EffectAttributeID.Damage;
-                                        entityManager.SetBuffer<MessageParameter>(1, instance)
-                                            .Add(messageParameter);
-                                    }
-
-                                    entityManager.SetComponent(1, instance,
-                                        LocalTransform.FromPositionRotation(destination.Position,
-                                            inverseCameraRotation));
+                                    messageParameter.messageKey = outputMessage.key;
+                                    messageParameter.value = -damageValue;
+                                    messageParameter.id = (int)EffectAttributeID.Damage;
+                                    entityManager.SetBuffer<MessageParameter>(1, instance)
+                                        .Add(messageParameter);
                                 }
+
+                                entityManager.SetComponent(1, instance,
+                                    LocalTransform.FromPositionRotation(destination.Position,
+                                        inverseCameraRotation));
                             }
                         }
                     }
