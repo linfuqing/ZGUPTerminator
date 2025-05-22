@@ -1250,7 +1250,7 @@ public partial struct EffectSystem : ISystem
                         }
                     }
                     
-                    if ((result & EnabledFlags.Drop) != EnabledFlags.Drop && index < targetLevels.Length && this.levelStatus.IsValid)
+                    if (!isFallToDestroy/*(result & EnabledFlags.Drop) != EnabledFlags.Drop*/ && index < targetLevels.Length && this.levelStatus.IsValid)
                     {
                         var targetLevel = targetLevels[index];
 
