@@ -429,6 +429,17 @@ public sealed class LoginManager : MonoBehaviour
                     __stageStyles.Clear();
                 }
                 
+                int numScenes = style.scenes == null ? 0 : style.scenes.Length;
+                Toggle toggle;
+                for(int i = 0; i < numScenes; ++i)
+                {
+                    toggle = style.scenes[i].toggle;
+                    if(toggle == null)
+                        continue;
+                                                
+                    toggle.interactable = false;
+                }
+                
                 if (x)
                 {
                     selectedEnergy = selectedLevel.energy;
@@ -442,8 +453,8 @@ public sealed class LoginManager : MonoBehaviour
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
                     {
-                        int numScenes = Mathf.Min(
-                            style.scenes == null ? 0 : style.scenes.Length,
+                        numScenes = Mathf.Min(
+                            numScenes,
                             level.scenes.Length);
                         if (numScenes > 0)
                         {
