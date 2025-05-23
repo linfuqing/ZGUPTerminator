@@ -268,6 +268,9 @@ public partial struct EffectSystem : ISystem
         public BufferAccessor<SimulationEvent> simulationEvents;
 
         [ReadOnly] 
+        public BufferAccessor<Child> children;
+
+        [ReadOnly] 
         public BufferAccessor<EffectPrefab> prefabs;
 
         [ReadOnly] 
@@ -644,6 +647,9 @@ public partial struct EffectSystem : ISystem
                                 }
                             }
 
+                            if(index < this.children.Length)
+                                entityManager.DestroyEntity(int.MaxValue - 1, children[index].AsNativeArray().Reinterpret<Entity>());
+
                             entityManager.DestroyEntity(int.MaxValue, entity);
 
                             enabledFlags |= EnabledFlags.Destroyed;
@@ -801,6 +807,9 @@ public partial struct EffectSystem : ISystem
         public BufferTypeHandle<SimulationEvent> simulationEventType;
 
         [ReadOnly] 
+        public BufferTypeHandle<Child> childType;
+
+        [ReadOnly] 
         public BufferTypeHandle<EffectPrefab> prefabType;
 
         [ReadOnly] 
@@ -855,6 +864,7 @@ public partial struct EffectSystem : ISystem
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.simulationCollisions = chunk.GetNativeArray(ref simulationCollisionType);
             collect.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
+            collect.children = chunk.GetBufferAccessor(ref childType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
@@ -1631,6 +1641,7 @@ public partial struct EffectSystem : ISystem
         __damages.Update(ref state);
         __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
+        __childType.Update(ref state);
         __prefabType.Update(ref state);
         __inputMessageType.Update(ref state);
         __targetDamages.Update(ref state);
@@ -1661,6 +1672,7 @@ public partial struct EffectSystem : ISystem
         collect.instanceType = __instanceType;
         collect.simulationCollisionType = __simulationCollisionType;
         collect.simulationEventType = __simulationEventType;
+        collect.childType = __childType;
         collect.prefabType = __prefabType;
         collect.outputMessages = __outputMessages;
         collect.inputMessageType = __inputMessageType;
@@ -1682,7 +1694,6 @@ public partial struct EffectSystem : ISystem
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
         __fallToDestroyType.Update(ref state);
-        __childType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
         __delayDestroyType.Update(ref state);
         __targetInstanceType.Update(ref state);

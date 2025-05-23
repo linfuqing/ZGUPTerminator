@@ -41,14 +41,6 @@ public sealed class LoginManager : MonoBehaviour
         public Sprite sprite;
     }
 
-    private enum SceneActiveStatus
-    {
-        None, 
-        WaitForRewarding,
-        WaitForRefreshing,
-        RightNow
-    }
-    
     public static event Action<Memory<UserRewardData>> onAwake;
     
     public static event Action<Stage> onStageChanged;
@@ -131,7 +123,7 @@ public sealed class LoginManager : MonoBehaviour
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
 
-    private SceneActiveStatus __sceneActiveStatus;
+    private int __sceneActiveDepth;
     
     private bool __isStart;
     private bool __isEnergyActive = true;
@@ -278,17 +270,13 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void RefreshLevel()
     {
-        switch (__sceneActiveStatus)
+        if (__sceneActiveDepth > 0)
         {
-            case SceneActiveStatus.WaitForRewarding:
-                __sceneActiveStatus = SceneActiveStatus.WaitForRefreshing;
-                return;
-            case SceneActiveStatus.WaitForRefreshing:
-                __sceneActiveStatus = SceneActiveStatus.RightNow;
-                break;
-            default:
+            if (--__sceneActiveDepth > 0)
                 return;
         }
+        else
+            return;
         
         foreach (var levelStyle in __levelStyles.Values)
         {
@@ -376,8 +364,8 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevels(IUserData.Levels levels)
     {
-        if((levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
-            __sceneActiveStatus = SceneActiveStatus.WaitForRewarding;
+        if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
+            __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
         
         if (__levelStyles != null)
         {
@@ -604,10 +592,10 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    if (!__isWaitingForRefreshing() || 
+                                    if (__sceneActiveDepth <= 0 || 
                                         GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
-                                        __sceneActiveStatus = SceneActiveStatus.None;
+                                        //__sceneActiveStatus = SceneActiveStatus.None;
 
                                         selectedStageIndex = __stageStyles.Count;
                                         selectedSceneIndex = sceneIndex;
@@ -634,14 +622,15 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
-                                            if (__isWaitingForRefreshing() ||
+                                            if (__sceneActiveDepth != 0 ||
                                                 GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                                 style.scenes[currentSceneIndex].onActive.Invoke();
                                             else
                                             {
                                                 style.scenes[currentSceneIndex].onActiveFirst.Invoke();
 
-                                                __sceneActiveStatus = SceneActiveStatus.None;
+                                                __sceneActiveDepth = -1;
+                                                //__sceneActiveStatus = SceneActiveStatus.None;
                                             }
 
                                             Toggle toggle;
@@ -708,7 +697,8 @@ public sealed class LoginManager : MonoBehaviour
         UserRewardData[] results;
         if (numRewards > 0)
         {
-            __sceneActiveStatus = SceneActiveStatus.WaitForRefreshing;
+            __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
+            
             UserRewardData result;
             results = new UserRewardData[numRewards];
             for (int i = 0; i < numRewards; ++i)
@@ -954,18 +944,6 @@ public sealed class LoginManager : MonoBehaviour
         }
 
         assetManager.LoadScene(__sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
-    }
-
-    private bool __isWaitingForRefreshing()
-    {
-        switch (__sceneActiveStatus)
-        {
-            case SceneActiveStatus.WaitForRewarding:
-            case SceneActiveStatus.WaitForRefreshing:
-                    return true;
-        }
-
-        return false;
     }
 
     private IEnumerator __CollectAndQueryLevels()
