@@ -267,12 +267,12 @@ public struct SpawnerDefinition
         if (!prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
             return false;
 
-        if (spawnerTime.version != status.version)
+        /*if (spawnerTime.version != status.version)
         {
             status = default;
             
             status.version = spawnerTime.version;
-        }
+        }*/
 
         SpawnerEntity spawnerEntity;
         spawnerEntity.spawner = entity;
@@ -408,6 +408,10 @@ public struct SpawnerDefinition
         localTransform.Scale = 1.0f;
         entityManager.SetComponent(2, entity, localTransform);
 
+        LocalToWorld localToWorld;
+        localToWorld.Value = localTransform.ToMatrix();
+        entityManager.SetComponent(2, entity, localToWorld);
+
         if (attributeIndex != -1)
         {
             ref var attribute = ref attributes[attributeIndex];
@@ -486,7 +490,7 @@ public struct SpawnerLayerMask : IComponentData
 
 public struct SpawnerTime : IComponentData
 {
-    public int version;
+    //public int version;
     public double value;
 }
 
