@@ -618,13 +618,13 @@ public sealed class LoginManager : MonoBehaviour
                                             }
 
                                             Toggle toggle;
-                                            foreach (var sceneIndex in sceneIndices)
+                                            for(int i = 0; i < numScenes; ++i)
                                             {
-                                                toggle = style.scenes[sceneIndex].toggle;
+                                                toggle = style.scenes[i].toggle;
                                                 if(toggle == null)
                                                     continue;
                                                 
-                                                toggle.interactable = sceneIndex != currentSceneIndex;
+                                                toggle.interactable = i != currentSceneIndex && sceneIndices.Contains(i);
                                             }
                                         }
                                     };
@@ -638,8 +638,6 @@ public sealed class LoginManager : MonoBehaviour
                                         else
                                             styleScene.toggle.isOn = true;
                                     }
-                                    else
-                                        styleScene.toggle.isOn = false;
                                 }
                             }
                             
