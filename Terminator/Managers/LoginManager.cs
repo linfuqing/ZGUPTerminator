@@ -376,7 +376,7 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevels(IUserData.Levels levels)
     {
-        if((levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0)
+        if((levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
             __sceneActiveStatus = SceneActiveStatus.WaitForRewarding;
         
         if (__levelStyles != null)

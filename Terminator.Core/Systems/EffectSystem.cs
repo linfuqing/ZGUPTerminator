@@ -552,7 +552,6 @@ public partial struct EffectSystem : ISystem
                             enabledFlags |= EnabledFlags.StatusTarget;
                         }
 
-
                         numMessageIndices = damage.messageIndices.Length;
                         for (i = 0; i < numMessageIndices; ++i)
                         {
@@ -1203,6 +1202,8 @@ public partial struct EffectSystem : ISystem
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
                         result |= EnabledFlags.Drop;
+
+                        target.invincibleTime = 0.0f;
 
                         if (index < characterGravityFactors.Length)
                         {
