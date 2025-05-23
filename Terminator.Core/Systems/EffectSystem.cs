@@ -240,6 +240,9 @@ public partial struct EffectSystem : ISystem
         
         public Random random;
 
+        [ReadOnly] 
+        public BufferLookup<Child> children;
+
         [ReadOnly]
         public ComponentLookup<EffectDamageParent> damageParentMap;
 
@@ -266,9 +269,6 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public BufferAccessor<SimulationEvent> simulationEvents;
-
-        [ReadOnly] 
-        public BufferAccessor<Child> children;
 
         [ReadOnly] 
         public BufferAccessor<EffectPrefab> prefabs;
@@ -647,10 +647,7 @@ public partial struct EffectSystem : ISystem
                                 }
                             }
 
-                            if(index < this.children.Length)
-                                entityManager.DestroyEntity(int.MaxValue - 1, children[index].AsNativeArray().Reinterpret<Entity>());
-
-                            entityManager.DestroyEntity(int.MaxValue, entity);
+                            __Destroy(int.MaxValue, entity, children, ref entityManager);
 
                             enabledFlags |= EnabledFlags.Destroyed;
                         }
@@ -779,6 +776,9 @@ public partial struct EffectSystem : ISystem
 
         public quaternion inverseCameraRotation;
 
+        [ReadOnly] 
+        public BufferLookup<Child> children;
+
         [ReadOnly]
         public ComponentLookup<EffectDamageParent> damageParents;
 
@@ -805,9 +805,6 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public BufferTypeHandle<SimulationEvent> simulationEventType;
-
-        [ReadOnly] 
-        public BufferTypeHandle<Child> childType;
 
         [ReadOnly] 
         public BufferTypeHandle<EffectPrefab> prefabType;
@@ -855,6 +852,7 @@ public partial struct EffectSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
+            collect.children = children;
             collect.damageParentMap = damageParents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
@@ -864,7 +862,6 @@ public partial struct EffectSystem : ISystem
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.simulationCollisions = chunk.GetNativeArray(ref simulationCollisionType);
             collect.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
-            collect.children = chunk.GetBufferAccessor(ref childType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
@@ -913,10 +910,10 @@ public partial struct EffectSystem : ISystem
         public RefRW<LevelStatus> levelStatus;
 
         [ReadOnly]
-        public BufferAccessor<EffectTargetMessage> targetMessages;
+        public BufferLookup<Child> children;
 
         [ReadOnly]
-        public BufferAccessor<Child> children;
+        public BufferAccessor<EffectTargetMessage> targetMessages;
 
         [ReadOnly]
         public NativeArray<Entity> entityArray;
@@ -1250,16 +1247,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                        {
-                            if (index < children.Length)
-                            {
-                                var children = this.children[index];
-                                foreach (var child in children)
-                                    entityManager.DestroyEntity(int.MaxValue - 1, child.Value);
-                            }
-
-                            entityManager.DestroyEntity(int.MaxValue, entityArray[index]);
-                        }
+                            __Destroy(int.MaxValue, entityArray[index], children, ref entityManager);
                     }
                     
                     if (!isFallToDestroy/*(result & EnabledFlags.Drop) != EnabledFlags.Drop*/ && index < targetLevels.Length && this.levelStatus.IsValid)
@@ -1302,11 +1290,11 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LevelStatus> levelStates;
         
-        [ReadOnly]
-        public BufferTypeHandle<EffectTargetMessage> targetMessageType;
+        [ReadOnly] 
+        public BufferLookup<Child> children;
 
         [ReadOnly]
-        public BufferTypeHandle<Child> childType;
+        public BufferTypeHandle<EffectTargetMessage> targetMessageType;
 
         [ReadOnly]
         public EntityTypeHandle entityType;
@@ -1362,8 +1350,8 @@ public partial struct EffectSystem : ISystem
             apply.inverseCameraRotation = inverseCameraRotation;
             apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
+            apply.children = children;
             apply.targetMessages = chunk.GetBufferAccessor(ref targetMessageType);
-            apply.children = chunk.GetBufferAccessor(ref childType);
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.characterBodies = chunk.GetNativeArray(ref characterBodyType);
@@ -1435,8 +1423,6 @@ public partial struct EffectSystem : ISystem
 
     private EntityTypeHandle __entityType;
     
-    private BufferTypeHandle<Child> __childType;
-
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
     private ComponentTypeHandle<FallToDestroy> __fallToDestroyType;
@@ -1500,6 +1486,8 @@ public partial struct EffectSystem : ISystem
 
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
 
+    private BufferLookup<Child> __children;
+
     private EntityQuery __groupToDestroy;
 
     private EntityQuery __groupToClear;
@@ -1512,6 +1500,21 @@ public partial struct EffectSystem : ISystem
     
     private NativeQueue<DamageInstance> __damageInstances;
 
+    private static void __Destroy(
+        int sortKey, 
+        in Entity entity, 
+        in BufferLookup<Child> children, 
+        ref EntityCommandBuffer.ParallelWriter entityManager)
+    {
+        if (children.TryGetBuffer(entity, out var buffer))
+        {
+            foreach (var child in buffer)
+                __Destroy(sortKey - 1, child.Value, children, ref entityManager);
+        }
+        
+        entityManager.DestroyEntity(sortKey, entity);
+    }
+
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
@@ -1521,7 +1524,6 @@ public partial struct EffectSystem : ISystem
         __damages = state.GetComponentLookup<EffectDamage>(true);
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __entityType = state.GetEntityTypeHandle();
-        __childType = state.GetBufferTypeHandle<Child>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
         __fallToDestroyType = state.GetComponentTypeHandle<FallToDestroy>(true);
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
@@ -1554,6 +1556,7 @@ public partial struct EffectSystem : ISystem
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
         __outputMessages = state.GetBufferLookup<Message>();
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
+        __children = state.GetBufferLookup<Child>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToDestroy = builder
@@ -1634,6 +1637,7 @@ public partial struct EffectSystem : ISystem
         clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
 
+        __children.Update(ref state);
         __entityType.Update(ref state);
         __damageParents.Update(ref state);
         __physicsColliders.Update(ref state);
@@ -1641,7 +1645,6 @@ public partial struct EffectSystem : ISystem
         __damages.Update(ref state);
         __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
-        __childType.Update(ref state);
         __prefabType.Update(ref state);
         __inputMessageType.Update(ref state);
         __targetDamages.Update(ref state);
@@ -1663,6 +1666,7 @@ public partial struct EffectSystem : ISystem
         collect.deltaTime = deltaTime;
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
+        collect.children = __children;
         collect.damageParents = __damageParents;
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
@@ -1672,7 +1676,6 @@ public partial struct EffectSystem : ISystem
         collect.instanceType = __instanceType;
         collect.simulationCollisionType = __simulationCollisionType;
         collect.simulationEventType = __simulationEventType;
-        collect.childType = __childType;
         collect.prefabType = __prefabType;
         collect.outputMessages = __outputMessages;
         collect.inputMessageType = __inputMessageType;
@@ -1719,8 +1722,8 @@ public partial struct EffectSystem : ISystem
         apply.time = time;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
+        apply.children = __children;
         apply.targetMessageType = __targetMessageType;
-        apply.childType = __childType;
         apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
         apply.fallToDestroyType = __fallToDestroyType;
