@@ -44,6 +44,7 @@ public sealed class LoginManager : MonoBehaviour
     private enum SceneActiveStatus
     {
         None, 
+        WaitForRewarding,
         WaitForRefreshing,
         RightNow
     }
@@ -277,7 +278,17 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void RefreshLevel()
     {
-        __sceneActiveStatus = SceneActiveStatus.RightNow;
+        switch (__sceneActiveStatus)
+        {
+            case SceneActiveStatus.WaitForRewarding:
+                __sceneActiveStatus = SceneActiveStatus.WaitForRefreshing;
+                return;
+            case SceneActiveStatus.WaitForRefreshing:
+                __sceneActiveStatus = SceneActiveStatus.RightNow;
+                break;
+            default:
+                return;
+        }
         
         foreach (var levelStyle in __levelStyles.Values)
         {
@@ -366,7 +377,7 @@ public sealed class LoginManager : MonoBehaviour
     private void __ApplyLevels(IUserData.Levels levels)
     {
         if((levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0)
-            __sceneActiveStatus = SceneActiveStatus.WaitForRefreshing;
+            __sceneActiveStatus = SceneActiveStatus.WaitForRewarding;
         
         if (__levelStyles != null)
         {
