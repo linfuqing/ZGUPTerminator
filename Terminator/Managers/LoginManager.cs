@@ -40,6 +40,13 @@ public sealed class LoginManager : MonoBehaviour
         public string name;
         public Sprite sprite;
     }
+
+    private enum SceneActiveStatus
+    {
+        None, 
+        WaitForRefreshing,
+        RightNow
+    }
     
     public static event Action<Memory<UserRewardData>> onAwake;
     
@@ -123,7 +130,8 @@ public sealed class LoginManager : MonoBehaviour
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
 
-    private bool __isSceneActiveFirst;
+    private SceneActiveStatus __sceneActiveStatus;
+    
     private bool __isStart;
     private bool __isEnergyActive = true;
 
@@ -269,7 +277,7 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void RefreshLevel()
     {
-        __isSceneActiveFirst = true;
+        __sceneActiveStatus = SceneActiveStatus.RightNow;
         
         foreach (var levelStyle in __levelStyles.Values)
         {
@@ -357,6 +365,9 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevels(IUserData.Levels levels)
     {
+        if((levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0)
+            __sceneActiveStatus = SceneActiveStatus.WaitForRefreshing;
+        
         if (__levelStyles != null)
         {
             foreach (var style in __levelStyles.Values)
@@ -582,16 +593,10 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    if (__isSceneActiveFirst || 
-                                        (levels.flag & IUserData.Levels.Flag.UnlockFirst) == 0 ||
+                                    if (SceneActiveStatus.WaitForRefreshing != __sceneActiveStatus || 
                                         GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
-                                        if (__isSceneActiveFirst && (levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
-                                        {
-                                            levels.flag = 0;
-
-                                            __isSceneActiveFirst = false;
-                                        }
+                                        __sceneActiveStatus = SceneActiveStatus.None;
 
                                         selectedStageIndex = __stageStyles.Count;
                                         selectedSceneIndex = sceneIndex;
@@ -618,14 +623,14 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
-                                            if (__isSceneActiveFirst ||
+                                            if (SceneActiveStatus.WaitForRefreshing == __sceneActiveStatus ||
                                                 GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                                 style.scenes[currentSceneIndex].onActive.Invoke();
                                             else
                                             {
                                                 style.scenes[currentSceneIndex].onActiveFirst.Invoke();
 
-                                                __isSceneActiveFirst = true;
+                                                __sceneActiveStatus = SceneActiveStatus.None;
                                             }
 
                                             Toggle toggle;
@@ -652,16 +657,6 @@ public sealed class LoginManager : MonoBehaviour
                                 }
                             }
                             
-                            /*if(__isSceneActiveFirst || 
-                               __GetSceneTimes(level.scenes[selectedSceneIndex].name) > 0)
-                                style.scenes[selectedSceneIndex].onActive.Invoke();
-                            else
-                            {
-                                style.scenes[selectedSceneIndex].onActiveFirst.Invoke();
-
-                                __isSceneActiveFirst = true;
-                            }*/
-
                             __stageStyles[selectedStageIndex].toggle.isOn = true;
 
                             int numStageStyles = __stageStyles.Count;
@@ -699,31 +694,38 @@ public sealed class LoginManager : MonoBehaviour
     private void __ApplyLevel(Memory<UserReward> rewards)
     {
         int numRewards = rewards.Length;
-        UserRewardData result;
-        var results = new UserRewardData[numRewards];
-        for(int i = 0; i < numRewards; ++i)
+        UserRewardData[] results;
+        if (numRewards > 0)
         {
-            ref var reward = ref rewards.Span[i];
-
-            switch (reward.type)
+            __sceneActiveStatus = SceneActiveStatus.WaitForRefreshing;
+            UserRewardData result;
+            results = new UserRewardData[numRewards];
+            for (int i = 0; i < numRewards; ++i)
             {
-                case UserRewardType.Gold:
-                    gold += reward.count;
-                    break;
-                case UserRewardType.Energy:
-                    energy += reward.count;
-                    break;
-                case UserRewardType.EnergyMax:
-                    energyMax += reward.count;
-                    break;
+                ref var reward = ref rewards.Span[i];
+
+                switch (reward.type)
+                {
+                    case UserRewardType.Gold:
+                        gold += reward.count;
+                        break;
+                    case UserRewardType.Energy:
+                        energy += reward.count;
+                        break;
+                    case UserRewardType.EnergyMax:
+                        energyMax += reward.count;
+                        break;
+                }
+
+                result.name = reward.name;
+                result.count = reward.count;
+                result.type = reward.type;
+
+                results[i] = result;
             }
-            
-            result.name = reward.name;
-            result.count = reward.count;
-            result.type = reward.type;
-            
-            results[i] = result;
         }
+        else
+            results = null;
 
         if(onAwake != null)
             onAwake(results);

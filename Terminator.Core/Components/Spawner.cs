@@ -1,10 +1,12 @@
 using System;
+using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.GraphicsIntegration;
 using Random = Unity.Mathematics.Random;
 
 public enum SpawnerSpace
@@ -173,7 +175,8 @@ public struct SpawnerDefinition
         in SpawnerTime spawnerTime, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
-        //in ComponentLookup<PrefabLoadResult> prefabLoadResults,
+        in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
+        in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities,
         in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref DynamicBuffer<SpawnerStatus> states, 
@@ -200,6 +203,8 @@ public struct SpawnerDefinition
                 spawnerTime, 
                 collisionWorld,
                 colliders, 
+                physicsGraphicalInterpolationBuffers, 
+                characterInterpolations, 
                 entities, 
                 prefabs,
                 ref spawner, 
@@ -221,6 +226,8 @@ public struct SpawnerDefinition
         in SpawnerTime spawnerTime, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
+        in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
+        in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities, 
         in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref Spawner data, 
@@ -296,6 +303,8 @@ public struct SpawnerDefinition
                         spawnerEntity,
                         collisionWorld,
                         colliders,
+                        physicsGraphicalInterpolationBuffers,
+                        characterInterpolations, 
                         ref random,
                         ref entityManager,
                         ref data))
@@ -342,6 +351,8 @@ public struct SpawnerDefinition
         in SpawnerEntity spawnerEntity,
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> colliders,
+        in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
+        in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         ref Random random,
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref Spawner data)
@@ -408,10 +419,22 @@ public struct SpawnerDefinition
         localTransform.Scale = 1.0f;
         entityManager.SetComponent(2, entity, localTransform);
 
-        LocalToWorld localToWorld;
-        localToWorld.Value = localTransform.ToMatrix();
-        entityManager.SetComponent(2, entity, localToWorld);
-
+        if (physicsGraphicalInterpolationBuffers.HasComponent(prefab))
+        {
+            PhysicsGraphicalInterpolationBuffer physicsGraphicalInterpolationBuffer;
+            physicsGraphicalInterpolationBuffer.PreviousVelocity = default;
+            physicsGraphicalInterpolationBuffer.PreviousTransform =
+                math.RigidTransform(localTransform.Rotation, localTransform.Position);
+            entityManager.SetComponent(2, entity, physicsGraphicalInterpolationBuffer);
+        }
+        
+        if (characterInterpolations.TryGetComponent(prefab, out var characterInterpolation))
+        {
+            characterInterpolation.InterpolationFromTransform =
+                math.RigidTransform(localTransform.Rotation, localTransform.Position);
+            entityManager.SetComponent(2, entity, characterInterpolation);
+        }
+        
         if (attributeIndex != -1)
         {
             ref var attribute = ref attributes[attributeIndex];

@@ -1,10 +1,12 @@
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
+using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.GraphicsIntegration;
 using Unity.Physics.Systems;
 using Unity.Transforms;
 
@@ -247,6 +249,12 @@ public partial struct SpawnerSystem : ISystem
         
         [ReadOnly]
         public ComponentLookup<PhysicsCollider> colliders;
+
+        [ReadOnly]
+        public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
+        
+        [ReadOnly]
+        public ComponentLookup<CharacterInterpolation> characterInterpolations;
         
         [ReadOnly] 
         public NativeParallelMultiHashMap<SpawnerEntity, Entity> entities;
@@ -291,6 +299,8 @@ public partial struct SpawnerSystem : ISystem
                 spawnerTime, 
                 collisionWorld,
                 colliders, 
+                physicsGraphicalInterpolationBuffers, 
+                characterInterpolations, 
                 entities, 
                 prefabs[index], 
                 ref states, 
@@ -319,6 +329,12 @@ public partial struct SpawnerSystem : ISystem
         [ReadOnly]
         public CollisionWorld collisionWorld;
         
+        [ReadOnly]
+        public ComponentLookup<CharacterInterpolation> characterInterpolations;
+
+        [ReadOnly]
+        public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
+
         [ReadOnly]
         public ComponentLookup<PhysicsCollider> colliders;
         
@@ -363,6 +379,8 @@ public partial struct SpawnerSystem : ISystem
             collect.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)time ^ (int)(time >> 32)));
             collect.spawnerTime = spawnerTime;
             collect.collisionWorld = collisionWorld;
+            collect.characterInterpolations = characterInterpolations;
+            collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
             collect.colliders = colliders;
             collect.entities = entities;
             collect.entityArray = chunk.GetNativeArray(entityType);
@@ -382,6 +400,10 @@ public partial struct SpawnerSystem : ISystem
                 collect.Execute(i);
         }
     }
+
+    private ComponentLookup<CharacterInterpolation> __characterInterpolations;
+
+    private ComponentLookup<PhysicsGraphicalInterpolationBuffer> __physicsGraphicalInterpolationBuffers;
 
     private ComponentLookup<PhysicsCollider> __colliders;
 
@@ -411,6 +433,8 @@ public partial struct SpawnerSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
+        __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __colliders = state.GetComponentLookup<PhysicsCollider>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __layerMasks = state.GetComponentLookup<SpawnerLayerMaskOverride>();
@@ -472,6 +496,8 @@ public partial struct SpawnerSystem : ISystem
         trigger.triggerType = __triggerType;
         var triggerJobHandle = trigger.ScheduleParallelByRef(__groupToTrigger, resetJobHandle);
 
+        __characterInterpolations.Update(ref state);
+        __physicsGraphicalInterpolationBuffers.Update(ref state);
         __colliders.Update(ref state);
         __localTransforms.Update(ref state);
         __instanceType.Update(ref state);
@@ -493,6 +519,8 @@ public partial struct SpawnerSystem : ISystem
         collect.instanceCount = spawnerSingleton.instanceCount;
         collect.entities = spawnerSingleton.entities;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
+        collect.characterInterpolations = __characterInterpolations;
+        collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
         collect.colliders = __colliders;
         collect.localTransforms = __localTransforms;
         collect.entityType = __entityType;
