@@ -206,7 +206,7 @@ public class LocatorAuthoring : MonoBehaviour
                         messageIndices[messageOffset + j] = -1;
                         
                         messageName = source.messageNames[j];
-                        for (k = 0; k < numMessageNames; ++k)
+                        for (k = 0; k < numMessages; ++k)
                         {
                             if (authoring._messages[k].name == messageName)
                             {
