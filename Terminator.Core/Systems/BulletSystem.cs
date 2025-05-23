@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.GraphicsIntegration;
 using Unity.Physics.Systems;
 using Unity.Transforms;
 using ZG;
@@ -141,6 +142,12 @@ public partial struct BulletSystem : ISystem
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
+
+        [ReadOnly]
+        public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
+
+        [ReadOnly]
+        public ComponentLookup<CharacterInterpolation> characterInterpolations;
 
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterBody> characterBodies;
@@ -284,6 +291,8 @@ public partial struct BulletSystem : ISystem
                 if (instances[i].Apply(
                         time,
                         collisionWorld,
+                        physicsGraphicalInterpolationBuffers,
+                        characterInterpolations, 
                         characterControls,
                         animationCurveDeltas,
                         ref definition,
@@ -332,6 +341,12 @@ public partial struct BulletSystem : ISystem
 
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
+
+        [ReadOnly]
+        public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
+
+        [ReadOnly]
+        public ComponentLookup<CharacterInterpolation> characterInterpolations;
 
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterBody> characterBodies;
@@ -398,6 +413,8 @@ public partial struct BulletSystem : ISystem
             collect.parents = parents;
             collect.localTransforms = localTransforms;
             collect.physicsColliders = physicsColliders;
+            collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
+            collect.characterInterpolations = characterInterpolations;
             collect.characterBodies = characterBodies;
             collect.characterControls = characterControls;
             collect.animationCurveDeltas = animationCurveDeltas;
@@ -434,6 +451,10 @@ public partial struct BulletSystem : ISystem
     
     private ComponentLookup<PhysicsCollider> __physicsColliders;
     
+    private ComponentLookup<PhysicsGraphicalInterpolationBuffer> __physicsGraphicalInterpolationBuffers;
+
+    private ComponentLookup<CharacterInterpolation> __characterInterpolations;
+
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
@@ -481,6 +502,8 @@ public partial struct BulletSystem : ISystem
         __parents = state.GetComponentLookup<Parent>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
+        __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
+        __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
@@ -532,6 +555,8 @@ public partial struct BulletSystem : ISystem
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
         __physicsColliders.Update(ref state);
+        __physicsGraphicalInterpolationBuffers.Update(ref state);
+        __characterInterpolations.Update(ref state);
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
         __animationCurveDeltas.Update(ref state);
@@ -560,6 +585,8 @@ public partial struct BulletSystem : ISystem
         collect.parents = __parents;
         collect.localTransforms = __localTransforms;
         collect.physicsColliders = __physicsColliders;
+        collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
+        collect.characterInterpolations = __characterInterpolations;
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
         collect.animationCurveDeltas = __animationCurveDeltas;

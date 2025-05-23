@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.GraphicsIntegration;
 using Unity.Transforms;
 using ZG;
 using Collider = Unity.Physics.Collider;
@@ -1050,6 +1051,8 @@ public struct BulletInstance : IBufferElementData
     public bool Apply(
         in double time, 
         in CollisionWorld collisionWorld,
+        in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
+        in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         ref BulletDefinition definition, 
@@ -1068,6 +1071,8 @@ public struct BulletInstance : IBufferElementData
             entity, 
             prefabRoot, 
             collisionWorld, 
+            physicsGraphicalInterpolationBuffers, 
+            characterInterpolations, 
             characterControls, 
             animationCurveDeltas, 
             ref definition.bullets[index], 
@@ -1080,6 +1085,8 @@ public struct BulletInstance : IBufferElementData
         in Entity entity, 
         in Entity prefabRoot, 
         in CollisionWorld collisionWorld,
+        in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
+        in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         ref BulletDefinition.Bullet data, 
@@ -1144,6 +1151,21 @@ public struct BulletInstance : IBufferElementData
         localTransform.Rotation = transformResult.rot;
         entityManager.SetComponent(1, entity, localTransform);
 
+        if (physicsGraphicalInterpolationBuffers.HasComponent(prefabRoot))
+        {
+            PhysicsGraphicalInterpolationBuffer physicsGraphicalInterpolationBuffer;
+            physicsGraphicalInterpolationBuffer.PreviousVelocity = default;
+            physicsGraphicalInterpolationBuffer.PreviousTransform =
+                math.RigidTransform(localTransform.Rotation, localTransform.Position);
+            entityManager.SetComponent(2, entity, physicsGraphicalInterpolationBuffer);
+        }
+        
+        if (characterInterpolations.TryGetComponent(prefabRoot, out var characterInterpolation))
+        {
+            characterInterpolation.InterpolationFromTransform =
+                math.RigidTransform(localTransform.Rotation, localTransform.Position);
+            entityManager.SetComponent(2, entity, characterInterpolation);
+        }
 
         if (animationCurveDeltas.HasComponent(prefabRoot))
         {
