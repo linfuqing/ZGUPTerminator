@@ -638,6 +638,8 @@ public sealed class LoginManager : MonoBehaviour
                                         else
                                             styleScene.toggle.isOn = true;
                                     }
+                                    else
+                                        styleScene.toggle.isOn = false;
                                 }
                             }
                             

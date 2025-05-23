@@ -181,21 +181,24 @@ public partial class LevelManager
             if (__skillActiveNames == null)
                 __skillActiveNames = new Dictionary<(int, int), FixedString128Bytes>();
 
-            __skillActiveNames[(index, level)] = name;
-
-            IAnalytics.instance?.SetActiveSkill(value.Value.name);
-            
-            if (__skillActives == null)
-                __skillActives = new Pool<SkillActive>();
-            
-            if(!__skillActives.TryGetValue(index, out var origin))
+            if (!__skillActiveNames.TryGetValue((index, level), out var oldName) || oldName != name)
             {
-                origin = new SkillActive(index, _skillActiveDatas);
-                
-                __skillActives.Insert(index, origin);
+                __skillActiveNames[(index, level)] = name;
+
+                IAnalytics.instance?.SetActiveSkill(value.Value.name);
+
+                if (__skillActives == null)
+                    __skillActives = new Pool<SkillActive>();
+
+                if (!__skillActives.TryGetValue(index, out var origin))
+                {
+                    origin = new SkillActive(index, _skillActiveDatas);
+
+                    __skillActives.Insert(index, origin);
+                }
+
+                origin.Reset(level, value.Value);
             }
-            
-            origin.Reset(level, value.Value);
         }
     }
     
