@@ -604,7 +604,7 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    if (SceneActiveStatus.WaitForRefreshing != __sceneActiveStatus || 
+                                    if (!__isWaitingForRefreshing() || 
                                         GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0)
                                     {
                                         __sceneActiveStatus = SceneActiveStatus.None;
@@ -634,7 +634,7 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
-                                            if (SceneActiveStatus.WaitForRefreshing == __sceneActiveStatus ||
+                                            if (__isWaitingForRefreshing() ||
                                                 GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                                 style.scenes[currentSceneIndex].onActive.Invoke();
                                             else
@@ -954,6 +954,18 @@ public sealed class LoginManager : MonoBehaviour
         }
 
         assetManager.LoadScene(__sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
+    }
+
+    private bool __isWaitingForRefreshing()
+    {
+        switch (__sceneActiveStatus)
+        {
+            case SceneActiveStatus.WaitForRewarding:
+            case SceneActiveStatus.WaitForRefreshing:
+                    return true;
+        }
+
+        return false;
     }
 
     private IEnumerator __CollectAndQueryLevels()
