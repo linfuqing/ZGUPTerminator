@@ -1964,7 +1964,7 @@ public partial class UserDataMain
         {
             set
             {
-                if(string.isEmptyOrNull(value))
+                if(string.IsNullOrEmpty(value))
                 {
                     directRewards = null;
                     return;
