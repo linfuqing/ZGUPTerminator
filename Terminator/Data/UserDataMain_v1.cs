@@ -1964,6 +1964,12 @@ public partial class UserDataMain
         {
             set
             {
+                if(string.isEmptyOrNull(value))
+                {
+                    directRewards = null;
+                    return;
+                }
+
                 var parameters = value.Split('/');
                 
                 int numParameters = parameters.Length;

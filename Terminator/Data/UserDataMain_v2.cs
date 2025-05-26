@@ -108,7 +108,7 @@ public partial class UserDataMain
         public Reward[] rewards;
 
 #if UNITY_EDITOR
-        [SerializeField, CSV("rewards", guidIndex = -1, nameIndex = 0)]
+        [SerializeField, CSV("_tip.rewards", guidIndex = -1, nameIndex = 0)]
         internal string _rewardsPath;
 #endif
         public IUserData.Tip instance

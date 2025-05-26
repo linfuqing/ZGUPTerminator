@@ -555,7 +555,7 @@ public partial class UserDataMain
     private Stage __GetStage(in Level level, int stage)
     {
 #if USER_DATA_VERSION_1
-        return level.stages[targetStage];
+        return level.stages[stage];
 #else
         return _stages[__GetStageIndex(level.stageNames[stage])];
 #endif
