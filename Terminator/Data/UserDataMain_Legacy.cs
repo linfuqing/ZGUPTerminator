@@ -212,7 +212,7 @@ public partial class UserDataMain
         {
             level = _levels[i];
             
-            numStages = level.stages == null ? 0 : level.stages.Length;
+            numStages = __GetStageCount(level);
             for (j = 0; j < numStages; ++j)
             {
                 if (((UserStage_v0.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{__ToID(stageIndex + j)}") &
@@ -225,7 +225,7 @@ public partial class UserDataMain
                 var userStages = new UserStage_v0[numStages];
                 for (j = 0; j < numStages; ++j)
                 {
-                    stage = level.stages[j];
+                    stage = __GetStage(level, j);
 
                     userStage.name = stage.name;
                     userStage.id = __ToID(stageIndex);
@@ -292,10 +292,10 @@ public partial class UserDataMain
         for (int i = 0; i < numLevels; ++i)
         {
             level = _levels[i];
-            numStages = level.stages == null ? 0 : level.stages.Length;
+            numStages = __GetStageCount(level);
             if (stageIndex < numStages)
             {
-                stage = level.stages[stageIndex];
+                stage = __GetStage(level, stageIndex);
                 foreach (var reward in stage.indirectRewards)
                 {
                     foreach (var value in reward.values)
@@ -340,7 +340,7 @@ public partial class UserDataMain
         {
             for (int i = 0; i < stage; ++i)
             {
-                foreach (var reward in level.stages[i].directRewards)
+                foreach (var reward in __GetStage(level, i).directRewards)
                 {
                     switch (reward.type)
                     {
@@ -361,7 +361,7 @@ public partial class UserDataMain
         
         int stageIndex = 0;
         for (int i = 0; i < levelIndex; ++i)
-            stageIndex += _levels[i].stages.Length;
+            stageIndex += __GetStageCount(_levels[i]);
 
         string key;
         UserStage_v0.Flag flag;

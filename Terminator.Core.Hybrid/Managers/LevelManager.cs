@@ -56,6 +56,10 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField] 
     internal Stage[] _stages;
 
+    private int __max;
+    private int __value;
+    private int __exp;
+    private int __maxExp;
     private int __count;
     private int __gold;
     private int __stage;
@@ -121,10 +125,11 @@ public partial class LevelManager : MonoBehaviour
         int gold, 
         int stage)
     {
-        IAnalytics.instance?.Set(value, max, maxExp, exp, count, gold, stage);
-
+        bool isDirty = false;
         if (stage != __stage)
         {
+            isDirty = true;
+            
             if (!isRestart && stage > __stage)
             {
                 int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
@@ -155,24 +160,50 @@ public partial class LevelManager : MonoBehaviour
             __stage = stage;
         }
 
-        if (__stages != null)
+        if (value != __value)
         {
-            foreach (var stageIndex in __stages)
+            isDirty = true;
+            
+            if (__stages != null)
             {
-                ref var temp = ref _stages[stageIndex];
-                if(temp.max > 0 && temp.onCount != null)
-                    temp.onCount.Invoke(Mathf.Max(0, temp.max - value).ToString());
+                foreach (var stageIndex in __stages)
+                {
+                    ref var temp = ref _stages[stageIndex];
+                    if (temp.max > 0 && temp.onCount != null)
+                        temp.onCount.Invoke(Mathf.Max(0, temp.max - value).ToString());
+                }
             }
-        }
-        
-        if (_progressbar != null)
-            _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
 
-        if (_expProgressbar != null)
-            _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp);
+            if (_progressbar != null)
+                _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
+
+            __value = value;
+        }
+        else if (max != __max)
+        {
+            isDirty = true;
+
+            if (_progressbar != null)
+                _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
+
+            __max = max;
+        }
+
+        if (exp != __exp || maxExp != __maxExp)
+        {
+            isDirty = true;
+
+            if (_expProgressbar != null)
+                _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp);
+
+            __exp = exp;
+            __maxExp = maxExp;
+        }
 
         if (count != __count)
         {
+            isDirty = true;
+
             if (_onKillCount != null)
                 _onKillCount.Invoke(count.ToString());
 
@@ -181,6 +212,8 @@ public partial class LevelManager : MonoBehaviour
 
         if (gold != __gold)
         {
+            isDirty = true;
+
             if (_onGoldCount != null)
                 _onGoldCount.Invoke(gold.ToString());
             
@@ -194,6 +227,9 @@ public partial class LevelManager : MonoBehaviour
             if(__skillSelectionGuideNames != null)
                 __skillSelectionGuideNames.Clear();
         }
+        
+        if(isDirty)
+            IAnalytics.instance?.Set(value, max, maxExp, exp, count, gold, stage);
     }
 
     public bool EnableStage(string name)

@@ -109,15 +109,51 @@ public sealed partial class UserDataMain : MonoBehaviour
         public string name;
         public int energy;
 
+ #if USER_DATA_VERSION_1
         public Stage[] stages;
+#endif
+        
+        public string[] stageNames;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 章节名字
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 章节体力
+        {
+            set => energy = value;
+        }
+        
+        [CSVField]
+        public string 章节小关
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    stageNames = null;
+
+                    return;
+                }
+                
+                stageNames = value.Split('/');
+            }
+        }
+#endif
     }
 
     [SerializeField]
     internal Level[] _levels;
 
+#if UNITY_EDITOR
     [SerializeField, CSV("_levels", guidIndex = -1, nameIndex = 0)] 
     internal string _levelsPath;
-
+#endif
+    
     public IEnumerator QueryLevels(
         uint userID,
         Action<IUserData.Levels> onComplete)
@@ -144,11 +180,11 @@ public sealed partial class UserDataMain : MonoBehaviour
             userLevel.id = __ToID(i);
             userLevel.energy = level.energy;
             
-            numStages = level.stages.Length;
+            numStages = __GetStageCount(level);
             userLevel.stages = new UserStage[numStages];
             for (j = 0; j < numStages; ++j)
             {
-                stage = level.stages[j];
+                stage = __GetStage(level, j);
                 userStage.name = stage.name;
                 userStage.id = __ToID(stageIndex++);
                 userStage.energy = stage.energy;
@@ -278,7 +314,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         bool isNextLevel = false;
         var level = _levels[levelIndex];
-        if ((level.stages == null ? 0 : level.stages.Length) == levelCache.stage)
+        if (__GetStageCount(level) == levelCache.stage)
         {
             UserData.SubmitStageFlag(level.name, levelCache.stage);
             
@@ -298,7 +334,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         var rewards = new List<UserReward>();
         for(int i = 0; i < levelCache.stage; ++i)
         {
-            stage = level.stages[i];
+            stage = __GetStage(level, i);
             key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stage.name}";
             if(PlayerPrefs.GetInt(key) != 0)
                 continue;

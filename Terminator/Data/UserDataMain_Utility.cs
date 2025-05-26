@@ -5,6 +5,22 @@ using Random = UnityEngine.Random;
 
 public partial class UserDataMain
 {
+    private Dictionary<string, int> __stageNameToIndices;
+    
+    private int __GetStageIndex(string name)
+    {
+        if (__stageNameToIndices == null)
+        {
+            __stageNameToIndices = new Dictionary<string, int>();
+
+            int numStages = _stages.Length;
+            for(int i = 0; i < numStages; ++i)
+                __stageNameToIndices.Add(_stages[i].name, i);
+        }
+
+        return __stageNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+
     private Dictionary<string, int> __purchasePoolNameToIndices;
     
     private int __GetPurchasePoolIndex(string name)
@@ -526,12 +542,29 @@ public partial class UserDataMain
 
         __ApplyRewards(outRewards);
     }
+
+    private int __GetStageCount(in Level level)
+    {
+#if USER_DATA_VERSION_1
+        return level.stages.Length;
+#else
+        return level.stageNames.Length;
+#endif
+    }
+    
+    private Stage __GetStage(in Level level, int stage)
+    {
+#if USER_DATA_VERSION_1
+        return level.stages[targetStage];
+#else
+        return _stages[__GetStageIndex(level.stageNames[stage])];
+#endif
+    }
     
     private bool __TryGetStage(uint stageID, out int stage, out int levelIndex, out int rewardIndex)
     {
         stage = -1;
         rewardIndex = 0;
-        Level level;
         int i, j, 
             stageIndex = 0, 
             targetStageIndex = __ToIndex(stageID), 
@@ -540,11 +573,23 @@ public partial class UserDataMain
             numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
         for (i = 0; i < numLevels; ++i)
         {
-            level = _levels[i];
-            numStages = level.stages.Length;
+            ref var level = ref _levels[i];
+            numStages = level.
+#if USER_DATA_VERSION_1
+                stages
+#else
+                stageNames
+#endif
+                .Length;
             numTargetStages = Mathf.Min(stageIndex + numStages, targetStageIndex) - stageIndex;
             for (j = 0; j < numTargetStages; ++j)
-                rewardIndex += level.stages[j].indirectRewards.Length;
+                rewardIndex += 
+#if USER_DATA_VERSION_1
+                    level.stages[j]
+#else
+                    _stages[__GetStageIndex(level.stageNames[j])]
+#endif
+                        .indirectRewards.Length;
 
             if (numTargetStages < numStages)
             {

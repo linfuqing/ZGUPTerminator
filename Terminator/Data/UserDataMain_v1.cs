@@ -1945,7 +1945,106 @@ public partial class UserDataMain
         public UserRewardData[] directRewards;
         
         public StageReward[] indirectRewards;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 小关名字
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 小关体力
+        {
+            set => energy = value;
+        }
+        
+        [CSVField]
+        public string 小关直接奖励
+        {
+            set
+            {
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                directRewards = new UserRewardData[numParameters];
+
+                string parameter;
+                string[] values;
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    values = parameter.Split(':');
+                    
+                    ref var directReward = ref directRewards[i];
+                    directReward.name = values[0];
+                    directReward.type = (UserRewardType)int.Parse(values[1]);
+                    directReward.count = int.Parse(values[2]);
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 小关间接奖励
+        {
+            set
+            {
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                indirectRewards = new StageReward[numParameters];
+
+                int i, j, numValues;
+                string parameter;
+                string[] values, values2;
+                for (i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    values = parameter.Split(':');
+                    
+                    ref var indirectReward = ref indirectRewards[i];
+                    indirectReward.name = values[0];
+                    indirectReward.condition = (UserStageReward.Condition)int.Parse(values[1]);
+                    if (values.Length > 3)
+                    {
+                        indirectReward.conditionValue = int.Parse(values[2]);
+                        
+                        values = values[3].Split('+');
+                    }
+                    else
+                    {
+                        indirectReward.conditionValue = 0;
+                        
+                        values = values[2].Split('+');
+                    }
+
+                    numValues = values.Length;
+
+                    indirectReward.values = new UserRewardData[numValues];
+                    for (j = 0; j < numValues; ++j)
+                    {
+                        ref var temp = ref indirectReward.values[j];
+                        
+                        values2 = values[j].Split('*');
+
+                        temp.name = values2[0];
+                        
+                        temp.type = (UserRewardType)int.Parse(values2[1]);
+                        temp.count = int.Parse(values2[2]);
+                    }
+                }
+            }
+        }
+#endif
     }
+
+    [SerializeField]
+    internal Stage[] _stages;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_stages", guidIndex = -1, nameIndex = 0)] 
+    internal string _stagesPath;
+#endif
 
     public IEnumerator QueryStage(
         uint userID,
@@ -1958,8 +2057,8 @@ public partial class UserDataMain
         {
             IUserData.Stage result;
             var level = _levels[levelIndex];
-            
-            var stage = level.stages[targetStage];
+
+            var stage = __GetStage(level, targetStage);
 
             result.energy = stage.energy;
             result.levelEnergy = level.energy;
@@ -2027,7 +2126,7 @@ public partial class UserDataMain
         }
         
         var level = _levels[levelIndex];
-        if (!__ApplyEnergy(level.stages[stage].energy))
+        if (!__ApplyEnergy(__GetStage(level, stage).energy))
         {
             onComplete(default);
 
@@ -2086,10 +2185,10 @@ public partial class UserDataMain
         for (i = 0; i < numLevels; ++i)
         {
             level = _levels[i];
-            numStages = level.stages.Length;
+            numStages = __GetStageCount(level);
             for (j = 0; j < numStages; ++j)
             {
-                stage = level.stages[j];
+                stage = __GetStage(level, j);
 
                 numStageRewards = stage.indirectRewards.Length;
                 if (stageRewardIndex < numStageRewards)
@@ -2135,10 +2234,10 @@ public partial class UserDataMain
         for (i = 0; i < numLevels; ++i)
         {
             level = _levels[i];
-            numStages = level.stages.Length;
+            numStages = __GetStageCount(level);
             for (j = 0; j < numStages; ++j)
             {
-                stage = level.stages[j];
+                stage = __GetStage(level, j);
 
                 numStageRewards = stage.indirectRewards.Length;
                 for (k = 0; k < numStageRewards; ++k)
