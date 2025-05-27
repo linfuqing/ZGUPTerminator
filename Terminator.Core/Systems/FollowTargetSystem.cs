@@ -319,6 +319,9 @@ public partial struct FollowTargetSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<FollowTargetVelocity> velocityType;
         
+        [ReadOnly] 
+        public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
+        
         //[ReadOnly]
         public ComponentTypeHandle<LocalTransform> localTransformType;
         
@@ -329,6 +332,8 @@ public partial struct FollowTargetSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            bool isCharacter = chunk.Has(ref characterBodyType);
+            
             ApplyTransforms applyTransforms;
             applyTransforms.deltaTimeR = deltaTimeR;
             applyTransforms.ups = chunk.GetNativeArray(ref upType);
@@ -340,7 +345,12 @@ public partial struct FollowTargetSystem : ISystem
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
+            {
+                if(isCharacter && !chunk.IsComponentEnabled(ref characterBodyType, i))
+                    continue;
+                
                 applyTransforms.Execute(i);
+            }
         }
     }
 
@@ -367,6 +377,8 @@ public partial struct FollowTargetSystem : ISystem
     private ComponentTypeHandle<ThirdPersonCharacterLookAt> __characterLookAtType;
 
     private ComponentTypeHandle<ThirdPersonCharacterControl> __characterControlType;
+
+    private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
     private ComponentTypeHandle<BezierSpeed> __bezierSpeedType;
 
@@ -418,6 +430,7 @@ public partial struct FollowTargetSystem : ISystem
         __parentMotionType = state.GetComponentTypeHandle<FollowTargetParentMotion>();
         __characterLookAtType = state.GetComponentTypeHandle<ThirdPersonCharacterLookAt>();
         __characterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
+        __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __bezierControlPointType = state.GetBufferTypeHandle<BezierControlPoint>(true);
         __bezierSpeedType = state.GetComponentTypeHandle<BezierSpeed>(true);
         __bezierDistanceType = state.GetComponentTypeHandle<BezierDistance>();
@@ -493,11 +506,13 @@ public partial struct FollowTargetSystem : ISystem
         __physicsVelocityType.Update(ref state);
         __characterLookAtType.Update(ref state);
         __characterControlType.Update(ref state);
+        __characterBodyType.Update(ref state);
         
         ApplyTransformsEx applyTransforms;
         applyTransforms.deltaTimeR = deltaTimeR;
         applyTransforms.upType = __upType;
         applyTransforms.velocityType = __velocityType;
+        applyTransforms.characterBodyType = __characterBodyType;
         applyTransforms.localTransformType = __localTransformType;
         applyTransforms.physicsVelocityType = __physicsVelocityType;
         applyTransforms.characterLookAtType = __characterLookAtType;
@@ -554,11 +569,19 @@ public partial struct FollowTargetTransformSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<FollowTargetVelocity> velocityType;
         
+        [ReadOnly]
+        public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
+
+        [ReadOnly]
+        public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
+
         //[ReadOnly]
         public ComponentTypeHandle<LocalTransform> localTransformType;
         
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            bool isCharacter = chunk.Has(ref characterBodyType), isPhysics = chunk.Has(ref physicsVelocityType);
+            
             ApplyTransforms applyTransforms;
             applyTransforms.deltaTime = deltaTime;
             applyTransforms.velocities = chunk.GetNativeArray(ref velocityType);
@@ -566,7 +589,17 @@ public partial struct FollowTargetTransformSystem : ISystem
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
+            {
+                if (isCharacter)
+                {
+                    if(chunk.IsComponentEnabled(ref characterBodyType, i))
+                        continue;
+                }
+                else if(isPhysics)
+                    continue;
+                
                 applyTransforms.Execute(i);
+            }
         }
     }
 
@@ -749,6 +782,8 @@ public partial struct FollowTargetTransformSystem : ISystem
 
     private ComponentTypeHandle<Parent> __parentType;
 
+    private ComponentTypeHandle<PhysicsVelocity> __physicsVelocityType;
+
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
     private ComponentTypeHandle<FollowTarget> __instanceType;
@@ -769,6 +804,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         __localToWorlds = state.GetComponentLookup<LocalToWorld>(true);
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
+        __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __instanceType = state.GetComponentTypeHandle<FollowTarget>();
         __speedType = state.GetComponentTypeHandle<FollowTargetSpeed>(true);
@@ -779,7 +815,7 @@ public partial struct FollowTargetTransformSystem : ISystem
             __instanceGroup = builder
                 .WithAll<FollowTargetVelocity>()
                 .WithAllRW<LocalTransform>()
-                .WithNone<PhysicsVelocity, ThirdPersonCharacterControl>()
+                .WithNone<PhysicsVelocity, KinematicCharacterBody>()
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -795,11 +831,15 @@ public partial struct FollowTargetTransformSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __characterBodyType.Update(ref state);
+        __physicsVelocityType.Update(ref state);
         __velocityType.Update(ref state);
         __localTransformType.Update(ref state);
         
         ApplyTransformsEx applyTransforms;
         applyTransforms.deltaTime = SystemAPI.Time.DeltaTime;
+        applyTransforms.characterBodyType = __characterBodyType;
+        applyTransforms.physicsVelocityType = __physicsVelocityType;
         applyTransforms.velocityType = __velocityType;
         applyTransforms.localTransformType = __localTransformType;
 
@@ -807,7 +847,6 @@ public partial struct FollowTargetTransformSystem : ISystem
         
         __localToWorlds.Update(ref state);
         __parentType.Update(ref state);
-        __characterBodyType.Update(ref state);
         __instanceType.Update(ref state);
         __speedType.Update(ref state);
         __distanceType.Update(ref state);
