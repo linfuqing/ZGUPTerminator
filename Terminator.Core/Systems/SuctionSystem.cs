@@ -37,8 +37,7 @@ public partial struct SuctionSystem : ISystem
                 characterBody.RelativeVelocity = targetVelocity.tangent;
                 characterBodies[index] = characterBody;
             }
-            
-            if(index < physicsVelocities.Length)
+            else if(index < physicsVelocities.Length)
             {
                 //var physicsVelocity = physicsVelocities[index];
                 PhysicsVelocity physicsVelocity;
@@ -284,7 +283,7 @@ public partial struct SuctionSystem : ISystem
         [ReadOnly]
         public NativeArray<SuctionTargetVelocity> targetVelocities;
 
-        //public NativeArray<PhysicsVelocity> physicsVelocities;
+        public NativeArray<PhysicsVelocity> physicsVelocities;
 
         //public NativeArray<KinematicCharacterBody> characterBodies;
 
@@ -324,6 +323,8 @@ public partial struct SuctionSystem : ISystem
             localTransform.Rotation = transform.rot;
             localTransform.Position = transform.pos;
             localTransforms[index] = localTransform;
+
+            physicsVelocities[index] = default;
             //physicsVelocities[index] = physicsVelocity;
         }
     }
@@ -342,20 +343,20 @@ public partial struct SuctionSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<KinematicCharacterProperties> characterPropertiesType;
 
-        //public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
-
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
         
+        public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
+
         public ComponentTypeHandle<LocalTransform> localTransformType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
             apply.timeAhead = timeAhead;
-            apply.targetVelocities = chunk.GetNativeArray(ref targetVelocityType);
-            //apply.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
             apply.physicsMasses = chunk.GetNativeArray(ref physicsMassType);
             apply.characterProperties = chunk.GetNativeArray(ref characterPropertiesType);
+            apply.targetVelocities = chunk.GetNativeArray(ref targetVelocityType);
+            apply.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
             apply.localTransforms = chunk.GetNativeArray(ref localTransformType);
 
             bool isCharacter = chunk.Has(ref characterBodyType);
@@ -475,7 +476,7 @@ public partial struct SuctionSystem : ISystem
         ApplyEx apply;
         apply.timeAhead = timeAheadOfLastFixedUpdate;
         apply.targetVelocityType = __targetVelocityType;
-        //apply.physicsVelocityType = __physicsVelocityType;
+        apply.physicsVelocityType = __physicsVelocityType;
         apply.physicsMassType = __physicsMassType;
         apply.characterPropertiesType = __characterPropertiesType;
         apply.characterBodyType = __characterBodyType;
