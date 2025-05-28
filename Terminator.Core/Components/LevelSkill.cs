@@ -230,7 +230,7 @@ public struct LevelSkillDefinition
             {
                 int count = numResults;
                 float minWeight = groupSkillWeights[numResults - 1].value.value;
-                for (i = numWeights - 1; i > count; --i)
+                for (i = numWeights - 1; i >= count; --i)
                 {
                     groupSkillWeight = groupSkillWeights[i];
                     if (groupSkillWeight.value.value < minWeight)
@@ -239,7 +239,7 @@ public struct LevelSkillDefinition
                         break;
                 }
 
-                numWeights = i;
+                numWeights = i + 1;
 
                 for (i = 0; i < count; ++i)
                 {
