@@ -34,7 +34,9 @@ public class PickableAuthoring : MonoBehaviour
             if (GetComponent<Rigidbody>() == null)
             {
                 AddComponent<PhysicsVelocity>(entity);
+
                 AddComponent<Unity.Physics.GraphicsIntegration.PhysicsGraphicalSmoothing>(entity);
+                AddComponent<Unity.Physics.GraphicsIntegration.PhysicsGraphicalInterpolationBuffer>(entity);
             }
         }
     }
