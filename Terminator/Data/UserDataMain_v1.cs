@@ -1938,7 +1938,15 @@ public partial class UserDataMain
     [Serializable]
     internal struct Stage
     {
+        [Flags]
+        public enum Flag
+        {
+            DontCache = 0x01
+        }
+        
         public string name;
+
+        public Flag flag;
 
         public int energy;
         
@@ -1953,6 +1961,12 @@ public partial class UserDataMain
             set => name = value;
         }
         
+        [CSVField]
+        public int 小关标签
+        {
+            set => flag = (Flag)value;
+        }
+
         [CSVField]
         public int 小关体力
         {
@@ -2068,7 +2082,7 @@ public partial class UserDataMain
 
             result.energy = stage.energy;
             result.levelEnergy = level.energy;
-            result.cache = UserData.GetStageCache(level.name, targetStage);
+            result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? default : UserData.GetStageCache(level.name, targetStage);
 
             /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
             result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
@@ -2116,7 +2130,7 @@ public partial class UserDataMain
     {
         yield return null;
 
-        if (!__TryGetStage(stageID, out int stage, out int levelIndex, out _))
+        if (!__TryGetStage(stageID, out int stageIndex, out int levelIndex, out _))
         {
             onComplete(default);
             
@@ -2132,7 +2146,8 @@ public partial class UserDataMain
         }
         
         var level = _levels[levelIndex];
-        if (!__ApplyEnergy(__GetStage(level, stage).energy))
+        var stage = __GetStage(level, stageIndex);
+        if (!__ApplyEnergy(stage.energy))
         {
             onComplete(default);
 
@@ -2154,19 +2169,19 @@ public partial class UserDataMain
         if(isDirty)
             UserDataMain.flag = flag;
         
-        UserData.ApplyStageFlag(level.name, stage);
+        UserData.ApplyStageFlag(level.name, stageIndex);
 
         //flag &= ~Flag.UnlockFirst;
 
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = __ToID(levelIndex);
-        levelCache.stage = stage;
+        levelCache.stage = stageIndex;
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
-        stageProperty.cache = UserData.GetStageCache(level.name, stage);
+        stageProperty.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? default : UserData.GetStageCache(level.name, stageIndex);
         stageProperty.value = __ApplyProperty(
             userID, 
             stageProperty.cache.skills);

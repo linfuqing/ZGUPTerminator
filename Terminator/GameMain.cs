@@ -372,6 +372,7 @@ public class GameMain : GameUser
     public static readonly string ContentPackPath = "ContentPackPath";
 
     public const string NAME_SPACE_SCENE = "GameMainScene";
+    public const string NAME_SPACE_LEVEL = "GameMainLevel";
 
     private bool __isActivated;
 
@@ -392,6 +393,21 @@ public class GameMain : GameUser
     public static void IncrementSceneTimes(string sceneName)
     {
         PlayerPrefs.SetInt(__GetSceneNameSpace(sceneName), GetSceneTimes(sceneName) + 1);
+    }
+
+    public static int GetLevelTimes(string levelName)
+    {
+        return PlayerPrefs.GetInt(__GetLevelNameSpace(levelName));
+    }
+
+    public static void IncrementLevelTimes(string levelName)
+    {
+        PlayerPrefs.SetInt(__GetLevelNameSpace(levelName), GetLevelTimes(levelName) + 1);
+    }
+
+    private static string __GetLevelNameSpace(string levelName)
+    {
+        return NAME_SPACE_LEVEL + levelName;
     }
 
     private static string __GetSceneNameSpace(string sceneName)

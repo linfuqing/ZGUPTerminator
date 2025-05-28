@@ -1027,6 +1027,9 @@ public partial class UserDataMain
     
     private IUserData.Property __ApplyProperty(uint userID, string[] cacheSkills)
     {
+        if (cacheSkills == null || cacheSkills.Length < 1)
+            return __ApplyProperty(userID);
+        
         string cardGroupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
         if(string.IsNullOrEmpty(cardGroupName))
             cardGroupName = _cardGroups[0].name;

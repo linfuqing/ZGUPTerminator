@@ -106,6 +106,7 @@ public sealed class LoginManager : MonoBehaviour
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
 
+    private string __levelName;
     private string __sceneName;
 
     private float __energyNextTime;
@@ -287,6 +288,10 @@ public sealed class LoginManager : MonoBehaviour
                 break;
             }
         }
+        
+        var scrollRect = _style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
+        if (scrollRect != null)
+            scrollRect.MoveTo(__levelStyles.Count - 1);
     }
     
     [Preserve]
@@ -452,6 +457,8 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
+                    __levelName = selectedLevel.name;
+                    
                     selectedEnergy = selectedLevel.energy;
 
                     /*if (style.button != null)
@@ -509,7 +516,7 @@ public sealed class LoginManager : MonoBehaviour
                                 stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
                                 if (stageStyle.onTitle != null)
-                                    stageStyle.onTitle.Invoke((i + 1).ToString());
+                                    stageStyle.onTitle.Invoke((/*i*/sceneIndex + 1).ToString());
 
                                 if (stage.rewardFlags == null)
                                 {
@@ -679,8 +686,27 @@ public sealed class LoginManager : MonoBehaviour
         }
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
-        if(scrollRect != null)
-            scrollRect.MoveTo(__levelStyles.Count - 1);
+        if (scrollRect != null)
+        {
+            int i, end = __levelStyles.Count - 1;
+            if (__sceneActiveDepth > 0)
+            {
+                for (i = end; i >= 0; --i)
+                {
+                    if (GameMain.GetLevelTimes(_levels[i].name) < 1)
+                        continue;
+
+                    scrollRect.MoveTo(i);
+
+                    break;
+                }
+            }
+            else
+                i = -1;
+
+            if (i < 0)
+                scrollRect.MoveTo(end);
+        }
 
         if (isHot)
         {
@@ -933,6 +959,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __LoadScene()
     {
+        GameMain.IncrementLevelTimes(__levelName);
         GameMain.IncrementSceneTimes(__sceneName);
         
         var assetManager = GameAssetManager.instance;
@@ -976,9 +1003,9 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QuerySkills(userID, __ApplySkills);
 #endif
 
-        if (isRestart)
-            yield return userData.ApplyLevel(userID, __selectedUserLevelID, __ApplyLevel);
-        else
+        //if (isRestart)
+        //    yield return userData.ApplyLevel(userID, __selectedUserLevelID, __ApplyLevel);
+        //else
             yield return userData.ApplyStage(userID, __selectedUserStageID, __ApplyStage);
             
         if (!__isStart)
