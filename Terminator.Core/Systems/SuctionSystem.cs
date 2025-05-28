@@ -449,7 +449,7 @@ public partial struct SuctionSystem : ISystem
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __instanceGroup = builder
-                .WithAll<Suction, LocalTransform>()
+                .WithAll<Suction, LocalTransform, EffectTarget>()
                 .Build(ref state);
     }
 
