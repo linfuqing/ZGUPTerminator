@@ -8,7 +8,7 @@ using Unity.Physics.Systems;
 using Unity.Transforms;
 using ZG;
 
-[BurstCompile, UpdateInGroup(typeof(AfterPhysicsSystemGroup))]
+[BurstCompile]//, UpdateInGroup(typeof(AfterPhysicsSystemGroup))]
 public partial struct PickableSystem : ISystem
 {
     private struct Pick
