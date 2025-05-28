@@ -10,7 +10,12 @@ using Unity.Physics.Systems;
 using Unity.Transforms;
 using Math = ZG.Mathematics.Math;
 
-[BurstCompile, UpdateInGroup(typeof(TransformSystemGroup), OrderFirst = true)]//, UpdateInGroup(typeof(AfterPhysicsSystemGroup), OrderLast = true)]
+[BurstCompile]
+[UpdateInGroup(typeof(TransformSystemGroup))]
+[UpdateBefore(typeof(LocalToWorldSystem))]
+[UpdateAfter(typeof(SmoothRigidBodiesGraphicalMotion))]
+[UpdateAfter(typeof(CharacterInterpolationSystem))]
+[WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation | WorldSystemFilterFlags.ClientSimulation)]//, UpdateInGroup(typeof(AfterPhysicsSystemGroup), OrderLast = true)]
 public partial struct SuctionSystem : ISystem
 {
     private struct Clear
@@ -272,8 +277,8 @@ public partial struct SuctionSystem : ISystem
     
     private struct Apply
     {
-        public float timeAhead;
-        
+        public float deltaTime;
+
         [ReadOnly]
         public NativeArray<PhysicsMass> physicsMasses;
 
@@ -288,6 +293,8 @@ public partial struct SuctionSystem : ISystem
         //public NativeArray<KinematicCharacterBody> characterBodies;
 
         public NativeArray<LocalTransform> localTransforms;
+
+        public NativeArray<LocalToWorld> localToWorlds;
 
         public void Execute(int index)
         {
@@ -311,18 +318,26 @@ public partial struct SuctionSystem : ISystem
             PhysicsVelocity physicsVelocity;
             physicsVelocity.Linear = targetVelocity.linear + targetVelocity.tangent;
             physicsVelocity.Angular = targetVelocity.angular;
-
+            
             var localTransform = localTransforms[index];
 
-            var transform = GraphicalSmoothingUtility.Extrapolate(
-                math.RigidTransform(localTransform.Rotation, localTransform.Position),
+            var temp = localTransform;
+
+            Unity.Physics.Extensions.PhysicsComponentExtensions.Integrate(
                 physicsVelocity, 
                 physicsMass, 
-                timeAhead);
-
-            localTransform.Rotation = transform.rot;
-            localTransform.Position = transform.pos;
+                deltaTime, 
+                ref localTransform.Position, 
+                ref localTransform.Rotation);
+            
             localTransforms[index] = localTransform;
+
+            if (localToWorlds.IsCreated && index < localToWorlds.Length)
+            {
+                LocalToWorld localToWorld;
+                localToWorld.Value = localTransform.ToMatrix();
+                localToWorlds[index] = localToWorld;
+            }
 
             physicsVelocities[index] = default;
             //physicsVelocities[index] = physicsVelocity;
@@ -332,13 +347,16 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
-        public float timeAhead;
+        public float deltaTime;
 
         [ReadOnly]
         public ComponentTypeHandle<SuctionTargetVelocity> targetVelocityType;
 
         [ReadOnly]
         public ComponentTypeHandle<PhysicsMass> physicsMassType;
+
+        [ReadOnly] 
+        public ComponentTypeHandle<CharacterInterpolation> characterInterpolationType;
 
         [ReadOnly]
         public ComponentTypeHandle<KinematicCharacterProperties> characterPropertiesType;
@@ -349,15 +367,18 @@ public partial struct SuctionSystem : ISystem
 
         public ComponentTypeHandle<LocalTransform> localTransformType;
 
+        public ComponentTypeHandle<LocalToWorld> localToWorldType;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
-            apply.timeAhead = timeAhead;
+            apply.deltaTime = deltaTime;
             apply.physicsMasses = chunk.GetNativeArray(ref physicsMassType);
             apply.characterProperties = chunk.GetNativeArray(ref characterPropertiesType);
             apply.targetVelocities = chunk.GetNativeArray(ref targetVelocityType);
             apply.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
             apply.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            apply.localToWorlds = chunk.Has(ref characterInterpolationType) ? chunk.GetNativeArray(ref localToWorldType) : default;
 
             bool isCharacter = chunk.Has(ref characterBodyType);
             
@@ -376,6 +397,8 @@ public partial struct SuctionSystem : ISystem
 
     private ComponentTypeHandle<PhysicsMass> __physicsMassType;
 
+    private ComponentTypeHandle<CharacterInterpolation> __characterInterpolationType;
+
     private ComponentTypeHandle<KinematicCharacterProperties> __characterPropertiesType;
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
@@ -385,6 +408,8 @@ public partial struct SuctionSystem : ISystem
     private ComponentTypeHandle<SuctionTargetVelocity> __targetVelocityType;
 
     private ComponentTypeHandle<PhysicsVelocity> __physicsVelocityType;
+
+    private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
@@ -404,11 +429,13 @@ public partial struct SuctionSystem : ISystem
     {
         __entityType = state.GetEntityTypeHandle();
         __physicsMassType = state.GetComponentTypeHandle<PhysicsMass>(true);
+        __characterInterpolationType = state.GetComponentTypeHandle<CharacterInterpolation>(true);
         __characterPropertiesType = state.GetComponentTypeHandle<KinematicCharacterProperties>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __instanceType = state.GetComponentTypeHandle<Suction>(true);
         __targetVelocityType = state.GetComponentTypeHandle<SuctionTargetVelocity>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
+        __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __parents = state.GetComponentLookup<Parent>(true);
@@ -424,23 +451,11 @@ public partial struct SuctionSystem : ISystem
             __instanceGroup = builder
                 .WithAll<Suction, LocalTransform>()
                 .Build(ref state);
-        
-        state.RequireForUpdate<CharacterInterpolationRememberTransformSystem.Singleton>();
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        var singleton = SystemAPI.GetSingletonRW<CharacterInterpolationRememberTransformSystem.Singleton>().ValueRO;
-        if (singleton.LastTimeRememberedInterpolationTransforms <= 0f)
-            return;
-        
-        float fixedTimeStep = singleton.InterpolationDeltaTime;
-        if (fixedTimeStep == 0f)
-            return;
-        
-        float timeAheadOfLastFixedUpdate = (float)(SystemAPI.Time.ElapsedTime - singleton.LastTimeRememberedInterpolationTransforms);
-        
         __targetVelocityType.Update(ref state);
         __physicsVelocityType.Update(ref state);
         __characterBodyType.Update(ref state);
@@ -458,9 +473,11 @@ public partial struct SuctionSystem : ISystem
         __localTransforms.Update(ref state);
         __velocities.Update(ref state);
         __simulationEvents.Update(ref state);
+        
+        float deltaTime = SystemAPI.Time.DeltaTime;
 
         CollectEx collect;
-        collect.deltaTime = SystemAPI.Time.DeltaTime;
+        collect.deltaTime = deltaTime;
         collect.entityType = __entityType;
         collect.simulationEvents = __simulationEvents;
         collect.instanceType = __instanceType;
@@ -471,16 +488,20 @@ public partial struct SuctionSystem : ISystem
 
         __localTransformType.Update(ref state);
         __physicsMassType.Update(ref state);
+        __characterInterpolationType.Update(ref state);
         __characterPropertiesType.Update(ref state);
+        __localToWorldType.Update(ref state);
 
         ApplyEx apply;
-        apply.timeAhead = timeAheadOfLastFixedUpdate;
+        apply.deltaTime = deltaTime;
         apply.targetVelocityType = __targetVelocityType;
         apply.physicsVelocityType = __physicsVelocityType;
         apply.physicsMassType = __physicsMassType;
+        apply.characterInterpolationType = __characterInterpolationType;
         apply.characterPropertiesType = __characterPropertiesType;
         apply.characterBodyType = __characterBodyType;
         apply.localTransformType = __localTransformType;
+        apply.localToWorldType = __localToWorldType;
         state.Dependency = apply.ScheduleParallelByRef(__targetGroup, jobHandle);
     }
 }
