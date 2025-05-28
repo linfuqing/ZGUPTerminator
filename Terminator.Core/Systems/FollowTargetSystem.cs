@@ -135,19 +135,11 @@ public partial struct FollowTargetSystem : ISystem
         }
     }
 
-    private ComponentTypeHandle<LocalTransform> __localTransformType;
-
-    private ComponentTypeHandle<PhysicsVelocity> __physicsVelocityType;
-
     private ComponentTypeHandle<FollowTargetUp> __upType;
-
-    private ComponentTypeHandle<FollowTargetVelocity> __velocityType;
 
     private ComponentTypeHandle<ThirdPersonCharacterLookAt> __characterLookAtType;
 
     private ComponentTypeHandle<ThirdPersonCharacterControl> __characterControlType;
-
-    private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
     private EntityQuery __velocityGroup;
 
@@ -156,18 +148,11 @@ public partial struct FollowTargetSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
         __upType = state.GetComponentTypeHandle<FollowTargetUp>(true);
         __characterLookAtType = state.GetComponentTypeHandle<ThirdPersonCharacterLookAt>();
         __characterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
 
-        __sharedData = new FollowTargetSharedData(
-            ref state,
-            __physicsVelocityType, 
-            out __localTransformType,
-            out __characterBodyType, 
-            out _, 
-            out __velocityType);
+        __sharedData = new FollowTargetSharedData(false, ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __velocityGroup = builder
@@ -187,6 +172,13 @@ public partial struct FollowTargetSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __sharedData.Update(ref state, 
+            out var localTransformType, 
+            out var physicsVelocityType, 
+            out var characterBodyType,
+            out _, 
+            out var velocityType);
+
         var jobHandle = __sharedData.Update(true, state.Dependency, ref state, out float deltaTimeR);
 
         __upType.Update(ref state);
@@ -196,10 +188,10 @@ public partial struct FollowTargetSystem : ISystem
         ApplyTransformsEx applyTransforms;
         applyTransforms.deltaTimeR = deltaTimeR;
         applyTransforms.upType = __upType;
-        applyTransforms.velocityType = __velocityType;
-        applyTransforms.characterBodyType = __characterBodyType;
-        applyTransforms.localTransformType = __localTransformType;
-        applyTransforms.physicsVelocityType = __physicsVelocityType;
+        applyTransforms.velocityType = velocityType;
+        applyTransforms.characterBodyType = characterBodyType;
+        applyTransforms.localTransformType = localTransformType;
+        applyTransforms.physicsVelocityType = physicsVelocityType;
         applyTransforms.characterLookAtType = __characterLookAtType;
         applyTransforms.characterControlsType = __characterControlType;
 
@@ -444,17 +436,9 @@ public partial struct FollowTargetTransformSystem : ISystem
 
     private ComponentLookup<LocalToWorld> __localToWorlds;
 
-    private ComponentTypeHandle<LocalTransform> __localTransformType;
-
     private ComponentTypeHandle<Parent> __parentType;
 
-    private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
-
-    private ComponentTypeHandle<FollowTarget> __instanceType;
-
     private ComponentTypeHandle<FollowTargetSpeed> __speedType;
-
-    private ComponentTypeHandle<FollowTargetVelocity> __velocityType;
 
     private BufferTypeHandle<FollowTargetDistance> __distanceType;
 
@@ -468,21 +452,11 @@ public partial struct FollowTargetTransformSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __localToWorlds = state.GetComponentLookup<LocalToWorld>(true);
-        //__localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
-        //__characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
-        //__instanceType = state.GetComponentTypeHandle<FollowTarget>();
         __speedType = state.GetComponentTypeHandle<FollowTargetSpeed>(true);
-        //__velocityType = state.GetComponentTypeHandle<FollowTargetVelocity>();
         __distanceType = state.GetBufferTypeHandle<FollowTargetDistance>(true);
 
-        __sharedData = new FollowTargetSharedData(
-            ref state,
-            state.GetComponentTypeHandle<PhysicsVelocity>(true), 
-            out __localTransformType,
-            out __characterBodyType, 
-            out __instanceType, 
-            out __velocityType);
+        __sharedData = new FollowTargetSharedData(true, ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __instanceGroup = builder
@@ -504,17 +478,25 @@ public partial struct FollowTargetTransformSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        __velocityType.Update(ref state);
-        __localTransformType.Update(ref state);
+        __sharedData.Update(ref state, 
+            out var localTransformType, 
+            out _, 
+            out var characterBodyType,
+            out var instanceType, 
+            out var velocityType);
         
         ApplyTransformsEx applyTransforms;
         applyTransforms.deltaTime = SystemAPI.Time.DeltaTime;
-        applyTransforms.velocityType = __velocityType;
-        applyTransforms.localTransformType = __localTransformType;
+        applyTransforms.velocityType = velocityType;
+        applyTransforms.localTransformType = localTransformType;
 
         var jobHandle = applyTransforms.ScheduleParallelByRef(__instanceGroup,  state.Dependency);
 
-        jobHandle = __sharedData.Update(false, jobHandle, ref state, out _);
+        jobHandle = __sharedData.Update(
+            false, 
+            jobHandle, 
+            ref state, 
+            out _);
         
         __localToWorlds.Update(ref state);
         __parentType.Update(ref state);
@@ -526,12 +508,12 @@ public partial struct FollowTargetTransformSystem : ISystem
         ComputeVelocitiesEx computeVelocities;
         computeVelocities.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         computeVelocities.localToWorlds = __localToWorlds;
-        computeVelocities.localTransformType = __localTransformType;
+        computeVelocities.localTransformType = localTransformType;
         computeVelocities.parentType = __parentType;
-        computeVelocities.characterBodyType = __characterBodyType;
-        computeVelocities.instanceType = __instanceType;
+        computeVelocities.characterBodyType = characterBodyType;
+        computeVelocities.instanceType = instanceType;
         computeVelocities.speedType = __speedType;
-        computeVelocities.velocityType = __velocityType;
+        computeVelocities.velocityType = velocityType;
         computeVelocities.distanceType = __distanceType;
         state.Dependency = computeVelocities.ScheduleParallelByRef(__velocityGroup, jobHandle);
     }
@@ -880,24 +862,16 @@ public struct FollowTargetSharedData
         return true;
     }
 
-    public FollowTargetSharedData(
-        ref SystemState state, 
-        in ComponentTypeHandle<PhysicsVelocity> physicsVelocityType, 
-        //out ComponentLookup<Parent> parents, 
-        //out ComponentLookup<LocalTransform> localTransforms, 
-        out ComponentTypeHandle<LocalTransform> localTransformType, 
-        out ComponentTypeHandle<KinematicCharacterBody> characterBodyType, 
-        out ComponentTypeHandle<FollowTarget> instanceType, 
-        out ComponentTypeHandle<FollowTargetVelocity> velocityType)
+    public FollowTargetSharedData(bool isPhysicsVelocityTypeReadOnly, ref SystemState state)
     {
-        __physicsVelocityType = physicsVelocityType;
         __entityType = state.GetEntityTypeHandle();
         __parents = state.GetComponentLookup<Parent>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>();
-        __localTransformType = localTransformType = state.GetComponentTypeHandle<LocalTransform>();
-        __characterBodyType = characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
-        __instanceType = instanceType = state.GetComponentTypeHandle<FollowTarget>();
-        __velocityType = velocityType = state.GetComponentTypeHandle<FollowTargetVelocity>();
+        __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
+        __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>(isPhysicsVelocityTypeReadOnly);
+        __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
+        __instanceType = state.GetComponentTypeHandle<FollowTarget>();
+        __velocityType = state.GetComponentTypeHandle<FollowTargetVelocity>();
         __parentType = state.GetComponentTypeHandle<FollowTargetParent>();
         __parentMotionType = state.GetComponentTypeHandle<FollowTargetParentMotion>();
         __bezierControlPointType = state.GetBufferTypeHandle<BezierControlPoint>(true);
@@ -919,11 +893,14 @@ public struct FollowTargetSharedData
                 .Build(ref state);
     }
 
-    public JobHandle Update(bool isInFixedFrame, in JobHandle inputDeps, ref SystemState state, out float deltaTimeR)
+    public void Update(
+        ref SystemState state,
+        out ComponentTypeHandle<LocalTransform> localTransformType,
+        out ComponentTypeHandle<PhysicsVelocity> physicsVelocityType,
+        out ComponentTypeHandle<KinematicCharacterBody> characterBodyType,
+        out ComponentTypeHandle<FollowTarget> instanceType,
+        out ComponentTypeHandle<FollowTargetVelocity> velocityType)
     {
-        float deltaTime = state.WorldUnmanaged.Time.DeltaTime;
-        deltaTimeR = math.rcp(deltaTime);
-
         __parents.Update(ref state);
         __entityType.Update(ref state);
         __physicsVelocityType.Update(ref state);
@@ -933,6 +910,28 @@ public struct FollowTargetSharedData
         __parentMotionType.Update(ref state);
         __velocityType.Update(ref state);
         __localTransforms.Update(ref state);
+
+        physicsVelocityType = __physicsVelocityType;
+        characterBodyType = __characterBodyType;
+        instanceType = __instanceType;
+
+        __bezierControlPointType.Update(ref state);
+        __bezierSpeedType.Update(ref state);
+        __localTransformType.Update(ref state);
+        __bezierDistanceType.Update(ref state);
+
+        localTransformType = __localTransformType;
+        velocityType = __velocityType;
+    }
+
+    public JobHandle Update(
+        bool isInFixedFrame, 
+        in JobHandle inputDeps, 
+        ref SystemState state, 
+        out float deltaTimeR)
+    {
+        float deltaTime = state.WorldUnmanaged.Time.DeltaTime;
+        deltaTimeR = math.rcp(deltaTime);
 
         ComputeParentsEx computeParents;
         computeParents.isInFixedFrame = isInFixedFrame;
@@ -948,11 +947,6 @@ public struct FollowTargetSharedData
         computeParents.localTransforms = __localTransforms;
         var jobHandle = computeParents.ScheduleParallelByRef(__parentGroup, inputDeps);
         
-        __bezierControlPointType.Update(ref state);
-        __bezierSpeedType.Update(ref state);
-        __localTransformType.Update(ref state);
-        __bezierDistanceType.Update(ref state);
-
         ApplyBeziersEx applyBeziers;
         applyBeziers.isInFixedFrame = isInFixedFrame;
         applyBeziers.deltaTime = deltaTime;
