@@ -444,12 +444,13 @@ public partial struct SuctionSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __targetGroup = builder
+                .WithAll<EffectTarget>()
                 .WithAllRW<SuctionTargetVelocity, LocalTransform>()
                 .Build(ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __instanceGroup = builder
-                .WithAll<Suction, LocalTransform, EffectTarget>()
+                .WithAll<Suction, LocalTransform>()
                 .Build(ref state);
     }
 
