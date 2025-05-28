@@ -32,7 +32,10 @@ public class PickableAuthoring : MonoBehaviour
             //SetComponentEnabled<PickableStatus>(entity, false);
 
             if (GetComponent<Rigidbody>() == null)
+            {
                 AddComponent<PhysicsVelocity>(entity);
+                AddComponent<Unity.Physics.GraphicsIntegration.PhysicsGraphicalSmoothing>(entity);
+            }
         }
     }
     
