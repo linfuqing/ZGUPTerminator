@@ -4,6 +4,7 @@ using Unity.Physics;
 
 public struct FixedFrame : IComponentData
 {
+    public float deltaTime;
     public int count;
 }
 
@@ -28,6 +29,8 @@ public partial struct FixedFrameSystem : ISystem
     {
         var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
         ++fixedFrame.count;
+
+        fixedFrame.deltaTime = SystemAPI.Time.DeltaTime;
         
         SystemAPI.SetSingleton(fixedFrame);
     }

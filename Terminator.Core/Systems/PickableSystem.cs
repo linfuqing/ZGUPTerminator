@@ -270,6 +270,7 @@ public partial struct PickableSystem : ISystem
                 .Build(ref state);
         
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
+        state.RequireForUpdate<FixedFrame>();
     }
 
     [BurstCompile]
@@ -286,7 +287,7 @@ public partial struct PickableSystem : ISystem
         __messageType.Update(ref state);
 
         PickEx pick;
-        pick.deltaTime = SystemAPI.Time.DeltaTime;
+        pick.deltaTime = SystemAPI.GetSingleton<FixedFrame>().deltaTime;
         pick.time = SystemAPI.Time.ElapsedTime;
         pick.localTransforms = __localTransforms;
         pick.entityType = __entityType;
