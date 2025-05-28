@@ -7,7 +7,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Random = Unity.Mathematics.Random;
 
-[BurstCompile]
+[BurstCompile, UpdateAfter(typeof(PickableSystem))]
 public partial struct LevelSkillPickableSystem : ISystem
 {
     private struct Result
