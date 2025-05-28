@@ -487,10 +487,7 @@ public partial interface IUserData
         public int expMax;
         public string[] skills;
 
-        public static readonly StageCache Empty = new StageCache()
-        {
-            skills = Array.Empty<string>()
-        };
+        public static readonly StageCache Empty = new StageCache(string.Empty);
 
         public StageCache(string value)
         {
@@ -500,7 +497,7 @@ public partial interface IUserData
                 exp = 0;
                 expMax = 0;
 
-                skills = null;
+                skills = Array.Empty<string>();
 
                 return;
             }
