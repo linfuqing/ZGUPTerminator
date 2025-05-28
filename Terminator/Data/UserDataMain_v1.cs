@@ -2082,7 +2082,7 @@ public partial class UserDataMain
 
             result.energy = stage.energy;
             result.levelEnergy = level.energy;
-            result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? new IUserData.StageCache() : UserData.GetStageCache(level.name, targetStage);
+            result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, targetStage);
 
             /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
             result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
@@ -2181,7 +2181,7 @@ public partial class UserDataMain
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
-        stageProperty.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? new IUserData.StageCache() : UserData.GetStageCache(level.name, stageIndex);
+        stageProperty.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, stageIndex);
         stageProperty.value = __ApplyProperty(
             userID, 
             stageProperty.cache.skills);

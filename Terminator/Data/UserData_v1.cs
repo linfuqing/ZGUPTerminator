@@ -487,6 +487,11 @@ public partial interface IUserData
         public int expMax;
         public string[] skills;
 
+        public static readonly StageCache Empty = new StageCache()
+        {
+            skills = Array.Empty<string>()
+        };
+
         public StageCache(string value)
         {
             if (string.IsNullOrEmpty(value))
