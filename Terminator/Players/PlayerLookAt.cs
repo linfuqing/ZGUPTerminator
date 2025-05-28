@@ -4,7 +4,7 @@ public class PlayerLookAt : MonoBehaviour
 {
     public static PlayerLookAt instance;
 
-    private void OnEnable()
+    protected void OnEnable()
     {
         if(instance == null)
             instance = this;

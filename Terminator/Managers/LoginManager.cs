@@ -494,11 +494,13 @@ public sealed class LoginManager : MonoBehaviour
                             {
                                 var stage = selectedLevel.stages[i];
 
+                                int stageIndex = -1;
                                 for (j = 0; j < numScenes; ++j)
                                 {
                                     ref var levelScene = ref level.scenes[j];
 
-                                    if (Array.IndexOf(levelScene.stageIndices, i) != -1)
+                                    stageIndex = Array.IndexOf(levelScene.stageIndices, i);
+                                    if (stageIndex != -1)
                                         break;
                                 }
                                 
@@ -516,7 +518,7 @@ public sealed class LoginManager : MonoBehaviour
                                 stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
                                 if (stageStyle.onTitle != null)
-                                    stageStyle.onTitle.Invoke((/*i*/sceneIndex + 1).ToString());
+                                    stageStyle.onTitle.Invoke((/*i*/stageIndex + 1).ToString());
 
                                 if (stage.rewardFlags == null)
                                 {
@@ -562,7 +564,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                     if (stageStyle.toggle != null)
                                     {
-                                        int stageIndex = i, stageListIndex = __stageStyles.Count;
+                                        int selectedStage = i, stageListIndex = __stageStyles.Count;
                                         
                                         var onSelected = stageStyle.onSelected;
 
@@ -583,7 +585,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;
 
-                                                LevelShared.stage = stageIndex;
+                                                LevelShared.stage = selectedStage;
 
                                                 if (onStageChanged != null)
                                                 {
