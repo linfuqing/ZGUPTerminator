@@ -280,12 +280,14 @@ public struct LevelSkillDefinition
                                 results.Add(result);
                             }
 
-                            numResults -= numSkillIndices - 1;
+                            numResults -= numSkillIndices;
                             if (numResults > 0)
                             {
                                 weights.Remove(groupSkillWeight.groupIndex);
                                 totalWeight -= groupSkillWeight.value.value;
                             }
+                            else
+                                break;
                         }
                         else
                             break;
@@ -336,7 +338,7 @@ public struct LevelSkillDefinition
                                         results.Add(result);
                                     }
 
-                                    numResults -= numSkillIndices - 1;
+                                    numResults -= numSkillIndices;
                                     if (numResults > 0)
                                     {
                                         weights.Remove(groupSkillWeight.groupIndex);
