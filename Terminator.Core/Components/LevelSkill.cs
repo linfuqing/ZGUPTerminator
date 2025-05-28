@@ -241,7 +241,7 @@ public struct LevelSkillDefinition
                             result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
                         ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
                             result.originIndex);
-                        numSkillIndices = math.min(skillIndices.Length, numResults - i);
+                        numSkillIndices = math.min(skillIndices.Length, numResults);
                         for (j = 0; j < numSkillIndices; ++j)
                         {
                             result.index = skillIndices[j];
@@ -249,7 +249,7 @@ public struct LevelSkillDefinition
                             results.Add(result);
                         }
 
-                        numResults -= numSkillIndices - 1;
+                        numResults -= numSkillIndices;
                         if (numResults < 1)
                             break;
                         /*if (numResults > i)
@@ -272,7 +272,7 @@ public struct LevelSkillDefinition
                                 result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
                             ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
                                 result.originIndex);
-                            numSkillIndices = math.min(skillIndices.Length, numResults - i);
+                            numSkillIndices = math.min(skillIndices.Length, numResults);
                             for (j = 0; j < numSkillIndices; ++j)
                             {
                                 result.index = skillIndices[j];
@@ -309,12 +309,13 @@ public struct LevelSkillDefinition
                         groupSkillWeights.RemoveRange(i, numWeights - i);
                         numWeights = groupSkillWeights.Length;*/
 
-                        float chance;
                         count = numResults;
+                        int weightOffset = i;
+                        float chance;
                         for (i = 0; i < count; ++i)
                         {
                             chance = random.NextFloat() * totalWeight;
-                            for (j = 0; j < numWeights; ++j)
+                            for (j = weightOffset; j < numWeights; ++j)
                             {
                                 groupSkillWeight = groupSkillWeights[j];
                                 if (!weights.ContainsKey(groupSkillWeight.groupIndex))
@@ -330,7 +331,7 @@ public struct LevelSkillDefinition
                                         result.activeIndex == -1 ? -1 : activeIndices[result.activeIndex].value;
                                     ref var skillIndices = ref __GetSkillIndices(groupSkillWeight.groupIndex,
                                         result.originIndex);
-                                    numSkillIndices = math.min(skillIndices.Length, numResults - i);
+                                    numSkillIndices = math.min(skillIndices.Length, numResults);
                                     for (k = 0; k < numSkillIndices; ++k)
                                     {
                                         result.index = skillIndices[k];
