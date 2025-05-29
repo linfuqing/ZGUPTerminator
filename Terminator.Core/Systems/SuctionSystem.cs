@@ -58,9 +58,6 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     private struct ClearEx : IJobChunk
     {
-        [ReadOnly]
-        public ComponentTypeHandle<EffectTarget> effectTargetType;
-        
         public ComponentTypeHandle<SuctionTargetVelocity> targetVelocityType;
 
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
@@ -71,8 +68,6 @@ public partial struct SuctionSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            bool isEffectTarget = chunk.Has(ref effectTargetType);
-            
             Clear clear;
             clear.targetVelocities = chunk.GetNativeArray(ref targetVelocityType);
             clear.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
@@ -85,12 +80,6 @@ public partial struct SuctionSystem : ISystem
                 clear.Execute(i);
                 
                 chunk.SetComponentEnabled(ref targetVelocityType, i, false);
-
-                if (i < clear.characterBodies.Length)
-                {
-                    if(!isEffectTarget || chunk.IsComponentEnabled(ref effectTargetType, i))
-                        chunk.SetComponentEnabled(ref characterBodyType, i, true);
-                }
             }
         }
     }
@@ -421,8 +410,6 @@ public partial struct SuctionSystem : ISystem
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
-    private ComponentTypeHandle<EffectTarget> __effectTargetType;
-
     private ComponentTypeHandle<Suction> __instanceType;
 
     private ComponentTypeHandle<SuctionTargetVelocity> __targetVelocityType;
@@ -454,7 +441,6 @@ public partial struct SuctionSystem : ISystem
         __characterInterpolationType = state.GetComponentTypeHandle<CharacterInterpolation>(true);
         __characterPropertiesType = state.GetComponentTypeHandle<KinematicCharacterProperties>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
-        __effectTargetType = state.GetComponentTypeHandle<EffectTarget>(true);
         __instanceType = state.GetComponentTypeHandle<Suction>(true);
         __targetVelocityType = state.GetComponentTypeHandle<SuctionTargetVelocity>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
@@ -480,13 +466,11 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        __effectTargetType.Update(ref state);
         __targetVelocityType.Update(ref state);
         __physicsVelocityType.Update(ref state);
         __characterBodyType.Update(ref state);
         
         ClearEx clear;
-        clear.effectTargetType = __effectTargetType;
         clear.targetVelocityType = __targetVelocityType;
         clear.physicsVelocityType = __physicsVelocityType;
         clear.characterBodyType = __characterBodyType;
