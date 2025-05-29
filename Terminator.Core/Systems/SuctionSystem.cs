@@ -58,6 +58,9 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     private struct ClearEx : IJobChunk
     {
+        [ReadOnly]
+        public ComponentTypeHandle<EffectTarget> effectTargetType;
+        
         public ComponentTypeHandle<SuctionTargetVelocity> targetVelocityType;
 
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
@@ -68,6 +71,8 @@ public partial struct SuctionSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            bool isEffectTarget = chunk.Has(ref effectTargetType);
+            
             Clear clear;
             clear.targetVelocities = chunk.GetNativeArray(ref targetVelocityType);
             clear.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
@@ -80,9 +85,12 @@ public partial struct SuctionSystem : ISystem
                 clear.Execute(i);
                 
                 chunk.SetComponentEnabled(ref targetVelocityType, i, false);
-                
-                if(i < clear.characterBodies.Length)
-                    chunk.SetComponentEnabled(ref characterBodyType, i, true);
+
+                if (i < clear.characterBodies.Length)
+                {
+                    if(!isEffectTarget || chunk.IsComponentEnabled(ref effectTargetType, i))
+                        chunk.SetComponentEnabled(ref characterBodyType, i, true);
+                }
             }
         }
     }
@@ -105,6 +113,9 @@ public partial struct SuctionSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public ComponentLookup<EffectTarget> effectTargets;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<SuctionTargetVelocity> velocities;
@@ -129,6 +140,9 @@ public partial struct SuctionSystem : ISystem
                 foreach (var simulationEvent in simulationEvents)
                 {
                     if (!localTransforms.TryGetComponent(simulationEvent.entity, out targetLocalTransform))
+                        continue;
+                    
+                    if(effectTargets.HasComponent(simulationEvent.entity) && !effectTargets.IsComponentEnabled(simulationEvent.entity))
                         continue;
 
                     velocity = transform.pos - targetLocalTransform.Position;
@@ -255,6 +269,9 @@ public partial struct SuctionSystem : ISystem
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
 
+        [ReadOnly]
+        public ComponentLookup<EffectTarget> effectTargets;
+
         [NativeDisableParallelForRestriction]
         public ComponentLookup<SuctionTargetVelocity> velocities;
 
@@ -267,6 +284,7 @@ public partial struct SuctionSystem : ISystem
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.parents = parents;
             collect.localTransforms = localTransforms;
+            collect.effectTargets = effectTargets;
             collect.velocities = velocities;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -403,6 +421,8 @@ public partial struct SuctionSystem : ISystem
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
+    private ComponentTypeHandle<EffectTarget> __effectTargetType;
+
     private ComponentTypeHandle<Suction> __instanceType;
 
     private ComponentTypeHandle<SuctionTargetVelocity> __targetVelocityType;
@@ -416,6 +436,8 @@ public partial struct SuctionSystem : ISystem
     private ComponentLookup<LocalTransform> __localTransforms;
 
     private ComponentLookup<Parent> __parents;
+
+    private ComponentLookup<EffectTarget> __effectTargets;
 
     private ComponentLookup<SuctionTargetVelocity> __velocities;
 
@@ -432,6 +454,7 @@ public partial struct SuctionSystem : ISystem
         __characterInterpolationType = state.GetComponentTypeHandle<CharacterInterpolation>(true);
         __characterPropertiesType = state.GetComponentTypeHandle<KinematicCharacterProperties>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
+        __effectTargetType = state.GetComponentTypeHandle<EffectTarget>(true);
         __instanceType = state.GetComponentTypeHandle<Suction>(true);
         __targetVelocityType = state.GetComponentTypeHandle<SuctionTargetVelocity>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
@@ -439,12 +462,12 @@ public partial struct SuctionSystem : ISystem
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __parents = state.GetComponentLookup<Parent>(true);
+        __effectTargets = state.GetComponentLookup<EffectTarget>(true);
         __velocities = state.GetComponentLookup<SuctionTargetVelocity>();
         __simulationEvents = state.GetBufferLookup<SimulationEvent>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __targetGroup = builder
-                .WithAll<EffectTarget>()
                 .WithAllRW<SuctionTargetVelocity, LocalTransform>()
                 .Build(ref state);
         
@@ -457,14 +480,15 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __effectTargetType.Update(ref state);
         __targetVelocityType.Update(ref state);
         __physicsVelocityType.Update(ref state);
         __characterBodyType.Update(ref state);
         
         ClearEx clear;
+        clear.effectTargetType = __effectTargetType;
         clear.targetVelocityType = __targetVelocityType;
         clear.physicsVelocityType = __physicsVelocityType;
-        //clear.physicsMassType = __physicsMassType;
         clear.characterBodyType = __characterBodyType;
         var jobHandle = clear.ScheduleParallelByRef(__targetGroup, state.Dependency);
         
@@ -472,6 +496,7 @@ public partial struct SuctionSystem : ISystem
         __instanceType.Update(ref state);
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
+        __effectTargets.Update(ref state);
         __velocities.Update(ref state);
         __simulationEvents.Update(ref state);
         
@@ -484,6 +509,7 @@ public partial struct SuctionSystem : ISystem
         collect.instanceType = __instanceType;
         collect.parents = __parents;
         collect.localTransforms = __localTransforms;
+        collect.effectTargets = __effectTargets;
         collect.velocities = __velocities;
         jobHandle = collect.ScheduleParallelByRef(__instanceGroup, jobHandle);
 
