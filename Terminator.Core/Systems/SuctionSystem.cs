@@ -332,7 +332,7 @@ public partial struct SuctionSystem : ISystem
             
             var localTransform = localTransforms[index];
 
-            var temp = localTransform;
+            //var temp = localTransform;
 
             Unity.Physics.Extensions.PhysicsComponentExtensions.Integrate(
                 physicsVelocity, 
