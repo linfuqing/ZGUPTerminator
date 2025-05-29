@@ -15,6 +15,7 @@ public class SuctionTargetAuthoring : MonoBehaviour
             var entity = GetEntity(TransformUsageFlags.None);
 
             AddComponent<SuctionTargetVelocity>(entity);
+            SetComponentEnabled<SuctionTargetVelocity>(entity, false);
         }
     }
 }

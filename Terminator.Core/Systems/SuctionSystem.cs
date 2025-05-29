@@ -73,13 +73,17 @@ public partial struct SuctionSystem : ISystem
             clear.physicsVelocities = chunk.GetNativeArray(ref physicsVelocityType);
             //clear.physicsMasses = chunk.GetNativeArray(ref physicsMassType);
             clear.characterBodies = chunk.GetNativeArray(ref characterBodyType);
-            
+
+            bool isCharacter = chunk.Has(ref characterBodyType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
                 clear.Execute(i);
                 
                 chunk.SetComponentEnabled(ref targetVelocityType, i, false);
+                
+                if(isCharacter)
+                    chunk.SetComponentEnabled(ref characterBodyType, i, true);
             }
         }
     }
@@ -128,6 +132,9 @@ public partial struct SuctionSystem : ISystem
                 float /*maxDistanceSQ = instance.maxDistance * instance.maxDistance, */distance, springSpeed, angle;
                 foreach (var simulationEvent in simulationEvents)
                 {
+                    if (!velocities.HasComponent(simulationEvent.entity))
+                        continue;
+
                     if (!localTransforms.TryGetComponent(simulationEvent.entity, out targetLocalTransform))
                         continue;
                     
@@ -142,9 +149,6 @@ public partial struct SuctionSystem : ISystem
 
                     if (distance > math.FLT_MIN_NORMAL)
                     {
-                        if (!velocities.HasComponent(simulationEvent.entity))
-                            continue;
-
                         ref var targetVelocity = ref velocities.GetRefRW(simulationEvent.entity).ValueRW;
 
                         distance = math.rsqrt(distance);
