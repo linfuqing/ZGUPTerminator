@@ -653,7 +653,7 @@ public partial struct EffectSystem : ISystem
                         }
                         else
                         {
-                            //statusTargets.Clear();
+                            statusTargets.Clear();
                             
                             status.time += definition.effects[status.index].startTime;
                         }
