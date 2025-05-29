@@ -931,32 +931,39 @@ public struct FollowTargetSharedData
         out float deltaTimeR)
     {
         float deltaTime = state.WorldUnmanaged.Time.DeltaTime;
-        deltaTimeR = math.rcp(deltaTime);
+        if (deltaTime > math.FLT_MIN_NORMAL)
+        {
+            deltaTimeR = math.rcp(deltaTime);
 
-        ComputeParentsEx computeParents;
-        computeParents.isInFixedFrame = isInFixedFrame;
-        computeParents.deltaTimeR = deltaTimeR;
-        computeParents.transformParents = __parents;
-        computeParents.entityType = __entityType;
-        computeParents.physicsVelocityType = __physicsVelocityType;
-        computeParents.characterBodyType = __characterBodyType;
-        computeParents.instanceType = __instanceType;
-        computeParents.parentType = __parentType;
-        computeParents.parentMotionType = __parentMotionType;
-        computeParents.velocityType = __velocityType;
-        computeParents.localTransforms = __localTransforms;
-        var jobHandle = computeParents.ScheduleParallelByRef(__parentGroup, inputDeps);
+            ComputeParentsEx computeParents;
+            computeParents.isInFixedFrame = isInFixedFrame;
+            computeParents.deltaTimeR = deltaTimeR;
+            computeParents.transformParents = __parents;
+            computeParents.entityType = __entityType;
+            computeParents.physicsVelocityType = __physicsVelocityType;
+            computeParents.characterBodyType = __characterBodyType;
+            computeParents.instanceType = __instanceType;
+            computeParents.parentType = __parentType;
+            computeParents.parentMotionType = __parentMotionType;
+            computeParents.velocityType = __velocityType;
+            computeParents.localTransforms = __localTransforms;
+            var jobHandle = computeParents.ScheduleParallelByRef(__parentGroup, inputDeps);
+
+            ApplyBeziersEx applyBeziers;
+            applyBeziers.isInFixedFrame = isInFixedFrame;
+            applyBeziers.deltaTime = deltaTime;
+            applyBeziers.physicsVelocityType = __physicsVelocityType;
+            applyBeziers.characterBodyType = __characterBodyType;
+            applyBeziers.bezierControlPointType = __bezierControlPointType;
+            applyBeziers.speedType = __bezierSpeedType;
+            applyBeziers.localTransformType = __localTransformType;
+            applyBeziers.velocityType = __velocityType;
+            applyBeziers.bezierDistanceType = __bezierDistanceType;
+            return applyBeziers.ScheduleParallelByRef(__bezierGroup, jobHandle);
+        }
         
-        ApplyBeziersEx applyBeziers;
-        applyBeziers.isInFixedFrame = isInFixedFrame;
-        applyBeziers.deltaTime = deltaTime;
-        applyBeziers.physicsVelocityType = __physicsVelocityType;
-        applyBeziers.characterBodyType = __characterBodyType;
-        applyBeziers.bezierControlPointType = __bezierControlPointType;
-        applyBeziers.speedType = __bezierSpeedType;
-        applyBeziers.localTransformType = __localTransformType;
-        applyBeziers.velocityType = __velocityType;
-        applyBeziers.bezierDistanceType = __bezierDistanceType;
-        return applyBeziers.ScheduleParallelByRef(__bezierGroup, jobHandle);
+        deltaTimeR = 0.0f;
+
+        return inputDeps;
     }
 }

@@ -501,34 +501,38 @@ public partial struct SuctionSystem : ISystem
         __simulationEvents.Update(ref state);
         
         float deltaTime = SystemAPI.Time.DeltaTime;
+        if (deltaTime > math.FLT_MIN_NORMAL)
+        {
+            CollectEx collect;
+            collect.deltaTime = deltaTime;
+            collect.entityType = __entityType;
+            collect.simulationEvents = __simulationEvents;
+            collect.instanceType = __instanceType;
+            collect.parents = __parents;
+            collect.localTransforms = __localTransforms;
+            collect.effectTargets = __effectTargets;
+            collect.velocities = __velocities;
+            jobHandle = collect.ScheduleParallelByRef(__instanceGroup, jobHandle);
 
-        CollectEx collect;
-        collect.deltaTime = deltaTime;
-        collect.entityType = __entityType;
-        collect.simulationEvents = __simulationEvents;
-        collect.instanceType = __instanceType;
-        collect.parents = __parents;
-        collect.localTransforms = __localTransforms;
-        collect.effectTargets = __effectTargets;
-        collect.velocities = __velocities;
-        jobHandle = collect.ScheduleParallelByRef(__instanceGroup, jobHandle);
+            __localTransformType.Update(ref state);
+            __physicsMassType.Update(ref state);
+            __characterInterpolationType.Update(ref state);
+            __characterPropertiesType.Update(ref state);
+            __localToWorldType.Update(ref state);
 
-        __localTransformType.Update(ref state);
-        __physicsMassType.Update(ref state);
-        __characterInterpolationType.Update(ref state);
-        __characterPropertiesType.Update(ref state);
-        __localToWorldType.Update(ref state);
-
-        ApplyEx apply;
-        apply.deltaTime = deltaTime;
-        apply.targetVelocityType = __targetVelocityType;
-        apply.physicsVelocityType = __physicsVelocityType;
-        apply.physicsMassType = __physicsMassType;
-        apply.characterInterpolationType = __characterInterpolationType;
-        apply.characterPropertiesType = __characterPropertiesType;
-        apply.characterBodyType = __characterBodyType;
-        apply.localTransformType = __localTransformType;
-        apply.localToWorldType = __localToWorldType;
-        state.Dependency = apply.ScheduleParallelByRef(__targetGroup, jobHandle);
+            ApplyEx apply;
+            apply.deltaTime = deltaTime;
+            apply.targetVelocityType = __targetVelocityType;
+            apply.physicsVelocityType = __physicsVelocityType;
+            apply.physicsMassType = __physicsMassType;
+            apply.characterInterpolationType = __characterInterpolationType;
+            apply.characterPropertiesType = __characterPropertiesType;
+            apply.characterBodyType = __characterBodyType;
+            apply.localTransformType = __localTransformType;
+            apply.localToWorldType = __localToWorldType;
+            state.Dependency = apply.ScheduleParallelByRef(__targetGroup, jobHandle);
+        }
+        else
+            state.Dependency = jobHandle;
     }
 }
