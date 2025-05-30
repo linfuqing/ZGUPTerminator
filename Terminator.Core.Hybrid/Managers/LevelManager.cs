@@ -251,9 +251,12 @@ public partial class LevelManager : MonoBehaviour
 
             if (__stages.Add(stageIndex))
             {
-                var onEnable = _stages[stageIndex].onEnable;
-                if (onEnable != null)
-                    onEnable.Invoke();
+                ref var stage = ref _stages[stageIndex];
+                if (stage.onEnable != null)
+                    stage.onEnable.Invoke();
+                
+                if (stage.max > 0 && stage.onCount != null)
+                    stage.onCount.Invoke(Mathf.Max(0, stage.max - __value).ToString());
 
                 return true;
             }
