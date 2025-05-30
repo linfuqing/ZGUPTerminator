@@ -678,7 +678,7 @@ public sealed class LoginManager : MonoBehaviour
 
             if (style.button != null)
             {
-                style.button.onClick.RemoveAllListeners();
+                style.button.onClick.RemoveListener(__ApplyStart);
                 style.button.onClick.AddListener(__ApplyStart);
             }
 
