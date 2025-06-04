@@ -9,6 +9,7 @@ using Unity.Physics;
 using Unity.Physics.GraphicsIntegration;
 using Unity.Physics.Systems;
 using Unity.Transforms;
+using ZG;
 
 public struct SpawnerSingleton : IComponentData
 {
@@ -255,6 +256,9 @@ public partial struct SpawnerSystem : ISystem
         
         [ReadOnly]
         public ComponentLookup<CharacterInterpolation> characterInterpolations;
+
+        [ReadOnly] 
+        public BufferLookup<MessageParameter> messageParameters;
         
         [ReadOnly] 
         public NativeParallelMultiHashMap<SpawnerEntity, Entity> entities;
@@ -301,6 +305,7 @@ public partial struct SpawnerSystem : ISystem
                 colliders, 
                 physicsGraphicalInterpolationBuffers, 
                 characterInterpolations, 
+                messageParameters, 
                 entities, 
                 prefabs[index], 
                 ref states, 
@@ -330,14 +335,17 @@ public partial struct SpawnerSystem : ISystem
         public CollisionWorld collisionWorld;
         
         [ReadOnly]
+        public ComponentLookup<PhysicsCollider> colliders;
+
+        [ReadOnly] 
+        public BufferLookup<MessageParameter> messageParameters;
+
+        [ReadOnly]
         public ComponentLookup<CharacterInterpolation> characterInterpolations;
 
         [ReadOnly]
         public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
 
-        [ReadOnly]
-        public ComponentLookup<PhysicsCollider> colliders;
-        
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
 
@@ -379,9 +387,10 @@ public partial struct SpawnerSystem : ISystem
             collect.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)time ^ (int)(time >> 32)));
             collect.spawnerTime = spawnerTime;
             collect.collisionWorld = collisionWorld;
-            collect.characterInterpolations = characterInterpolations;
-            collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
             collect.colliders = colliders;
+            collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
+            collect.characterInterpolations = characterInterpolations;
+            collect.messageParameters = messageParameters;
             collect.entities = entities;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
@@ -400,6 +409,8 @@ public partial struct SpawnerSystem : ISystem
                 collect.Execute(i);
         }
     }
+
+    private BufferLookup<MessageParameter> __messageParameters;
 
     private ComponentLookup<CharacterInterpolation> __characterInterpolations;
 
@@ -433,6 +444,7 @@ public partial struct SpawnerSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __messageParameters = state.GetBufferLookup<MessageParameter>(true);
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __colliders = state.GetComponentLookup<PhysicsCollider>(true);
@@ -496,6 +508,7 @@ public partial struct SpawnerSystem : ISystem
         trigger.triggerType = __triggerType;
         var triggerJobHandle = trigger.ScheduleParallelByRef(__groupToTrigger, resetJobHandle);
 
+        __messageParameters.Update(ref state);
         __characterInterpolations.Update(ref state);
         __physicsGraphicalInterpolationBuffers.Update(ref state);
         __colliders.Update(ref state);
@@ -519,6 +532,7 @@ public partial struct SpawnerSystem : ISystem
         collect.instanceCount = spawnerSingleton.instanceCount;
         collect.entities = spawnerSingleton.entities;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
+        collect.messageParameters = __messageParameters;
         collect.characterInterpolations = __characterInterpolations;
         collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
         collect.colliders = __colliders;

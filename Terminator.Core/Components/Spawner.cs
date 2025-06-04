@@ -7,6 +7,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.GraphicsIntegration;
+using ZG;
 using Random = Unity.Mathematics.Random;
 
 public enum SpawnerSpace
@@ -177,6 +178,7 @@ public struct SpawnerDefinition
         in ComponentLookup<PhysicsCollider> colliders, 
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
+        in BufferLookup<MessageParameter> messageParameters, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities,
         in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref DynamicBuffer<SpawnerStatus> states, 
@@ -205,6 +207,7 @@ public struct SpawnerDefinition
                 colliders, 
                 physicsGraphicalInterpolationBuffers, 
                 characterInterpolations, 
+                messageParameters, 
                 entities, 
                 prefabs,
                 ref spawner, 
@@ -228,6 +231,7 @@ public struct SpawnerDefinition
         in ComponentLookup<PhysicsCollider> colliders, 
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
+        in BufferLookup<MessageParameter> messageParameters, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities, 
         in DynamicBuffer<SpawnerPrefab> prefabs, 
         ref Spawner data, 
@@ -305,6 +309,7 @@ public struct SpawnerDefinition
                         colliders,
                         physicsGraphicalInterpolationBuffers,
                         characterInterpolations, 
+                        messageParameters, 
                         ref random,
                         ref entityManager,
                         ref data))
@@ -353,6 +358,7 @@ public struct SpawnerDefinition
         in ComponentLookup<PhysicsCollider> colliders,
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
+        in BufferLookup<MessageParameter> messageParameters, 
         ref Random random,
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref Spawner data)
@@ -462,6 +468,25 @@ public struct SpawnerDefinition
                 effectTarget.hp = math.min((int)math.round(attribute.hp + attribute.hpBuff * times), attribute.hpMax);
                 effectTarget.invincibleTime = 0.0f;
                 entityManager.SetComponent(2, entity, effectTarget);
+
+                if (messageParameters.TryGetBuffer(prefab, out var source))
+                {
+                    var destination = entityManager.SetBuffer<MessageParameter>(2, entity);
+                    destination.CopyFrom(source);
+                    int count = destination.Length;
+                    
+                    for (i = 0; i < count; ++i)
+                    {
+                        ref var messageParameter = ref destination.ElementAt(i);
+                        switch ((EffectAttributeID)messageParameter.id)
+                        {
+                            case EffectAttributeID.HPMax:
+                            case EffectAttributeID.HP:
+                                messageParameter.value *= effectTarget.hp / attribute.hp;
+                                break;
+                        }
+                    }
+                }
             }
 
             if (attribute.level != 0 || attribute.exp != 0 || attribute.gold != 0)
