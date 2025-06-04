@@ -482,7 +482,7 @@ public struct SpawnerDefinition
                         {
                             case EffectAttributeID.HPMax:
                             case EffectAttributeID.HP:
-                                messageParameter.value *= effectTarget.hp / attribute.hp;
+                                messageParameter.value = effectTarget.hp;
                                 break;
                         }
                     }
