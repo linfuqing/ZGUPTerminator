@@ -440,9 +440,9 @@ public partial interface IUserData
 
             UnlockFirst = 0x02 | Unlock, 
             
-            RoleUnlock = 0x04, 
+            //RoleUnlock = 0x04, 
             
-            RoleUnlockFirst = 0x08
+            //RoleUnlockFirst = 0x08
         }
 
         public Flag flag;

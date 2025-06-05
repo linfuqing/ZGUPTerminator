@@ -57,7 +57,12 @@ public class AttributeEventReceiver : MonoBehaviour
         }
 
         if (parameters.TryGet((int)EffectAttributeID.HP, out int hp))
+        {
+            if (__hpMax == 0)
+                __hpMax = hp;
+            
             dirtyFlag |= 1 << (int)AttributeType.HP;
+        }
         else
             hp = __hpMax;
 

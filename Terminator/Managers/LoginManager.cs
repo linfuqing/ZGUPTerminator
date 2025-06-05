@@ -224,49 +224,8 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 总攻击倍率
-    /// </summary>
     [Obsolete]
-    public float bulletDamageScale
-    {
-        get;
-
-        set;
-    }
-    
-    /// <summary>
-    /// 总防御倍率
-    /// </summary>
-    [Obsolete]
-    public float effectTargetDamageScale
-    {
-        get;
-
-        set;
-    }
-    
-    /// <summary>
-    /// 总HP倍率
-    /// </summary>
-    [Obsolete]
-    public float effectTargetHPScale
-    {
-        get;
-
-        set;
-    }
-
-    /// <summary>
-    /// 选择的超能武器的名字
-    /// </summary>
-    [Obsolete]
-    public string[] activeSkillNames
-    {
-        get;
-
-        set;
-    }
+    public string[] activeSkillNames;
 
     [Preserve]
     public void RefreshLevel()

@@ -591,7 +591,7 @@ public struct BulletDefinition
 
         int statusCount = status.count, entityCount = 0;
 
-        if (data.capacity > 0 && (data.interval > math.FLT_MIN_NORMAL || data.cooldown > math.FLT_MIN_NORMAL))
+        if (data.capacity > status.count && (data.interval > math.FLT_MIN_NORMAL || data.cooldown > math.FLT_MIN_NORMAL))
         {
             //status.cooldown = cooldown;
 

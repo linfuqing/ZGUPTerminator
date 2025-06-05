@@ -1163,10 +1163,10 @@ public partial class UserDataMain
         else if ((flag & Flag.RolesUnlock) != 0)
             result.flag |= IUserData.Roles.Flag.Unlock;
         
-        if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
+        /*if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
             result.flag |= IUserData.Roles.Flag.RoleUnlockFirst;
         else if ((flag & Flag.RoleUnlock) != 0)
-            result.flag |= IUserData.Roles.Flag.RoleUnlock;
+            result.flag |= IUserData.Roles.Flag.RoleUnlock;*/
         
         bool isCreated = (flag & Flag.RolesCreated) != Flag.RolesCreated;
 
@@ -1663,7 +1663,7 @@ public partial class UserDataMain
             userTalents.Add(userTalent);
         }
 
-        flag &= ~Flag.RoleUnlockFirst;
+        //flag &= ~Flag.RoleUnlockFirst;
 
         onComplete(userTalents.ToArray());
     }
