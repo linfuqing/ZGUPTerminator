@@ -607,10 +607,15 @@ public struct BulletDefinition
                 }
                 else
                     count = 1;
-
-                entityCount += count;
-
+                
                 status.count += count;
+                if (status.count > data.capacity)
+                {
+                    count += data.capacity - status.count;
+                    
+                    status.count = data.capacity;
+                }
+
                 if (status.count == data.capacity)
                 {
                     status.cooldown += data.cooldown;
@@ -622,6 +627,9 @@ public struct BulletDefinition
                         break;
                     }
                 }
+                
+                entityCount += count;
+
             } while (status.cooldown <= time);
         }
         else
@@ -711,7 +719,7 @@ public struct BulletDefinition
                 if (data.interval > math.FLT_MIN_NORMAL)
                 {
                     count = data.capacity - statusCount;
-                    count = math.min(count, (int)math.floor((time - cooldown) / data.interval) + 1);
+                    count = math.min(count, entityCount);
                 }
                 else
                     count = 1;
