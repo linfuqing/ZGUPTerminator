@@ -229,6 +229,19 @@ public struct SkillDefinition
                         }
                     }
                 }
+                
+                if (isCooldown && !isReload)
+                {
+                    for (j = 0; j < numBulletIndices; ++j)
+                    {
+                        ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                        if (bullet.index < bulletStates.Length)
+                        {
+                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                            bulletStatus.cooldown = math.max(bulletStatus.cooldown, time);
+                        }
+                    }
+                }
             }
             
             if (isCooldown)

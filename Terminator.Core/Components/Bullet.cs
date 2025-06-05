@@ -603,19 +603,17 @@ public struct BulletDefinition
                     count = data.capacity - status.count;
                     count = math.min(count, (int)math.floor((time - status.cooldown) / data.interval) + 1);
 
+                    if (status.count + count > data.capacity)
+                        count = data.capacity - status.count;
+                    
                     status.cooldown += data.interval * count;
                 }
                 else
                     count = 1;
                 
-                status.count += count;
-                if (status.count > data.capacity)
-                {
-                    count += data.capacity - status.count;
-                    
-                    status.count = data.capacity;
-                }
+                entityCount += count;
 
+                status.count += count;
                 if (status.count == data.capacity)
                 {
                     status.cooldown += data.cooldown;
@@ -628,8 +626,6 @@ public struct BulletDefinition
                     }
                 }
                 
-                entityCount += count;
-
             } while (status.cooldown <= time);
         }
         else

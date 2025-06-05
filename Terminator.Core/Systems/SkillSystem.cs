@@ -203,6 +203,8 @@ public partial struct SkillSystem : ISystem
                 .WithAll<SkillDefinitionData, SkillActiveIndex>()
                 .WithAllRW<BulletActiveIndex, SkillStatus>()
                 .Build(ref state);
+        
+        state.RequireForUpdate<FixedFrame>();
     }
 
     [BurstCompile]
@@ -228,7 +230,7 @@ public partial struct SkillSystem : ISystem
         __bulletLayerMaskType.Update(ref state);
         
         CollectEx collect;
-        collect.time = SystemAPI.Time.ElapsedTime;
+        collect.time = SystemAPI.GetSingleton<FixedFrame>().elapsedTime;//SystemAPI.Time.ElapsedTime;
         collect.bulletDefinitionType = __bulletDefinitionType;
         collect.instanceType = __instanceType;
         collect.cooldownScaleType = __cooldownScaleType;

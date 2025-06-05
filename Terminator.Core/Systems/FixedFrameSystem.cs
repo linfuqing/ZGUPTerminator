@@ -6,6 +6,8 @@ public struct FixedFrame : IComponentData
 {
     public float deltaTime;
     public int count;
+    
+    public double elapsedTime => (double)deltaTime * count;
 }
 
 [BurstCompile, UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
