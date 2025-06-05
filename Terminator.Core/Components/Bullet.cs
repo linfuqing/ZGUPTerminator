@@ -701,18 +701,10 @@ public struct BulletDefinition
         instance.parent = parent;
         instance.entityPrefabReference = prefabs[data.prefabLoaderIndex].entityPrefabReference;
         
-        for(int i = 0; i < entityCount; ++i)
-        {
-            instances.Add(instance);
-                    
-            instance.time += data.interval;
-        }
-
-        /*if(entityCount == 1)
+        if(entityCount == 1)
             instances.Add(instance);
         else
         {
-            entityCount = 0;
             int count, i;
             do
             {
@@ -726,14 +718,12 @@ public struct BulletDefinition
 
                 for(i = 0; i < count; ++i)
                 {
-                    instance.time = cooldown;
+                    instance.time = cooldown + data.delayTime;
 
                     instances.Add(instance);
                     
                     cooldown += data.interval;
                 }
-
-                entityCount += count;
 
                 statusCount += count;
                 if (statusCount == data.capacity)
@@ -742,8 +732,10 @@ public struct BulletDefinition
 
                     cooldown += data.cooldown;
                 }
-            } while (cooldown <= time);
-        }*/
+                
+                entityCount -= count;
+            } while (entityCount > 0);
+        }
 
         return true;
     }
