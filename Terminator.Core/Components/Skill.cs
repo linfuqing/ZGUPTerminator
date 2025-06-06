@@ -230,7 +230,7 @@ public struct SkillDefinition
                     }
                 }
                 
-                if (isCooldown && !isReload)
+                /*if (isCooldown && !isReload)
                 {
                     for (j = 0; j < numBulletIndices; ++j)
                     {
@@ -245,7 +245,7 @@ public struct SkillDefinition
                             bulletStatus.version = 0;
                         }
                     }
-                }
+                }*/
             }
             
             if (isCooldown)

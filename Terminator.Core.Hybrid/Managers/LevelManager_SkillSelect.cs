@@ -226,11 +226,11 @@ public partial class LevelManager
                     }
 
                     if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
-                        (guideIndex == -1 || guidePriority < source.value.flag) &&
+                        (guideIndex == -1 || guidePriority < source.value.priority) &&
                         _skillSelectionGuides != null &&
                         Array.IndexOf(_skillSelectionGuides, source.name) != -1)
                     {
-                        guidePriority = source.value.flag;
+                        guidePriority = source.value.priority;
                         guideIndex = i;
                     }
 
@@ -254,9 +254,9 @@ public partial class LevelManager
 
                     style.SetAsset(source.value);
 
-                    if (source.value.flag > 0 && (recommendIndex == -1 || recommendPriority < source.value.flag))
+                    if ((recommendIndex == -1 || recommendPriority < source.value.priority))
                     {
-                        recommendPriority = source.value.flag;
+                        recommendPriority = source.value.priority;
                         recommendIndex = i;
                     }
 
