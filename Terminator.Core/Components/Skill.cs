@@ -238,7 +238,11 @@ public struct SkillDefinition
                         if (bullet.index < bulletStates.Length)
                         {
                             ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                            bulletStatus.cooldown = math.max(bulletStatus.cooldown, time);
+                            //bulletStatus.cooldown = math.max(bulletStatus.cooldown, time);bulletStatus.cooldown =
+                            bulletStatus.cooldown = time + bulletDefinition.bullets[bullet.index].startTime;
+                            bulletStatus.times = 0;
+                            bulletStatus.count = 0;
+                            bulletStatus.version = 0;
                         }
                     }
                 }
