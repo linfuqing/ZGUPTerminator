@@ -56,12 +56,31 @@ public partial interface IUserData
         /// 付费状态
         /// </summary>
         public Status status;
+        
         /// <summary>
-        /// 付费次数
+        /// 存钱罐当前的金币或者钻石&章节礼包当前的章节数
+        /// </summary>
+        public int exp;
+
+        /// <summary>
+        /// 存钱罐需要的金币或者钻石&章节礼包需要达到的章节数
+        /// </summary>
+        public int expMax;
+
+        /// <summary>
+        /// （每日）购买上限
+        /// </summary>
+        public int capacity;
+        /// <summary>
+        /// 购买次数
         /// </summary>
         public int times;
         /// <summary>
-        /// 有效期
+        /// 有效期，为0则没有有效期
+        /// </summary>
+        public int deadline;
+        /// <summary>
+        /// 购买日期
         /// </summary>
         public long ticks;
         /// <summary>
@@ -111,7 +130,7 @@ public partial interface IUserData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
+    IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete);
 }
 
 public partial class UserData
@@ -131,8 +150,8 @@ public partial class UserData
         return UserDataMain.instance.QueryPurchaseTokens(type, level, onComplete);
     }
     
-    public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.CollectPurchaseToken(type, level, onComplete);
+        return UserDataMain.instance.CollectPurchaseToken(type, onComplete);
     }
 }

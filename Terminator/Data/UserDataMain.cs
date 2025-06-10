@@ -56,12 +56,28 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
 
     private const string NAME_SPACE_USER_GOLD = "UserGold";
+    private const string NAME_SPACE_USER_GOLD_BANK = "UserGoldBank";
 
     public static int gold
     {
         get => PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
 
-        set => PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
+        set
+        {
+            int origin = gold;
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
+
+            if (value > origin)
+                goldBank += value - origin;
+        }
+    }
+
+    public static int goldBank
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD_BANK);
+
+        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD_BANK, value);
     }
     
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
@@ -415,6 +431,9 @@ public sealed partial class UserDataMain : MonoBehaviour
 #endif
             UserData.level = int.MaxValue - 1;
         }
+
+        if (IPurchaseData.instance == null)
+            gameObject.AddComponent<PurchaseData>();
 
         instance = this;
     }

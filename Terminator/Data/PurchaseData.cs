@@ -22,13 +22,13 @@ public enum PurchaseType
     //通行证，分0，1两档
     Pass,
     
-    //章节礼包
+    //章节礼包，章节为对应数字挡位，只能购买已打通的章节
     Level,
     
     //存钱罐
-    PiggyBank, 
+    GoldBank, 
     
-    //钻石，分为0，1，2，3，4，5，6个挡位
+    //钻石，分为0，1，2，3，4，5这6个首充挡位以及6，7，8，9，10，11这6个普通挡位
     Diamond, 
     
     //买体力
@@ -60,6 +60,8 @@ public interface IPurchaseData
         /// 购买次数
         /// </summary>
         public int times;
+
+        public int deadline;
         
         /// <summary>
         /// 有效期
@@ -68,7 +70,7 @@ public interface IPurchaseData
         
         public bool IsValid(int times)
         {
-            return this.times == times && (ticks == 0 || ticks > DateTime.UtcNow.Ticks);
+            return this.times == times && (deadline == 0 || ticks + deadline * TimeSpan.TicksPerSecond > DateTime.UtcNow.Ticks);
         }
     }
     
@@ -96,7 +98,8 @@ public interface IPurchaseData
 public class PurchaseData : MonoBehaviour, IPurchaseData
 {
     public const string NAME_SPACE_TIMES = "PurchaseDataTimes";
-    public const string NAME_SPACE_SECONDS = "PurchaseDataSeconds";
+    public const string NAME_SPACE_DEADLINE = "PurchaseDataDeadline";
+    public const string NAME_SPACE_PAY_TIME = "PurchaseDataPayTime";
     
     public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -105,7 +108,8 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         IPurchaseData.Output result;
         
         result.times = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_TIMES));
-        result.ticks = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_SECONDS)) * TimeSpan.TicksPerSecond;
+        result.deadline = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_DEADLINE));
+        result.ticks = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_PAY_TIME)) * TimeSpan.TicksPerSecond;
         if(result.ticks != 0)
             result.ticks += UnixEpoch.Ticks;
 
@@ -187,21 +191,15 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         {
             case PurchaseType.MonthlyCard:
             case PurchaseType.SweepCard:
-                key = input.ToString(NAME_SPACE_SECONDS);
+                key = input.ToString(NAME_SPACE_DEADLINE);
                 seconds = PlayerPrefs.GetInt(key);
-                if(seconds == 0)
-                    seconds = (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
-
                 seconds += (int)(TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond) * 30;
                 
                 PlayerPrefs.SetInt(key, seconds);
                 break;
             case PurchaseType.Pass:
-                key = input.ToString(NAME_SPACE_SECONDS);
+                key = input.ToString(NAME_SPACE_DEADLINE);
                 seconds = PlayerPrefs.GetInt(key);
-                if(seconds == 0)
-                    seconds = (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
-
                 seconds = (int)((new DateTime(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks).ToLocalTime()
                                      .AddMonths(1).ToUniversalTime().Ticks -
                                  UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
@@ -212,6 +210,9 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 seconds = 0;
                 break;
         }
+
+        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME),
+            (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond));
 
         onComplete(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks);
     }

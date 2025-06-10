@@ -14,6 +14,12 @@ public partial class UserDataMain
 
         public int level;
 
+        [Tooltip("（每日）购买上限")]
+        public int capacity;
+
+        [Tooltip("存钱罐需要的金币或者钻石&章节礼包需要达到的章节数")]
+        public int exp;
+
         public UserRewardData[] rewards;
     }
 
@@ -35,7 +41,24 @@ public partial class UserDataMain
             out var output)
             ? IUserData.PurchaseItems.Status.Vaild : 
             (time + 1 == output.times ? IUserData.PurchaseItems.Status.Purchased : IUserData.PurchaseItems.Status.Invaild);
+        switch (type)
+        {
+            case PurchaseType.Level:
+                result.exp = UserData.level;
+                break;
+            case PurchaseType.GoldBank:
+                result.exp = goldBank;
+                break;
+            default:
+                result.exp = 0;
+                break;
+        }
+
+        result.expMax = 0;
+        result.capacity = 0;
+        
         result.times = output.times;
+        result.deadline = output.deadline;
         result.ticks = output.ticks;
         result.rewards = null;
         
@@ -44,6 +67,8 @@ public partial class UserDataMain
             if (purchaseItem.type == type && 
                 purchaseItem.level == level)
             {
+                result.expMax = purchaseItem.exp;
+                result.capacity = purchaseItem.capacity;
                 result.rewards = purchaseItem.rewards;
 
                 break;
@@ -59,14 +84,43 @@ public partial class UserDataMain
 
         if (PurchaseData.Exchange(type, level, NAME_SPACE_USER_PURCHASE_ITEM))
         {
+            bool result = true;
+            List<UserReward> rewards = null;
             foreach (var purchaseItem in _purchaseItems)
             {
                 if (purchaseItem.type == type && purchaseItem.level == level)
                 {
-                    onComplete(__ApplyRewards(purchaseItem.rewards).ToArray());
+                    switch (type)
+                    {
+                        case PurchaseType.Level:
+                            if (UserData.level < purchaseItem.exp)
+                                break;
+                            
+                            rewards = __ApplyRewards(purchaseItem.rewards);
+                            
+                            break;
+                        case PurchaseType.GoldBank:
+                            if (goldBank < purchaseItem.exp)
+                                break;
+                            
+                            rewards = __ApplyRewards(purchaseItem.rewards);
+
+                            goldBank = 0;
+                            break;
+                        default:
+                            rewards = __ApplyRewards(purchaseItem.rewards);
+                            break;
+                    }
                     
-                    yield break;
+                    break;
                 }
+            }
+
+            if (rewards != null)
+            {
+                onComplete(rewards.ToArray());
+
+                yield break;
             }
         }
 
@@ -140,7 +194,7 @@ public partial class UserDataMain
         onComplete(result);
     }
     
-    public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
     {
         yield return null;
 
@@ -158,20 +212,25 @@ public partial class UserDataMain
         }
 
         List<UserReward> rewards = null;
-        if (PurchaseData.IsValid(type, level, NAME_SPACE_USER_PURCHASE_ITEM, out int times, out _))
+        
+        string key;
+        foreach (var purchaseToken in _purchaseTokens)
         {
-            string key;
-            foreach (var purchaseToken in _purchaseTokens)
+            if (purchaseToken.type == type && 
+                purchaseToken.exp <= exp)
             {
-                if (purchaseToken.type == type && 
-                    purchaseToken.level == level && 
-                    purchaseToken.exp <= exp)
+                if (PurchaseData.IsValid(
+                        type, 
+                        purchaseToken.level, 
+                        NAME_SPACE_USER_PURCHASE_ITEM, 
+                        out int times,
+                        out _))
                 {
                     key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
                     if (PlayerPrefs.GetInt(key) < times)
                     {
                         PlayerPrefs.SetInt(key, times);
-                        
+
                         if (rewards == null)
                             rewards = new List<UserReward>();
 
