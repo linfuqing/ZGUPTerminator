@@ -72,6 +72,9 @@ public struct UserEnergy
     public int max;
     public uint unitTime;
     public long tick;
+
+    public int current =>
+        Mathf.Min(value + (int)((DateTime.UtcNow.Ticks - tick) / (TimeSpan.TicksPerMillisecond * unitTime)));
 }
 
 public partial struct UserLevel

@@ -31,6 +31,9 @@ public enum PurchaseType
     //钻石，分为0，1，2，3，4，5，6个挡位
     Diamond, 
     
+    //买体力
+    Energy, 
+    
     //活动预留
     Other
 }
@@ -63,18 +66,21 @@ public interface IPurchaseData
         /// </summary>
         public long ticks;
         
-        public bool isValid => times >= 0 && (ticks == 0 || ticks > DateTime.UtcNow.Ticks);
+        public bool IsValid(int times)
+        {
+            return this.times == times && (ticks == 0 || ticks > DateTime.UtcNow.Ticks);
+        }
     }
     
     /// <summary>
-    ///  查询有效期
+    ///  查询付费状态，不需要查询奖励的时候使用，需要查询奖励时用<see cref="IUserData.QueryPurchaseItems"/>替代。
     /// </summary>
     /// <param name="userID"></param>
     /// <param name="type"></param>
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator Query(uint userID, Input[] inputs, System.Action<Output[]> onComplete);
+    IEnumerator Query(uint userID, Input[] inputs, Action<Output[]> onComplete);
     
     /// <summary>
     /// 购买商品
@@ -90,7 +96,7 @@ public interface IPurchaseData
 public class PurchaseData : MonoBehaviour, IPurchaseData
 {
     public const string NAME_SPACE_TIMES = "PurchaseDataTimes";
-    public const string NAME_SPACE_TICKS = "PurchaseDataTicks";
+    public const string NAME_SPACE_SECONDS = "PurchaseDataSeconds";
     
     public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -99,7 +105,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         IPurchaseData.Output result;
         
         result.times = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_TIMES));
-        result.ticks = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_TICKS)) * TimeSpan.TicksPerSecond;
+        result.ticks = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_SECONDS)) * TimeSpan.TicksPerSecond;
         if(result.ticks != 0)
             result.ticks += UnixEpoch.Ticks;
 
@@ -113,6 +119,39 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         input.level = level;
 
         return Query(input);
+    }
+
+    public static bool IsValid(PurchaseType type, int level, string key, out int times, out IPurchaseData.Output output)
+    {
+        IPurchaseData.Input input;
+        input.type = type;
+        input.level = level;
+
+        key = input.ToString(key);
+
+        times = PlayerPrefs.GetInt(key);
+
+        output = Query(input);
+
+        return output.IsValid(times);
+    }
+
+    public static bool Exchange(PurchaseType type, int level, string key)
+    {
+        IPurchaseData.Input input;
+        input.type = type;
+        input.level = level;
+
+        key = input.ToString(key);
+
+        int times = PlayerPrefs.GetInt(key) + 1;
+
+        if(!Query(input).IsValid(times))
+            return false;
+        
+        PlayerPrefs.SetInt(key, times);
+
+        return true;
     }
     
     public IEnumerator Query(
@@ -142,26 +181,39 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         int times = PlayerPrefs.GetInt(timesKey);
         PlayerPrefs.SetInt(timesKey, ++times);
 
-        long ticks;
+        int seconds;
+        string key;
         switch (type)
         {
             case PurchaseType.MonthlyCard:
             case PurchaseType.SweepCard:
-                string ticksKey = input.ToString(NAME_SPACE_TICKS);
-                ticks = PlayerPrefs.GetInt(ticksKey);
-                if(ticks == 0)
-                    ticks = DateTime.UtcNow.Ticks;
+                key = input.ToString(NAME_SPACE_SECONDS);
+                seconds = PlayerPrefs.GetInt(key);
+                if(seconds == 0)
+                    seconds = (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
 
-                ticks += TimeSpan.TicksPerDay * 30;
+                seconds += (int)(TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond) * 30;
                 
-                PlayerPrefs.SetInt(ticksKey, (int)((ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond));
+                PlayerPrefs.SetInt(key, seconds);
+                break;
+            case PurchaseType.Pass:
+                key = input.ToString(NAME_SPACE_SECONDS);
+                seconds = PlayerPrefs.GetInt(key);
+                if(seconds == 0)
+                    seconds = (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
+
+                seconds = (int)((new DateTime(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks).ToLocalTime()
+                                     .AddMonths(1).ToUniversalTime().Ticks -
+                                 UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
+                
+                PlayerPrefs.SetInt(key, seconds);
                 break;
             default:
-                ticks = 0;
+                seconds = 0;
                 break;
         }
 
-        onComplete(ticks);
+        onComplete(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks);
     }
 
     void Awake()

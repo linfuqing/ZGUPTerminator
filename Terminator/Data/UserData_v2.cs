@@ -20,20 +20,40 @@ public partial interface IUserData
 
             public float chance;
         }
+
+        /// <summary>
+        /// 快速游荡剩余看广告次数
+        /// </summary>
+        public int timesFromAd;
+        
+        /// <summary>
+        /// 快速游荡剩余消耗体力次数
+        /// </summary>
+        public int timesFromEnergy;
+
+        /// <summary>
+        /// 快速游荡每次消耗多少体力
+        /// </summary>
+        public int energiesPerTime;
+
+        /// <summary>
+        /// 每次快速游荡可消耗的时间长度， 可传入<see cref="Generate"/>获得结果。
+        /// </summary>
+        public long ticksPerTime;
         
         public long maxTime;
-        public long tick;
+        public long ticks;
         
         public Reward[] rewards;
 
-        public UserRewardData[] Generate()
+        public UserRewardData[] Generate(long deltaTicks = 0)
         {
-            uint hash = (uint)this.tick ^ (uint)(this.tick >> 32);
+            uint hash = (uint)this.ticks ^ (uint)(this.ticks >> 32);
             var random = new Unity.Mathematics.Random(hash);
 
             bool isContains;
             int numRewards = rewards.Length, accessoryIndex = numRewards;
-            long tick = Math.Min(DateTime.UtcNow.Ticks - this.tick, maxTime);
+            long ticks = Math.Min(deltaTicks == 0 ? DateTime.UtcNow.Ticks - this.ticks : deltaTicks, maxTime);
             UserRewardData result;
             var results = new Dictionary<int, UserRewardData>();
             var rewardTimes = new int[numRewards];
@@ -43,7 +63,7 @@ public partial interface IUserData
                 for(int i = 0; i < numRewards; ++i)
                 {
                     ref var reward = ref rewards[i];
-                    if (++rewardTimes[i] * reward.unitTime > tick ||
+                    if (++rewardTimes[i] * reward.unitTime > ticks ||
                         reward.chance < random.NextFloat())
                         continue;
                     

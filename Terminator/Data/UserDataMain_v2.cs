@@ -9,6 +9,46 @@ public partial class UserDataMain
     [Serializable]
     public struct Tip
     {
+        public struct Used
+        {
+            public int days;
+
+            public int timesFromAd;
+            public int timesFromEnergy;
+
+            public Used(string value)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    days = (int)(new TimeSpan(DateTime.Now.Ticks).TotalDays);
+                    timesFromAd = 0;
+                    timesFromEnergy = 0;
+
+                    return;
+                }
+
+                var parameters = value.Split(UserData.SEPARATOR);
+                
+                days = int.Parse(parameters[0]);
+
+                if ((int)(new TimeSpan(DateTime.Now.Ticks).TotalDays) == days)
+                {
+                    timesFromAd = int.Parse(parameters[1]);
+                    timesFromEnergy = int.Parse(parameters[2]);
+                }
+                else
+                {
+                    timesFromAd = 0;
+                    timesFromEnergy = 0;
+                }
+            }
+
+            public override string ToString()
+            {
+                return $"{days}{UserData.SEPARATOR}{timesFromAd}{UserData.SEPARATOR}{timesFromEnergy}";
+            }
+        }
+
         [Serializable]
         public struct Reward
         {
@@ -16,9 +56,7 @@ public partial class UserDataMain
 
             public UserRewardType type;
 
-            [UnityEngine.Serialization.FormerlySerializedAs("min")]
             public int minCount;
-            [UnityEngine.Serialization.FormerlySerializedAs("max")]
             public int maxCount;
 
             public int minLevel;
@@ -103,6 +141,13 @@ public partial class UserDataMain
 #endif
         }
 
+        public int timesPerDayFromAd;
+        public int timesPerDayFromEnergy;
+
+        public int energiesPerTime;
+
+        public double intervalPerTime;
+
         public double maxTime;
 
         public Reward[] rewards;
@@ -111,6 +156,14 @@ public partial class UserDataMain
         [SerializeField, CSV("_tip.rewards", guidIndex = -1, nameIndex = 0)]
         internal string _rewardsPath;
 #endif
+
+        public static Used used
+        {
+            get => new Used(PlayerPrefs.GetString(NAME_SPACE_USER_TIP_USED));
+
+            set => PlayerPrefs.SetString(NAME_SPACE_USER_TIP_USED, value.ToString());
+        }
+        
         public IUserData.Tip instance
         {
             get
@@ -124,15 +177,19 @@ public partial class UserDataMain
                     PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
                 }
 
-                return Create((uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks);
+                return Create((uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks, used);
             }
         }
 
-        public IUserData.Tip Create(long tick)
+        public IUserData.Tip Create(long ticks, in Used used)
         {
             IUserData.Tip result;
+            result.timesFromAd = timesPerDayFromAd - used.timesFromAd;
+            result.timesFromEnergy = timesPerDayFromEnergy - used.timesFromEnergy;
+            result.energiesPerTime = energiesPerTime;
+            result.ticksPerTime =  (long)Math.Round(intervalPerTime * TimeSpan.TicksPerSecond);
             result.maxTime = (long)Math.Round(maxTime * TimeSpan.TicksPerSecond);
-            result.tick = tick;
+            result.ticks = ticks;
             
             int numRewards = rewards.Length;
             
@@ -160,6 +217,8 @@ public partial class UserDataMain
     }
 
     private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
+    private const string NAME_SPACE_USER_TIP_USED = "UserTipUsed";
+    
     private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [SerializeField]
@@ -199,7 +258,29 @@ public partial class UserDataMain
         
         onComplete(rewards.ToArray());
     }
-    
+
+    public IEnumerator UseTip(
+        uint userID,
+        Action<Memory<UserReward>> onComplete)
+    {
+        yield return null;
+
+        var used = Tip.used;
+        if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy || !__ApplyEnergy(_tip.energiesPerTime))
+        {
+            onComplete(null);
+            
+            yield break;
+        }
+
+        Tip.used = used;
+
+        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
+
+        var results = __ApplyRewards(rewards);
+
+        onComplete(results == null ? null : results.ToArray());
+    }
     
     public IEnumerator QueryTalents(
         uint userID,
