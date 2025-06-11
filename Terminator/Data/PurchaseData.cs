@@ -97,9 +97,9 @@ public interface IPurchaseData
 
 public class PurchaseData : MonoBehaviour, IPurchaseData
 {
-    public const string NAME_SPACE_TIMES = "PurchaseDataTimes";
-    public const string NAME_SPACE_DEADLINE = "PurchaseDataDeadline";
-    public const string NAME_SPACE_PAY_TIME = "PurchaseDataPayTime";
+    public const string NAME_SPACE_TIMES = "PurchaseTimes";
+    public const string NAME_SPACE_DEADLINE = "PurchaseDeadline";
+    public const string NAME_SPACE_PAY_TIME = "PurchasePayTime";
     
     public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -214,7 +214,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME),
             (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond));
 
-        onComplete(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks);
+        onComplete(seconds == 0 ? 0 : seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks);
     }
 
     void Awake()

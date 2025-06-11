@@ -380,6 +380,13 @@ public partial class UserData
         return UserDataMain.instance.CollectTip(userID, onComplete);
     }
     
+    public IEnumerator UseTip(
+        uint userID,
+        Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.UseTip(userID, onComplete);
+    }
+
     public IEnumerator QueryTalents(
         uint userID,
         Action<IUserData.Talents> onComplete)

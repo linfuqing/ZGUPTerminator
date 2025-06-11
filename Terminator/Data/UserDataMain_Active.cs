@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public partial class UserDataMain
@@ -92,4 +93,14 @@ public partial class UserDataMain
 
         set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_MONTH, new Active().ToString());
     }
+
+    /*public IEnumerator CollectReward(uint userID, uint rewardID, Action<bool> onComplete)
+    {
+        
+    }
+    
+    public IEnumerator CollectQuest(uint userID, uint questID, Action<bool> onComplete)
+    {
+        
+    }*/
 }

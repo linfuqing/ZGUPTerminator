@@ -39,8 +39,8 @@ public partial class UserDataMain
             NAME_SPACE_USER_PURCHASE_ITEM,
             out int time,
             out var output)
-            ? IUserData.PurchaseItems.Status.Vaild : 
-            (time + 1 == output.times ? IUserData.PurchaseItems.Status.Purchased : IUserData.PurchaseItems.Status.Invaild);
+            ? IUserData.PurchaseItems.Status.Valid : 
+            (time + 1 == output.times ? IUserData.PurchaseItems.Status.Purchased : IUserData.PurchaseItems.Status.Invalid);
         switch (type)
         {
             case PurchaseType.Level:

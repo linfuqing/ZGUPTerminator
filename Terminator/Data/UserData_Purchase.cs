@@ -41,15 +41,15 @@ public partial interface IUserData
             /// <summary>
             /// 未购买&过期
             /// </summary>
-            Invaild,
+            Invalid,
             /// <summary>
             /// 已购买未领取（闪退等情况）
             /// </summary>
             Purchased, 
             /// <summary>
-            /// 当前购买已领取，有的付费（如充值）等价于<see cref="Invaild"/>
+            /// 当前购买已领取，有的付费（如充值）等价于<see cref="Invalid"/>
             /// </summary>
-            Vaild
+            Valid
         }
         
         /// <summary>

@@ -112,6 +112,10 @@ public partial interface IUserData
     IEnumerator CollectTip(
         uint userID,
         Action<Memory<UserReward>> onComplete);
+
+    IEnumerator UseTip(
+        uint userID,
+        Action<Memory<UserReward>> onComplete);
     
     IEnumerator QueryTalents(
         uint userID, 

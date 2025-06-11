@@ -1,12 +1,105 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public interface IAdvertisementData
+public enum AdvertisementType
 {
+    //游荡
+    Tip, 
     
+    //宝箱
+    PurchasedPool, 
+    
+    //每日商品
+    Item, 
+    
+    //免费金币
+    Gold, 
+    
+    //买体力
+    Energy, 
+    
+    //活动预留
+    Other
 }
 
-public class AdvertisementData : MonoBehaviour
+public interface IAdvertisementData
 {
+    public struct Input
+    {
+        public string name;
+
+        public AdvertisementType type;
+
+        public string ToString(string prefix)
+        {
+            return $"{prefix}{type}{name}";
+        }
+    }
+    
+    public struct Output
+    {
+        public string name;
+
+        public AdvertisementType type;
+
+        public string ToString(string prefix)
+        {
+            return $"{prefix}{type}{name}";
+        }
+    }
+
+    public static IAdvertisementData instance;
+    
+    /// <summary>
+    /// 播放广告
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="type"></param>
+    /// <param name="name">
+    /// 当是PurchasedPool时，填宝箱名；Item时填写商品名。其它填空。
+    /// </param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator Broadcast(uint userID, AdvertisementType type, string name, Action<bool> onComplete);
+}
+
+public class AdvertisementData : MonoBehaviour, IAdvertisementData
+{
+    public const string NAME_SPACE_TIMES = "AdvertisementTimes";
+
+    public static string GetNameSpace(AdvertisementType type, string name)
+    {
+        return $"{NAME_SPACE_TIMES}{type}{name}";
+    }
+    
+    public static int QueryTimes(AdvertisementType type, string name)
+    {
+        return PlayerPrefs.GetInt(GetNameSpace(type, name));
+    }
+    
+    public static bool Exchange(AdvertisementType type, string name, string key)
+    {
+        key = $"{key}{type}{name}";
+
+        int times = PlayerPrefs.GetInt(key) + 1;
+
+        if(QueryTimes(type, name) <= times)
+            return false;
+        
+        PlayerPrefs.SetInt(key, times);
+
+        return true;
+    }
+    
+    public IEnumerator Broadcast(uint userID, AdvertisementType type, string name, Action<bool> onComplete)
+    {
+        yield return null;
+
+        var key = GetNameSpace(type, name);
+        PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
+
+        onComplete(true);
+    }
 }
