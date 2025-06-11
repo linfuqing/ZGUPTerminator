@@ -243,3 +243,26 @@ public partial class UserDataMain
         onComplete(rewards == null ? null : rewards.ToArray());
     }
 }
+
+public partial class UserData
+{
+    public IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
+    {
+        return UserDataMain.instance.QueryPurchaseItems(type, level, onComplete);
+    }
+    
+    public IEnumerator CollectPurchaseItem(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.CollectPurchaseItem(type, level, onComplete);
+    }
+
+    public IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
+    {
+        return UserDataMain.instance.QueryPurchaseTokens(type, level, onComplete);
+    }
+    
+    public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.CollectPurchaseToken(type, onComplete);
+    }
+}

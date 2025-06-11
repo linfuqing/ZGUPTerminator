@@ -104,3 +104,54 @@ public partial class UserDataMain
         
     }*/
 }
+
+public partial class UserData
+{
+    public IEnumerator QuerySignIn(uint userID, Action<IUserData.SignIn> onComplete)
+    {
+        return null;
+    }
+
+    public IEnumerator CollectSignIn(uint userID, uint activeID, Action<Memory<UserReward>> onComplete)
+    {
+        return null;
+    }
+
+    public IEnumerator QueryActive(uint userID, UserActiveType type, Action<IUserData.Active> onComplete)
+    {
+        return null;
+    }
+
+    public IEnumerator CollectActive(
+        uint userID,
+        UserActiveType type,
+        int activeID,
+        Action<Memory<UserReward>> onComplete)
+    {
+        return null;
+    }
+    
+    public IEnumerator CollectActiveQuest(
+        uint userID, 
+        UserActiveType type, 
+        int questID, 
+        Action<Memory<UserReward>> onComplete)
+    {
+        return null;
+    }
+    
+    public IEnumerator CollectAchievementQuest(
+        uint userID, 
+        int questID, 
+        Action<Memory<UserReward>> onComplete)
+    {
+        return null;
+    }
+    
+    public IEnumerator QueryAchievements(
+        uint userID, 
+        Action<Memory<UserQuest>> onComplete)
+    {
+        return null;
+    }
+}

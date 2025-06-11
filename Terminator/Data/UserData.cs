@@ -13,7 +13,8 @@ public enum UserRewardType
     Diamond, 
     Gold, 
     Energy, 
-    EnergyMax
+    EnergyMax, 
+    Active
 }
 
 public enum UserSkillType
