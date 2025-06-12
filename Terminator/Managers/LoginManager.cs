@@ -129,6 +129,20 @@ public sealed class LoginManager : MonoBehaviour
     private bool __isStart;
     private bool __isEnergyActive = true;
 
+    public static uint? userID
+    {
+        get;
+
+        private set;
+    }
+
+    public static LoginManager instance
+    {
+        get;
+
+        private set;
+    }
+
     public bool isEnergyActive
     {
         get => __isEnergyActive;
@@ -163,20 +177,6 @@ public sealed class LoginManager : MonoBehaviour
             
             isEnergyActive = value <= energy;
         }
-    }
-
-    public static uint? userID
-    {
-        get;
-
-        private set;
-    }
-
-    public static LoginManager instance
-    {
-        get;
-
-        private set;
     }
 
     public int gold
@@ -223,6 +223,8 @@ public sealed class LoginManager : MonoBehaviour
                 _onEnergyMax.Invoke(value.ToString());
         }
     }
+
+    public IReadOnlyCollection<int> levelIndices => __levelStyles.Keys;
 
     [Obsolete]
     public string[] activeSkillNames;

@@ -3,6 +3,8 @@ using System.Collections;
 
 public partial class UserDataMain
 {
+    public const string NAME_SPACE_USER_TIP_AD = "UserTipAd";
+    
     public IEnumerator UseTipAd(
         uint userID,
         Action<Memory<UserReward>> onComplete)
@@ -14,6 +16,13 @@ public partial class UserDataMain
         {
             onComplete(null);
             
+            yield break;
+        }
+
+        if (!AdvertisementData.Exchange(AdvertisementType.Tip, string.Empty, NAME_SPACE_USER_TIP_AD))
+        {
+            onComplete(null);
+
             yield break;
         }
 

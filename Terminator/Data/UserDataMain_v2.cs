@@ -11,41 +11,21 @@ public partial class UserDataMain
     {
         public struct Used
         {
-            public int days;
-
             public int timesFromAd;
             public int timesFromEnergy;
 
-            public Used(string value)
+            public static Used Parse(Memory<string> parameters)
             {
-                if (string.IsNullOrEmpty(value))
-                {
-                    days = (int)(new TimeSpan(DateTime.Now.Ticks).TotalDays);
-                    timesFromAd = 0;
-                    timesFromEnergy = 0;
+                Used used;
+                used.timesFromAd = int.Parse(parameters.Span[0]);
+                used.timesFromEnergy = int.Parse(parameters.Span[1]);
 
-                    return;
-                }
-
-                var parameters = value.Split(UserData.SEPARATOR);
-                
-                days = int.Parse(parameters[0]);
-
-                if ((int)(new TimeSpan(DateTime.Now.Ticks).TotalDays) == days)
-                {
-                    timesFromAd = int.Parse(parameters[1]);
-                    timesFromEnergy = int.Parse(parameters[2]);
-                }
-                else
-                {
-                    timesFromAd = 0;
-                    timesFromEnergy = 0;
-                }
+                return used;
             }
-
+            
             public override string ToString()
             {
-                return $"{days}{UserData.SEPARATOR}{timesFromAd}{UserData.SEPARATOR}{timesFromEnergy}";
+                return $"{timesFromAd}{UserData.SEPARATOR}{timesFromEnergy}";
             }
         }
 
@@ -159,9 +139,9 @@ public partial class UserDataMain
 
         public static Used used
         {
-            get => new Used(PlayerPrefs.GetString(NAME_SPACE_USER_TIP_USED));
+            get => new Active<Used>(PlayerPrefs.GetString(NAME_SPACE_USER_TIP_USED), Used.Parse).ToDay();
 
-            set => PlayerPrefs.SetString(NAME_SPACE_USER_TIP_USED, value.ToString());
+            set => PlayerPrefs.SetString(NAME_SPACE_USER_TIP_USED, new Active<Used>(value).ToString());
         }
         
         public IUserData.Tip instance

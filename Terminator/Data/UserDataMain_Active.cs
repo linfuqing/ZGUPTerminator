@@ -4,19 +4,19 @@ using UnityEngine;
 
 public partial class UserDataMain
 {
-    private struct Active
+    private struct Active<T>
     {
-        public int value;
+        public T value;
         
         public int day;
 
-        public Active(int value)
+        public Active(T value)
         {
             this.value = value;
             day = (int)new TimeSpan(DateTime.Now.Ticks).TotalDays;
         }
 
-        public Active(string value)
+        public Active(string value, Func<Memory<string>, T> parse)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -27,16 +27,16 @@ public partial class UserDataMain
 
             var parameters = value.Split(UserData.SEPARATOR);
             
-            this.value = int.Parse(parameters[0]);
-            day = int.Parse(parameters[1]);
+            day = int.Parse(parameters[0]);
+            this.value = parse(parameters.AsMemory(1));
         }
 
-        public int ToDay()
+        public T ToDay()
         {
-            return (int)(new TimeSpan(DateTime.Now.Ticks).TotalDays) == day ? value : 0;
+            return (int)(new TimeSpan(DateTime.Now.Ticks).TotalDays) == day ? value : default;
         }
         
-        public int ToWeek()
+        public T ToWeek()
         {
             DateTime dateTime = new DateTime(day * TimeSpan.TicksPerDay), now = DateTime.Now;
             var totalDays = (now - dateTime).TotalDays;
@@ -47,10 +47,10 @@ public partial class UserDataMain
                     return value;
             }
 
-            return 0;
+            return default;
         }
 
-        public int ToMonth()
+        public T ToMonth()
         {
             DateTime dateTime = new DateTime(day * TimeSpan.TicksPerDay), now = DateTime.Now;
             var totalDays = (now - dateTime).TotalDays;
@@ -60,12 +60,12 @@ public partial class UserDataMain
                     return value;
             }
 
-            return 0;
+            return default;
         }
 
         public override string ToString()
         {
-            return $"{value}{UserData.SEPARATOR}{day}";
+            return $"{day}{UserData.SEPARATOR}{value}";
         }
     }
     
@@ -75,23 +75,28 @@ public partial class UserDataMain
 
     public static int ad
     {
-        get => new Active(PlayerPrefs.GetString(NAME_SPACE_USER_ACTIVE_DAY)).ToDay();
+        get => new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ACTIVE_DAY), __Parse).ToDay();
 
-        set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_DAY, new Active().ToString());
+        set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_DAY, new Active<int>(value).ToString());
     }
 
     public static int aw
     {
-        get => new Active(PlayerPrefs.GetString(NAME_SPACE_USER_ACTIVE_WEEK)).ToWeek();
+        get => new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ACTIVE_WEEK), __Parse).ToWeek();
 
-        set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_WEEK, new Active().ToString());
+        set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_WEEK, new Active<int>(value).ToString());
     }
 
     public static int am
     {
-        get => new Active(PlayerPrefs.GetString(NAME_SPACE_USER_ACTIVE_MONTH)).ToMonth();
+        get => new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ACTIVE_MONTH), __Parse).ToMonth();
 
-        set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_MONTH, new Active().ToString());
+        set => PlayerPrefs.SetString(NAME_SPACE_USER_ACTIVE_MONTH, new Active<int>(value).ToString());
+    }
+
+    private static int __Parse(Memory<string> parameters)
+    {
+        return int.Parse(parameters.Span[0]);
     }
 
     /*public IEnumerator CollectReward(uint userID, uint rewardID, Action<bool> onComplete)
