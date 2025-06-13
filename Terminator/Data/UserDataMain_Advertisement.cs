@@ -36,3 +36,13 @@ public partial class UserDataMain
     }
 
 }
+
+public partial class UserData
+{
+    public IEnumerator UseTipAd(
+        uint userID,
+        Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.UseTipAd(userID, onComplete);
+    }
+}
