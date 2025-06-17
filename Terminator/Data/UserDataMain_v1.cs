@@ -517,6 +517,9 @@ public partial class UserDataMain
         if ((flag & Flag.CardUnlockFirst) == Flag.CardUnlockFirst)
             result.flag |= IUserData.Cards.Flag.CardFirst;
         
+        if ((flag & Flag.CardUpgradeFirst) == Flag.CardUpgradeFirst)
+            result.flag |= IUserData.Cards.Flag.CardUpgrade;
+
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
 
         result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
@@ -753,6 +756,11 @@ public partial class UserDataMain
         PlayerPrefs.SetInt(countKey, count - cardLevel.count);
 
         UserDataMain.gold = gold - cardLevel.gold;
+        
+        var flag = UserDataMain.flag;
+        flag &= ~Flag.CardUpgradeFirst;
+
+        UserDataMain.flag = flag;
         
         onComplete(true);
     }

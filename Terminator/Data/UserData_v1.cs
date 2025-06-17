@@ -400,7 +400,8 @@ public partial interface IUserData
             Unlock = 0x01, 
             UnlockFirst = 0x02 | Unlock, 
             
-            CardFirst = 0x04
+            CardFirst = 0x04, 
+            CardUpgrade = 0x08
         }
 
         /// <summary>

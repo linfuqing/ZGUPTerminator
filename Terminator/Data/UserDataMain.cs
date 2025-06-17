@@ -22,14 +22,17 @@ public sealed partial class UserDataMain : MonoBehaviour
         CardUnlockFirst = 0x0080, 
         CardUnlock = 0x0100 | CardUnlockFirst, 
 
-        RolesCreated = 0x0200, 
-        RolesUnlockFirst = 0x0400, 
-        RolesUnlock = 0x0800 | RolesUnlockFirst, 
+        CardUpgradeFirst = 0x0200, 
+        CardUpgrade = 0x0400 | CardUpgradeFirst, 
+
+        RolesCreated = 0x0800, 
+        RolesUnlockFirst = 0x1000, 
+        RolesUnlock = 0x2000 | RolesUnlockFirst, 
         
         //RoleUnlockFirst = 0x1000, 
         //RoleUnlock = 0x2000 | RoleUnlockFirst, 
         
-        UnlockFirst = PurchasesUnlockFirst | TalentsUnlockFirst | CardsUnlockFirst | CardUnlockFirst | RolesUnlockFirst// | RoleUnlockFirst
+        UnlockFirst = PurchasesUnlockFirst | TalentsUnlockFirst | CardsUnlockFirst | CardUnlockFirst | CardUpgradeFirst | RolesUnlockFirst// | RoleUnlockFirst
     }
     
     private const string NAME_SPACE_USER_FLAG = "UserFlag";
