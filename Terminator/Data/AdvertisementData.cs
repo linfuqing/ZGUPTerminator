@@ -12,7 +12,7 @@ public enum AdvertisementType
     PurchasedPool, 
     
     //每日商品
-    Item, 
+    Product, 
     
     //免费金币
     Gold, 

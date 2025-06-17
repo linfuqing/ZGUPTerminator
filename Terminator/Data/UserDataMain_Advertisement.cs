@@ -35,6 +35,15 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
 
+    public IEnumerator BuyEnergiesAd(uint userID, Action<bool> onComplete)
+    {
+        yield return null;
+    }
+    
+    public IEnumerator BuyProductAd(uint userID, uint productID, Action<Memory<UserReward>> onComplete)
+    {
+        yield return null;
+    }
 }
 
 public partial class UserData
@@ -44,5 +53,21 @@ public partial class UserData
         Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.UseTipAd(userID, onComplete);
+    }
+    
+    public IEnumerator BuyEnergiesAd(
+        uint userID,
+        Action<bool> onComplete)
+    {
+        return UserDataMain.instance.BuyEnergiesAd(userID, onComplete);
+    }
+    
+    
+    public IEnumerator BuyProductAd(
+        uint userID,
+        uint productID, 
+        Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.BuyProductAd(userID, productID, onComplete);
     }
 }

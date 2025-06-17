@@ -180,6 +180,13 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_DIAMOND = "UserDiamond";
     private const string NAME_SPACE_USER_PURCHASE_POOL_KEY = "UserPurchasePoolKey";
+
+    public static int diamond
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
+
+        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, value);
+    }
     
     public IEnumerator QueryPurchases(
         uint userID,
@@ -196,7 +203,7 @@ public partial class UserDataMain
         else if ((flag & Flag.PurchasesUnlock) != 0)
             result.flag |= IUserData.Purchases.Flag.Unlock;
         
-        result.diamond = PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
+        result.diamond = diamond;
 
         UserPurchasePool userPurchasePool;
         PurchasePool purchasePool;
@@ -317,7 +324,7 @@ public partial class UserDataMain
         int keyCount = PlayerPrefs.GetInt(poolKey);
         if (keyCount < times)
         {
-            int destination = (times - keyCount) * purchasePool.diamond, source = PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
+            int destination = (times - keyCount) * purchasePool.diamond, source = diamond;
             if (destination > source)
             {
                 onComplete(null);
@@ -325,7 +332,7 @@ public partial class UserDataMain
                 yield break;
             }
             
-            PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, source - destination);
+            diamond = source - destination;
             
             PlayerPrefs.DeleteKey(poolKey);
         }
