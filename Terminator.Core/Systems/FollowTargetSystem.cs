@@ -345,7 +345,11 @@ public partial struct FollowTargetTransformSystem : ISystem
                 velocity.target = transform.Position + distance;
             }
             else if (index < ups.Length)
-                distance -= math.projectsafe(distance, ups[index].value);
+            {
+                var up = ups[index];
+                if((up.control & FollowTargetControl.Pitch) == 0)
+                    distance -= math.projectsafe(distance, up.value);
+            }
 
             float lengthSQ = math.lengthsq(distance), speed = 0.0f;
             if (index < distances.Length)

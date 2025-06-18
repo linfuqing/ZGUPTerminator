@@ -9,6 +9,12 @@ public enum FollowTargetSpace
     Camera, 
 }
 
+[Flags]
+public enum FollowTargetControl
+{
+    Pitch = 0x01
+}
+
 /*[Flags]
 public enum FollowTargetFlag
 {
@@ -31,6 +37,8 @@ public struct FollowTargetSpeed : IComponentData
 
 public struct FollowTargetUp : IComponentData
 {
+    public FollowTargetControl control;
+    
     public float3 value;
 }
 

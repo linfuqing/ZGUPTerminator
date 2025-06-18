@@ -38,6 +38,7 @@ public class FollowTargetAuthoring : MonoBehaviour
             if (authoring._isUp)
             {
                 FollowTargetUp up;
+                up.control = authoring._control;
                 up.value = math.up();
                 AddComponent(entity, up);
             }
@@ -66,6 +67,9 @@ public class FollowTargetAuthoring : MonoBehaviour
 
     [SerializeField]
     internal bool _isUp;
+
+    [SerializeField] 
+    internal FollowTargetControl _control;
 
     [SerializeField] 
     [UnityEngine.Serialization.FormerlySerializedAs("_speeds")]
