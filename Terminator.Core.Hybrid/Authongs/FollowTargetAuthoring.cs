@@ -69,7 +69,7 @@ public class FollowTargetAuthoring : MonoBehaviour
     internal bool _isUp;
 
     [SerializeField] 
-    internal FollowTargetControl _control;
+    internal FollowTargetControl _control = FollowTargetControl.Pitch;
 
     [SerializeField] 
     [UnityEngine.Serialization.FormerlySerializedAs("_speeds")]
