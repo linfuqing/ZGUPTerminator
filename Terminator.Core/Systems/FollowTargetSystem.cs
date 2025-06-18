@@ -279,6 +279,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         public NativeArray<KinematicCharacterBody> characterBodies;
 
         [ReadOnly] 
+        public NativeArray<FollowTargetUp> ups;
+
+        [ReadOnly] 
         public NativeArray<FollowTarget> instances;
 
         [ReadOnly] 
@@ -341,6 +344,8 @@ public partial struct FollowTargetTransformSystem : ISystem
 
                 velocity.target = transform.Position + distance;
             }
+            else if (index < ups.Length)
+                distance -= math.projectsafe(distance, ups[index].value);
 
             float lengthSQ = math.lengthsq(distance), speed = 0.0f;
             if (index < distances.Length)
@@ -406,6 +411,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
 
         [ReadOnly] 
+        public ComponentTypeHandle<FollowTargetUp> upType;
+
+        [ReadOnly] 
         public ComponentTypeHandle<FollowTargetSpeed> speedType;
 
         public ComponentTypeHandle<FollowTargetVelocity> velocityType;
@@ -422,6 +430,7 @@ public partial struct FollowTargetTransformSystem : ISystem
             computeVelocities.characterBodies = chunk.GetNativeArray(ref characterBodyType);
             computeVelocities.distances = chunk.GetBufferAccessor(ref distanceType);
             computeVelocities.instances = chunk.GetNativeArray(ref instanceType);
+            computeVelocities.ups = chunk.GetNativeArray(ref upType);
             computeVelocities.speeds = chunk.GetNativeArray(ref speedType);
             computeVelocities.velocities = chunk.GetNativeArray(ref velocityType);
 
@@ -438,6 +447,8 @@ public partial struct FollowTargetTransformSystem : ISystem
 
     private ComponentTypeHandle<Parent> __parentType;
 
+    private ComponentTypeHandle<FollowTargetUp> __upType;
+
     private ComponentTypeHandle<FollowTargetSpeed> __speedType;
 
     private BufferTypeHandle<FollowTargetDistance> __distanceType;
@@ -453,6 +464,7 @@ public partial struct FollowTargetTransformSystem : ISystem
     {
         __localToWorlds = state.GetComponentLookup<LocalToWorld>(true);
         __parentType = state.GetComponentTypeHandle<Parent>(true);
+        __upType = state.GetComponentTypeHandle<FollowTargetUp>(true);
         __speedType = state.GetComponentTypeHandle<FollowTargetSpeed>(true);
         __distanceType = state.GetBufferTypeHandle<FollowTargetDistance>(true);
 
@@ -500,8 +512,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         
         __localToWorlds.Update(ref state);
         __parentType.Update(ref state);
-        //__characterBodyType.Update(ref state);
-        //__instanceType.Update(ref state);
+        __upType.Update(ref state);
         __speedType.Update(ref state);
         __distanceType.Update(ref state);
         
@@ -512,6 +523,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         computeVelocities.parentType = __parentType;
         computeVelocities.characterBodyType = characterBodyType;
         computeVelocities.instanceType = instanceType;
+        computeVelocities.upType = __upType;
         computeVelocities.speedType = __speedType;
         computeVelocities.velocityType = velocityType;
         computeVelocities.distanceType = __distanceType;
