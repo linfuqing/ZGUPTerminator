@@ -584,7 +584,7 @@ public class GameMain : GameUser
             var analytics = IAnalytics.instance as IAnalyticsEx;
             analytics?.StartLevel(defaultSceneName);
 
-            yield return IUserData.instance.ApplyLevel(userID, 1, null);
+            yield return IUserData.instance.ApplyLevel(userID, 1, 0, null);
 
             IRewardData.instance = new GameRewardData(userID);
             //LevelPlayerShared.effectTargetRecovery = 1024.0f;
