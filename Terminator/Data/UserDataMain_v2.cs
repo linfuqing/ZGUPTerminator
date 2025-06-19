@@ -274,7 +274,7 @@ public partial class UserDataMain
         {
             if ((flag & Flag.UnlockFirst) == Flag.TalentsUnlockFirst)
                 result.flag |= IUserData.Talents.Flag.UnlockFirst;
-            else
+            else if((flag & Flag.TalentsUnlockFirst) == 0)
                 result.flag |= IUserData.Talents.Flag.Unlock;
         }
 

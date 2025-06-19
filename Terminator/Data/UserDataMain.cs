@@ -257,12 +257,15 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     public IEnumerator ApplyLevel(
         uint userID,
-        uint levelID,
-        Action<IUserData.Property> onComplete)
+        uint levelID, 
+        int closestStage, 
+        Action<IUserData.LevelProperty> onComplete)
     {
         yield return null;
+
+        int levelIndex = __ToIndex(levelID);
         
-        int userLevel = UserData.level, levelIndex = __ToIndex(levelID);
+        int userLevel = UserData.level;
         if (userLevel < levelIndex)
         {
             onComplete(default);
@@ -300,14 +303,24 @@ public sealed partial class UserDataMain : MonoBehaviour
         if(isDirty)
             UserDataMain.flag = flag;
         
+        IUserData.LevelProperty result;
+
+        for (result.stage = closestStage; result.stage > 0; --result.stage)
+        {
+            if ((__GetStage(level, result.stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
+                break;
+        }
+
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = levelID;
-        levelCache.stage = 0;
+        levelCache.stage = result.stage;
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
 
-        onComplete(__ApplyProperty(userID));
+        result.value = __ApplyProperty(userID);
+
+        onComplete(result);
     }
 
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
@@ -465,7 +478,8 @@ public partial class UserData
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID,
-        Action<IUserData.Property> onComplete)
+        int closestStage, 
+        Action<IUserData.LevelProperty> onComplete)
     {
         var userDataMain = UserDataMain.instance;
         if (userDataMain == null)
@@ -476,12 +490,12 @@ public partial class UserData
             levelCache.name = _defaultSceneName;
             levelCache.id = levelID;
             levelCache.gold = 0;
-            levelCache.stage = 0;
+            levelCache.stage = closestStage;
 
             UserData.levelCache = levelCache;
         }
         else
-            yield return userDataMain.ApplyLevel(userID, levelID, onComplete);
+            yield return userDataMain.ApplyLevel(userID, levelID, closestStage, onComplete);
     }
 
     public IEnumerator CollectLevel(

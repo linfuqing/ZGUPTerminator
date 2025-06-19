@@ -2196,6 +2196,7 @@ public partial class UserDataMain
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
+        stageProperty.stage = stageIndex;
         stageProperty.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, stageIndex);
         stageProperty.value = __ApplyProperty(
             userID, 

@@ -144,6 +144,12 @@ public partial interface IUserData : IGameUserData
         public UserAttributeData[] attributes;
     }
 
+    public struct LevelProperty
+    {
+        public int stage;
+        public Property value;
+    }
+
     public static IUserData instance;
 
     IEnumerator QueryUser(
@@ -163,7 +169,8 @@ public partial interface IUserData : IGameUserData
     IEnumerator ApplyLevel(
         uint userID,
         uint levelID, 
-        Action<Property> onComplete);
+        int closestStage, 
+        Action<LevelProperty> onComplete);
 
     IEnumerator SubmitLevel(
         uint userID,

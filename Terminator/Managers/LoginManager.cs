@@ -123,6 +123,7 @@ public sealed class LoginManager : MonoBehaviour
     //private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
     private uint __selectedUserStageID;
+    private int __selectedStageIndex;
 
     private int __sceneActiveDepth;
     
@@ -546,7 +547,9 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;
 
-                                                LevelShared.stage = selectedStage;
+                                                __selectedStageIndex = selectedStage;
+
+                                                //LevelShared.stage = selectedStage;
 
                                                 if (onStageChanged != null)
                                                 {
@@ -721,13 +724,15 @@ public sealed class LoginManager : MonoBehaviour
             onAwake(results);
     }
 
-    private void __ApplyLevel(IUserData.Property property)
+    private void __ApplyLevel(IUserData.LevelProperty property)
     {
         LevelPlayerShared.skillRage = 0;
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
+        
+        LevelShared.stage = property.stage;
 
-        __SubmitStage(property);
+        __SubmitStage(property.value);
     }
     
     private void __ApplyStage(IUserData.StageProperty property)
@@ -747,6 +752,8 @@ public sealed class LoginManager : MonoBehaviour
         LevelPlayerShared.skillRage = property.cache.rage;
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
+        
+        LevelShared.stage = property.stage;
         
         __SubmitStage(property.value);
     }
@@ -966,9 +973,9 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QuerySkills(userID, __ApplySkills);
 #endif
 
-        //if (isRestart)
-        //    yield return userData.ApplyLevel(userID, __selectedUserLevelID, __ApplyLevel);
-        //else
+        if (isRestart)
+            yield return userData.ApplyLevel(userID, __selectedUserLevelID, __selectedStageIndex, __ApplyLevel);
+        else
             yield return userData.ApplyStage(userID, __selectedUserStageID, __ApplyStage);
             
         if (!__isStart)

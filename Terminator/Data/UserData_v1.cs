@@ -533,6 +533,8 @@ public partial interface IUserData
 
     public struct StageProperty
     {
+        public int stage;
+        
         public Property value;
 
         public StageCache cache;
