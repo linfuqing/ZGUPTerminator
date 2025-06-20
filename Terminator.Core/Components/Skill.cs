@@ -90,26 +90,23 @@ public struct SkillDefinition
             isCooldown = status.cooldown + skill.duration > time;
             if (isCooldown)
             {
-                isChanged = false;
-                for (j = 0; j < numBulletIndices; ++j)
+                isChanged = SkillMessageType.Cooldown == status.messageType;
+                if (!isChanged)
                 {
-                    ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                    if (bullet.index < bulletStates.Length)
+                    for (j = 0; j < numBulletIndices; ++j)
                     {
-                        ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
-                        if (/*bulletStatus.cooldown > time || */bulletStatus.version != 0)
+                        ref var bullet = ref this.bullets[skill.bulletIndices[j]];
+                        if (bullet.index < bulletStates.Length)
                         {
-                            isChanged = true;
-
-                            break;
+                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                            if ( /*bulletStatus.cooldown > time || */bulletStatus.version != 0)
+                                break;
                         }
                     }
+
+                    if (j == numBulletIndices)
+                        status.cooldown = time;
                 }
-
-                if (!isChanged)
-                    status.cooldown = time;
-
-                isChanged = SkillMessageType.Cooldown == status.messageType;
             }
             else
             {
@@ -120,13 +117,17 @@ public struct SkillDefinition
                     
                     status.cooldown = time + value;
                 }
-                else
+                else if(skill.duration > math.FLT_MIN_NORMAL)
                 {
                     status.messageType = SkillMessageType.Cooldown;
                     
-                    isCooldown = true;
-                    
                     isChanged = true;
+                }
+                else
+                {
+                    isChanged = false;
+
+                    isCooldown = true;
                 }
                 
                 //isReload = true;
