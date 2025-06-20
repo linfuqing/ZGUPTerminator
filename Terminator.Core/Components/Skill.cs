@@ -113,9 +113,9 @@ public struct SkillDefinition
                 value = skill.cooldown * cooldownScale;
                 if (value > math.FLT_MIN_NORMAL)
                 {
-                    isChanged = false;
-                    
-                    status.cooldown = time + value;
+                    isChanged = SkillMessageType.Cooldown == status.messageType;
+                    if(!isChanged)
+                        status.cooldown = time + value;
                 }
                 else if(skill.duration > math.FLT_MIN_NORMAL)
                 {
