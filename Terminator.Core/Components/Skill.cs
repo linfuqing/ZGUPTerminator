@@ -70,7 +70,7 @@ public struct SkillDefinition
             layerMaskExclude = 0, 
             preIndex,
             i, j, k;
-        bool isCooldown, isChanged, isReload, result = false;
+        bool isCooldown, isChanged, result = false;
         for (i = 0; i < numActiveIndices; ++i)
         {
             skillActiveIndex = skillActiveIndices[i];
@@ -110,28 +110,26 @@ public struct SkillDefinition
                     status.cooldown = time;
 
                 isChanged = SkillMessageType.Cooldown == status.messageType;
-
-                isReload = true;
             }
             else
             {
                 value = skill.cooldown * cooldownScale;
                 if (value > math.FLT_MIN_NORMAL)
                 {
-                    status.cooldown = time + value;
-
                     isChanged = false;
+                    
+                    status.cooldown = time + value;
                 }
                 else
                 {
                     status.messageType = SkillMessageType.Cooldown;
-
+                    
                     isCooldown = true;
-
+                    
                     isChanged = true;
                 }
                 
-                isReload = false;
+                //isReload = true;
             }
             
             if (isChanged)
@@ -166,8 +164,11 @@ public struct SkillDefinition
                         rage -= skill.rage;
                 }
 
-                if (isCooldown && isReload)
+                if (isCooldown)
                 {
+                    status.cooldown = time;
+                    //UnityEngine.Debug.LogError($"Skill {skillActiveIndex.value}");
+
                     for (j = 0; j < numBulletIndices; ++j)
                     {
                         ref var bullet = ref this.bullets[skill.bulletIndices[j]];
@@ -182,6 +183,8 @@ public struct SkillDefinition
                         }
                     }
                 }
+                else
+                    isChanged = false;
             }
 
             random = default;

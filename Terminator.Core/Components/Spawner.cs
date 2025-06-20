@@ -561,12 +561,25 @@ public struct SpawnerStatus : IBufferElementData
     //public double startTime;
 }
 
-public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>
+public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>, IComparable<SpawnerEntity>
 {
     public Entity spawner;
     public int spawnerIndex;
     public int loaderIndex;
 
+    public int CompareTo(SpawnerEntity other)
+    {
+        int result = spawner.CompareTo(other.spawner);
+        if (result == 0)
+        {
+            result = spawnerIndex.CompareTo(other.spawnerIndex);
+            if(result == 0)
+                result = loaderIndex.CompareTo(other.loaderIndex);
+        }
+
+        return result;
+    }
+    
     public bool Equals(SpawnerEntity other)
     {
         return spawner == other.spawner && spawnerIndex == other.spawnerIndex && loaderIndex == other.loaderIndex;
