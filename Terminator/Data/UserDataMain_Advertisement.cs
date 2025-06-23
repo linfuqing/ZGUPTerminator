@@ -35,9 +35,26 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
 
+    public const string NAME_SPACE_USER_ENERGY_AD = "UserEnergyAd";
+
     public IEnumerator BuyEnergiesAd(uint userID, Action<bool> onComplete)
     {
         yield return null;
+        
+        int buyTimesByAd = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD);
+        if (buyTimesByAd < _energies.buyTimesByAd && 
+            AdvertisementData.Exchange(AdvertisementType.Energy, string.Empty, NAME_SPACE_USER_ENERGY_AD))
+        {
+            __ApplyEnergy(-_energies.energyPerTime);
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD, ++buyTimesByAd);
+            
+            onComplete(true);
+            
+            yield break;
+        }
+
+        onComplete(false);
     }
     
     public IEnumerator BuyProductAd(uint userID, uint productID, Action<Memory<UserReward>> onComplete)

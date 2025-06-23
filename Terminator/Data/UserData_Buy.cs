@@ -11,10 +11,18 @@ public enum UserCurrencyType
 
 public struct UserProduct
 {
+    [Flags]
+    public enum Flag
+    {
+        Collected = 0x01
+    }
+    
     public string name;
     
     public uint id;
     
+    public Flag flag;
+
     /// <summary>
     /// 货币类型
     /// </summary>

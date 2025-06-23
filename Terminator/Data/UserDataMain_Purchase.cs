@@ -189,7 +189,7 @@ public partial class UserDataMain
             }
         }
 
-        result.values = values == null ? values.ToArray() : null;
+        result.values = values == null ? null : values.ToArray();
         
         onComplete(result);
     }

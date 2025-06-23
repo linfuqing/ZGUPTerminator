@@ -373,7 +373,12 @@ public class GameMain : GameUser
 
     public const string NAME_SPACE_SCENE = "GameMainScene";
     public const string NAME_SPACE_LEVEL = "GameMainLevel";
+    
+    public const string NAME_SPACE_PLAYER_PREF_VERSION = "PlayerPrefVersion";
 
+    [SerializeField] 
+    internal int _playerPrefVersion = 1;
+    
     private bool __isActivated;
 
     public IAssetBundleFactory factory
@@ -417,6 +422,13 @@ public class GameMain : GameUser
 
     IEnumerator Start()
     {
+        if (PlayerPrefs.GetInt(NAME_SPACE_PLAYER_PREF_VERSION) < _playerPrefVersion)
+        {
+            PlayerPrefs.DeleteAll();
+            
+            PlayerPrefs.SetInt(NAME_SPACE_PLAYER_PREF_VERSION, _playerPrefVersion);
+        }
+        
         //PlayerSettings.WebGL.threadsSupport
         Application.targetFrameRate = 60;
 

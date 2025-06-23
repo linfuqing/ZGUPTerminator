@@ -1082,7 +1082,10 @@ public partial struct EffectSystem : ISystem
                         targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
                     }
 
-                    target.hp += -damage;
+                    if (target.hp > 0)
+                        target.hp += -damage;
+                    else
+                        damage = 0;
                 }
 
                 float delayTime = 0.0f, deadTime = 0.0f;

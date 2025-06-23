@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Transforms;
 using ZG;
 
 [BurstCompile]
@@ -11,6 +12,11 @@ public partial struct DelayDestroySystem : ISystem
     {
         public bool isFixedFrameUpdated;
         public float deltaTime;
+        
+        [ReadOnly]
+        public BufferLookup<Child> children;
+
+        [ReadOnly]
         public NativeArray<Entity> entityArray;
         public NativeArray<DelayDestroy> delayDestroys;
         
@@ -33,8 +39,23 @@ public partial struct DelayDestroySystem : ISystem
                     instanceIDs[index] = instanceID;
                 }
                 
-                entityManager.DestroyEntity(0, entityArray[index]);
+                __Destroy(0, entityArray[index], children, ref entityManager);
             }
+        }
+        
+        private static void __Destroy(
+            int sortKey, 
+            in Entity entity, 
+            in BufferLookup<Child> children, 
+            ref EntityCommandBuffer.ParallelWriter entityManager)
+        {
+            if (children.TryGetBuffer(entity, out var buffer))
+            {
+                foreach (var child in buffer)
+                    __Destroy(sortKey - 1, child.Value, children, ref entityManager);
+            }
+        
+            entityManager.DestroyEntity(sortKey, entity);
         }
     }
 
@@ -43,6 +64,9 @@ public partial struct DelayDestroySystem : ISystem
     {
         public bool isFixedFrameUpdated;
         public float deltaTime;
+        [ReadOnly]
+        public BufferLookup<Child> children;
+        [ReadOnly]
         public EntityTypeHandle entityType;
         public ComponentTypeHandle<DelayDestroy> delayDestroyType;
 
@@ -55,6 +79,7 @@ public partial struct DelayDestroySystem : ISystem
             Apply apply;
             apply.isFixedFrameUpdated = isFixedFrameUpdated;
             apply.deltaTime = deltaTime;
+            apply.children = children;
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
             apply.instanceIDs = chunk.GetNativeArray(ref instanceIDType);
@@ -68,8 +93,9 @@ public partial struct DelayDestroySystem : ISystem
 
     private int __fixedFrameCount;
     private EntityTypeHandle __entityType;
+    private BufferLookup<Child> __children;
     private ComponentTypeHandle<DelayDestroy> __delayDestroyType;
-    public ComponentTypeHandle<CopyMatrixToTransformInstanceID> __instanceIDType;
+    private ComponentTypeHandle<CopyMatrixToTransformInstanceID> __instanceIDType;
 
     private EntityQuery __group;
 
@@ -77,6 +103,7 @@ public partial struct DelayDestroySystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __entityType = state.GetEntityTypeHandle();
+        __children = state.GetBufferLookup<Child>();
         __delayDestroyType = state.GetComponentTypeHandle<DelayDestroy>();
         __instanceIDType = state.GetComponentTypeHandle<CopyMatrixToTransformInstanceID>();
 
@@ -94,6 +121,8 @@ public partial struct DelayDestroySystem : ISystem
     {
         int fixedFrameCount = SystemAPI.GetSingleton<FixedFrame>().count;
         
+        __children.Update(ref state);
+        
         __entityType.Update(ref state);
         __delayDestroyType.Update(ref state);
         __instanceIDType.Update(ref state);
@@ -101,6 +130,7 @@ public partial struct DelayDestroySystem : ISystem
         ApplyEx apply;
         apply.isFixedFrameUpdated = fixedFrameCount != __fixedFrameCount;
         apply.deltaTime = SystemAPI.Time.DeltaTime;
+        apply.children = __children;
         apply.entityType = __entityType;
         apply.delayDestroyType = __delayDestroyType;
         apply.instanceIDType = __instanceIDType;
