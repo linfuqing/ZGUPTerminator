@@ -184,6 +184,9 @@ public partial class UserDataMain
                     value.flag = UserPurchaseToken.Flag.Collected;
                 
                 value.rewards = token.rewards;
+
+                if (values == null)
+                    values = new List<UserPurchaseToken>();
                 
                 values.Add(value);
             }

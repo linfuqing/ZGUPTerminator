@@ -152,70 +152,79 @@ public partial class UserDataMain
         yield return null;
         
         var seed = new Active<ProductSeed>(PlayerPrefs.GetString(NAME_SPACE_USER_PRODUCT_SEED), ProductSeed.Parse).ToDay();
-        Product product;
-        var random = new Unity.Mathematics.Random(seed.value);
-        float randomValue = random.NextFloat(), chance = 0.0f;
-        int numProducts = _products.Length, bitIndex = 0, index = __ToIndex(productID);
-        bool isSelected = false;
-        for (int i = 0; i < numProducts; ++i)
+        int index = __ToIndex(productID);
+        if ((seed.bits & (1 << index)) == 0)
         {
-            product = _products[i];
-
-            chance += product.chance;
-            if (chance > 1.0f)
+            Product product;
+            var random = new Unity.Mathematics.Random(seed.value);
+            float randomValue = random.NextFloat(), chance = 0.0f;
+            int numProducts = _products.Length, bitIndex = 0;
+            bool isSelected = false;
+            for (int i = 0; i < numProducts; ++i)
             {
-                chance -= 1.0f;
+                product = _products[i];
 
-                isSelected = false;
-            }
-            
-            if(isSelected || chance < randomValue)
-                continue;
-
-            if (index == bitIndex)
-            {
-                isSelected = false;
-                
-                switch (product.currencyType)
+                chance += product.chance;
+                if (chance > 1.0f)
                 {
-                    case UserCurrencyType.Gold:
-                        isSelected = gold >= product.price;
-                        if (isSelected)
-                            gold -= product.price;
-                        
-                        break;
-                    case UserCurrencyType.Diamond:
-                        isSelected = diamond >= product.price;
-                        if (isSelected)
-                            diamond -= product.price;
-                        
-                        break;
-                    case UserCurrencyType.Ad:
-                        isSelected = AdvertisementData.Exchange(AdvertisementType.Product, product.name, NAME_SPACE_USER_PRODUCT_AD);
-                        break;
-                    case UserCurrencyType.Free:
-                        isSelected = true;
-                        break;
-                    default:
-                        isSelected = false;
-                        break;
+                    chance -= 1.0f;
+
+                    isSelected = false;
                 }
 
-                if (isSelected)
+                if (isSelected || chance < randomValue)
+                    continue;
+
+                if (index == bitIndex)
                 {
-                    onComplete(__ApplyRewards(product.rewards).ToArray());
+                    isSelected = false;
 
-                    yield break;
+                    switch (product.currencyType)
+                    {
+                        case UserCurrencyType.Gold:
+                            isSelected = gold >= product.price;
+                            if (isSelected)
+                                gold -= product.price;
+
+                            break;
+                        case UserCurrencyType.Diamond:
+                            isSelected = diamond >= product.price;
+                            if (isSelected)
+                                diamond -= product.price;
+
+                            break;
+                        case UserCurrencyType.Ad:
+                            isSelected = AdvertisementData.Exchange(AdvertisementType.Product, product.name,
+                                NAME_SPACE_USER_PRODUCT_AD);
+                            break;
+                        case UserCurrencyType.Free:
+                            isSelected = true;
+                            break;
+                        default:
+                            isSelected = false;
+                            break;
+                    }
+
+                    if (isSelected)
+                    {
+                        seed.bits |= 1 << index;
+                        
+                        PlayerPrefs.SetString(NAME_SPACE_USER_PRODUCT_SEED, new Active<ProductSeed>(seed).ToString());
+
+                        onComplete(__ApplyRewards(product.rewards).ToArray());
+
+                        yield break;
+                    }
+
+                    break;
                 }
-                
-                break;
-            }
-            
-            isSelected = true;
 
-            ++bitIndex;
+                isSelected = true;
+
+                ++bitIndex;
+            }
         }
-        
+
         onComplete(null);
     }
 }
