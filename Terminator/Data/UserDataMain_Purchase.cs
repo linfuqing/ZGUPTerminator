@@ -105,7 +105,7 @@ public partial class UserDataMain
                             
                             rewards = __ApplyRewards(purchaseItem.rewards);
 
-                            goldBank = 0;
+                            //goldBank = 0;
                             break;
                         default:
                             rewards = __ApplyRewards(purchaseItem.rewards);
@@ -118,6 +118,8 @@ public partial class UserDataMain
 
             if (rewards != null)
             {
+                __AppendQuest(UserQuest.Type.Buy, 1);
+                
                 onComplete(rewards.ToArray());
 
                 yield break;

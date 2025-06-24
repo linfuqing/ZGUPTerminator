@@ -236,6 +236,8 @@ public partial class UserDataMain
         var rewards = new List<UserReward>();
         __ApplyRewards(results, rewards);
         
+        __AppendQuest(UserQuest.Type.Tip, 1);
+
         onComplete(rewards.ToArray());
     }
 
@@ -339,6 +341,8 @@ public partial class UserDataMain
         PlayerPrefs.SetInt(key, (int)flag);
         
         UserDataMain.flag &= ~Flag.TalentsUnlockFirst;
+        
+        __AppendQuest(UserQuest.Type.Talents, 1);
 
         onComplete(true);
     }

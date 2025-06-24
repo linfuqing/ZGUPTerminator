@@ -206,6 +206,15 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 
                 PlayerPrefs.SetInt(key, seconds);
                 break;
+            case PurchaseType.GoldBank:
+                key = input.ToString(NAME_SPACE_DEADLINE);
+                seconds = PlayerPrefs.GetInt(key);
+                seconds = (int)((new DateTime(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks).ToLocalTime()
+                                     .AddDays(1).ToUniversalTime().Ticks -
+                                 UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
+
+                PlayerPrefs.SetInt(key, seconds);
+                break;
             default:
                 seconds = 0;
                 break;

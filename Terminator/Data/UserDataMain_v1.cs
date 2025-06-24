@@ -185,7 +185,16 @@ public partial class UserDataMain
     {
         get => PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
 
-        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, value);
+        private set
+        {
+            int result = value - diamond;
+            if (result > 0)
+                __AppendQuest(UserQuest.Type.DiamondsToGet, result);
+            else if(result < 0)
+                __AppendQuest(UserQuest.Type.DiamondsToUse, -result);
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, value);
+        }
     }
     
     public IEnumerator QueryPurchases(
@@ -403,6 +412,8 @@ public partial class UserDataMain
         PlayerPrefs.SetInt(timeKey, purchasePoolTimes);
 
         flag &= ~Flag.PurchasesUnlockFirst;
+        
+        __AppendQuest(UserQuest.Type.Purchase, times);
 
         onComplete(results.ToArray());
     }
@@ -761,6 +772,8 @@ public partial class UserDataMain
         flag &= ~Flag.CardUpgradeFirst;
 
         UserDataMain.flag = flag;
+
+        __AppendQuest(UserQuest.Type.CardToUpgrade, 1);
         
         onComplete(true);
     }
@@ -1880,6 +1893,8 @@ public partial class UserDataMain
 
                 PlayerPrefs.SetInt(accessoryLevelKey, ++level);
 
+                __AppendQuest(UserQuest.Type.AccessorySlotToUpgrade, 1);
+
                 onComplete(true);
                 
                 yield break;
@@ -1934,10 +1949,17 @@ public partial class UserDataMain
             userAccessoryStage.name = accessoryStage.name;
             userAccessoryStage.count = accessoryStage.count;
             userAccessoryStage.property = accessoryStage.property;
+            
+            __AppendQuest(UserQuest.Type.Accessories, 1);
+            
+            if(stage > 1)
+                __AppendQuest(UserQuest.Type.Accessories + stage - 1, 1);
         }
         else
             userAccessoryStage = default;
         
+        __AppendQuest(UserQuest.Type.AccessoryToUprank, 1);
+
         onComplete(userAccessoryStage);
     }
 
@@ -2194,6 +2216,8 @@ public partial class UserDataMain
         levelCache.stage = stageIndex;
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
+        
+        __AppendQuest(UserQuest.Type.Stage, 1);
         
         IUserData.StageProperty stageProperty;
         stageProperty.stage = stageIndex;

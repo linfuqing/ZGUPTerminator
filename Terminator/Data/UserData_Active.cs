@@ -19,12 +19,12 @@ public struct UserActive
 
     public uint id;
 
+    public Flag flag;
+
     /// <summary>
     /// 天数或活跃值
     /// </summary>
     public int exp;
-    
-    public Flag flag;
 
     public UserRewardData[] rewards;
 }
@@ -39,12 +39,163 @@ public struct UserQuest
 
     public enum Type
     {
+        /// <summary>
+        /// 登录
+        /// </summary>
         Login, 
         
-        UpgradeCard, 
-        UpgradeAccessory,
+        /// <summary>
+        /// 天赋升级次数
+        /// </summary>
+        Talents, 
         
-        Level
+        /// <summary>
+        /// 升级卡片
+        /// </summary>
+        CardToUpgrade, 
+        
+        /// <summary>
+        /// 获得技能卡数
+        /// </summary>
+        Cards, 
+        
+        /// <summary>
+        /// 获得稀有技能卡数
+        /// </summary>
+        Cards1, 
+        /// <summary>
+        /// 获得史诗技能卡数
+        /// </summary>
+        Cards2,
+        /// <summary>
+        /// 获得传说技能卡数
+        /// </summary>
+        Cards3,
+
+        /// <summary>
+        /// 获得装备数量
+        /// </summary>
+        Accessories,
+        
+        /// <summary>
+        /// 获得稀有装备数量
+        /// </summary>
+        Accessories1, 
+        
+        /// <summary>
+        /// 获得史诗装备数量
+        /// </summary>
+        Accessories2, 
+        
+        /// <summary>
+        /// 获得传说装备数量
+        /// </summary>
+        Accessories3, 
+
+        /// <summary>
+        /// 升级装备槽
+        /// </summary>
+        AccessorySlotToUpgrade,
+        
+        /// <summary>
+        /// 合成装备
+        /// </summary>
+        AccessoryToUprank, 
+        
+        /// <summary>
+        /// 开宝箱次数
+        /// </summary>
+        Purchase, 
+        
+        /// <summary>
+        /// 触发保底次数
+        /// </summary>
+        Purchases, 
+
+        /// <summary>
+        /// 游荡
+        /// </summary>
+        Tip, 
+        
+        /// <summary>
+        /// 挑战主线关卡次数
+        /// </summary>
+        Stage, 
+        
+        /// <summary>
+        /// 击杀怪物数
+        /// </summary>
+        KillCount, 
+        /// <summary>
+        /// 击杀BOSS数
+        /// </summary>
+        KillBoss, 
+        
+        /// <summary>
+        /// 获得金币
+        /// </summary>
+        GoldsToGet, 
+
+        /// <summary>
+        /// 消耗金币
+        /// </summary>
+        GoldsToUse, 
+
+        /// <summary>
+        /// 获得钻石
+        /// </summary>
+        DiamondsToGet, 
+
+        /// <summary>
+        /// 消耗钻石
+        /// </summary>
+        DiamondsToUse, 
+        
+        /// <summary>
+        /// 消耗体力
+        /// </summary>
+        EnergiesToUse, 
+        /// <summary>
+        /// 购买体力
+        /// </summary>
+        EnergiesToBuy, 
+        
+        /// <summary>
+        /// 充值次数
+        /// </summary>
+        Buy, 
+        
+        /// <summary>
+        /// 达到主线章节
+        /// </summary>
+        AchievementLevels, 
+        
+        /// <summary>
+        /// 技能卡达到最高级别
+        /// </summary>
+        AchievementCard,
+        
+        /// <summary>
+        /// 获得装备种类
+        /// </summary>
+        AchievementAccessoryStyles,
+        
+        /// <summary>
+        /// 装备槽位最高级
+        /// </summary>
+        AchievementAccessorySlot,
+        
+        /// <summary>
+        /// 全身装备槽位最低级
+        /// </summary>
+        AchievementAccessorySlots,
+        
+        /// <summary>
+        /// 获得角色数量
+        /// </summary>
+        AchievementRoles, 
+
+        Unknown
     }
 
     public string name;
@@ -71,9 +222,9 @@ public partial interface IUserData
     
     IEnumerator QuerySignIn(uint userID, Action<SignIn> onComplete);
 
-    IEnumerator CollectSignIn(uint userID, uint activeID, Action<Memory<UserReward>> onComplete);
+    IEnumerator CollectSignIn(uint userID, Action<Memory<UserReward>> onComplete);
 
-    public struct Active
+    public struct Actives
     {
         public int exp;
         
@@ -82,23 +233,23 @@ public partial interface IUserData
         public UserQuest[] quests;
     }
     
-    IEnumerator QueryActive(uint userID, UserActiveType type, Action<Active> onComplete);
+    IEnumerator QueryActives(uint userID, UserActiveType type, Action<Actives> onComplete);
     
     IEnumerator CollectActive(
         uint userID, 
+        uint activeID, 
         UserActiveType type, 
-        int activeID, 
         Action<Memory<UserReward>> onComplete);
     
     IEnumerator CollectActiveQuest(
         uint userID, 
+        uint questID, 
         UserActiveType type, 
-        int questID, 
         Action<Memory<UserReward>> onComplete);
     
     IEnumerator CollectAchievementQuest(
         uint userID, 
-        int questID, 
+        uint questID, 
         Action<Memory<UserReward>> onComplete);
     
     IEnumerator QueryAchievements(

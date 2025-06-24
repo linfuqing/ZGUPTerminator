@@ -59,7 +59,6 @@ public sealed partial class UserDataMain : MonoBehaviour
     }
 
     private const string NAME_SPACE_USER_GOLD = "UserGold";
-    private const string NAME_SPACE_USER_GOLD_BANK = "UserGoldBank";
 
     public static int gold
     {
@@ -67,24 +66,21 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         set
         {
-            int origin = gold;
-            
-            PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
+            int result = value - gold;
+            if (result > 0)
+                __AppendQuest(UserQuest.Type.GoldsToGet, result);
+            else if(result < 0)
+                __AppendQuest(UserQuest.Type.GoldsToUse, -result);
 
-            if (value > origin)
-                goldBank += value - origin;
+            PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
         }
     }
 
-    public static int goldBank
-    {
-        get => PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD_BANK);
+    public static int goldBank => __GetQuest(UserQuest.Type.GoldsToGet, ActiveType.Day, out _);
 
-        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD_BANK, value);
-    }
-    
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
     private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
+    private const string NAME_SPACE_USER_ENERGY_MAX = "UserEnergyMax";
 
     [Header("Main")]
     [SerializeField]
@@ -106,7 +102,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         
             UserEnergy userEnergy;
             userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
-            userEnergy.max = _energy.max;
+            userEnergy.max = _energy.max + PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_MAX);
             userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
             userEnergy.tick = (uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks;
 
@@ -247,6 +243,9 @@ public sealed partial class UserDataMain : MonoBehaviour
 
             userLevels[i] = userLevel;
         }
+
+        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
+            __AppendQuest(UserQuest.Type.Login, 1);
 
         IUserData.Levels result;
         result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.Levels.Flag.UnlockFirst;
@@ -420,6 +419,11 @@ public sealed partial class UserDataMain : MonoBehaviour
         energy -= value;
         if (energy < 0)
             return false;
+
+        if (value > 0)
+            __AppendQuest(UserQuest.Type.EnergiesToUse, value);
+        else
+            __AppendQuest(UserQuest.Type.EnergiesToBuy, -value);
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time);

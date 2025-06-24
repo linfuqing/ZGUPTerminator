@@ -5,6 +5,38 @@ using Random = UnityEngine.Random;
 
 public partial class UserDataMain
 {
+    private Dictionary<string, int> __activeNameToIndices;
+
+    private int __GetActiveIndex(string name)
+    {
+        if (__activeNameToIndices == null)
+        {
+            __activeNameToIndices = new Dictionary<string, int>();
+
+            int numActives = _actives.Length;
+            for(int i = 0; i < numActives; ++i)
+                __activeNameToIndices.Add(_actives[i].name, i);
+        }
+
+        return __activeNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+    
+    private Dictionary<string, int> __questNameToIndices;
+
+    private int __GetQuestIndex(string name)
+    {
+        if (__questNameToIndices == null)
+        {
+            __questNameToIndices = new Dictionary<string, int>();
+
+            int numQuests = _quests.Length;
+            for(int i = 0; i < numQuests; ++i)
+                __questNameToIndices.Add(_quests[i].name, i);
+        }
+
+        return __questNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+    
     private Dictionary<string, int> __stageNameToIndices;
     
     private int __GetStageIndex(string name)
@@ -462,6 +494,13 @@ public partial class UserDataMain
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
                 break;
             case UserRewardType.Card:
+                __AppendQuest(UserQuest.Type.Cards, reward.count);
+
+                int cardIndex = __GetCardIndex(reward.name), 
+                    cardStyleIndex = __GetCardStyleIndex(_cards[cardIndex].styleName);
+                if(cardStyleIndex > 0)
+                    __AppendQuest(UserQuest.Type.Cards + cardStyleIndex, reward.count);
+
                 bool isDirty = false;
                 if ((flag & Flag.CardsUnlock) == 0 /* && UserData.level > 0*/) //(flag & Flag.CardsCreated) == 0)
                 {
@@ -480,7 +519,7 @@ public partial class UserDataMain
                 if (isDirty)
                     UserDataMain.flag = flag;
 
-                id = __ToID(__GetCardIndex(reward.name));
+                id = __ToID(cardIndex);
                 key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
                 
                 string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{reward.name}";
@@ -500,6 +539,10 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
                 break;
             case UserRewardType.Accessory:
+                __AppendQuest(UserQuest.Type.Accessories, 1);
+                if(reward.count > 1)
+                    __AppendQuest(UserQuest.Type.Accessories + reward.count - 1, 1);
+                
                 if ((flag & Flag.RolesUnlock) == 0 && UserData.level > 0)//(flag & Flag.RolesCreated) == 0)
                     UserDataMain.flag |= Flag.RolesUnlock;
                 
@@ -522,6 +565,14 @@ public partial class UserDataMain
                 id = 1;
                 key = NAME_SPACE_USER_ENERGY;
                 break;
+            case UserRewardType.EnergyMax:
+                id = 1;
+                key = NAME_SPACE_USER_ENERGY_MAX;
+                break;
+            case UserRewardType.Active:
+                __AppendActive(reward.count);
+                
+                return 1;
             default:
                 return 0;
         }
