@@ -535,6 +535,8 @@ public partial interface IUserData
     {
         public int stage;
         
+        public SpawnerAttribute.Scale spawnerAttribute;
+        
         public Property value;
 
         public StageCache cache;

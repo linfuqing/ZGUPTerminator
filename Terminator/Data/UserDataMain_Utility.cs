@@ -798,6 +798,7 @@ public partial class UserDataMain
 
     private IUserData.Property __ApplyProperty(uint userID)
     {
+        IUserData.Property result;
         IUserData.Skill skill;
 
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
@@ -831,6 +832,8 @@ public partial class UserDataMain
         }
         
         keyPrefix = $"{keyPrefix}{UserData.SEPARATOR}";
+
+        result.spawnerLayerMask = 0;
         
         int i, j, styleIndex, level, 
             numAttributes = attributes.Count, 
@@ -871,6 +874,8 @@ public partial class UserDataMain
             }
             
             ref var accessory = ref _accessories[accessoryInfo.index];
+
+            result.spawnerLayerMask |= accessory.spawnerLayerMask;
             
             level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
             if (level > 0)
@@ -973,7 +978,6 @@ public partial class UserDataMain
         if(accessoryStageSkills != null)
             __ApplySkills(skills, accessoryStageSkills);
 
-        IUserData.Property result;
         result.name = role.instanceName;
         result.attributes = attributes.ToArray();
         result.skills = skills.ToArray();
@@ -1195,6 +1199,8 @@ public partial class UserDataMain
         }
         else
         {
+            result.spawnerLayerMask = 0;
+            
             var skills = new List<IUserData.Skill>();
             var attributes = new List<UserAttributeData>();
             List<UserAccessory.Attribute> accessoryStageAttributes = null;
@@ -1263,6 +1269,8 @@ public partial class UserDataMain
                     case SkillInfo.BelongTo.Accessory:
 
                         ref var accessory = ref _accessories[skillInfo.index];
+
+                        result.spawnerLayerMask |= accessory.spawnerLayerMask.value;
 
                         level = 0;
                         int numAccessorySlots = _accessorySlots.Length, i;

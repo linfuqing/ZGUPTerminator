@@ -176,6 +176,175 @@ public sealed partial class UserDataMain : MonoBehaviour
     internal string _levelsPath;
 #endif
     
+    [Serializable]
+    internal struct Stage
+    {
+        [Flags]
+        public enum Flag
+        {
+            DontCache = 0x01
+        }
+        
+        public string name;
+
+        public Flag flag;
+
+        public int energy;
+
+        public SpawnerAttribute.Scale spawnerAttribute;
+        
+        public UserRewardData[] directRewards;
+        
+        public StageReward[] indirectRewards;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 小关名字
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 小关标签
+        {
+            set => flag = (Flag)value;
+        }
+
+        [CSVField]
+        public int 小关体力
+        {
+            set => energy = value;
+        }
+
+        [CSVField]
+        public float 小关速度比率
+        {
+            set => spawnerAttribute.speedScale = value;
+        }
+        
+        [CSVField]
+        public float 小关伤害比率
+        {
+            set => spawnerAttribute.damageScale = value;
+        }
+        
+        [CSVField]
+        public float 小关血量比率
+        {
+            set => spawnerAttribute.hp = value;
+        }
+        
+        [CSVField]
+        public float 小关进度比率
+        {
+            set => spawnerAttribute.level = value;
+        }
+        
+        [CSVField]
+        public float 小关经验比率
+        {
+            set => spawnerAttribute.exp = value;
+        }
+        
+        [CSVField]
+        public float 小关金币比率
+        {
+            set => spawnerAttribute.gold = value;
+        }
+
+        [CSVField]
+        public string 小关直接奖励
+        {
+            set
+            {
+                if(string.IsNullOrEmpty(value))
+                {
+                    directRewards = null;
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                directRewards = new UserRewardData[numParameters];
+
+                string parameter;
+                string[] values;
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    values = parameter.Split(':');
+                    
+                    ref var directReward = ref directRewards[i];
+                    directReward.name = values[0];
+                    directReward.type = (UserRewardType)int.Parse(values[1]);
+                    directReward.count = int.Parse(values[2]);
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 小关间接奖励
+        {
+            set
+            {
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                indirectRewards = new StageReward[numParameters];
+
+                int i, j, numValues;
+                string parameter;
+                string[] values, values2;
+                for (i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    values = parameter.Split(':');
+                    
+                    ref var indirectReward = ref indirectRewards[i];
+                    indirectReward.name = values[0];
+                    indirectReward.condition = (UserStageReward.Condition)int.Parse(values[1]);
+                    if (values.Length > 3)
+                    {
+                        indirectReward.conditionValue = int.Parse(values[2]);
+                        
+                        values = values[3].Split('+');
+                    }
+                    else
+                    {
+                        indirectReward.conditionValue = 0;
+                        
+                        values = values[2].Split('+');
+                    }
+
+                    numValues = values.Length;
+
+                    indirectReward.values = new UserRewardData[numValues];
+                    for (j = 0; j < numValues; ++j)
+                    {
+                        ref var temp = ref indirectReward.values[j];
+                        
+                        values2 = values[j].Split('*');
+
+                        temp.name = values2[0];
+                        
+                        temp.type = (UserRewardType)int.Parse(values2[1]);
+                        temp.count = int.Parse(values2[2]);
+                    }
+                }
+            }
+        }
+#endif
+    }
+
+    [SerializeField]
+    internal Stage[] _stages;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_stages", guidIndex = -1, nameIndex = 0)] 
+    internal string _stagesPath;
+#endif
+
     public IEnumerator QueryLevels(
         uint userID,
         Action<IUserData.Levels> onComplete)
@@ -317,6 +486,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
 
+        result.spawnerAttribute = __GetStage(level, result.stage).spawnerAttribute;
         result.value = __ApplyProperty(userID);
 
         onComplete(result);

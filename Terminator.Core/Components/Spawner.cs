@@ -95,6 +95,17 @@ public struct SpawnerInstance
 
 public struct SpawnerAttribute
 {
+    [Serializable]
+    public struct Scale
+    {
+        public float speedScale;
+        public float damageScale;
+        public float hp;
+        public float level;
+        public float exp;
+        public float gold;
+    }
+    
     public int hp;
     public int hpMax;
     public int level;
@@ -119,28 +130,89 @@ public struct SpawnerAttribute
 
     public float interval;
 
-    public static SpawnerAttribute operator +(SpawnerAttribute x, SpawnerAttribute y)
+    public static SpawnerAttribute operator *(SpawnerAttribute x, Scale y)
     {
         SpawnerAttribute result;
-        result.hp = x.hp + y.hp;
-        result.hpMax = x.hpMax + y.hpMax;
-        result.level = x.level + y.level;
-        result.levelMax = x.levelMax + y.levelMax;
-        result.exp = x.exp + y.exp;
-        result.expMax = x.expMax + y.expMax;
-        result.gold = x.gold + y.gold;
-        result.goldMax = x.goldMax + y.goldMax;
-        result.damageScale = x.damageScale + y.damageScale;
-        result.damageScaleMax = x.damageScaleMax + y.damageScaleMax;
-        result.speedScale = x.speedScale + y.speedScale;
-        result.speedScaleMax = x.speedScaleMax + y.speedScaleMax;
-        result.speedScaleBuff = x.speedScaleBuff + y.speedScaleBuff;
-        result.damageScaleBuff = x.damageScaleBuff + y.damageScaleBuff;
-        result.hpBuff = x.hpBuff + y.hpBuff;
-        result.levelBuff = x.levelBuff + y.levelBuff;
-        result.expBuff = x.expBuff + y.expBuff;
-        result.goldBuff = x.goldBuff + y.goldBuff;
-        result.interval = x.interval + y.interval;
+        if (y.hp > math.FLT_MIN_NORMAL)
+        {
+            result.hp = (int)math.round(x.hp * y.hp);
+            result.hpMax = (int)math.round(x.hpMax * y.hp);
+            result.hpBuff = x.hpBuff * y.hp;
+        }
+        else
+        {
+            result.hp = x.hp;
+            result.hpMax = x.hpMax ;
+            result.hpBuff = x.hpBuff;
+        }
+
+        if (y.level > math.FLT_MIN_NORMAL)
+        {
+            result.level = (int)math.round(x.level * y.level);
+            result.levelMax = (int)math.round(x.levelMax * y.level);
+            result.levelBuff = x.levelBuff * y.level;
+        }
+        else
+        {
+            result.level = x.level;
+            result.levelMax = x.levelMax;
+            result.levelBuff = x.levelBuff;
+        }
+
+        if (y.exp > math.FLT_MIN_NORMAL)
+        {
+            result.exp = (int)math.round(x.exp * y.exp);
+            result.expMax = (int)math.round(x.expMax * y.exp);
+            result.expBuff = x.expBuff * y.exp;
+        }
+        else
+        {
+            result.exp = x.exp;
+            result.expMax = x.expMax;
+            result.expBuff = x.expBuff;
+        }
+        
+        if (y.gold > math.FLT_MIN_NORMAL)
+        {
+            result.gold = (int)math.round(x.gold * y.gold);
+            result.goldMax = (int)math.round(x.goldMax * y.gold);
+            result.goldBuff = x.goldBuff * y.gold;
+        }
+        else
+        {
+            result.gold = x.gold;
+            result.goldMax = x.goldMax;
+            result.goldBuff = x.goldBuff;
+        }
+        
+        if (y.damageScale > math.FLT_MIN_NORMAL)
+        {
+            result.damageScale = x.damageScale * y.damageScale;
+            result.damageScaleMax = x.damageScaleMax * y.damageScale;
+            result.damageScaleBuff = x.damageScaleBuff * y.damageScale;
+        }
+        else
+        {
+            result.damageScale = x.damageScale;
+            result.damageScaleMax = x.damageScaleMax;
+            result.damageScaleBuff = x.damageScaleBuff;
+        }
+        
+        if (y.speedScale > math.FLT_MIN_NORMAL)
+        {
+            result.speedScale = x.speedScale * y.speedScale;
+            result.speedScaleMax = x.speedScaleMax * y.speedScale;
+            result.speedScaleBuff = x.speedScaleBuff * y.speedScale;
+        }
+        else
+        {
+            result.speedScale = x.speedScale;
+            result.speedScaleMax = x.speedScaleMax;
+            result.speedScaleBuff = x.speedScaleBuff;
+        }
+
+        result.interval = x.interval;
+        
         return result;
     }
 }
@@ -470,7 +542,7 @@ public struct SpawnerDefinition
         if (attributeIndex != -1)
         {
             var attribute = attributes[attributeIndex];
-            attribute += SpawnerShared.attribute;
+            attribute *= SpawnerShared.attribute;
 
             float times = attribute.interval > math.FLT_MIN_NORMAL ? math.floor(time / attribute.interval) : time;
             
@@ -636,15 +708,15 @@ public static class SpawnerShared
         public static ref int value => ref Value.Data;
     }
 
-    private struct Attribute
+    private struct AttributeScale
     {
-        private static readonly SharedStatic<SpawnerAttribute> Value =
-            SharedStatic<SpawnerAttribute>.GetOrCreate<Attribute>();
+        private static readonly SharedStatic<SpawnerAttribute.Scale> Value =
+            SharedStatic<SpawnerAttribute.Scale>.GetOrCreate<Attribute>();
 
-        public static ref SpawnerAttribute value => ref Value.Data;
+        public static ref SpawnerAttribute.Scale value => ref Value.Data;
     }
 
     public static ref int layerMask => ref LayerMask.value;
     
-    public static ref SpawnerAttribute attribute => ref Attribute.value;
+    public static ref SpawnerAttribute.Scale attribute => ref AttributeScale.value;
 }

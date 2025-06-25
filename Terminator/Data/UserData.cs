@@ -140,6 +140,7 @@ public partial interface IUserData : IGameUserData
     public struct Property
     {
         public string name;
+        public int spawnerLayerMask;
         public Skill[] skills;
         public UserAttributeData[] attributes;
     }
@@ -147,6 +148,7 @@ public partial interface IUserData : IGameUserData
     public struct LevelProperty
     {
         public int stage;
+        public SpawnerAttribute.Scale spawnerAttribute;
         public Property value;
     }
 

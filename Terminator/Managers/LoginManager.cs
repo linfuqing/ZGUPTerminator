@@ -726,7 +726,11 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.LevelProperty property)
     {
+        SpawnerShared.attribute = property.spawnerAttribute;
+        SpawnerShared.layerMask = property.value.spawnerLayerMask;
+
         LevelPlayerShared.skillRage = 0;
+        
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
         
@@ -748,8 +752,12 @@ public sealed class LoginManager : MonoBehaviour
             
             return;
         }
+
+        SpawnerShared.attribute = property.spawnerAttribute;
+        SpawnerShared.layerMask = property.value.spawnerLayerMask;
         
         LevelPlayerShared.skillRage = property.cache.rage;
+        
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
         
