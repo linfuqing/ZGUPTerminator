@@ -92,7 +92,7 @@ public partial interface IUserData
     public struct PurchaseTokens
     {
         /// <summary>
-        /// 首充天数，补给卡，月卡，游荡卡填0，基金代表章节，通行证代表活跃度
+        /// 首充代表天数，补给卡，月卡，游荡卡为0，基金代表章节，通行证代表活跃度
         /// </summary>
         public int exp;
         
