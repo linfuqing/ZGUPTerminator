@@ -109,7 +109,7 @@ public partial interface IUserData
     IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<PurchaseItems> onComplete);
 
     /// <summary>
-    /// 针对对应令牌的查询
+    /// 针对首充、补给卡、月卡、游荡卡日常奖励或令牌路线奖励的查询
     /// </summary>
     /// <param name="type"></param>
     /// <param name="level"></param>
