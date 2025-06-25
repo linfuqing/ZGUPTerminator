@@ -15,7 +15,7 @@ public partial class UserDataMain
         
 #if UNITY_EDITOR
         [CSVField]
-        public string 技能名字
+        public string 技能名称
         {
             set
             {
@@ -24,7 +24,7 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public string 技能组名字
+        public string 技能组名称
         {
             set
             {

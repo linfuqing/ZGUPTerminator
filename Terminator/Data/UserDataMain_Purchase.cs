@@ -138,6 +138,7 @@ public partial class UserDataMain
 
         public int level;
 
+        [Tooltip("月卡、永久补给卡填1，基金代表章节，通行证代表活跃度")]
         public int exp;
 
         public UserRewardData[] rewards;
@@ -206,6 +207,10 @@ public partial class UserDataMain
         int exp;
         switch (type)
         {
+            /*case PurchaseType.MonthlyCard:
+            case PurchaseType.DiamondCard:
+                
+                break;*/
             case PurchaseType.Fund:
                 exp = UserData.level;
                 break;
