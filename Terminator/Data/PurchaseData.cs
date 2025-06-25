@@ -61,10 +61,13 @@ public interface IPurchaseData
         /// </summary>
         public int times;
 
+        /// <summary>
+        /// 有效期
+        /// </summary>
         public int deadline;
         
         /// <summary>
-        /// 有效期
+        /// 购买时间
         /// </summary>
         public long ticks;
         

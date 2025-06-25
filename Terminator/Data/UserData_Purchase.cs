@@ -91,6 +91,9 @@ public partial interface IUserData
 
     public struct PurchaseTokens
     {
+        /// <summary>
+        /// 首充天数，补给卡，月卡，游荡卡填0，基金代表章节，通行证代表活跃度
+        /// </summary>
         public int exp;
         
         public UserPurchaseToken[] values;
@@ -123,6 +126,15 @@ public partial interface IUserData
     /// <returns></returns>
     IEnumerator CollectPurchaseItem(PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
 
+    /// <summary>
+    /// 领取首充、补给卡、月卡、游荡卡日常奖励
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="level"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
+    
     /// <summary>
     /// 领取赛季开始至今日的所有令牌奖励
     /// </summary>

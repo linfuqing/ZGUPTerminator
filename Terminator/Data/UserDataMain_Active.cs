@@ -18,12 +18,12 @@ public partial class UserDataMain
     {
         public T value;
         
-        public int day;
+        public uint seconds;
 
         public Active(T value)
         {
             this.value = value;
-            day = (int)new TimeSpan(DateTime.Now.Ticks).TotalDays;
+            seconds = ZG.DateTimeUtility.GetSeconds();
         }
 
         public Active(string value, Func<Memory<string>, T> parse)
@@ -37,48 +37,31 @@ public partial class UserDataMain
 
             var parameters = value.Split(UserData.SEPARATOR);
             
-            day = int.Parse(parameters[0]);
+            seconds = uint.Parse(parameters[0]);
             this.value = parse(parameters.AsMemory(1));
         }
 
         public T ToDay()
         {
-            return (int)(new TimeSpan(DateTime.Now.Ticks).TotalDays) == day ? value : default;
+            return ZG.DateTimeUtility.IsToday(seconds) ? value : default;
         }
         
         public T ToWeek()
         {
-            DateTime dateTime = new DateTime(day * TimeSpan.TicksPerDay), now = DateTime.Now;
-            var totalDays = (now - dateTime).TotalDays;
-            if (totalDays < 7d && totalDays > -7d)
-            {
-                DayOfWeek dayOfWeek = dateTime.DayOfWeek, nowDayOfWeek = now.DayOfWeek;
-                if ((totalDays >= 0.0f) ^ (dayOfWeek >= nowDayOfWeek))
-                    return value;
-            }
-
-            return default;
+            return ZG.DateTimeUtility.IsThisWeek(seconds) ? value : default;
         }
 
         public T ToMonth()
         {
-            DateTime dateTime = new DateTime(day * TimeSpan.TicksPerDay), now = DateTime.Now;
-            var totalDays = (now - dateTime).TotalDays;
-            if (totalDays < 30d && totalDays > -30d)
-            {
-                if (dateTime.Month == now.Month)
-                    return value;
-            }
-
-            return default;
+            return ZG.DateTimeUtility.IsThisMonth(seconds) ? value : default;
         }
 
         public override string ToString()
         {
-            return $"{day}{UserData.SEPARATOR}{value}";
+            return $"{seconds}{UserData.SEPARATOR}{value}";
         }
     }
-    
+
     public static int ad => __GetQuest(UserQuest.Type.Unknown, ActiveType.Day, out _);
 
     public static int aw => __GetQuest(UserQuest.Type.Unknown, ActiveType.Week, out _);

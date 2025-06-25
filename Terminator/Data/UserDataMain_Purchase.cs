@@ -138,7 +138,7 @@ public partial class UserDataMain
 
         public int level;
 
-        [Tooltip("月卡、永久补给卡填1，基金代表章节，通行证代表活跃度")]
+        [Tooltip("首充填写天数，补给卡，月卡，游荡卡填0，基金代表章节，通行证代表活跃度")]
         public int exp;
 
         public UserRewardData[] rewards;
@@ -148,6 +148,8 @@ public partial class UserDataMain
     internal PurchaseToken[] _purchaseTokens;
     
     public const string NAME_SPACE_USER_PURCHASE_TOKEN = "UserPurchaseToken";
+    public const string NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS = "UserPurchaseTokenSeconds";
+    public const string NAME_SPACE_USER_PURCHASE_TOKEN_TIMES = "UserPurchaseTokenTimes";
 
     public IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
     {
@@ -156,6 +158,14 @@ public partial class UserDataMain
         IUserData.PurchaseTokens result;
         switch (type)
         {
+            case PurchaseType.FirstCharge:
+                result.exp = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{type}{level}");
+                break;
+            case PurchaseType.DiamondCard:
+            case PurchaseType.MonthlyCard:
+            case PurchaseType.SweepCard:
+                result.exp = 0;
+                break;
             case PurchaseType.Fund:
                 result.exp = UserData.level;
                 break;
@@ -167,9 +177,10 @@ public partial class UserDataMain
         }
         
         var output = PurchaseData.Query(type, level);
-        UserPurchaseToken value;
         List<UserPurchaseToken> values = null;
+        UserPurchaseToken value;
         PurchaseToken token;
+        string key;
         int numPurchasesTokens = _purchaseTokens.Length;
         for(int i = 0; i < numPurchasesTokens; ++i)
         {
@@ -181,7 +192,10 @@ public partial class UserDataMain
                 value.id = __ToID(i);
                 value.exp = token.exp;
 
-                if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
+                key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
+
+                if (!(PlayerPrefs.HasKey(key) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(key))) &&
+                    PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
                     value.flag = 0;
                 else
                     value.flag = UserPurchaseToken.Flag.Collected;
@@ -200,6 +214,88 @@ public partial class UserDataMain
         onComplete(result);
     }
     
+    public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    {
+        yield return null;
+
+        bool isWriteSeconds = false, isWriteTimes = false;
+        int exp;
+        string expKey = null;
+        switch (type)
+        {
+            case PurchaseType.FirstCharge:
+                isWriteSeconds = true;
+                isWriteTimes = true;
+
+                expKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{type}{level}";
+                
+                exp = PlayerPrefs.GetInt(expKey);
+                break;
+            case PurchaseType.DiamondCard:
+            case PurchaseType.MonthlyCard:
+            case PurchaseType.SweepCard:
+                isWriteSeconds = true;
+                
+                exp = 0;
+                break;
+            case PurchaseType.Fund:
+                isWriteTimes = true;
+                
+                exp = UserData.level;
+                break;
+            case PurchaseType.Pass:
+                isWriteTimes = true;
+                
+                exp = am;
+                break;
+            default:
+                yield break;
+        }
+
+        List<UserReward> rewards = null;
+        
+        string secondsKey, key;
+        foreach (var purchaseToken in _purchaseTokens)
+        {
+            if (purchaseToken.type == type && 
+                purchaseToken.level == level && 
+                purchaseToken.exp <= exp)
+            {
+                if (PurchaseData.IsValid(
+                        type, 
+                        purchaseToken.level, 
+                        NAME_SPACE_USER_PURCHASE_ITEM, 
+                        out int times,
+                        out _))
+                {
+                    secondsKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
+                    if (!(PlayerPrefs.HasKey(secondsKey) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(secondsKey))))
+                    {
+                        key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
+                        if (PlayerPrefs.GetInt(key) < times)
+                        {
+                            if (isWriteTimes)
+                                PlayerPrefs.SetInt(key, times);
+
+                            if (isWriteSeconds)
+                                PlayerPrefs.SetInt(secondsKey, (int)ZG.DateTimeUtility.GetSeconds());
+                            
+                            if(expKey != null)
+                                PlayerPrefs.SetInt(expKey, exp + 1);
+
+                            if (rewards == null)
+                                rewards = new List<UserReward>();
+
+                            __ApplyRewards(purchaseToken.rewards, rewards);
+                        }
+                    }
+                }
+            }
+        }
+        
+        onComplete(rewards == null ? null : rewards.ToArray());
+    }
+    
     public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
     {
         yield return null;
@@ -207,10 +303,6 @@ public partial class UserDataMain
         int exp;
         switch (type)
         {
-            /*case PurchaseType.MonthlyCard:
-            case PurchaseType.DiamondCard:
-                
-                break;*/
             case PurchaseType.Fund:
                 exp = UserData.level;
                 break;
@@ -269,6 +361,11 @@ public partial class UserData
     public IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
     {
         return UserDataMain.instance.QueryPurchaseTokens(type, level, onComplete);
+    }
+
+    public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.CollectPurchaseToken(type, level, onComplete);
     }
     
     public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
