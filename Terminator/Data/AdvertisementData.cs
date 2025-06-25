@@ -53,7 +53,8 @@ public interface IAdvertisementData
     public static IAdvertisementData instance;
     
     /// <summary>
-    /// 播放广告
+    /// 播放广告，买了免广告也应该调用该接口后再下发奖励，否则下发奖励失败。
+    /// 购买了免广告卡后将自动跳过广告。
     /// </summary>
     /// <param name="userID"></param>
     /// <param name="type"></param>

@@ -1,4 +1,5 @@
 using System;
+using Unity.Burst;
 using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
@@ -92,35 +93,60 @@ public struct SpawnerInstance
     }
 }*/
 
+public struct SpawnerAttribute
+{
+    public int hp;
+    public int hpMax;
+    public int level;
+    public int levelMax;
+    public int exp;
+    public int expMax;
+    public int gold;
+    public int goldMax;
+
+    public float damageScale;
+    public float damageScaleMax;
+
+    public float speedScale;
+    public float speedScaleMax;
+
+    public float speedScaleBuff;
+    public float damageScaleBuff;
+    public float hpBuff;
+    public float levelBuff;
+    public float expBuff;
+    public float goldBuff;
+
+    public float interval;
+
+    public static SpawnerAttribute operator +(SpawnerAttribute x, SpawnerAttribute y)
+    {
+        SpawnerAttribute result;
+        result.hp = x.hp + y.hp;
+        result.hpMax = x.hpMax + y.hpMax;
+        result.level = x.level + y.level;
+        result.levelMax = x.levelMax + y.levelMax;
+        result.exp = x.exp + y.exp;
+        result.expMax = x.expMax + y.expMax;
+        result.gold = x.gold + y.gold;
+        result.goldMax = x.goldMax + y.goldMax;
+        result.damageScale = x.damageScale + y.damageScale;
+        result.damageScaleMax = x.damageScaleMax + y.damageScaleMax;
+        result.speedScale = x.speedScale + y.speedScale;
+        result.speedScaleMax = x.speedScaleMax + y.speedScaleMax;
+        result.speedScaleBuff = x.speedScaleBuff + y.speedScaleBuff;
+        result.damageScaleBuff = x.damageScaleBuff + y.damageScaleBuff;
+        result.hpBuff = x.hpBuff + y.hpBuff;
+        result.levelBuff = x.levelBuff + y.levelBuff;
+        result.expBuff = x.expBuff + y.expBuff;
+        result.goldBuff = x.goldBuff + y.goldBuff;
+        result.interval = x.interval + y.interval;
+        return result;
+    }
+}
+
 public struct SpawnerDefinition
 {
-    public struct Attribute
-    {
-        public int hp;
-        public int hpMax;
-        public int level;
-        public int levelMax;
-        public int exp;
-        public int expMax;
-        public int gold;
-        public int goldMax;
-
-        public float damageScale;
-        public float damageScaleMax;
-
-        public float speedScale;
-        public float speedScaleMax;
-
-        public float speedScaleBuff;
-        public float damageScaleBuff;
-        public float hpBuff;
-        public float levelBuff;
-        public float expBuff;
-        public float goldBuff;
-
-        public float interval;
-    }
-
     public struct Area
     {
         public SpawnerSpace space;
@@ -164,7 +190,7 @@ public struct SpawnerDefinition
 
     public BlobArray<Area> areas;
     
-    public BlobArray<Attribute> attributes;
+    public BlobArray<SpawnerAttribute> attributes;
 
     public BlobArray<Spawner> spawners;
 
@@ -443,25 +469,26 @@ public struct SpawnerDefinition
         
         if (attributeIndex != -1)
         {
-            ref var attribute = ref attributes[attributeIndex];
+            var attribute = attributes[attributeIndex];
+            attribute += SpawnerShared.attribute;
 
             float times = attribute.interval > math.FLT_MIN_NORMAL ? math.floor(time / attribute.interval) : time;
             
-            if (attribute.speedScale > math.FLT_MIN_NORMAL)
+            if (attribute.speedScale > math.FLT_MIN_NORMAL && attribute.speedScaleMax > math.FLT_MIN_NORMAL)
             {
                 FollowTargetSpeed followTargetSpeed;
                 followTargetSpeed.scale = math.min(attribute.speedScale + attribute.speedScaleBuff * times, attribute.speedScaleMax);
                 entityManager.SetComponent(2, entity, followTargetSpeed);
             }
 
-            if (attribute.damageScale > math.FLT_MIN_NORMAL)
+            if (attribute.damageScale > math.FLT_MIN_NORMAL && attribute.damageScaleMax > math.FLT_MIN_NORMAL)
             {
                 EffectDamage effectDamage;
                 effectDamage.scale = math.min(attribute.damageScale + attribute.damageScaleBuff * times, attribute.damageScaleMax);
                 entityManager.AddComponent(1, entity, effectDamage);
             }
 
-            if (attribute.hp != 0)
+            if (attribute.hp != 0 && attribute.hpMax > 0)
             {
                 EffectTarget effectTarget;
                 effectTarget.times = 0;
@@ -489,7 +516,9 @@ public struct SpawnerDefinition
                 }
             }
 
-            if (attribute.level != 0 || attribute.exp != 0 || attribute.gold != 0)
+            if (attribute.level != 0 && attribute.levelMax > 0 || 
+                attribute.exp != 0 && attribute.expMax > 0 || 
+                attribute.gold != 0 && attribute.goldMax > 0)
             {
                 EffectTargetLevel effectTargetLevel;
                 effectTargetLevel.value = math.min((int)math.round(attribute.level + attribute.levelBuff * times), attribute.levelMax);
@@ -532,7 +561,7 @@ public struct SpawnerLayerMask : IComponentData
         in SpawnerLayerMaskInclude includeValue,
         in SpawnerLayerMaskExclude excludeValue)
     {
-        return ((overrideValue.value == 0 ? value : overrideValue.value) | includeValue.value) & ~excludeValue.value;
+        return ((overrideValue.value == 0 ? (value | SpawnerShared.layerMask) : overrideValue.value) | includeValue.value) & ~excludeValue.value;
     }
 }
 
@@ -595,4 +624,27 @@ public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>, ICompar
 public struct SpawnerTrigger : IComponentData
 {
     public int layerMask;
+}
+
+public static class SpawnerShared
+{
+    private struct LayerMask
+    {
+        private static readonly SharedStatic<int> Value =
+            SharedStatic<int>.GetOrCreate<LayerMask>();
+
+        public static ref int value => ref Value.Data;
+    }
+
+    private struct Attribute
+    {
+        private static readonly SharedStatic<SpawnerAttribute> Value =
+            SharedStatic<SpawnerAttribute>.GetOrCreate<Attribute>();
+
+        public static ref SpawnerAttribute value => ref Value.Data;
+    }
+
+    public static ref int layerMask => ref LayerMask.value;
+    
+    public static ref SpawnerAttribute attribute => ref Attribute.value;
 }
