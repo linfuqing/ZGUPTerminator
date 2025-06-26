@@ -65,6 +65,24 @@ public class SkillKeyAuthoring : MonoBehaviour
         public string name;
 
         public string[] keyNames;
+        
+        [CSVField]
+        public string 词条技能名称
+        {
+            set
+            {
+                name = value;
+            }
+        }
+
+        [CSVField]
+        public string 词条技能词条
+        {
+            set
+            {
+                keyNames = value.Split("/");
+            }
+        }
     }
 
     class Baker : Baker<SkillKeyAuthoring>
@@ -158,7 +176,19 @@ public class SkillKeyAuthoring : MonoBehaviour
     [SerializeField]
     internal KeyData[] _keys;
     
+    #region CSV
+    [SerializeField]
+    [CSV("_keys", guidIndex = -1, nameIndex = 0)]
+    internal string _keysPath;
+    #endregion
+    
     [SerializeField]
     internal SkillData[] _skills;
+    
+    #region CSV
+    [SerializeField]
+    [CSV("_skills", guidIndex = -1, nameIndex = 0)]
+    internal string _skillsPath;
+    #endregion
 }
 #endif
