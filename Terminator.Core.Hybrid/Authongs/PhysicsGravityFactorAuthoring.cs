@@ -13,7 +13,11 @@ public class PhysicsGravityFactorAuthoring : MonoBehaviour
 
             PhysicsGravityFactor physicsGravityFactor;
             physicsGravityFactor.Value = Mathf.Abs(authoring._value) > Mathf.Epsilon ? authoring._value : 1.0f;
-            AddComponent(entity, physicsGravityFactor);
+            
+            if(GetComponent<Rigidbody>() == null)
+                AddComponent(entity, physicsGravityFactor);
+            else
+                SetComponent(entity, physicsGravityFactor);
         }
     }
 
