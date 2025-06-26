@@ -5,7 +5,6 @@ using ZG;
 using Object = UnityEngine.Object;
 using Random = Unity.Mathematics.Random;
 
-
 public enum SkillMessageType
 {
     Cooldown,
@@ -24,11 +23,11 @@ public struct SkillDefinition
     public struct Skill
     {
         public int layerMask;
-        public int layerMaskInclude;
-        public int layerMaskExclude;
+        
         public float rage;
         public float duration;
         public float cooldown;
+        
         public BlobArray<int> bulletIndices;
         public BlobArray<int> messageIndices;
         public BlobArray<int> preIndices;
@@ -38,6 +37,7 @@ public struct SkillDefinition
     public BlobArray<Skill> skills;
     
     public bool Update(
+        int layerMask, 
         float cooldownScale, 
         double time, 
         in DynamicBuffer<SkillMessage> inputMessages, 
@@ -48,7 +48,6 @@ public struct SkillDefinition
         ref DynamicBuffer<Message> outputMessages, 
         ref DynamicBuffer<MessageParameter> outputMessageParameters, 
         ref BulletDefinition bulletDefinition, 
-        ref int layerMask, 
         ref float rage)
     {
         bulletActiveIndices.Clear();
@@ -66,8 +65,8 @@ public struct SkillDefinition
             numPreIndices, 
             numBulletIndices,
             numMessageIndices,
-            layerMaskInclude = 0, 
-            layerMaskExclude = 0, 
+            //layerMaskInclude = 0, 
+            //layerMaskExclude = 0, 
             preIndex,
             i, j, k;
         bool isCooldown, isChanged, result = false;
@@ -254,8 +253,8 @@ public struct SkillDefinition
             
             if (isCooldown)
             {
-                layerMaskInclude |= skill.layerMaskInclude;
-                layerMaskExclude |= skill.layerMaskExclude;
+                //layerMaskInclude |= skill.layerMaskInclude;
+                //layerMaskExclude |= skill.layerMaskExclude;
                 
                 __GetOrCreateRandom(status.cooldown, ref random);
 
@@ -288,7 +287,7 @@ public struct SkillDefinition
             }
         }
 
-        layerMask = layerMaskInclude & ~layerMaskExclude;
+        //layerMask = layerMaskInclude & ~layerMaskExclude;
 
         return result;
     }
@@ -318,10 +317,10 @@ public struct SkillRage : IComponentData
     public float value;
 }
 
-public struct SkillLayerMask : IComponentData
+/*public struct SkillLayerMask : IComponentData
 {
     public int value;
-}
+}*/
 
 public struct SkillMessage : IBufferElementData
 {

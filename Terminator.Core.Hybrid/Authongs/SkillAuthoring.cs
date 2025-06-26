@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using UnityEngine;
 using ZG;
 using Object = UnityEngine.Object;
@@ -40,16 +39,14 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             return name == other.name && damageScale == other.damageScale && chance.Equals(other.chance);
         }
     }
-    
+
     [Serializable]
     public struct SkillData
     {
         public string name;
 
+        [Tooltip("如果填写，则对应的子弹标签被激活时，技能才生效")]
         public LayerMask layerMask;
-        
-        public LayerMask layerMaskInclude;
-        public LayerMask layerMaskExclude;
         
         public float rage;
         
@@ -58,6 +55,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
         public BulletData[] bullets;
         public string[] messageNames;
         public string[] preNames;
+        public string[] keyNames;
         
         #region CSV
         [CSVField]
@@ -78,24 +76,6 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             }
         }
 
-        [CSVField]
-        public int 技能包含标签
-        {
-            set
-            {
-                layerMaskInclude = value;
-            }
-        }
-        
-        [CSVField]
-        public int 技能排除标签
-        {
-            set
-            {
-                layerMaskExclude = value;
-            }
-        }
-        
         [CSVField]
         public float 技能需要怒气
         {
@@ -187,6 +167,16 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                 preNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
         }
+        
+        [CSVField]
+        public string 技能词条
+        {
+            set
+            {
+                keyNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
+            }
+        }
+
         #endregion
     }
 
@@ -213,7 +203,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
         {
             SkillDefinitionData instance;
             int i, j, 
-                numSkills = authoring._skills.Length, 
+                numSkills = authoring._skills.Length,
                 numMessages = authoring._messages == null ? 0 : authoring._messages.Length, 
                 numAttributeMessages = (authoring._attributeParameter == null ? 0 : 1);
             using (var builder = new BlobBuilder(Allocator.Temp))
@@ -240,8 +230,6 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     ref var destination = ref skills[i];
 
                     destination.layerMask = source.layerMask;
-                    destination.layerMaskInclude = source.layerMaskInclude;
-                    destination.layerMaskExclude = source.layerMaskExclude;
                     destination.duration = source.duration;
                     destination.cooldown = source.cooldown;
                     destination.rage = source.rage;
@@ -351,7 +339,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             cooldownScale.value = authoring._cooldownScale;
             AddComponent(entity, cooldownScale);
 
-            AddComponent<SkillLayerMask>(entity);
+            //AddComponent<SkillLayerMask>(entity);
             AddComponent<SkillRage>(entity);
 
             var activeIndices = AddBuffer<SkillActiveIndex>(entity);
@@ -414,7 +402,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
 
     [SerializeField] 
     internal MessageData[] _messages;
-    
+
     [SerializeField]
     internal SkillData[] _skills;
     
