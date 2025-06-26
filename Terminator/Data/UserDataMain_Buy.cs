@@ -84,6 +84,11 @@ public partial class UserDataMain
 
             return result;
         }
+
+        public override string ToString()
+        {
+            return $"{value}{UserData.SEPARATOR}{bits}";
+        }
     }
     
     [SerializeField]

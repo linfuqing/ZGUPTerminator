@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 using Unity.Physics;
 using UnityEngine;
 
@@ -11,8 +12,11 @@ public class PhysicsGravityFactorAuthoring : MonoBehaviour
             Entity entity = GetEntity(authoring, TransformUsageFlags.None);
 
             PhysicsGravityFactor physicsGravityFactor;
-            physicsGravityFactor.Value = 1.0f;
+            physicsGravityFactor.Value = Mathf.Abs(authoring._value) > Mathf.Epsilon ? authoring._value : 1.0f;
             AddComponent(entity, physicsGravityFactor);
         }
     }
+
+    [SerializeField] 
+    internal float _value = 1.0f;
 }
