@@ -17,9 +17,7 @@ public class SkillKeyAuthoring : MonoBehaviour
             public int count;
 
             [Tooltip("该词条生效时，激活特定的子弹标签")]
-            public LayerMask include;
-            [Tooltip("该词条生效时，屏蔽特定的子弹标签")]
-            public LayerMask exclude;
+            public LayerMask value;
         }
         
         public string name;
@@ -50,8 +48,7 @@ public class SkillKeyAuthoring : MonoBehaviour
                 {
                     keywords = parameters[i].Split(':');
                     bulletLayerMask.count = int.Parse(keywords[0]);
-                    bulletLayerMask.include = int.Parse(keywords[1]);
-                    bulletLayerMask.exclude = int.Parse(keywords[2]);
+                    bulletLayerMask.value = int.Parse(keywords[1]);
                     
                     bulletLayerMasks[i] = bulletLayerMask;
                 }
@@ -110,8 +107,7 @@ public class SkillKeyAuthoring : MonoBehaviour
                         ref var destinationBulletLayerMask = ref bulletLayerMasks[j];
 
                         destinationBulletLayerMask.count = sourceBulletLayerMask.count;
-                        destinationBulletLayerMask.include = sourceBulletLayerMask.include;
-                        destinationBulletLayerMask.exclude = sourceBulletLayerMask.exclude;
+                        destinationBulletLayerMask.value = sourceBulletLayerMask.value;
                     }
                 }
 
@@ -121,26 +117,29 @@ public class SkillKeyAuthoring : MonoBehaviour
                 int k, numKeyIndices, numSkills = authoring._skills == null ? 0 : authoring._skills.Length;
                 string keyName;
                 BlobBuilderArray<int> keyIndices;
-                var skills = builder.Allocate(ref root.skills, numSkills);
+                var skills = builder.Allocate(ref root.skills, skillLength);
+                for (i = 0; i < skillLength; ++i)
+                    skills[i] = default;
+                
                 for (i = 0; i < numSkills; ++i)
                 {
                     ref var sourceSkill = ref authoring._skills[i];
-                    ref var destinationSkill = ref skills[i];
-                    destinationSkill.index = -1;
                     
                     for (j = 0; j < skillLength; ++j)
                     {
                         if (skillAuthoring.skills[j].name == sourceSkill.name)
-                        {
-                            destinationSkill.index = j;
-
                             break;
-                        }
                     }
 
-                    if (destinationSkill.index == -1)
+                    if (j == skillLength)
+                    {
                         Debug.LogError($"The key of skill {sourceSkill.name} can not been found!");
+                        
+                        continue;
+                    }
                     
+                    ref var destinationSkill = ref skills[j];
+
                     numKeyIndices = sourceSkill.keyNames == null ? 0 : sourceSkill.keyNames.Length;
                     keyIndices = builder.Allocate(ref destinationSkill.keyIndices, numKeyIndices);
                     for (j = 0; j < numKeyIndices; ++j)
