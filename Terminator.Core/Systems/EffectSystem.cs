@@ -1410,9 +1410,9 @@ public partial struct EffectSystem : ISystem
         }
     }
 
-    private uint __frameCount;
+    private int __frameCount;
 
-    private double __time;
+    //private double __time;
     
     private ComponentLookup<PhysicsCollider> __physicsColliders;
 
@@ -1590,6 +1590,8 @@ public partial struct EffectSystem : ISystem
         
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
 
+        state.RequireForUpdate<FixedFrame>();
+
         __prefabLoader = new PrefabLoader(ref state);
 
         __damageInstances = new NativeQueue<DamageInstance>(Allocator.Persistent);
@@ -1604,6 +1606,14 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
+        if (fixedFrame.count <= __frameCount)
+            return;
+        
+        float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
+
+        __frameCount = fixedFrame.count;
+        
         var entityCommandBuffer = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged);
 
@@ -1613,7 +1623,7 @@ public partial struct EffectSystem : ISystem
         instantiate.damageInstances = __damageInstances;
         instantiate.entityManager = entityCommandBuffer;
         instantiate.prefabLoader = __prefabLoader.AsWriter();
-        var jobHandle = instantiate.Schedule(state.Dependency);
+        var jobHandle = instantiate.ScheduleByRef(state.Dependency);
             
         __characterBodyType.Update(ref state);
         __targetType.Update(ref state);
@@ -1663,7 +1673,6 @@ public partial struct EffectSystem : ISystem
         quaternion inverseCameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
             ? math.inverse(mainCameraTransform.value.rot)
             : quaternion.identity;
-        float deltaTime = SystemAPI.Time.DeltaTime;
         
         CollectEx collect;
         collect.deltaTime = deltaTime;
@@ -1713,15 +1722,15 @@ public partial struct EffectSystem : ISystem
         __messageParameterType.Update(ref state);
         __delayTimeType.Update(ref state);
 
-        if (deltaTime > math.FLT_MIN_NORMAL)
+        /*if (deltaTime > math.FLT_MIN_NORMAL)
             __time += deltaTime;
         else if(__frameCount > 0)
             __time += __time / __frameCount;
         
-        ++__frameCount;
+        ++__frameCount;*/
 
-        apply.frameCount = __frameCount;
-        apply.deltaTime = (float)(__time / __frameCount);
+        apply.frameCount = (uint)__frameCount;
+        apply.deltaTime = deltaTime;//(float)(__time / __frameCount);
         apply.time = time;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
