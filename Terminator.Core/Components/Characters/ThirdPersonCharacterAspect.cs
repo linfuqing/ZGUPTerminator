@@ -35,15 +35,15 @@ public struct ThirdPersonCharacterUpdateContext
     [ReadOnly]
     public ComponentLookup<CharacterFrictionSurface> characterFrictionSurfaceLookup;
 
-    [NativeDisableParallelForRestriction]
-    public BufferLookup<SimulationEvent> simulationEvents;
+    //[NativeDisableParallelForRestriction]
+    //public BufferLookup<SimulationEvent> simulationEvents;
 
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
     // Here, you can get the component lookups.
     public void OnSystemCreate(ref SystemState state)
     {
         characterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
-        simulationEvents = state.GetBufferLookup<SimulationEvent>();
+        //simulationEvents = state.GetBufferLookup<SimulationEvent>();
     }
     
     // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
@@ -51,7 +51,7 @@ public struct ThirdPersonCharacterUpdateContext
     public void OnSystemUpdate(ref SystemState state)
     {
         characterFrictionSurfaceLookup.Update(ref state);
-        simulationEvents.Update(ref state);
+        //simulationEvents.Update(ref state);
     }
 }
 
