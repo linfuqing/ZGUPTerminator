@@ -35,15 +35,15 @@ public struct ThirdPersonCharacterUpdateContext
     [ReadOnly]
     public ComponentLookup<CharacterFrictionSurface> characterFrictionSurfaceLookup;
 
-    //[NativeDisableParallelForRestriction]
-    //public BufferLookup<SimulationEvent> simulationEvents;
+    [NativeDisableParallelForRestriction]
+    public BufferLookup<SimulationEvent> simulationEvents;
 
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
     // Here, you can get the component lookups.
     public void OnSystemCreate(ref SystemState state)
     {
         characterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
-        //simulationEvents = state.GetBufferLookup<SimulationEvent>();
+        simulationEvents = state.GetBufferLookup<SimulationEvent>();
     }
     
     // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
@@ -51,7 +51,7 @@ public struct ThirdPersonCharacterUpdateContext
     public void OnSystemUpdate(ref SystemState state)
     {
         characterFrictionSurfaceLookup.Update(ref state);
-        //simulationEvents.Update(ref state);
+        simulationEvents.Update(ref state);
     }
 }
 
@@ -64,8 +64,6 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
     public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
     [Optional]
     public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
-    [Optional]
-    public readonly DynamicBuffer<SimulationEvent> SimulationEvents;
 
     public void PhysicsUpdate(
         in Entity entity, 
@@ -94,15 +92,14 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
         CharacterAspect.Update_ProcessStatefulCharacterHits();
 
-        //if (context.simulationEvents.TryGetBuffer(entity, out var simulationEvents))
-        if(SimulationEvents.IsCreated)
+        if (context.simulationEvents.TryGetBuffer(entity, out var simulationEvents))
         {
             SimulationEvent simulationEvent;
             foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
             {
                 simulationEvent.entity = characterHit.Entity;
                 simulationEvent.colliderKey = characterHit.ColliderKey;
-                SimulationEvent.Append(SimulationEvents, simulationEvent);
+                SimulationEvent.Append(simulationEvents, simulationEvent);
             }
         }
         
