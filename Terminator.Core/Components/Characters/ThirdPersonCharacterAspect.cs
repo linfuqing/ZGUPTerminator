@@ -15,12 +15,12 @@ using Unity.CharacterController;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
-public struct ThirdPersonCharacterSimulationEventResult
+/*public struct ThirdPersonCharacterSimulationEventResult
 {
     public Entity entity;
 
     public SimulationEvent value;
-}
+}*/
 
 [Serializable]
 public struct CharacterFrictionSurface : IComponentData
@@ -64,12 +64,14 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
     public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
     [Optional]
     public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
+    [Optional]
+    public readonly DynamicBuffer<SimulationEvent> SimulationEvents;
 
     public void PhysicsUpdate(
         in Entity entity, 
         ref ThirdPersonCharacterUpdateContext context, 
-        ref KinematicCharacterUpdateContext baseContext, 
-        ref NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults)
+        ref KinematicCharacterUpdateContext baseContext/*, 
+        ref NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults*/)
     {
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
@@ -91,19 +93,20 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         CharacterAspect.Update_MovingPlatformDetection(ref baseContext, ref characterBody); 
         CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
         CharacterAspect.Update_ProcessStatefulCharacterHits();
-        
-        ThirdPersonCharacterSimulationEventResult simulationEventResult;
-        if (context.simulationEvents.TryGetBuffer(entity, out var simulationEvents))
+
+        //if (context.simulationEvents.TryGetBuffer(entity, out var simulationEvents))
+        if(SimulationEvents.IsCreated)
         {
+            SimulationEvent simulationEvent;
             foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
             {
-                simulationEventResult.value.entity = characterHit.Entity;
-                simulationEventResult.value.colliderKey = characterHit.ColliderKey;
-                SimulationEvent.Append(simulationEvents, simulationEventResult.value);
+                simulationEvent.entity = characterHit.Entity;
+                simulationEvent.colliderKey = characterHit.ColliderKey;
+                SimulationEvent.Append(SimulationEvents, simulationEvent);
             }
         }
         
-        simulationEventResult.value.entity = entity;
+        /*simulationEventResult.value.entity = entity;
         foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
         {
             if(!context.simulationEvents.HasBuffer(characterHit.Entity))
@@ -113,7 +116,7 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
             simulationEventResult.entity = characterHit.Entity;
 
             simulationEventResults.Enqueue(simulationEventResult);
-        }
+        }*/
     }
 
     private void HandleVelocityControl(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)

@@ -17,8 +17,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
     private ThirdPersonCharacterUpdateContext _context;
     private KinematicCharacterUpdateContext _baseContext;
     
-    private NativeQueue<ThirdPersonCharacterSimulationEventResult> __simulationEventResults;
-
+    //private NativeQueue<ThirdPersonCharacterSimulationEventResult> __simulationEventResults;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -34,7 +33,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         _baseContext = new KinematicCharacterUpdateContext();
         _baseContext.OnSystemCreate(ref state);
 
-        __simulationEventResults = new NativeQueue<ThirdPersonCharacterSimulationEventResult>(Allocator.Persistent);
+        //__simulationEventResults = new NativeQueue<ThirdPersonCharacterSimulationEventResult>(Allocator.Persistent);
 
         state.RequireForUpdate(_characterQuery);
         state.RequireForUpdate<PhysicsWorldSingleton>();
@@ -43,7 +42,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
-        __simulationEventResults.Dispose();
+        //__simulationEventResults.Dispose();
     }
 
     [BurstCompile]
@@ -55,15 +54,15 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         ThirdPersonCharacterPhysicsUpdateJob job = new ThirdPersonCharacterPhysicsUpdateJob
         {
             Context = _context,
-            BaseContext = _baseContext,
-            simulationEventResults = __simulationEventResults.AsParallelWriter()
+            BaseContext = _baseContext//,
+            //simulationEventResults = __simulationEventResults.AsParallelWriter()
         };
         job.ScheduleParallelByRef(_characterQuery);
 
-        Apply apply;
+        /*Apply apply;
         apply.simulationEventResults = __simulationEventResults;
         apply.simulationEvents = _context.simulationEvents;
-        state.Dependency = apply.ScheduleByRef(state.Dependency);
+        state.Dependency = apply.ScheduleByRef(state.Dependency);*/
     }
 
     [BurstCompile]
@@ -73,13 +72,13 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         public ThirdPersonCharacterUpdateContext Context;
         public KinematicCharacterUpdateContext BaseContext;
 
-        public NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults;
+        //public NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults;
 
         void Execute(
             in Entity entity, 
             ThirdPersonCharacterAspect characterAspect)
         {
-            characterAspect.PhysicsUpdate(entity, ref Context, ref BaseContext, ref simulationEventResults);
+            characterAspect.PhysicsUpdate(entity, ref Context, ref BaseContext/*, ref simulationEventResults*/);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -93,7 +92,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         }
     }
     
-    [BurstCompile]
+    /*[BurstCompile]
     private struct Apply : IJob
     {
         public NativeQueue<ThirdPersonCharacterSimulationEventResult> simulationEventResults;
@@ -110,7 +109,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
                     this.simulationEvents.SetBufferEnabled(result.entity, true);
             }
         }
-    }
+    }*/
 }
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
