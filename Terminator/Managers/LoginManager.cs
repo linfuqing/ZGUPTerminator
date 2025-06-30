@@ -21,6 +21,8 @@ public sealed class LoginManager : MonoBehaviour
     {
         public string name;
         
+        public GameObject prefab;
+        
         public int[] stageIndices;
     }
 
@@ -29,7 +31,6 @@ public sealed class LoginManager : MonoBehaviour
     {
         public string name;
         public string title;
-        public GameObject prefab;
         
         public Scene[] scenes;
     }
@@ -387,7 +388,11 @@ public sealed class LoginManager : MonoBehaviour
 
             //if(style.onImage != null)
             //    style.onImage.Invoke(level.sprite);
-            Instantiate(level.prefab, style.root);
+
+            int numPrefabs = level.scenes.Length;
+            var prefabs = new GameObject[numPrefabs];
+            for(int i = 0; i < numPrefabs; ++i)
+                prefabs[i] = Instantiate(level.scenes[i].prefab, style.root);
 
             style.toggle.onValueChanged.AddListener(x =>
             {
@@ -543,7 +548,10 @@ public sealed class LoginManager : MonoBehaviour
                                                     if (onSelected != null)
                                                         onSelected.Invoke();
                                                 }
-
+                                                
+                                                for(int i = 0; i < numPrefabs; ++i)
+                                                    prefabs[i].SetActive(i == sceneIndex);
+                                                
                                                 __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;
 
