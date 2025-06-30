@@ -389,10 +389,10 @@ public sealed class LoginManager : MonoBehaviour
             //if(style.onImage != null)
             //    style.onImage.Invoke(level.sprite);
 
-            int numPrefabs = level.scenes.Length;
+            int numScenes = style.scenes.Length, numPrefabs = Mathf.Min(numScenes, level.scenes.Length);
             var prefabs = new GameObject[numPrefabs];
             for(int i = 0; i < numPrefabs; ++i)
-                prefabs[i] = Instantiate(level.scenes[i].prefab, style.root);
+                prefabs[i] = Instantiate(level.scenes[i].prefab, style.scenes[i].root);
 
             style.toggle.onValueChanged.AddListener(x =>
             {
@@ -411,7 +411,6 @@ public sealed class LoginManager : MonoBehaviour
                     __stageStyles.Clear();
                 }
                 
-                int numScenes = style.scenes == null ? 0 : style.scenes.Length;
                 Toggle toggle;
                 for(int i = 0; i < numScenes; ++i)
                 {
