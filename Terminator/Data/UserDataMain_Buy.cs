@@ -157,6 +157,13 @@ public partial class UserDataMain
         yield return null;
         
         var seed = new Active<ProductSeed>(PlayerPrefs.GetString(NAME_SPACE_USER_PRODUCT_SEED), ProductSeed.Parse).ToDay();
+        if (seed.value == 0)
+        {
+            seed.value = (uint)((DateTime.UtcNow.Ticks - Utc1970.Ticks) / TimeSpan.TicksPerSecond);
+            
+            PlayerPrefs.SetString(NAME_SPACE_USER_PRODUCT_SEED, new Active<ProductSeed>(seed).ToString());
+        }
+        
         int index = __ToIndex(productID);
         if ((seed.bits & (1 << index)) == 0)
         {
