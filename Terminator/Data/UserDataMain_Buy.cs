@@ -23,7 +23,7 @@ public partial class UserDataMain
     
     public IEnumerator QueryEnergies(uint userID, Action<IUserData.Energies> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         IUserData.Energies energies;
         energies.energyPerTime = _energies.energyPerTime;
@@ -38,7 +38,7 @@ public partial class UserDataMain
 
     public IEnumerator BuyEnergies(uint userID, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         int diamond = UserDataMain.diamond;
         if (diamond >= _energies.diamondPerTime)
@@ -99,7 +99,7 @@ public partial class UserDataMain
 
     public IEnumerator QueryProducts(uint userID, Action<Memory<UserProduct>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var seed = new Active<ProductSeed>(PlayerPrefs.GetString(NAME_SPACE_USER_PRODUCT_SEED), ProductSeed.Parse).ToDay();
         if (seed.value == 0)
@@ -155,7 +155,7 @@ public partial class UserDataMain
 
     public IEnumerator BuyProduct(uint userID, uint productID, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         var seed = new Active<ProductSeed>(PlayerPrefs.GetString(NAME_SPACE_USER_PRODUCT_SEED), ProductSeed.Parse).ToDay();
         if (seed.value == 0)

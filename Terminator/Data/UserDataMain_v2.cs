@@ -208,7 +208,7 @@ public partial class UserDataMain
         uint userID,
         Action<IUserData.Tip> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
         if (time == 0)
@@ -226,7 +226,7 @@ public partial class UserDataMain
         uint userID,
         Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var results = _tip.instance.Generate();
 
@@ -245,7 +245,7 @@ public partial class UserDataMain
         uint userID,
         Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var used = Tip.used;
         if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy || !__ApplyEnergy(_tip.energiesPerTime))
@@ -268,7 +268,7 @@ public partial class UserDataMain
         uint userID,
         Action<IUserData.Talents> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         IUserData.Talents result;
         result.flag = 0;
@@ -314,7 +314,7 @@ public partial class UserDataMain
         uint talentID,
         Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var talent = _talents[__ToIndex(talentID)];
         string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}";

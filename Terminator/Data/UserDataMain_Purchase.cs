@@ -30,7 +30,7 @@ public partial class UserDataMain
     
     public IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         IUserData.PurchaseItems result;
         result.status = PurchaseData.IsValid(
@@ -80,7 +80,7 @@ public partial class UserDataMain
 
     public IEnumerator CollectPurchaseItem(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         if (PurchaseData.Exchange(type, level, NAME_SPACE_USER_PURCHASE_ITEM))
         {
@@ -153,7 +153,7 @@ public partial class UserDataMain
 
     public IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         IUserData.PurchaseTokens result;
         switch (type)
@@ -216,7 +216,7 @@ public partial class UserDataMain
     
     public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         bool isWriteSeconds = false, isWriteTimes = false;
         int exp;
@@ -298,7 +298,7 @@ public partial class UserDataMain
     
     public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int exp;
         switch (type)

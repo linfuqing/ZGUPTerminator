@@ -90,7 +90,7 @@ public partial class UserDataMain
     
     public IEnumerator QuerySignIn(uint userID, Action<IUserData.SignIn> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         IUserData.SignIn result;
         result.day = __GetQuest(UserQuest.Type.Login, ActiveType.Week);
@@ -118,7 +118,7 @@ public partial class UserDataMain
 
     public IEnumerator CollectSignIn(uint userID, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int day = __GetQuest(UserQuest.Type.Login, ActiveType.Week);
         string key;
@@ -179,7 +179,7 @@ public partial class UserDataMain
 
     public IEnumerator QueryActives(uint userID, UserActiveType type, Action<IUserData.Actives> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int count;
         UserQuest userQuest;
@@ -280,7 +280,7 @@ public partial class UserDataMain
         UserActiveType type,
         Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         string activeName, key;
         int exp, times;
@@ -326,6 +326,8 @@ public partial class UserDataMain
         UserActiveType type,
         Action<Memory<UserReward>> onComplete)
     {
+        yield return __CreateEnumerator();
+        
         int count, times;
         string key;
         Quest quest;
@@ -368,6 +370,8 @@ public partial class UserDataMain
         uint questID,
         Action<Memory<UserReward>> onComplete)
     {
+        yield return __CreateEnumerator();
+        
         var quest = _quests[__GetQuestIndex(_achievementQuestNames[__ToIndex(questID)])];
         string key = $"{NAME_SPACE_USER_ACHIEVEMENT_QUEST}{quest.name}";
         if (PlayerPrefs.GetInt(key) == 0 && quest.capacity <= __GetQuest(quest.type, ActiveType.Achievement))
@@ -386,7 +390,7 @@ public partial class UserDataMain
         uint userID,
         Action<Memory<UserQuest>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         int numAchievementQuestNames = _achievementQuestNames.Length;
         Quest quest;

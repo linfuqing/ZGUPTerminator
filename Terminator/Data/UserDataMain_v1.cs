@@ -326,7 +326,7 @@ public partial class UserDataMain
         int times,
         Action<Memory<UserItem>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var purchasePool = _purchasePools[__ToIndex(purchasePoolID)];
         string poolKey = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{purchasePool.name}";
@@ -514,7 +514,7 @@ public partial class UserDataMain
         uint userID,
         Action<IUserData.Cards> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         IUserData.Cards result;
         result.flag = 0;
@@ -669,7 +669,7 @@ public partial class UserDataMain
         uint cardID,
         Action<UserCard> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var card = _cards[__ToIndex(cardID)];
         
@@ -713,7 +713,7 @@ public partial class UserDataMain
     
     public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         PlayerPrefs.SetString(NAME_SPACE_USER_CARD_GROUP, _cardGroups[__ToIndex(groupID)].name);
 
@@ -722,7 +722,7 @@ public partial class UserDataMain
 
     public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
         PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
@@ -738,7 +738,7 @@ public partial class UserDataMain
 
     public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var card = _cards[__ToIndex(cardID)];
         var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(card.styleName));
@@ -1191,7 +1191,7 @@ public partial class UserDataMain
         uint userID,
         Action<IUserData.Roles> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         IUserData.Roles result;
         result.flag = 0;
@@ -1526,7 +1526,7 @@ public partial class UserDataMain
         uint roleID,
         Action<UserRole> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         UserRole result;
         
@@ -1576,7 +1576,7 @@ public partial class UserDataMain
     
     public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         PlayerPrefs.SetString(NAME_SPACE_USER_ROLE_GROUP, _roleGroups[__ToIndex(groupID)].name);
 
@@ -1585,7 +1585,7 @@ public partial class UserDataMain
 
     public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         string key =
                 $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[__ToIndex(groupID)].name}",
@@ -1680,7 +1680,7 @@ public partial class UserDataMain
         uint roleID,
         Action<Memory<UserTalent>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int numTalents = _talents.Length;
         string roleName = _roles[__ToIndex(roleID)].name;
@@ -1712,7 +1712,7 @@ public partial class UserDataMain
         uint talentID,
         Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var talent = _talents[__ToIndex(talentID)];
         string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}";
@@ -1746,7 +1746,7 @@ public partial class UserDataMain
         uint accessoryID,
         Action<UserAccessory> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         if (!__TryGetAccessory(accessoryID, out var info))
         {
@@ -1822,7 +1822,7 @@ public partial class UserDataMain
         uint accessoryID,
         Action<Memory<UserAccessory.Stage>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         if (!__TryGetAccessory(accessoryID, out var info))
         {
@@ -1857,7 +1857,7 @@ public partial class UserDataMain
         uint slotID, 
         Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var accessorySlot = _accessorySlots[__ToIndex(slotID)];
         string roleGroupName = _roleGroups[__ToIndex(groupID)].name, 
@@ -1884,7 +1884,7 @@ public partial class UserDataMain
     public IEnumerator UpgradeAccessory(uint userID, uint accessorySlotID,
         Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var accessorySlot = _accessorySlots[__ToIndex(accessorySlotID)];
         var levelIndices = __GetAccessoryStyleLevelIndices(__GetAccessoryStyleIndex(accessorySlot.styleName));
@@ -1921,7 +1921,7 @@ public partial class UserDataMain
         uint[] sourceAccessoryIDs, 
         Action<UserAccessory.Stage?> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         if (!__TryGetAccessory(destinationAccessoryID, out var info))
         {
@@ -1988,7 +1988,7 @@ public partial class UserDataMain
         uint stageID, 
         Action<IUserData.Stage> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         if (__TryGetStage(stageID, out int targetStage, out int levelIndex, out int rewardIndex))
         {
@@ -2045,7 +2045,7 @@ public partial class UserDataMain
         uint stageID,
         Action<IUserData.StageProperty> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         if (!__TryGetStage(stageID, out int stageIndex, out int levelIndex, out _))
         {
@@ -2114,7 +2114,7 @@ public partial class UserDataMain
 
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int i, j, 
             stageRewardIndex = __ToIndex(stageRewardID), 
@@ -2160,7 +2160,7 @@ public partial class UserDataMain
 
     public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         bool result = false;
         int i,
@@ -2207,7 +2207,7 @@ public partial class UserDataMain
 
     public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         /*bool isSelected;
         float chance, total;

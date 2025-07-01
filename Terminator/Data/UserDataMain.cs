@@ -115,7 +115,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         string channelUser,
         Action<User, UserEnergy> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         User user;
         user.id = UserData.id;
@@ -349,7 +349,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         uint userID,
         Action<IUserData.Levels> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         bool isUnlock = true;
         int i, j, k, 
@@ -429,7 +429,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         int closestStage, 
         Action<IUserData.LevelProperty> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         int levelIndex = __ToIndex(levelID);
         
@@ -498,7 +498,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         uint userID,
         Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var temp = UserData.levelCache;
         if (temp == null)

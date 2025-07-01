@@ -1378,4 +1378,9 @@ public partial class UserDataMain
 
         return result;
     }
+
+    private System.Collections.IEnumerator __CreateEnumerator()
+    {
+        return null;
+    }
 }

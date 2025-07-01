@@ -10,7 +10,7 @@ public partial class UserDataMain
         uint userID,
         Action<Memory<UserReward>> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
 
         var used = Tip.used;
         if (++used.timesFromAd > _tip.timesPerDayFromAd)
@@ -40,7 +40,7 @@ public partial class UserDataMain
 
     public IEnumerator BuyEnergiesAd(uint userID, Action<bool> onComplete)
     {
-        yield return null;
+        yield return __CreateEnumerator();
         
         int buyTimesByAd = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD);
         if (buyTimesByAd < _energies.buyTimesByAd && 
@@ -56,11 +56,6 @@ public partial class UserDataMain
         }
 
         onComplete(false);
-    }
-    
-    public IEnumerator BuyProductAd(uint userID, uint productID, Action<Memory<UserReward>> onComplete)
-    {
-        yield return null;
     }
 }
 
@@ -81,11 +76,11 @@ public partial class UserData
     }
     
     
-    public IEnumerator BuyProductAd(
+    /*public IEnumerator BuyProductAd(
         uint userID,
         uint productID, 
         Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.BuyProductAd(userID, productID, onComplete);
-    }
+    }*/
 }

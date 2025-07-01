@@ -9,8 +9,8 @@ public partial interface IUserData
 
     IEnumerator BuyEnergiesAd(uint userID, Action<bool> onComplete);
 
-    IEnumerator BuyProductAd(
+    /*IEnumerator BuyProductAd(
         uint userID,
         uint productID,
-        Action<Memory<UserReward>> onComplete);
+        Action<Memory<UserReward>> onComplete);*/
 }
