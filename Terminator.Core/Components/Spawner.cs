@@ -633,7 +633,11 @@ public struct SpawnerLayerMask : IComponentData
         in SpawnerLayerMaskInclude includeValue,
         in SpawnerLayerMaskExclude excludeValue)
     {
-        return ((overrideValue.value == 0 ? (value | SpawnerShared.layerMask) : overrideValue.value) | includeValue.value) & ~excludeValue.value;
+        int result = overrideValue.value == 0 ? value : overrideValue.value;
+        result |= SpawnerShared.layerMask;
+        result = (result | includeValue.value) & ~excludeValue.value;
+        
+        return result;
     }
 }
 
