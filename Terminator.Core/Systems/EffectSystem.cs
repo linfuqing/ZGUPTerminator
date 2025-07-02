@@ -34,6 +34,7 @@ public partial struct EffectSystem : ISystem
     private struct DamageInstance
     {
         public int index;
+        public int layerMask;
         public float scale;
         public RigidTransform transform;
         public Entity entity;
@@ -83,6 +84,7 @@ public partial struct EffectSystem : ISystem
                         entityManager.AddComponent(entity, damageParent);
                     }
 
+                    damage.layerMask = damageInstance.layerMask;
                     damage.scale = damageInstance.scale;
                     entityManager.AddComponent(entity, damage);
                 }
@@ -1786,6 +1788,7 @@ public partial struct EffectSystem : ISystem
 
         DamageInstance damageInstance;
         damageInstance.index = instanceDamageParent.index;
+        damageInstance.layerMask = instanceDamage.layerMask;
         damageInstance.scale = instanceDamage.scale;
         damageInstance.entity = instanceDamageParent.entity;
 
@@ -1795,6 +1798,9 @@ public partial struct EffectSystem : ISystem
         for (int i = 0; i < numPrefabs; ++i)
         {
             ref var prefab = ref prefabsDefinition[i];
+            if(prefab.layerMask != 0 && (prefab.layerMask & instanceDamage.layerMask) == 0)
+                continue;
+            
             totalChance += prefab.chance;
             if (totalChance > 1.0f)
             {

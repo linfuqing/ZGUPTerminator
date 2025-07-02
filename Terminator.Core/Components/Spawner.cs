@@ -556,6 +556,7 @@ public struct SpawnerDefinition
             if (attribute.damageScale > math.FLT_MIN_NORMAL && attribute.damageScaleMax > math.FLT_MIN_NORMAL)
             {
                 EffectDamage effectDamage;
+                effectDamage.layerMask = 0;
                 effectDamage.scale = math.min(attribute.damageScale + attribute.damageScaleBuff * times, attribute.damageScaleMax);
                 entityManager.AddComponent(1, entity, effectDamage);
             }

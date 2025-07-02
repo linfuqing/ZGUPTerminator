@@ -696,6 +696,7 @@ public struct BulletDefinition
 
         BulletInstance instance;
         instance.index = index;
+        instance.layerMask = layerMask;
         instance.damageScale = damageScale;
         instance.time = cooldown + data.delayTime;
         instance.targetPosition = targetStatus.targetPosition;
@@ -885,148 +886,6 @@ public struct BulletDefinition
 
         return true;
     }
-
-    private static void __Instantiate(
-        int index,
-        float damageScale,
-        double time, 
-        in float3 parentPosition,
-        in RigidTransform transform, 
-        in Entity parent,
-        in Entity entity,
-        in Entity prefabRoot,
-        in CollisionWorld collisionWorld,
-        in ComponentLookup<ThirdPersonCharacterControl> characterControls,
-        in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
-        in BulletTargetStatus targetStatus,
-        ref Bullet data, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
-    {
-        //var entity = entityManager.Instantiate(0, prefabRoot);
-
-        BulletEntity bulletEntity;
-        bulletEntity.index = index;
-        bulletEntity.parent = parent;
-        entityManager.AddComponent(1, entity, bulletEntity);
-
-        if (data.space == BulletSpace.Local)
-        {
-            Parent temp;
-            temp.Value = parent;
-            entityManager.AddComponent(1, entity, temp);
-
-            //transformResult = math.mul(math.inverse(math.RigidTransform(transform)), transformResult);
-        }
-
-        var transformResult = transform;
-        
-        int rigidBodyIndex = targetStatus.target == Entity.Null ? -1 : collisionWorld.GetRigidBodyIndex(targetStatus.target);
-        float3 targetPosition = rigidBodyIndex == -1
-            ? targetStatus.targetPosition
-            : collisionWorld.Bodies[rigidBodyIndex].WorldFromBody.pos;
-        if (data.targetSpace == BulletSpace.Local && targetStatus.target != Entity.Null)
-        {
-            Parent temp;
-            temp.Value = targetStatus.target;
-            entityManager.AddComponent(1, entity, temp);
-
-            transformResult.pos -= targetPosition;
-        }
-
-        FollowTarget followTarget;
-        switch (data.followTarget)
-        {
-            case BulletFollowTarget.Source:
-                //followTarget.flag = 0;
-                followTarget.entity = parent;
-                followTarget.offset = data.space == BulletSpace.Local ? transformResult.pos : transformResult.pos - parentPosition;//transform.c3.xyz;
-                followTarget.space = FollowTargetSpace.Camera;
-                entityManager.SetComponent(1, entity, followTarget);
-                entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
-                break;
-            case BulletFollowTarget.Destination:
-                if (targetStatus.target != Entity.Null)
-                {
-                    followTarget.entity = targetStatus.target;
-                    
-                    followTarget.offset = targetStatus.targetPosition - targetPosition;
-                        /*if (target.coordinate == BulletTargetCoordinate.Origin)
-                            followTarget.offset = float3.zero;
-                        else
-                        {
-                            int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
-                            if (rigidBodyIndex == -1)
-                                followTarget.offset = float3.zero;
-                            else
-                            {
-                                var collider = collisionWorld.Bodies[rigidBodyIndex].Collider;
-
-                                followTarget.offset = collider.IsCreated ? collider.Value.MassProperties.MassDistribution.Transform.pos : float3.zero;
-                            }
-                        }*/
-
-                    followTarget.space = FollowTargetSpace.World;
-                    //followTarget.flag = characterBodies.HasComponent(prefabRoot) ? 0 : FollowTargetFlag.KeepVelocity;
-                    entityManager.SetComponent(1, entity, followTarget);
-                    entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
-                }
-
-                break;
-        }
-
-        LocalTransform localTransform;
-        localTransform.Scale = 1.0f;
-        localTransform.Position = transformResult.pos;
-        localTransform.Rotation = transformResult.rot;
-        entityManager.SetComponent(1, entity, localTransform);
-
-
-        if (animationCurveDeltas.HasComponent(prefabRoot))
-        {
-            AnimationCurveDelta animationCurveDelta;
-            animationCurveDelta.elapsed = time;
-            animationCurveDelta.start = time;
-            entityManager.SetComponent(1, entity, animationCurveDelta);
-        }
-
-        if (data.animationCurveSpeed > math.FLT_MIN_NORMAL)
-        {
-            AnimationCurveSpeed animationCurveSpeed;
-            animationCurveSpeed.value = data.animationCurveSpeed;
-            entityManager.SetComponent(1, entity, animationCurveSpeed);
-        }
-
-        if (data.linearSpeed > math.FLT_MIN_NORMAL)
-        {
-            var forward = math.forward(transformResult.rot);
-
-            if (characterControls.TryGetComponent(prefabRoot, out var control))
-            {
-                control.MoveVector = forward * data.linearSpeed;
-                entityManager.SetComponent(1, entity, control);
-            }
-            else
-            {
-                PhysicsVelocity velocity;
-                velocity.Angular = data.angularSpeed;
-                velocity.Linear = forward * data.linearSpeed;
-                //velocity.Linear.y = 0.0f;
-                entityManager.SetComponent(1, entity, velocity);
-            }
-        }
-
-        if (damageScale > math.FLT_MIN_NORMAL)
-        {
-            EffectDamage effectDamage;
-            effectDamage.scale = damageScale;
-            entityManager.AddComponent(1, entity, effectDamage);
-        }
-
-        EffectDamageParent damageParent;
-        damageParent.index = index;
-        damageParent.entity = parent;
-        entityManager.AddComponent(1, entity, damageParent);
-    }
 }
 
 public struct BulletDefinitionData : IComponentData
@@ -1042,6 +901,7 @@ public struct BulletLayerMask : IComponentData
 public struct BulletInstance : IBufferElementData
 {
     public int index;
+    public int layerMask;
     public float damageScale;
     public double time;
     public float3 targetPosition;
@@ -1206,6 +1066,7 @@ public struct BulletInstance : IBufferElementData
         if (damageScale > math.FLT_MIN_NORMAL)
         {
             EffectDamage effectDamage;
+            effectDamage.layerMask = layerMask;
             effectDamage.scale = damageScale;
             entityManager.AddComponent(1, entity, effectDamage);
         }

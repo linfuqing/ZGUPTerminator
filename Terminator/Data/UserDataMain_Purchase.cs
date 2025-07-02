@@ -84,7 +84,6 @@ public partial class UserDataMain
 
         if (PurchaseData.Exchange(type, level, NAME_SPACE_USER_PURCHASE_ITEM))
         {
-            bool result = true;
             List<UserReward> rewards = null;
             foreach (var purchaseItem in _purchaseItems)
             {
@@ -116,14 +115,11 @@ public partial class UserDataMain
                 }
             }
 
-            if (rewards != null)
-            {
-                __AppendQuest(UserQuest.Type.Buy, 1);
-                
-                onComplete(rewards.ToArray());
+            __AppendQuest(UserQuest.Type.Buy, 1);
+            
+            onComplete(rewards == null ? Array.Empty<UserReward>() : rewards.ToArray());
 
-                yield break;
-            }
+            yield break;
         }
 
         onComplete(null);
@@ -175,7 +171,7 @@ public partial class UserDataMain
             default:
                 yield break;
         }
-        
+
         var output = PurchaseData.Query(type, level);
         List<UserPurchaseToken> values = null;
         UserPurchaseToken value;

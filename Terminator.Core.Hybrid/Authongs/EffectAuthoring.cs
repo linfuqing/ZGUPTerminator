@@ -41,6 +41,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public string name;
 
         public EffectSpace space;
+        
+        public LayerMask layerMask;
 
         public float chance;
 
@@ -213,6 +215,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         ref var sourcePrefab = ref source.prefabs[j];
                         ref var destinationPrefab = ref prefabs[j];
                         destinationPrefab.space = sourcePrefab.space;
+                        destinationPrefab.layerMask = sourcePrefab.layerMask;
                         
                         UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                         if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
@@ -269,6 +272,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         ref var sourcePrefab = ref source.prefabs[j];
                         ref var destinationPrefab = ref prefabs[j];
                         destinationPrefab.space = sourcePrefab.space;
+                        destinationPrefab.layerMask = sourcePrefab.layerMask;
                         
                         UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                         if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
@@ -290,6 +294,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     ref var destinationPrefab = ref prefabs[i];
                     
                     destinationPrefab.space = sourcePrefab.space;
+                    destinationPrefab.layerMask = sourcePrefab.layerMask;
                         
                     UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                     if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))

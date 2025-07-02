@@ -37,6 +37,7 @@ public struct EffectDefinition
     public struct Prefab
     {
         public EffectSpace space;
+        public int layerMask;
         public int index;
         public float chance;
     }
@@ -125,6 +126,7 @@ public struct EffectDamageParent : IComponentData
 
 public struct EffectDamage : IComponentData
 {
+    public int layerMask;
     public float scale;
 }
 
