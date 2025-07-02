@@ -282,6 +282,26 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     }
                 }
 
+                numPrefabs = authoring._prefabs == null ? 0 : authoring._prefabs.Length;
+                prefabs = builder.Allocate(ref root.prefabs, numPrefabs);
+                for (i = 0; i < numPrefabs; ++i)
+                {
+                    ref var sourcePrefab = ref authoring._prefabs[i];
+                    ref var destinationPrefab = ref prefabs[i];
+                    
+                    destinationPrefab.space = sourcePrefab.space;
+                        
+                    UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
+                    if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
+                    {
+                        destinationPrefab.index = prefabIndices.Count;
+                            
+                        prefabIndices[sourcePrefab.gameObject] = destinationPrefab.index;
+                    }
+
+                    destinationPrefab.chance = sourcePrefab.chance;
+                }
+
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);
             }
 
@@ -315,15 +335,17 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
     internal MessageData[] _messages;
     
     [SerializeField]
-    [UnityEngine.Serialization.FormerlySerializedAs("_damages")]
     internal EffectData[] _effects;
+
+    [SerializeField] 
+    internal PrefabData[] _prefabs;
 
     /*private void OnValidate()
     {
         var temp = PrefabUtility.GetCorrespondingObjectFromSource(this);
         if (temp != null && temp != this)
             return;
-        
+
         bool isDirty = false;
         int numEffects = _effects == null ? 0 : _effects.Length, numDamages, i, j;
         for (i = 0; i < numEffects; ++i)
@@ -331,7 +353,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
             ref var effect = ref _effects[i];
             if(effect.messageNames == null || effect.messageNames.Length < 1)
                 continue;
-            
+
             numDamages = effect.damages == null ? 0 : effect.damages.Length;
             if (numDamages > 0)
             {
@@ -341,13 +363,13 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     if (damage.messageNames == null || damage.messageNames.Length < 1)
                     {
                         damage.messageNames = (string[])effect.messageNames.Clone();
-                        
+
                         isDirty = true;
                     }
                 }
             }
         }
-        
+
         if(isDirty)
             UnityEditor.EditorApplication.delayCall += () =>
         {

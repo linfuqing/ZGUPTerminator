@@ -247,13 +247,13 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectDamageParent> damageParentMap;
 
         [ReadOnly] 
+        public ComponentLookup<EffectDamage> damages;
+
+        [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
 
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterProperties> characterProperties;
-
-        [ReadOnly] 
-        public ComponentLookup<EffectDamage> damages;
 
         [ReadOnly]
         public NativeArray<Entity> entityArray;
@@ -533,7 +533,11 @@ public partial struct EffectSystem : ISystem
                             instanceDamage,
                             instanceDamageParent,
                             prefabs,
-                            ref damage.prefabs);
+                            ref damageInstances,
+                            ref entityManager, 
+                            ref prefabLoader,
+                            ref damage.prefabs, 
+                            ref random);
 
                         if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
                             ++entityCount;
@@ -666,7 +670,11 @@ public partial struct EffectSystem : ISystem
                             instanceDamage,
                             instanceDamageParent,
                             prefabs,
-                            ref effect.prefabs);
+                            ref damageInstances,
+                            ref entityManager, 
+                            ref prefabLoader,
+                            ref effect.prefabs, 
+                            ref random);
                 }
             }
             else
@@ -675,96 +683,6 @@ public partial struct EffectSystem : ISystem
             states[index] = status;
 
             return enabledFlags;
-        }
-
-        private void __Drop(
-            in RigidTransform transform, 
-            in Entity parent, 
-            in EffectDamage instanceDamage, 
-            in EffectDamageParent instanceDamageParent, 
-            in DynamicBuffer<EffectPrefab> prefabs, 
-            ref BlobArray<EffectDefinition.Prefab> prefabsDefinition)
-        {
-            int numPrefabs = prefabsDefinition.Length;
-            if (numPrefabs < 1)
-                return;
-            
-            Parent instanceParent;
-            instanceParent.Value = parent;
-            
-            DamageInstance damageInstance;
-            damageInstance.index = instanceDamageParent.index;
-            damageInstance.scale = instanceDamage.scale;
-            damageInstance.entity = instanceDamageParent.entity;
-            
-            bool isContains = false;
-            float chance = random.NextFloat(), totalChance = 0.0f;
-            Entity instance;
-            for (int i = 0; i < numPrefabs; ++i)
-            {
-                ref var prefab = ref prefabsDefinition[i];
-                totalChance += prefab.chance;
-                if (totalChance > 1.0f)
-                {
-                    totalChance -= 1.0f;
-
-                    chance = random.NextFloat();
-
-                    isContains = false;
-                }
-
-                if (isContains || totalChance < chance)
-                    continue;
-
-                damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
-                if (prefabLoader.TryGetOrLoadPrefabRoot(
-                        damageInstance.entityPrefabReference, out instance))
-                {
-                    instance = entityManager.Instantiate(0, instance);
-
-                    switch (prefab.space)
-                    {
-                        case EffectSpace.World:
-                            entityManager.SetComponent(2, instance,
-                                LocalTransform.FromPositionRotation(transform.pos,
-                                    transform.rot));
-
-                            break;
-                        case EffectSpace.Local:
-                            entityManager.AddComponent(2, instance, instanceParent);
-
-                            break;
-                    }
-                    
-                    if(instanceDamageParent.entity != Entity.Null)
-                        entityManager.AddComponent(2, instance, instanceDamageParent);
-                    
-                    entityManager.AddComponent(2, instance, instanceDamage);
-                }
-                else
-                {
-                    switch (prefab.space)
-                    {
-                        case EffectSpace.World:
-                            damageInstance.parent = Entity.Null;
-                            damageInstance.transform = transform;
-
-                            damageInstances.Enqueue(damageInstance);
-
-                            break;
-                        case EffectSpace.Local:
-                            damageInstance.parent = parent;
-                            damageInstance.transform = RigidTransform.identity;
-
-                            damageInstances.Enqueue(damageInstance);
-
-                            break;
-                    }
-                }
-
-                isContains = true;
-            }
-
         }
     }
 
@@ -909,8 +827,17 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction]
         public RefRW<LevelStatus> levelStatus;
 
+        [ReadOnly] 
+        public ComponentLookup<EffectDamage> damages;
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParentMap;
+
         [ReadOnly]
         public BufferLookup<Child> children;
+
+        [ReadOnly] 
+        public BufferAccessor<EffectPrefab> prefabs;
 
         [ReadOnly]
         public BufferAccessor<EffectTargetMessage> targetMessages;
@@ -924,8 +851,14 @@ public partial struct EffectSystem : ISystem
         [ReadOnly]
         public NativeArray<KinematicCharacterBody> characterBodies;
 
+        [ReadOnly]
+        public NativeArray<EffectDefinitionData> instances;
+
+        [ReadOnly]
+        public NativeArray<EffectDamageParent> damageParents;
+
         [ReadOnly] 
-        public NativeArray<EffectTargetData> instances;
+        public NativeArray<EffectTargetData> targetInstances;
 
         [ReadOnly] 
         public NativeArray<EffectTargetLevel> targetLevels;
@@ -958,6 +891,8 @@ public partial struct EffectSystem : ISystem
 
         public PrefabLoader.ParallelWriter prefabLoader;
 
+        public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
+
         public EnabledFlags Execute(int index)
         {
             EnabledFlags result = 0;
@@ -967,7 +902,7 @@ public partial struct EffectSystem : ISystem
             
             if (target.invincibleTime < 0.0f)
             {
-                var instance = instances[index];
+                var targetInstance = targetInstances[index];
 
                 int damage, damageLayerMask;
 
@@ -980,10 +915,10 @@ public partial struct EffectSystem : ISystem
 
                     target.hp += targetHP.value;
 
-                    if (targetHP.value >= instance.hpMax && 
-                        instance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
+                    if (targetHP.value >= targetInstance.hpMax && 
+                        targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
                     {
-                        target.invincibleTime = instance.recoveryInvincibleTime;
+                        target.invincibleTime = targetInstance.recoveryInvincibleTime;
                         result |= EnabledFlags.Invincible;
                     }
 
@@ -1229,23 +1164,23 @@ public partial struct EffectSystem : ISystem
                     {
                         result |= EnabledFlags.Die;
 
-                        if (target.times > 0 && instance.recoveryChance > random.NextFloat())
+                        if (target.times > 0 && targetInstance.recoveryChance > random.NextFloat())
                         {
                             result |= EnabledFlags.Recovery;
 
                             --target.times;
 
-                            target.invincibleTime = instance.recoveryTime;
+                            target.invincibleTime = targetInstance.recoveryTime;
                             target.hp = 0;
 
-                            targetHP.value = instance.hpMax;
+                            targetHP.value = targetInstance.hpMax;
                             targetHP.layerMask = damageLayerMask;
 
-                            if (!instance.recoveryMessageName.IsEmpty && messages.IsCreated)
+                            if (!targetInstance.recoveryMessageName.IsEmpty && messages.IsCreated)
                             {
                                 message.key = 0;
-                                message.name = instance.recoveryMessageName;
-                                message.value = instance.recoveryMessageValue;
+                                message.name = targetInstance.recoveryMessageName;
+                                message.value = targetInstance.recoveryMessageValue;
                                 messages.Add(message);
                             }
                         }
@@ -1253,16 +1188,58 @@ public partial struct EffectSystem : ISystem
                             __Destroy(int.MaxValue, entityArray[index], children, ref entityManager);
                     }
                     
-                    if (!isFallToDestroy/*(result & EnabledFlags.Drop) != EnabledFlags.Drop*/ && index < targetLevels.Length && this.levelStatus.IsValid)
+                    if (!isFallToDestroy)
                     {
-                        var targetLevel = targetLevels[index];
+                        if (index < targetLevels.Length &&
+                            this.levelStatus.IsValid)
+                        {
+                            var targetLevel = targetLevels[index];
 
-                        ref var levelStatus = ref this.levelStatus.ValueRW;
-                        Interlocked.Add(ref levelStatus.value, targetLevel.value);
-                        Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                        Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+                            ref var levelStatus = ref this.levelStatus.ValueRW;
+                            Interlocked.Add(ref levelStatus.value, targetLevel.value);
+                            Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
+                            Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
 
-                        Interlocked.Increment(ref levelStatus.count);
+                            Interlocked.Increment(ref levelStatus.count);
+                        }
+
+                        if (index < instances.Length && index < prefabs.Length)
+                        {
+                            ref var prefabsDefinition = ref instances[index].definition.Value.prefabs;
+                            if (prefabsDefinition.Length > 0)
+                            {
+                                Entity entity = entityArray[index];
+
+                                if (!EffectDamageParent.TryGetComponent(
+                                        entity,
+                                        damageParentMap,
+                                        damages,
+                                        out EffectDamage instanceDamage,
+                                        out _))
+                                    instanceDamage.scale = 1.0f;
+
+                                EffectDamageParent instanceDamageParent;
+                                if (index < damageParents.Length)
+                                    instanceDamageParent = damageParents[index].GetRoot(damageParentMap, damages);
+                                else
+                                {
+                                    instanceDamageParent.index = -1;
+                                    instanceDamageParent.entity = entity;
+                                }
+
+                                __Drop(
+                                    math.RigidTransform(localToWorlds[index].Value),
+                                    entity, 
+                                    instanceDamage,
+                                    instanceDamageParent,
+                                    prefabs[index],
+                                    ref damageInstances,
+                                    ref entityManager,
+                                    ref prefabLoader,
+                                    ref prefabsDefinition,
+                                    ref random);
+                            }
+                        }
                     }
                 }
 
@@ -1294,7 +1271,16 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<LevelStatus> levelStates;
         
         [ReadOnly] 
+        public ComponentLookup<EffectDamage> damages;
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParents;
+
+        [ReadOnly] 
         public BufferLookup<Child> children;
+
+        [ReadOnly] 
+        public BufferTypeHandle<EffectPrefab> prefabType;
 
         [ReadOnly]
         public BufferTypeHandle<EffectTargetMessage> targetMessageType;
@@ -1309,7 +1295,13 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<FallToDestroy> fallToDestroyType;
 
         [ReadOnly]
-        public ComponentTypeHandle<EffectTargetData> instanceType;
+        public ComponentTypeHandle<EffectDamageParent> damageParentType;
+
+        [ReadOnly]
+        public ComponentTypeHandle<EffectDefinitionData> instanceType;
+
+        [ReadOnly]
+        public ComponentTypeHandle<EffectTargetData> targetInstanceType;
 
         [ReadOnly]
         public ComponentTypeHandle<EffectTargetLevel> targetLevelType;
@@ -1344,6 +1336,8 @@ public partial struct EffectSystem : ISystem
         
         public PrefabLoader.ParallelWriter prefabLoader;
 
+        public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
@@ -1353,12 +1347,17 @@ public partial struct EffectSystem : ISystem
             apply.inverseCameraRotation = inverseCameraRotation;
             apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
+            apply.damages = damages;
+            apply.damageParentMap = damageParents;
             apply.children = children;
+            apply.prefabs = chunk.GetBufferAccessor(ref prefabType);
             apply.targetMessages = chunk.GetBufferAccessor(ref targetMessageType);
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.characterBodies = chunk.GetNativeArray(ref characterBodyType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
+            apply.damageParents = chunk.GetNativeArray(ref damageParentType);
+            apply.targetInstances = chunk.GetNativeArray(ref targetInstanceType);
             apply.targetLevels = chunk.GetNativeArray(ref targetLevelType);
             apply.targetDamageScales = chunk.GetNativeArray(ref targetDamageScaleType);
             apply.targetInvulnerabilities = chunk.GetNativeArray(ref targetInvulnerabilityType);
@@ -1373,6 +1372,7 @@ public partial struct EffectSystem : ISystem
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
+            apply.damageInstances = damageInstances;
 
             bool isCharacter = chunk.Has(ref characterBodyType);
             EnabledFlags result;
@@ -1668,6 +1668,7 @@ public partial struct EffectSystem : ISystem
         __outputMessages.Update(ref state);
         __damageStatistics.Update(ref state);
         
+        var damageInstances = __damageInstances.AsParallelWriter();
         var prefabLoader = __prefabLoader.AsParallelWriter();
 
         quaternion inverseCameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
@@ -1701,7 +1702,7 @@ public partial struct EffectSystem : ISystem
         collect.damageStatistics = __damageStatistics;
         collect.entityManager = entityManager;
         collect.prefabLoader = prefabLoader;
-        collect.damageInstances = __damageInstances.AsParallelWriter();
+        collect.damageInstances = damageInstances;
         jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
 
         ApplyEx apply;
@@ -1735,11 +1736,16 @@ public partial struct EffectSystem : ISystem
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;
         apply.children = __children;
+        apply.damages = __damages;
+        apply.damageParents = __damageParents;
+        apply.prefabType = __prefabType;
         apply.targetMessageType = __targetMessageType;
         apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
         apply.fallToDestroyType = __fallToDestroyType;
-        apply.instanceType = __targetInstanceType;
+        apply.damageParentType = __damageParentType;
+        apply.instanceType = __instanceType;
+        apply.targetInstanceType = __targetInstanceType;
         apply.targetLevelType = __targetLevelType;
         apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;
@@ -1755,6 +1761,101 @@ public partial struct EffectSystem : ISystem
         apply.messageParameterType = __messageParameterType;
         apply.entityManager = entityManager;
         apply.prefabLoader = prefabLoader;
+        apply.damageInstances = damageInstances;
         state.Dependency = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
+    }
+
+    private static void __Drop(
+        in RigidTransform transform,
+        in Entity parent,
+        in EffectDamage instanceDamage,
+        in EffectDamageParent instanceDamageParent,
+        in DynamicBuffer<EffectPrefab> prefabs,
+        ref NativeQueue<DamageInstance>.ParallelWriter damageInstances,
+        ref EntityCommandBuffer.ParallelWriter entityManager,
+        ref PrefabLoader.ParallelWriter prefabLoader,
+        ref BlobArray<EffectDefinition.Prefab> prefabsDefinition,
+        ref Random random)
+    {
+        int numPrefabs = prefabsDefinition.Length;
+        if (numPrefabs < 1)
+            return;
+
+        Parent instanceParent;
+        instanceParent.Value = parent;
+
+        DamageInstance damageInstance;
+        damageInstance.index = instanceDamageParent.index;
+        damageInstance.scale = instanceDamage.scale;
+        damageInstance.entity = instanceDamageParent.entity;
+
+        bool isContains = false;
+        float chance = random.NextFloat(), totalChance = 0.0f;
+        Entity instance;
+        for (int i = 0; i < numPrefabs; ++i)
+        {
+            ref var prefab = ref prefabsDefinition[i];
+            totalChance += prefab.chance;
+            if (totalChance > 1.0f)
+            {
+                totalChance -= 1.0f;
+
+                chance = random.NextFloat();
+
+                isContains = false;
+            }
+
+            if (isContains || totalChance < chance)
+                continue;
+
+            damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
+            if (prefabLoader.TryGetOrLoadPrefabRoot(
+                    damageInstance.entityPrefabReference, out instance))
+            {
+                instance = entityManager.Instantiate(0, instance);
+
+                switch (prefab.space)
+                {
+                    case EffectSpace.World:
+                        entityManager.SetComponent(2, instance,
+                            LocalTransform.FromPositionRotation(transform.pos,
+                                transform.rot));
+
+                        break;
+                    case EffectSpace.Local:
+                        entityManager.AddComponent(2, instance, instanceParent);
+
+                        break;
+                }
+
+                if (instanceDamageParent.entity != Entity.Null)
+                    entityManager.AddComponent(2, instance, instanceDamageParent);
+
+                entityManager.AddComponent(2, instance, instanceDamage);
+            }
+            else
+            {
+                switch (prefab.space)
+                {
+                    case EffectSpace.World:
+                        damageInstance.parent = Entity.Null;
+                        damageInstance.transform = transform;
+
+                        damageInstances.Enqueue(damageInstance);
+
+                        break;
+                    case EffectSpace.Local:
+                        damageInstance.parent = parent;
+                        damageInstance.transform = RigidTransform.identity;
+
+                        damageInstances.Enqueue(damageInstance);
+
+                        break;
+                }
+            }
+
+            isContains = true;
+        }
+
     }
 }

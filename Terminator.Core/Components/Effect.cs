@@ -77,6 +77,7 @@ public struct EffectDefinition
 
     public BlobArray<Damage> damages;
     public BlobArray<Effect> effects;
+    public BlobArray<Prefab> prefabs;
 }
 
 public struct EffectDefinitionData : IComponentData

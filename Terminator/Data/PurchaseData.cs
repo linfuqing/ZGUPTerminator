@@ -73,7 +73,7 @@ public interface IPurchaseData
         
         public bool IsValid(int times)
         {
-            return this.times == times && (deadline == 0 || ticks + deadline * TimeSpan.TicksPerSecond > DateTime.UtcNow.Ticks);
+            return this.times >= times && (deadline == 0 || ticks + deadline * TimeSpan.TicksPerSecond > DateTime.UtcNow.Ticks);
         }
     }
     
