@@ -197,6 +197,9 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
 
     public void VariableUpdate(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
+        if(ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+            return;
+
         ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref ThirdPersonCharacterControl characterControl = ref CharacterControl.ValueRW;

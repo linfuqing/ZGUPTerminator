@@ -131,6 +131,7 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
             .WithAll<
                 ThirdPersonCharacterComponent,
                 ThirdPersonCharacterControl>()
+            .WithAllRW<ThirdPersonCharacterStandTime>()
             .Build(ref state);
 
         _context = new ThirdPersonCharacterUpdateContext();
