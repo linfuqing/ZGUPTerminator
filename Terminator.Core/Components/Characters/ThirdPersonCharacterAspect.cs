@@ -64,6 +64,8 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
     public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
     [Optional]
     public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
+    
+    public readonly DynamicBuffer<ThirdPersonCharacterStandTime> StandTimes;
 
     public void PhysicsUpdate(
         in Entity entity, 
@@ -118,6 +120,9 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
 
     private void HandleVelocityControl(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
+        if(ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+            return;
+        
         float deltaTime = baseContext.Time.DeltaTime;
         ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;

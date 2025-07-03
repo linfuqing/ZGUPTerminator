@@ -40,7 +40,7 @@ public partial class UserDataMain
             out int time,
             out var output)
             ? IUserData.PurchaseItems.Status.Valid : 
-            (time + 1 == output.times ? IUserData.PurchaseItems.Status.Purchased : IUserData.PurchaseItems.Status.Invalid);
+            (time < output.times ? IUserData.PurchaseItems.Status.Purchased : IUserData.PurchaseItems.Status.Invalid);
         switch (type)
         {
             case PurchaseType.Level:

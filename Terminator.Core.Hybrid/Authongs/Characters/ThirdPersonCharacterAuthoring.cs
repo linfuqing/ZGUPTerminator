@@ -27,6 +27,7 @@ public class ThirdPersonCharacterAuthoring : MonoBehaviour
             AddComponent(selfEntity, gravityFactor);
             AddComponent<ThirdPersonCharacterLookAt>(selfEntity);
             AddComponent<ThirdPersonCharacterControl>(selfEntity);
+            AddComponent<ThirdPersonCharacterStandTime>(selfEntity);
         }
     }
 

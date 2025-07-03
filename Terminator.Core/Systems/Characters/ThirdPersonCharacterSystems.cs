@@ -25,7 +25,8 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         _characterQuery = KinematicCharacterUtilities.GetBaseCharacterQueryBuilder()
             .WithAll<
                 ThirdPersonCharacterComponent,
-                ThirdPersonCharacterControl>()
+                ThirdPersonCharacterControl, 
+                ThirdPersonCharacterStandTime>()
             .Build(ref state);
 
         _context = new ThirdPersonCharacterUpdateContext();

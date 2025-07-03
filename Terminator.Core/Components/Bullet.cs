@@ -477,10 +477,22 @@ public struct BulletDefinition
         public BlobArray<int> messageIndices;
     }
 
+    public struct StandTime
+    {
+        public struct Range
+        {
+            public float start;
+            public float end;
+        }
+
+        public BlobArray<Range> ranges;
+    }
+
     public float minAirSpeed;
     public float maxAirSpeed;
     public BlobArray<Target> targets;
     public BlobArray<Bullet> bullets;
+    public BlobArray<StandTime> standTimes;
 
     public bool Update(
         BulletLocation location, 

@@ -548,8 +548,8 @@ public sealed class LoginManager : MonoBehaviour
                                                         onSelected.Invoke();
                                                 }
                                                 
-                                                for(int i = 0; i < numPrefabs; ++i)
-                                                    prefabs[i].SetActive(i == sceneIndex);
+                                                /*for(int i = 0; i < numPrefabs; ++i)
+                                                    prefabs[i].SetActive(i == sceneIndex);*/
                                                 
                                                 __sceneName = level.scenes[sceneIndex].name;
                                                 __selectedUserStageID = stage.id;

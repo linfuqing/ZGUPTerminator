@@ -61,3 +61,32 @@ public struct ThirdPersonCharacterControl : IComponentData
     public bool Jump;
     public bool Sprint;
 }
+
+public struct ThirdPersonCharacterStandTime : IBufferElementData
+{
+    public double time;
+    
+    public float duration;
+
+    public static bool IsStand(double time, DynamicBuffer<ThirdPersonCharacterStandTime> standTimes)
+    {
+        int numStandTimes = standTimes.Length;
+        for (int i = 0; i < numStandTimes; ++i)
+        {
+            ref var standTime = ref standTimes.ElementAt(i);
+            if(standTime.time > time)
+                continue;
+
+            if (standTime.time + standTime.duration < time)
+            {
+                standTimes.RemoveAtSwapBack(i--);
+                
+                --numStandTimes;
+            }
+            else
+                return true;
+        }
+
+        return false;
+    }
+}
