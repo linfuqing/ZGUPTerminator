@@ -28,8 +28,15 @@ public partial class UserDataMain
         }
 
         Tip.used = used;
+        
+        bool hasSweepCard = PurchaseData.IsValid(PurchaseType.SweepCard,
+            0,
+            NAME_SPACE_USER_PURCHASE_ITEM,
+            out _,
+            out _);
 
-        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
+        float multiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
+        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
 
         var results = __ApplyRewards(rewards);
 

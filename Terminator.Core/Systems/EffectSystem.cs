@@ -547,6 +547,8 @@ public partial struct EffectSystem : ISystem
                         statusTarget.entity = simulationEvent.entity;
                         statusTargets.Add(statusTarget);
 
+                        enabledFlags |= EnabledFlags.StatusTarget;
+
                         if (isResult)
                         {
                             if (delayDestroies.HasComponent(simulationEvent.entity))
@@ -557,8 +559,6 @@ public partial struct EffectSystem : ISystem
                                         ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
                                         delayDestroyTime);
                             }
-
-                            enabledFlags |= EnabledFlags.StatusTarget;
                         }
 
                         numMessageIndices = damage.messageIndices.Length;

@@ -267,8 +267,8 @@ public partial class UserDataMain
 
         Tip.used = used;
 
-        float scale = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
-        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * scale * TimeSpan.TicksPerSecond));
+        float multiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
+        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
 
         var results = __ApplyRewards(rewards);
 
