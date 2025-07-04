@@ -65,6 +65,7 @@ public partial class UserDataMain
     internal struct Product
     {
         public string name;
+        public UserProduct.Type productType;
         public UserCurrencyType currencyType;
         public int price;
         public float chance;
@@ -136,6 +137,7 @@ public partial class UserDataMain
             userProduct.name = product.name;
             userProduct.id = __ToID(bitIndex);
             userProduct.flag = (seed.bits & (1 << bitIndex)) == 0 ? 0 : UserProduct.Flag.Collected;
+            userProduct.productType = product.productType;
             userProduct.currencyType = product.currencyType;
             userProduct.price = product.price;
             userProduct.rewards = product.rewards;
@@ -220,7 +222,8 @@ public partial class UserDataMain
 
                     if (isSelected)
                     {
-                        seed.bits |= 1 << index;
+                        if(UserProduct.Type.Normal != product.productType)
+                            seed.bits |= 1 << index;
                         
                         PlayerPrefs.SetString(NAME_SPACE_USER_PRODUCT_SEED, new Active<ProductSeed>(seed).ToString());
 

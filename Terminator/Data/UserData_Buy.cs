@@ -11,6 +11,12 @@ public enum UserCurrencyType
 
 public struct UserProduct
 {
+    public enum Type
+    {
+        Normal, 
+        Day
+    }
+
     [Flags]
     public enum Flag
     {
@@ -22,6 +28,8 @@ public struct UserProduct
     public uint id;
     
     public Flag flag;
+
+    public Type productType;
 
     /// <summary>
     /// 货币类型
