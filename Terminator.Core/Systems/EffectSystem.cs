@@ -1139,12 +1139,16 @@ public partial struct EffectSystem : ISystem
                     {
                         result |= EnabledFlags.Die;
 
+                        Entity entity = entityArray[index];
+
                         DelayDestroy delayDestroy;
                         delayDestroy.time = deadTime;
                         if (index < delayDestroys.Length)
                             delayDestroys[index] = delayDestroy;
                         else
-                            entityManager.AddComponent(0, entityArray[index], delayDestroy);
+                            entityManager.AddComponent(0, entity, delayDestroy);
+                        
+                        entityManager.RemoveComponent<PhysicsCollider>(0, entity);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
