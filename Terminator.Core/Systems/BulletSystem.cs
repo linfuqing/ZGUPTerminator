@@ -195,10 +195,10 @@ public partial struct BulletSystem : ISystem
 
         public BufferAccessor<BulletInstance> instances;
 
-        //[NativeDisableParallelForRestriction] 
-        //public BufferLookup<ThirdPersonCharacterStandTime> characterStandTimes;
-
         public NativeArray<BulletVersion> versions;
+
+        [NativeDisableParallelForRestriction] 
+        public BufferLookup<ThirdPersonCharacterStandTime> characterStandTimes;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -217,6 +217,7 @@ public partial struct BulletSystem : ISystem
             BulletLocation location = 0;
             float3 up = math.up();
             ref var definition = ref definitions[index].definition.Value;
+            DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes;
             if (character != Entity.Null)
             {
                 up = characterBody.GroundingUp;
@@ -229,7 +230,11 @@ public partial struct BulletSystem : ISystem
                     if (dot > definition.minAirSpeed && dot < definition.maxAirSpeed)
                         location = BulletLocation.Air;
                 }
+
+                this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
             }
+            else
+                characterStandTimes = default;
 
             bool isFire = this.isFire;
             
@@ -279,6 +284,7 @@ public partial struct BulletSystem : ISystem
                 activeIndices[index],
                 inputMessages[index],
                 ref outputMessages,
+                ref characterStandTimes, 
                 ref targetStates,
                 ref states,
                 ref instances,
@@ -399,6 +405,9 @@ public partial struct BulletSystem : ISystem
 
         public ComponentTypeHandle<BulletVersion> versionType;
 
+        [NativeDisableParallelForRestriction] 
+        public BufferLookup<ThirdPersonCharacterStandTime> characterStandTimes;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
 
         public PrefabLoader.ParallelWriter prefabLoader;
@@ -436,6 +445,7 @@ public partial struct BulletSystem : ISystem
             collect.targetStates = chunk.GetBufferAccessor(ref targetStatusType);
             collect.instances = chunk.GetBufferAccessor(ref instanceType);
             collect.versions = chunk.GetNativeArray(ref versionType);
+            collect.characterStandTimes = characterStandTimes;
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
 
@@ -494,6 +504,8 @@ public partial struct BulletSystem : ISystem
 
     private ComponentTypeHandle<BulletVersion> __versionType;
 
+    private BufferLookup<ThirdPersonCharacterStandTime> __characterStandTimes;
+
     private EntityQuery __group;
     private EntityQuery __targetGroup;
 
@@ -525,6 +537,7 @@ public partial struct BulletSystem : ISystem
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __versionType = state.GetComponentTypeHandle<BulletVersion>();
+        __characterStandTimes = state.GetBufferLookup<ThirdPersonCharacterStandTime>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -578,6 +591,7 @@ public partial struct BulletSystem : ISystem
         __outputMessageType.Update(ref state);
         __delayTimeType.Update(ref state);
         __versionType.Update(ref state);
+        __characterStandTimes.Update(ref state);
         //__prefabLoader.Update(ref state);
 
         CollectEx collect;
@@ -608,6 +622,7 @@ public partial struct BulletSystem : ISystem
         collect.outputMessageType = __outputMessageType;
         collect.delayTimeType = __delayTimeType;
         collect.versionType = __versionType;
+        collect.characterStandTimes = __characterStandTimes;
         collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         collect.prefabLoader = __prefabLoader.AsParallelWriter();
 

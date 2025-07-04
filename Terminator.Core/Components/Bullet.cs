@@ -508,6 +508,7 @@ public struct BulletDefinition
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
+        ref DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref DynamicBuffer<BulletInstance> instances,
         ref PrefabLoader.ParallelWriter prefabLoader,
@@ -670,6 +671,21 @@ public struct BulletDefinition
             }
         }
 
+        int numStandTimeIndices = data.standTimeIndices.Length;
+        if (numStandTimeIndices > 0 && characterStandTimes.IsCreated)
+        {
+            ThirdPersonCharacterStandTime destination;
+            for (int i = 0; i < numStandTimeIndices; ++i)
+            {
+                ref var source = ref this.standTimes[data.standTimeIndices[i]];
+
+                destination.time = time + source.start;
+                destination.duration = source.end - source.start;
+
+                characterStandTimes.Add(destination);
+            }
+        }
+
         RigidTransform transformResult;
         transformResult.pos = targetStatus.transform.pos;
 
@@ -772,6 +788,7 @@ public struct BulletDefinition
         in DynamicBuffer<BulletActiveIndex> activeIndices, 
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
+        ref DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref DynamicBuffer<BulletStatus> states,
         ref DynamicBuffer<BulletInstance> instances,
@@ -830,6 +847,7 @@ public struct BulletDefinition
                 prefabs, 
                 inputMessages,
                 ref outputMessages,
+                ref characterStandTimes, 
                 ref targetStates,
                 ref instances, 
                 ref prefabLoader, 
