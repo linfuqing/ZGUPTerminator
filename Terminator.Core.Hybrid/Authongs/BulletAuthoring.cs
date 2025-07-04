@@ -232,6 +232,31 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     [Serializable]
     public struct BulletData
     {
+        [Serializable]
+        public struct StandTime : IEquatable<StandTime>
+        {
+            public float start;
+            public float end;
+
+            public static implicit operator BulletDefinition.StandTime(StandTime standTime)
+            {
+                BulletDefinition.StandTime result;
+                result.start = standTime.start;
+                result.end = standTime.end;
+                return result;
+            }
+
+            public bool Equals(StandTime other)
+            {
+                return Mathf.Approximately(start, other.start) && Mathf.Approximately(end, other.end);
+            }
+
+            public override int GetHashCode()
+            {
+                return start.GetHashCode() ^ end.GetHashCode();
+            }
+        }
+
         public string name;
 
         public string targetName;
@@ -277,6 +302,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public BulletFollowTarget followTarget;
         
         public string[] messageNames;
+
+        public StandTime[] standTimes;
         
         #region CSV
         [CSVField]
@@ -297,6 +324,40 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             }
         }
         
+        [CSVField]
+        public string 子弹站立时间
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                    return;
+                
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length, index;
+                string parameter;
+                StandTime standTime;
+                standTimes = new StandTime[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    index = parameter.IndexOf(':');
+                    if (index == -1)
+                        standTime.start = 0.0f;
+                    else
+                    {
+                        standTime.start = float.Parse(parameter.Remove(index));
+                        
+                        parameter = parameter.Substring(index + 1);
+                    }
+                    
+                    standTime.end = float.Parse(parameter);
+
+                    standTimes[i] = standTime;
+                }
+            }
+        }
+
         [CSVField]
         public string 子弹目标
         {
@@ -592,11 +653,12 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 
                 var bullets = builder.Allocate(ref root.bullets, numBullets);
 
+                var standTimeIndices = new Dictionary<BulletData.StandTime, int>();
                 var messages = AddBuffer<BulletMessage>(entity);
                 string messageName;
                 BulletMessage destinationMessage;
-                BlobBuilderArray<int> messageIndices;
-                int numMessageNames, numMessages = authoring._messages == null ? 0 : authoring._messages.Length, k;
+                BlobBuilderArray<int> indices;
+                int count, index, numMessages = authoring._messages == null ? 0 : authoring._messages.Length, k;
                 for (i = 0; i < numBullets; ++i)
                 {
                     ref var destination = ref bullets[i];
@@ -623,11 +685,11 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                         prefabs.Add(prefab);
                     }
 
-                    numMessageNames = source.messageNames == null ? 0 : source.messageNames.Length;
-                    messageIndices = builder.Allocate(ref destination.messageIndices, numMessageNames);
-                    for (j = 0; j < numMessageNames; ++j)
+                    count = source.messageNames == null ? 0 : source.messageNames.Length;
+                    indices = builder.Allocate(ref destination.messageIndices, count);
+                    for (j = 0; j < count; ++j)
                     {
-                        messageIndices[j] = -1;
+                        indices[j] = -1;
                         
                         messageName = source.messageNames[j];
                         for (k = 0; k < numMessages; ++k)
@@ -639,18 +701,33 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                                 destinationMessage.name = sourceMessage.messageName;
                                 destinationMessage.value = sourceMessage.messageValue;
 
-                                messageIndices[j] = messages.Length;
+                                indices[j] = messages.Length;
                                 messages.Add(destinationMessage);
 
                                 break;
                             }
                         }
 
-                        if (messageIndices[j] == -1)
+                        if (indices[j] == -1)
                             Debug.LogError(
                                 $"Message {messageName} of bullet {source.name} can not been found!");
                     }
+                    
+                    count = source.standTimes == null ? 0 : source.standTimes.Length;
+                    indices = builder.Allocate(ref destination.standTimeIndices, count);
+                    for (j = 0; j < count; ++j)
+                    {
+                        ref var standTime = ref source.standTimes[j];
+                        if (!standTimeIndices.TryGetValue(standTime, out index))
+                        {
+                            index = standTimeIndices.Count;
+                            
+                            standTimeIndices[standTime] = index;
+                        }
 
+                        indices[j] = index;
+                    }
+                    
                     destination.transform = math.RigidTransform(source.rotation, source.position);
                     destination.angularSpeed = source.angularSpeed;
                     destination.linearSpeed = source.linearSpeed;
@@ -686,6 +763,10 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.direction = source.direction;
                     destination.followTarget = source.followTarget;
                 }
+                
+                var standTimes = builder.Allocate(ref root.standTimes, standTimeIndices.Count);
+                foreach (var standTimeIndex in standTimeIndices)
+                    standTimes[standTimeIndex.Value] = standTimeIndex.Key;
 
                 instance.definition = builder.CreateBlobAssetReference<BulletDefinition>(Allocator.Persistent);
             }

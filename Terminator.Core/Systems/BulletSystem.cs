@@ -195,6 +195,9 @@ public partial struct BulletSystem : ISystem
 
         public BufferAccessor<BulletInstance> instances;
 
+        //[NativeDisableParallelForRestriction] 
+        //public BufferLookup<ThirdPersonCharacterStandTime> characterStandTimes;
+
         public NativeArray<BulletVersion> versions;
 
         public EntityCommandBuffer.ParallelWriter entityManager;

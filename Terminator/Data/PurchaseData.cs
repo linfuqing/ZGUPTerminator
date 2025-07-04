@@ -153,7 +153,8 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
 
         int times = PlayerPrefs.GetInt(key) + 1;
 
-        if(!Query(input).IsValid(times))
+        var output = Query(input);
+        if(output.times < times)
             return false;
         
         PlayerPrefs.SetInt(key, times);

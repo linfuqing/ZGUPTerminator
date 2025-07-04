@@ -475,17 +475,13 @@ public struct BulletDefinition
         public BulletDirection direction;
         public BulletFollowTarget followTarget;
         public BlobArray<int> messageIndices;
+        public BlobArray<int> standTimeIndices;
     }
 
     public struct StandTime
     {
-        public struct Range
-        {
-            public float start;
-            public float end;
-        }
-
-        public BlobArray<Range> ranges;
+        public float start;
+        public float end;
     }
 
     public float minAirSpeed;
