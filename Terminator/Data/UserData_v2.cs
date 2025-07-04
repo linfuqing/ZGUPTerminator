@@ -37,6 +37,11 @@ public partial interface IUserData
         public int energiesPerTime;
 
         /// <summary>
+        /// 游荡卡倍率
+        /// </summary>
+        public float sweepCardMultiplier;
+
+        /// <summary>
         /// 每次快速游荡可消耗的时间长度， 可传入<see cref="Generate"/>获得结果。
         /// </summary>
         public long ticksPerTime;

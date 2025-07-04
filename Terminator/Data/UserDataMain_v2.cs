@@ -126,6 +126,9 @@ public partial class UserDataMain
 
         public int energiesPerTime;
 
+        [Tooltip("填1.2")]
+        public float sweepCardMultiplier;
+
         public double intervalPerTime;
 
         public double maxTime;
@@ -167,6 +170,7 @@ public partial class UserDataMain
             result.timesFromAd = timesPerDayFromAd - used.timesFromAd;
             result.timesFromEnergy = timesPerDayFromEnergy - used.timesFromEnergy;
             result.energiesPerTime = energiesPerTime;
+            result.sweepCardMultiplier = sweepCardMultiplier;
             result.ticksPerTime =  (long)Math.Round(intervalPerTime * TimeSpan.TicksPerSecond);
             result.maxTime = (long)Math.Round(maxTime * TimeSpan.TicksPerSecond);
             result.ticks = ticks;
@@ -247,8 +251,14 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
+        bool hasSweepCard = PurchaseData.IsValid(PurchaseType.SweepCard,
+            0,
+            NAME_SPACE_USER_PURCHASE_ITEM,
+            out _,
+            out _);
         var used = Tip.used;
-        if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy || !__ApplyEnergy(_tip.energiesPerTime))
+        if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy && !hasSweepCard || 
+            !__ApplyEnergy(_tip.energiesPerTime))
         {
             onComplete(null);
             
@@ -257,7 +267,8 @@ public partial class UserDataMain
 
         Tip.used = used;
 
-        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
+        float scale = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
+        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * scale * TimeSpan.TicksPerSecond));
 
         var results = __ApplyRewards(rewards);
 
