@@ -451,7 +451,8 @@ public sealed class LoginManager : MonoBehaviour
                                 numRewardFlags,
                                 stageStyleStartIndex = __stageStyles.Count,
                                 selectedStageIndex = 0, 
-                                selectedSceneIndex = 0;
+                                selectedSceneIndex = 0, 
+                                previousSceneIndex = -1;
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
@@ -604,7 +605,15 @@ public sealed class LoginManager : MonoBehaviour
                                         {
                                             if (__sceneActiveDepth != 0 ||
                                                 GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
-                                                style.scenes[currentSceneIndex].onActive.Invoke();
+                                            {
+                                                if (previousSceneIndex != currentSceneIndex)
+                                                {
+                                                    if (previousSceneIndex == -1)
+                                                        style.scenes[currentSceneIndex].onActive.Invoke();
+                                                    else
+                                                        style.scenes[currentSceneIndex].onActiveDiff.Invoke();
+                                                }
+                                            }
                                             else
                                             {
                                                 style.scenes[currentSceneIndex].onActiveFirst.Invoke();
@@ -612,6 +621,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
                                             }
+
+                                            previousSceneIndex = currentSceneIndex;
 
                                             Toggle toggle;
                                             for(int i = 0; i < numScenes; ++i)

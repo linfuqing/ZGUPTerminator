@@ -13,6 +13,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     {
         public UnityEvent onActiveFirst;
 
+        public UnityEvent onActiveDiff;
+
         public UnityEvent onActive;
 
         public Transform root;
