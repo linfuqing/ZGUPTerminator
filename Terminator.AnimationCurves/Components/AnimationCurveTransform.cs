@@ -47,18 +47,18 @@ public struct AnimationCurveBoolDefinition
         while (count > 0)
         {
             middle = (count + 1) >> 1;
-            if (keyFrames[index + middle].time > time)
+            if (keyFrames[index + middle].time < time)
+            {
+                index += middle;
+
+                count -= middle;
+            }
+            else
             {
                 if (middle < 2)
                     break;
 
                 count = middle;
-            }
-            else
-            {
-                index += middle;
-
-                count -= middle;
             }
         }
 
