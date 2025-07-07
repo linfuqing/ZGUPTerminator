@@ -55,7 +55,6 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
         public BulletData[] bullets;
         public string[] messageNames;
         public string[] preNames;
-        public string[] keyNames;
         
         #region CSV
         [CSVField]
@@ -168,15 +167,6 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             }
         }
         
-        [CSVField]
-        public string 技能词条
-        {
-            set
-            {
-                keyNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
-            }
-        }
-
         #endregion
     }
 

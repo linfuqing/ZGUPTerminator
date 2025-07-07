@@ -476,6 +476,7 @@ public struct BulletDefinition
         public BulletFollowTarget followTarget;
         public BlobArray<int> messageIndices;
         public BlobArray<int> standTimeIndices;
+        public BlobArray<FixedString32Bytes> tags;
     }
 
     public struct StandTime
@@ -505,6 +506,7 @@ public struct BulletDefinition
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
+        in DynamicBuffer<BulletTag> tags, 
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
@@ -530,31 +532,67 @@ public struct BulletDefinition
 
         if (result)
         {
-            ref var target = ref targets[data.targetIndex];
-            result = //(isLocation || target.minDistance >= target.maxDistance) &&
-                     target.Update(
-                         version,
-                         time,
-                         up,
-                         cameraRotation,
-                         transform,
-                         lookAt,
-                         collisionWorld,
-                         physicsColliders,
-                         characterBodies,
-                         prefabs,
-                         targetStates.AsNativeArray(),
-                         ref prefabLoader, 
-                         ref targetStatus,
-                         ref random);
+            int numTags = data.tags.Length;
+            if (numTags > 0)
+            {
+                if (tags.IsEmpty)
+                    result = false;
+                else
+                {
+                    bool isContains;
+                    for (int i = 0; i < numTags; ++i)
+                    {
+                        ref var dataTag = ref data.tags[i];
 
-            if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
-                result = __Check(
-                    data.targetLocation,
-                    uint.MaxValue,
-                    targetStatus.target,
-                    collisionWorld,
-                    characterBodies);
+                        isContains = false;
+                        foreach (var tag in tags)
+                        {
+                            if (tag.value == dataTag)
+                            {
+                                isContains = true;
+
+                                break;
+                            }
+                        }
+
+                        if (!isContains)
+                        {
+                            result = false;
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (result)
+            {
+                ref var target = ref targets[data.targetIndex];
+                result = //(isLocation || target.minDistance >= target.maxDistance) &&
+                    target.Update(
+                        version,
+                        time,
+                        up,
+                        cameraRotation,
+                        transform,
+                        lookAt,
+                        collisionWorld,
+                        physicsColliders,
+                        characterBodies,
+                        prefabs,
+                        targetStates.AsNativeArray(),
+                        ref prefabLoader,
+                        ref targetStatus,
+                        ref random);
+
+                if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
+                    result = __Check(
+                        data.targetLocation,
+                        uint.MaxValue,
+                        targetStatus.target,
+                        collisionWorld,
+                        characterBodies);
+            }
         }
 
         /*if (!result || !isLocation && data.capacity < 2 && data.times == 1)
@@ -784,6 +822,7 @@ public struct BulletDefinition
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        in DynamicBuffer<BulletTag> tags, 
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletActiveIndex> activeIndices, 
         in DynamicBuffer<BulletMessage> inputMessages,
@@ -844,6 +883,7 @@ public struct BulletDefinition
                 collisionWorld,
                 physicsColliders,
                 characterBodies, 
+                tags, 
                 prefabs, 
                 inputMessages,
                 ref outputMessages,
@@ -922,6 +962,11 @@ public struct BulletDefinitionData : IComponentData
 public struct BulletLayerMask : IComponentData
 {
     public int value;
+}
+
+public struct BulletTag : IBufferElementData
+{
+    public FixedString32Bytes value;
 }
 
 public struct BulletInstance : IBufferElementData

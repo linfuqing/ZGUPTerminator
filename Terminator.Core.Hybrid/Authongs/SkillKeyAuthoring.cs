@@ -12,17 +12,17 @@ public class SkillKeyAuthoring : MonoBehaviour
     internal struct KeyData
     {
         [Serializable]
-        public struct BulletLayerMask
+        public struct BulletTag
         {
             public int count;
 
             [Tooltip("该词条生效时，激活特定的子弹标签")]
-            public LayerMask value;
+            public string value;
         }
         
         public string name;
         
-        public BulletLayerMask[] bulletLayerMasks;
+        public BulletTag[] bulletTags;
         
         [CSVField]
         public string 词条名称
@@ -41,16 +41,16 @@ public class SkillKeyAuthoring : MonoBehaviour
                 var parameters = value.Split('/');
                 
                 int numParameters = parameters.Length;
-                BulletLayerMask bulletLayerMask;
-                bulletLayerMasks = new BulletLayerMask[numParameters];
+                BulletTag bulletTag;
+                bulletTags = new BulletTag[numParameters];
                 string[] keywords;
                 for (int i = 0; i < numParameters; ++i)
                 {
                     keywords = parameters[i].Split(':');
-                    bulletLayerMask.count = int.Parse(keywords[0]);
-                    bulletLayerMask.value = int.Parse(keywords[1]);
+                    bulletTag.count = int.Parse(keywords[0]);
+                    bulletTag.value = keywords[1];
                     
-                    bulletLayerMasks[i] = bulletLayerMask;
+                    bulletTags[i] = bulletTag;
                 }
             }
         }
@@ -92,22 +92,22 @@ public class SkillKeyAuthoring : MonoBehaviour
                 ref var root = ref builder.ConstructRoot<SkillKeyDefinition>();
 
                 int i, j, numBulletLayerMasks, numKeys = authoring._keys == null ? 0 : authoring._keys.Length;
-                BlobBuilderArray<SkillKeyDefinition.BulletLayerMask> bulletLayerMasks;
+                BlobBuilderArray<SkillKeyDefinition.BulletTag> bulletTags;
                 var keys = builder.Allocate(ref root.keys, numKeys);
                 for (i = 0; i < numKeys; ++i)
                 {
                     ref var sourceKey = ref authoring._keys[i];
                     ref var destinationKey = ref keys[i];
 
-                    numBulletLayerMasks = sourceKey.bulletLayerMasks.Length;
-                    bulletLayerMasks = builder.Allocate(ref destinationKey.bulletLayerMasks, numBulletLayerMasks);
+                    numBulletLayerMasks = sourceKey.bulletTags.Length;
+                    bulletTags = builder.Allocate(ref destinationKey.bulletTags, numBulletLayerMasks);
                     for (j = 0; j < numBulletLayerMasks; ++j)
                     {
-                        ref var sourceBulletLayerMask = ref sourceKey.bulletLayerMasks[j];
-                        ref var destinationBulletLayerMask = ref bulletLayerMasks[j];
+                        ref var sourceBulletTag = ref sourceKey.bulletTags[j];
+                        ref var destinationBulletTag = ref bulletTags[j];
 
-                        destinationBulletLayerMask.count = sourceBulletLayerMask.count;
-                        destinationBulletLayerMask.value = sourceBulletLayerMask.value;
+                        destinationBulletTag.count = sourceBulletTag.count;
+                        destinationBulletTag.value = sourceBulletTag.value;
                     }
                 }
 

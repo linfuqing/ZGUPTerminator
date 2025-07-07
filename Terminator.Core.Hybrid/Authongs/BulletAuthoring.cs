@@ -301,6 +301,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public BulletDirection direction;
         public BulletFollowTarget followTarget;
         
+        public string[] tags;
+
         public string[] messageNames;
 
         public StandTime[] standTimes;
@@ -658,6 +660,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                 string messageName;
                 BulletMessage destinationMessage;
                 BlobBuilderArray<int> indices;
+                BlobBuilderArray<FixedString32Bytes> tags;
                 int count, index, numMessages = authoring._messages == null ? 0 : authoring._messages.Length, k;
                 for (i = 0; i < numBullets; ++i)
                 {
@@ -728,6 +731,11 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                         indices[j] = index;
                     }
                     
+                    count = source.tags == null ? 0 : source.tags.Length;
+                    tags = builder.Allocate(ref destination.tags, count);
+                    for (j = 0; j < count; ++j)
+                        tags[j] = source.tags[j];
+                    
                     destination.transform = math.RigidTransform(source.rotation, source.position);
                     destination.angularSpeed = source.angularSpeed;
                     destination.linearSpeed = source.linearSpeed;
@@ -782,6 +790,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             BulletLayerMask layerMask;
             layerMask.value = authoring._layerMask.value;
             AddComponent(entity, layerMask);
+            
+            AddComponent<BulletTag>(entity);
             
             AddComponent<BulletStatus>(entity);
             AddComponent<BulletTargetStatus>(entity);

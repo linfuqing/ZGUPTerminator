@@ -9,25 +9,30 @@ public struct SkillKeyDefinition
         public BlobArray<int> keyIndices;
     }
 
-    public struct BulletLayerMask
+    public struct BulletTag
     {
         public int count;
 
-        public int value;
+        public FixedString32Bytes value;
     }
 
     public struct Key
     {
-        public BlobArray<BulletLayerMask> bulletLayerMasks;
+        public BlobArray<BulletTag> bulletTags;
     }
     
     public BlobArray<Skill> skills;
     public BlobArray<Key> keys;
 
-    public int GetBulletLayerMask(in NativeArray<SkillActiveIndex> skillActiveIndices, ref UnsafeHashMap<int, int> counts)
+    public void GetBulletTags(
+        in NativeArray<SkillActiveIndex> skillActiveIndices,
+        ref DynamicBuffer<global::BulletTag> results, 
+        ref UnsafeHashMap<int, int> counts)
     {
         if(counts.IsCreated)
             counts.Clear();
+        
+        results.Clear();
         
         int i, j, count, numKeyIndices, numSkills = skills.Length;
         foreach (var skillActiveIndex in skillActiveIndices)
@@ -53,34 +58,30 @@ public struct SkillKeyDefinition
             }
         }
 
-        int result = 0, numBulletLayerMasks;
+        int numBulletTags;
+        global::BulletTag result;
         foreach (var pair in counts)
         {
             ref var key = ref keys[pair.Key];
             
-            numBulletLayerMasks = key.bulletLayerMasks.Length;
-            for (i = 0; i < numBulletLayerMasks; ++i)
+            numBulletTags = key.bulletTags.Length;
+            for (i = 0; i < numBulletTags; ++i)
             {
-                ref var bulletLayerMask = ref key.bulletLayerMasks[i];
-                if(bulletLayerMask.count > pair.Value)
+                ref var bulletTag = ref key.bulletTags[i];
+                if(bulletTag.count > pair.Value)
                     continue;
                 
-                result |= bulletLayerMask.value;
+                result.value = bulletTag.value;
+
+                results.Add(result);
 
                 break;
             }
         }
-
-        return result;
     }
 }
 
 public struct SkillKeyDefinitionData : IComponentData
 {
     public BlobAssetReference<SkillKeyDefinition> definition;
-}
-
-public struct SkillKeyLayerMask : IComponentData
-{
-    public int value;
 }
