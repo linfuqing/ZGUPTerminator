@@ -62,7 +62,7 @@ public struct AnimationCurveBoolDefinition
             }
         }
 
-        return index;
+        return index == -1 ? 0 : index;
     }
 }
 
@@ -229,7 +229,7 @@ public struct AnimationCurveActive : IComponentData
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         ref var definition = ref this.definition.Value;
-        int startFrameIndex = definition.StartKeyFrameIndexOf(time) + 1, numKeyFrames = definition.keyFrames.Length;
+        int startFrameIndex = definition.StartKeyFrameIndexOf(time), numKeyFrames = definition.keyFrames.Length;
         if (startFrameIndex < numKeyFrames)
         {
             int i;
@@ -252,7 +252,7 @@ public struct AnimationCurveActive : IComponentData
                     for (i = 0; i < numKeyFrames; ++i)
                     {
                         ref var keyFrame = ref definition.keyFrames[i];
-                        if (keyFrame.time - time > deltaTime)
+                        if (keyFrame.time - time > 0.0f)
                             break;
                 
                         __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
