@@ -187,11 +187,21 @@ public sealed class LoginManager : MonoBehaviour
 
         set
         {
+            if (value > __gold)
+                goldBank += value - __gold;
+            
             __gold = value;
             
             if(_onGold != null)
                 _onGold.Invoke(value.ToString());
         }
+    }
+
+    public int goldBank
+    {
+        get;
+
+        set;
     }
 
     public int energy
