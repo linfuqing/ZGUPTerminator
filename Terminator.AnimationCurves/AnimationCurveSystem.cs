@@ -5,6 +5,87 @@ using Unity.Entities;
 using Unity.Transforms;
 using ZG;
 
+public struct AnimationCurveSingleton : IComponentData
+{
+    public NativeQueue<Entity> entitiesToEnable;
+    public NativeQueue<Entity> entitiesToDisable;
+}
+
+[BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
+public partial struct AnimationCurveInitSystem : ISystem
+{
+    private NativeQueue<Entity> __entitiesToEnable;
+    private NativeQueue<Entity> __entitiesToDisable;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __entitiesToEnable = new NativeQueue<Entity>(Allocator.Persistent);
+        __entitiesToDisable = new NativeQueue<Entity>(Allocator.Persistent);
+
+        AnimationCurveSingleton singleton;
+        singleton.entitiesToEnable = __entitiesToEnable;
+        singleton.entitiesToDisable = __entitiesToDisable;
+        state.EntityManager.CreateSingleton(singleton);
+    }
+
+    [BurstCompile]
+    public void OnDestroy(ref SystemState state)
+    {
+        __entitiesToEnable.Dispose();
+        __entitiesToDisable.Dispose();
+    }
+
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        state.CompleteDependency();
+
+        var entityManager = state.EntityManager;
+        NativeList<Entity> entities = default;
+        while (__entitiesToEnable.TryDequeue(out Entity entity))
+        {
+            if(!entityManager.Exists(entity))
+                continue;
+
+            if (!entities.IsCreated)
+                entities = new NativeList<Entity>(Allocator.Temp);
+            
+            entities.Add(entity);
+        }
+
+        if (!entities.IsEmpty)
+        {
+            entityManager.RemoveComponent<Disabled>(entities.AsArray());
+            
+            entities.Clear();
+        }
+
+        while (__entitiesToDisable.TryDequeue(out Entity entity))
+        {
+            if(!entityManager.Exists(entity))
+                continue;
+
+            if (!entities.IsCreated)
+                entities = new NativeList<Entity>(Allocator.Temp);
+            
+            entities.Add(entity);
+        }
+
+        if (!entities.IsEmpty)
+            entityManager.AddComponent<Disabled>(entities.AsArray());
+        
+        if (entities.IsCreated)
+            entities.Dispose();
+        
+        AnimationCurveSingleton singleton;
+        singleton.entitiesToEnable = __entitiesToEnable;
+        singleton.entitiesToDisable = __entitiesToDisable;
+        
+        SystemAPI.SetSingleton(singleton);
+    }
+}
+
 [BurstCompile, UpdateAfter(typeof(TransformSystemGroup))]
 public partial struct AnimationCurveUpdateSystem : ISystem
 {
@@ -33,8 +114,9 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         [ReadOnly]
         public BufferAccessor<AnimationCurveEntity> entities;
 
-        public EntityCommandBuffer.ParallelWriter entityManager;
-
+        public NativeQueue<Entity>.ParallelWriter entitiesToEnable;
+        public NativeQueue<Entity>.ParallelWriter entitiesToDisable;
+        
         public void Execute(int index)
         {
             actives[index].Evaluate(
@@ -43,7 +125,8 @@ public partial struct AnimationCurveUpdateSystem : ISystem
                 deltas[index].Update(this.time) * speeds[index].value,
                 entities[index],
                 children,
-                ref entityManager);
+                ref entitiesToEnable, 
+                ref entitiesToDisable);
         }
     }
 
@@ -73,7 +156,8 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         [ReadOnly]
         public BufferTypeHandle<AnimationCurveEntity> entityType;
 
-        public EntityCommandBuffer.ParallelWriter entityManager;
+        public NativeQueue<Entity>.ParallelWriter entitiesToEnable;
+        public NativeQueue<Entity>.ParallelWriter entitiesToDisable;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
@@ -87,7 +171,8 @@ public partial struct AnimationCurveUpdateSystem : ISystem
             active.speeds = chunk.GetNativeArray(ref speedType);
             active.actives = chunk.GetNativeArray(ref activeType);
             active.entities = chunk.GetBufferAccessor(ref entityType);
-            active.entityManager = entityManager;
+            active.entitiesToEnable = entitiesToEnable;
+            active.entitiesToDisable = entitiesToDisable;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -268,7 +353,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
                 .WithAllRW<AnimationCurveTime>()
                 .Build(ref state);
 
-        state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
+        state.RequireForUpdate<AnimationCurveSingleton>();
     }
 
     [BurstCompile]
@@ -292,8 +377,10 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         active.speedType = __speedType;
         active.activeType = __activeType;
         active.entityType = __curveEntityType;
-        active.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
-            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+
+        var singleton = SystemAPI.GetSingleton<AnimationCurveSingleton>();
+        active.entitiesToEnable = singleton.entitiesToEnable.AsParallelWriter();
+        active.entitiesToDisable = singleton.entitiesToDisable.AsParallelWriter();
         var jobHandle = active.ScheduleParallelByRef(__groupToActive, state.Dependency);
 
         __inputMessageType.Update(ref state);

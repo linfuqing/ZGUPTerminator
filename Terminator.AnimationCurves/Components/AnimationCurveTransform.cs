@@ -226,7 +226,8 @@ public struct AnimationCurveActive : IComponentData
         float deltaTime, 
         in DynamicBuffer<AnimationCurveEntity> entities, 
         in BufferLookup<Child> children, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
+        ref NativeQueue<Entity>.ParallelWriter entitiesToEnable, 
+        ref NativeQueue<Entity>.ParallelWriter entitiesToDisable)
     {
         ref var definition = ref this.definition.Value;
         int startFrameIndex = definition.StartKeyFrameIndexOf(time), numKeyFrames = definition.keyFrames.Length;
@@ -238,8 +239,11 @@ public struct AnimationCurveActive : IComponentData
                 ref var keyFrame = ref definition.keyFrames[i];
                 if (keyFrame.time - time > deltaTime)
                     break;
-                
-                __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
+
+                __SetActive(
+                    entities[keyFrame.index].value, 
+                    children, 
+                    ref (keyFrame.value ? ref entitiesToEnable : ref entitiesToDisable));
             }
 
             if (length > math.FLT_MIN_NORMAL)
@@ -255,7 +259,10 @@ public struct AnimationCurveActive : IComponentData
                         if (keyFrame.time - time > 0.0f)
                             break;
                 
-                        __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
+                        __SetActive(
+                            entities[keyFrame.index].value, 
+                            children, 
+                            ref (keyFrame.value ? ref entitiesToEnable : ref entitiesToDisable));
                     }
                 }
             }
@@ -263,18 +270,17 @@ public struct AnimationCurveActive : IComponentData
     }
 
     private void __SetActive(
-        bool value, 
         in Entity entity, 
         in BufferLookup<Child> children, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
+        ref NativeQueue<Entity>.ParallelWriter entities)
     {
         if (children.TryGetBuffer(entity, out var childrenBuffer))
         {
             foreach (var child in childrenBuffer)
-                __SetActive(value, child.Value, children, ref entityManager);
+                __SetActive(child.Value, children, ref entities);
         }
         else
-            entityManager.SetEnabled(0, entity, value);
+            entities.Enqueue(entity);
     }
 }
 
