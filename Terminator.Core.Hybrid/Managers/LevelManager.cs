@@ -202,12 +202,17 @@ public partial class LevelManager : MonoBehaviour
 
         if (count != __count)
         {
-            isDirty = true;
+            if (count > 0)
+            {
+                isDirty = true;
 
-            if (_onKillCount != null)
-                _onKillCount.Invoke(count.ToString());
+                if (_onKillCount != null)
+                    _onKillCount.Invoke(count.ToString());
 
-            __count = count;
+                __count = count;
+            }
+            else
+                __ShowTime();
         }
 
         if (gold != __gold)
@@ -309,12 +314,8 @@ public partial class LevelManager : MonoBehaviour
     public void Pause()
     {
         IAnalytics.instance?.Pause();
-        
-        if (_onGameTime != null)
-        {
-            var timeSpan = new TimeSpan((long)((Time.time - __startTime) * TimeSpan.TicksPerSecond));
-            _onGameTime.Invoke($"{timeSpan.Minutes} : {timeSpan.Seconds}");
-        }
+
+        __ShowTime();
     }
     
     [UnityEngine.Scripting.Preserve]
@@ -392,6 +393,15 @@ public partial class LevelManager : MonoBehaviour
             _onQuit.Invoke();
         
         IAnalytics.instance?.Quit();
+    }
+
+    private void __ShowTime()
+    {
+        if (_onGameTime != null)
+        {
+            var timeSpan = new TimeSpan((long)((Time.time - __startTime) * TimeSpan.TicksPerSecond));
+            _onGameTime.Invoke($"{timeSpan.Minutes} : {timeSpan.Seconds}");
+        }
     }
 
     void Start()
