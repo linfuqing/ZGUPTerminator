@@ -42,23 +42,12 @@ public partial struct AnimationCurveInitSystem : ISystem
         state.CompleteDependency();
 
         var entityManager = state.EntityManager;
-        NativeList<Entity> entities = default;
         while (__entitiesToEnable.TryDequeue(out Entity entity))
         {
             if(!entityManager.Exists(entity))
                 continue;
 
-            if (!entities.IsCreated)
-                entities = new NativeList<Entity>(Allocator.Temp);
-            
-            entities.Add(entity);
-        }
-
-        if (!entities.IsEmpty)
-        {
-            entityManager.RemoveComponent<Disabled>(entities.AsArray());
-            
-            entities.Clear();
+            entityManager.SetEnabled(entity, true);
         }
 
         while (__entitiesToDisable.TryDequeue(out Entity entity))
@@ -66,18 +55,9 @@ public partial struct AnimationCurveInitSystem : ISystem
             if(!entityManager.Exists(entity))
                 continue;
 
-            if (!entities.IsCreated)
-                entities = new NativeList<Entity>(Allocator.Temp);
-            
-            entities.Add(entity);
+            entityManager.SetEnabled(entity, false);
         }
 
-        if (!entities.IsEmpty)
-            entityManager.AddComponent<Disabled>(entities.AsArray());
-        
-        if (entities.IsCreated)
-            entities.Dispose();
-        
         AnimationCurveSingleton singleton;
         singleton.entitiesToEnable = __entitiesToEnable;
         singleton.entitiesToDisable = __entitiesToDisable;
