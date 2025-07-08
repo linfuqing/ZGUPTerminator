@@ -16,7 +16,9 @@ using Random = Unity.Mathematics.Random;
 
 [BurstCompile, 
  CreateAfter(typeof(PrefabLoaderSystem)), 
- UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true), UpdateBefore(typeof(CopyMatrixToTransformSystem))]
+ UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true), 
+ UpdateBefore(typeof(CopyMatrixToTransformSystem)), 
+ UpdateAfter(typeof(AnimationCurveUpdateSystem))]
 public partial struct EffectSystem : ISystem
 {
     [Flags]
