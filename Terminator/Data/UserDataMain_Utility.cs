@@ -554,17 +554,14 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_ITEM_COUNT}{reward.name}";
                 break; 
             case UserRewardType.Diamond:
-                id = 1;
-                key = NAME_SPACE_USER_DIAMOND;
-                break;
+                diamond += reward.count;
+                return 1;
             case UserRewardType.Gold:
-                id = 1;
-                key = NAME_SPACE_USER_GOLD;
-                break;
+                gold += reward.count;
+                return 1;
             case UserRewardType.Energy:
-                id = 1;
-                key = NAME_SPACE_USER_ENERGY;
-                break;
+                __ApplyEnergy(-reward.count);
+                return 1;
             case UserRewardType.EnergyMax:
                 id = 1;
                 key = NAME_SPACE_USER_ENERGY_MAX;
