@@ -144,6 +144,13 @@ public sealed class LoginManager : MonoBehaviour
 
         private set;
     }
+    
+    public event UnityAction<string> onGoldChanged
+    {
+        add => _onGold.AddListener(value);
+
+        remove => _onGold.RemoveListener(value);
+    }
 
     public bool isEnergyActive
     {
