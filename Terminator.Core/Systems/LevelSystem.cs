@@ -81,7 +81,7 @@ public partial struct LevelSystem : ISystem
             SpawnerLayerMaskExclude spawnerLayerMaskExclude;
             ref var definition = ref instances[index].definition.Value;
             var status = states[index];
-            var prefabs = this.prefabs[index].AsNativeArray();
+            var prefabs = index < this.prefabs.Length ? this.prefabs[index].AsNativeArray() : default;
             for(i = 0; i < numStages; ++i)
             {
                 ref var stage = ref stages.ElementAt(i);
