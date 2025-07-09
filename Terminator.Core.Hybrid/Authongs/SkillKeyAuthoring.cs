@@ -12,12 +12,22 @@ public class SkillKeyAuthoring : MonoBehaviour
     internal struct KeyData
     {
         [Serializable]
-        public struct BulletTag
+        public struct BulletTag : IComparable<BulletTag>
         {
             public int count;
 
             [Tooltip("该词条生效时，激活特定的子弹标签")]
             public string value;
+
+            public int CompareTo(BulletTag other)
+            {
+                return other.count.CompareTo(count);
+            }
+
+            public override int GetHashCode()
+            {
+                return count;
+            }
         }
         
         public string name;
@@ -91,7 +101,7 @@ public class SkillKeyAuthoring : MonoBehaviour
             {
                 ref var root = ref builder.ConstructRoot<SkillKeyDefinition>();
 
-                int i, j, numBulletLayerMasks, numKeys = authoring._keys == null ? 0 : authoring._keys.Length;
+                int i, j, numBulletTags, numKeys = authoring._keys == null ? 0 : authoring._keys.Length;
                 BlobBuilderArray<SkillKeyDefinition.BulletTag> bulletTags;
                 var keys = builder.Allocate(ref root.keys, numKeys);
                 for (i = 0; i < numKeys; ++i)
@@ -99,9 +109,11 @@ public class SkillKeyAuthoring : MonoBehaviour
                     ref var sourceKey = ref authoring._keys[i];
                     ref var destinationKey = ref keys[i];
 
-                    numBulletLayerMasks = sourceKey.bulletTags.Length;
-                    bulletTags = builder.Allocate(ref destinationKey.bulletTags, numBulletLayerMasks);
-                    for (j = 0; j < numBulletLayerMasks; ++j)
+                    Array.Sort(sourceKey.bulletTags);
+                    
+                    numBulletTags = sourceKey.bulletTags.Length;
+                    bulletTags = builder.Allocate(ref destinationKey.bulletTags, numBulletTags);
+                    for (j = 0; j < numBulletTags; ++j)
                     {
                         ref var sourceBulletTag = ref sourceKey.bulletTags[j];
                         ref var destinationBulletTag = ref bulletTags[j];
