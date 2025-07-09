@@ -318,6 +318,15 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
+        public string 子弹标签名称
+        {
+            set
+            {
+                tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
+            }
+        }
+
+        [CSVField]
         public string 子弹消息名称
         {
             set
