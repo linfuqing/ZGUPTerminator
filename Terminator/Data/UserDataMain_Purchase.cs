@@ -329,6 +329,22 @@ public partial class UserDataMain
             if (purchaseToken.type == type && 
                 purchaseToken.exp <= exp)
             {
+                if (purchaseToken.level < 0 && PurchaseData.Exchange(type, purchaseToken.level, NAME_SPACE_USER_PURCHASE_ITEM))
+                {
+                    foreach (var purchaseItem in _purchaseItems)
+                    {
+                        if (purchaseItem.type == type && purchaseItem.level == purchaseToken.level)
+                        {
+                            if (rewards == null)
+                                rewards = new List<UserReward>();
+                            
+                            __ApplyRewards(purchaseItem.rewards, rewards);
+                            
+                            break;
+                        }
+                    }
+                }
+
                 if (PurchaseData.IsValid(
                         type, 
                         purchaseToken.level, 
