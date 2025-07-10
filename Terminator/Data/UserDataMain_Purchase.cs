@@ -171,8 +171,15 @@ public partial class UserDataMain
             default:
                 yield break;
         }
-
+        
         var output = PurchaseData.Query(type, level);
+        if (level == -1 && (output.ticks == 0 || output.ticks + output.deadline * TimeSpan.TicksPerSecond < DateTime.UtcNow.Ticks))
+        {
+            PurchaseData.Buy(type, level);
+            
+            output = PurchaseData.Query(type, level);
+        }
+        
         List<UserPurchaseToken> values = null;
         UserPurchaseToken value;
         PurchaseToken token;
@@ -190,12 +197,17 @@ public partial class UserDataMain
 
                 key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
 
-                if (!(PlayerPrefs.HasKey(key) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(key))) &&
-                    PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
-                    value.flag = 0;
+                if (output.times > 0)
+                {
+                    if (!(PlayerPrefs.HasKey(key) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(key))) &&
+                        PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
+                        value.flag = 0;
+                    else
+                        value.flag = UserPurchaseToken.Flag.Collected;
+                }
                 else
-                    value.flag = UserPurchaseToken.Flag.Collected;
-                
+                    value.flag = UserPurchaseToken.Flag.Locked;
+
                 value.rewards = token.rewards;
 
                 if (values == null)

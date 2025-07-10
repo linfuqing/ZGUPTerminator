@@ -161,26 +161,9 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
 
         return true;
     }
-    
-    public IEnumerator Query(
-        uint userID, 
-        IPurchaseData.Input[] inputs, 
-        Action<IPurchaseData.Output[]> onComplete)
+
+    public static long Buy(PurchaseType type, int level)
     {
-        yield return null;
-
-        int length = inputs.Length;
-        var outputs = new IPurchaseData.Output[length];
-        for (int i = 0; i < length; ++i)
-            outputs[i] = Query(inputs[i]);
-        
-        onComplete(outputs);
-    }
-
-    public IEnumerator Buy(uint userID, PurchaseType type, int level, Action<long?> onComplete)
-    {
-        yield return null;
-
         IPurchaseData.Input input;
         input.type = type;
         input.level = level;
@@ -227,7 +210,30 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME),
             (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond));
 
-        onComplete(seconds == 0 ? 0 : seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks);
+        return seconds == 0 ? 0 : seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks;
+    }
+    
+    public IEnumerator Query(
+        uint userID, 
+        IPurchaseData.Input[] inputs, 
+        Action<IPurchaseData.Output[]> onComplete)
+    {
+        yield return null;
+
+        int length = inputs.Length;
+        var outputs = new IPurchaseData.Output[length];
+        for (int i = 0; i < length; ++i)
+            outputs[i] = Query(inputs[i]);
+        
+        onComplete(outputs);
+    }
+
+    public IEnumerator Buy(uint userID, PurchaseType type, int level, Action<long?> onComplete)
+    {
+        yield return null;
+
+        long result = Buy(type, level);
+        onComplete(result);
     }
 
     void Awake()
