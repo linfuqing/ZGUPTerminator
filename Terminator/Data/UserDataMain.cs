@@ -574,18 +574,20 @@ public sealed partial class UserDataMain : MonoBehaviour
             float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) /
                                 _energy.uintTime;
             int energyInt =  Mathf.FloorToInt(energyFloat);
-            energy += energyInt;
+            
+            if (energy < _energy.max)
+            {
+                if (energy + energyInt > _energy.max)
+                    energy = _energy.max;
+                else
+                {
+                    energy += energyInt;
 
-            time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+                    time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+                }
+            }
         }
 
-        if (energy >= _energy.max)
-        {
-            energy = _energy.max;
-
-            time = now;
-        }
-        
         energy -= value;
         if (energy < 0)
             return false;
@@ -596,7 +598,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             __AppendQuest(UserQuest.Type.EnergiesToBuy, -value);
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
-        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));
 
         return true;
     }

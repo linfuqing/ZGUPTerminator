@@ -895,7 +895,8 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __IncreaseEnergy()
     {
-        energy = Mathf.Min(energy + 1, energyMax);
+        if(__energy < __energyMax)
+            energy = __energy + 1;
 
         if (__selectedEnergy == energy)
             isEnergyActive = true;
