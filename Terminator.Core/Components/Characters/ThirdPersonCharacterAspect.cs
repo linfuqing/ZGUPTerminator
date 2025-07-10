@@ -120,13 +120,13 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
 
     private void HandleVelocityControl(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
-        if(ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
-            return;
-        
         float deltaTime = baseContext.Time.DeltaTime;
         ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref ThirdPersonCharacterControl characterControl = ref CharacterControl.ValueRW;
+
+        if(ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+            characterControl.MoveVector = float3.zero;
 
         // Rotate move input and velocity to take into account parent rotation
         if(characterBody.ParentEntity != Entity.Null)
