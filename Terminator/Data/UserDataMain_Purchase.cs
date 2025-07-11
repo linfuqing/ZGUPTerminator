@@ -151,6 +151,8 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
+        var output = PurchaseData.Query(type, level);
+        
         IUserData.PurchaseTokens result;
         switch (type)
         {
@@ -164,20 +166,28 @@ public partial class UserDataMain
                 break;
             case PurchaseType.Fund:
                 result.exp = UserData.level;
+                
+                if (level == -1 && output.ticks == 0)
+                {
+                    PurchaseData.Buy(type, level);
+            
+                    output = PurchaseData.Query(type, level);
+                }
+
                 break;
             case PurchaseType.Pass:
                 result.exp = am;
+                
+                if (level == -1 && (output.ticks == 0 || output.ticks + output.deadline * TimeSpan.TicksPerSecond < DateTime.UtcNow.Ticks))
+                {
+                    PurchaseData.Buy(type, level);
+            
+                    output = PurchaseData.Query(type, level);
+                }
+
                 break;
             default:
                 yield break;
-        }
-        
-        var output = PurchaseData.Query(type, level);
-        if (level == -1 && (output.ticks == 0 || output.ticks + output.deadline * TimeSpan.TicksPerSecond < DateTime.UtcNow.Ticks))
-        {
-            PurchaseData.Buy(type, level);
-            
-            output = PurchaseData.Query(type, level);
         }
         
         List<UserPurchaseToken> values = null;
