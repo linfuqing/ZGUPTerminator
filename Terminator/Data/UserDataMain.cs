@@ -450,7 +450,11 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
 
         var flag = UserDataMain.flag;
-        bool isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
+        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.PurchasesUnlockFirst;
+        
+        isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
         if(isDirty)
             flag &= ~Flag.CardsUnlockFirst;
 
