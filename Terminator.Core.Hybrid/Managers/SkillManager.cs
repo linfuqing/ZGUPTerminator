@@ -129,6 +129,16 @@ public class SkillManager : MonoBehaviour
                 flag = value;
             }
         }
+        
+        
+        [CSVField]
+        public string 关卡技能描述词条名
+        {
+            set
+            {
+                keys = string.IsNullOrEmpty(value) ? null : value.Split('/');
+            }
+        }
 #endif
     }
 
@@ -225,7 +235,7 @@ public class SkillManager : MonoBehaviour
 
     public static bool TryGetAsset(string name, out SkillAsset result)
     {
-        return TryGetAsset(name.ToString(), out result);
+        return TryGetAsset(new FixedString128Bytes(name), out result);
     }
 
     public static bool TryGetAsset(in FixedString128Bytes name, out SkillAsset result)
