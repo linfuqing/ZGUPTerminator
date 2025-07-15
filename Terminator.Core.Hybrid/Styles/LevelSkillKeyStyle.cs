@@ -11,7 +11,7 @@ public class LevelSkillKeyStyle : SkillKeyStyle
     
     public Progressbar progressbar;
 
-    public void SetAsset(in SkillKeyAsset value, int count)
+    public bool SetAsset(in SkillKeyAsset value, int count)
     {
         onTitle.Invoke(value.name);
         onDetail.Invoke(value.detail);
@@ -23,7 +23,7 @@ public class LevelSkillKeyStyle : SkillKeyStyle
         SkillStyle.SetActive(ranks, index);
 
         progressbar.value = count * 1.0f / value.capacity;
-        
-        gameObject.SetActive(index >= 0);
+
+        return index >= 0;
     }
 }

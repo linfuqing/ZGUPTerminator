@@ -263,7 +263,7 @@ public partial class LevelManager
                 if(style == null)
                     continue;
                     
-                style.SetAsset(asset, result.count);
+                style.gameObject.SetActive(style.SetAsset(asset, result.count));
             }
         }
         
@@ -286,7 +286,7 @@ public partial class LevelManager
                     if(style == null)
                         continue;
                     
-                    style.SetAsset(asset, result.count);
+                    style.gameObject.SetActive(style.SetAsset(asset, result.count));
                 }
             }
 
