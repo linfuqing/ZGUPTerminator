@@ -212,7 +212,7 @@ public partial class LevelSystemManaged
                 bool result = false, isCompleted = true;
                 int temp, level;
                 //FixedString128Bytes skillName;
-                SkillAsset asset;
+                //SkillAsset asset;
                 foreach (var key in keys)
                 {
                     temp = __indices[key];

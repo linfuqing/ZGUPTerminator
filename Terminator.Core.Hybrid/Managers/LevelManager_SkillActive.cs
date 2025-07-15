@@ -228,7 +228,7 @@ public partial class LevelManager
 
     public void SetActiveSkill(int index, int level, float cooldown, float elapsedTime)
     {
-        if (!__skillActives.TryGetValue(index, out var value))
+        if (__skillActives == null || !__skillActives.TryGetValue(index, out var value))
             return;
         
         value.Set(level, cooldown, elapsedTime);
