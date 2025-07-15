@@ -44,6 +44,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         
         public float chance;
 
+        public float damageScale;
+
         public BulletAuthoring.LayerMaskData bulletLayerMask;
 
         public GameObject gameObject;
@@ -235,6 +237,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         }
 
                         destinationPrefab.chance = sourcePrefab.chance;
+                        destinationPrefab.damageScale = sourcePrefab.damageScale;
                         destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
                     }
                 }
@@ -294,6 +297,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         }
 
                         destinationPrefab.chance = sourcePrefab.chance;
+                        destinationPrefab.damageScale = sourcePrefab.damageScale;
                         destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
                     }
                 }
@@ -316,6 +320,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     }
 
                     destinationPrefab.chance = sourcePrefab.chance;
+                    destinationPrefab.damageScale = sourcePrefab.damageScale;
                     destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
                 }
 

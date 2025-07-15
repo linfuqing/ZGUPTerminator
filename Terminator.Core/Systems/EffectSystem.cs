@@ -1820,7 +1820,6 @@ public partial struct EffectSystem : ISystem
 
         DamageInstance damageInstance;
         damageInstance.index = instanceDamageParent.index;
-        damageInstance.scale = instanceDamage.scale;
         damageInstance.entity = instanceDamageParent.entity;
         damageInstance.bulletLayerMask = instanceDamage.bulletLayerMask;
 
@@ -1846,6 +1845,7 @@ public partial struct EffectSystem : ISystem
             if (isContains || totalChance < chance)
                 continue;
 
+            damageInstance.scale = instanceDamage.scale * (math.abs(prefab.damageScale) > math.FLT_MIN_NORMAL ? prefab.damageScale : 1.0f);
             damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
             if (prefabLoader.TryGetOrLoadPrefabRoot(
                     damageInstance.entityPrefabReference, out instance))

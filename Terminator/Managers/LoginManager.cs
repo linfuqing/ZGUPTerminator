@@ -44,6 +44,8 @@ public sealed class LoginManager : MonoBehaviour
 
     public static event Action<Memory<UserRewardData>> onAwake;
     
+    public static event Action onLevelLoaded;
+
     public static event Action<Stage> onStageChanged;
     
     public event Action<int> onEnergyChanged;

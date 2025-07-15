@@ -39,6 +39,7 @@ public struct EffectDefinition
         public EffectSpace space;
         public int index;
         public float chance;
+        public float damageScale;
         public BulletLayerMask bulletLayerMask;
     }
     
