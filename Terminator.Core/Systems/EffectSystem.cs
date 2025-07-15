@@ -288,6 +288,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectTargetDamage> targetDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<EffectTargetLevel> targetLevels;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<DelayDestroy> delayDestroies;
 
         [NativeDisableParallelForRestriction]
@@ -389,7 +392,7 @@ public partial struct EffectSystem : ISystem
                         totalDamageValue = 0, 
                         damageValue,
                         dropDamageValue, 
-                        layerMask,
+                        //layerMask,
                         belongsTo,
                         numMessageIndices,
                         numDamageIndices,
@@ -421,8 +424,10 @@ public partial struct EffectSystem : ISystem
                         for (i = 0; i < numDamageIndices; ++i)
                         {
                             damageIndex = effect.damageIndices[i];
-                            layerMask = definition.damages[damageIndex].layerMask;
-                            if (layerMask == 0 || (layerMask & belongsTo) != 0)
+                            ref var damageTemp = ref definition.damages[damageIndex];
+                            //layerMask = definition.damages[damageIndex].layerMask;
+                            if ((damageTemp.layerMask == 0 || (damageTemp.layerMask & belongsTo) != 0) &&
+                                (damageTemp.bulletLayerMask == 0 || (damageTemp.bulletLayerMask & instanceDamage.layerMask) != 0))
                                 break;
                         }
 
@@ -553,6 +558,18 @@ public partial struct EffectSystem : ISystem
 
                         if (isResult)
                         {
+                            if (math.abs(damage.goldMultiplier) > math.FLT_MIN_NORMAL && targetLevels.HasComponent(simulationEvent.entity))
+                            {
+                                ref var targetLevel = ref targetLevels.GetRefRW(simulationEvent.entity).ValueRW;
+                                int gold = targetLevel.gold;
+                                float goldMultiplier = gold * damage.goldMultiplier;
+
+                                gold = (int)math.select(math.floor(goldMultiplier), math.ceil(goldMultiplier),
+                                    math.frac(goldMultiplier) > random.NextFloat()) - gold;
+                                
+                                Interlocked.Add(ref targetLevel.gold, gold);
+                            }
+                            
                             if (delayDestroies.HasComponent(simulationEvent.entity))
                             {
                                 delayDestroyTime = damage.delayDestroyTime; // * damageScale;
@@ -742,6 +759,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectTargetDamage> targetDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<EffectTargetLevel> targetLevels;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<DelayDestroy> delayDestroies;
 
         [NativeDisableParallelForRestriction]
@@ -789,6 +809,7 @@ public partial struct EffectSystem : ISystem
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
             collect.states = chunk.GetNativeArray(ref statusType);
             collect.targetDamages = targetDamages;
+            collect.targetLevels = targetLevels;
             collect.delayDestroies = delayDestroies;
             collect.dropToDamages = dropToDamages;
             collect.characterBodies = characterBodies;
@@ -1487,6 +1508,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectTargetDamage> __targetDamages;
 
+    private ComponentLookup<EffectTargetLevel> __targetLevels;
+
     private ComponentLookup<DelayDestroy> __delayDestroies;
     
     private ComponentLookup<DropToDamage> __dropToDamages;
@@ -1562,6 +1585,7 @@ public partial struct EffectSystem : ISystem
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
+        __targetLevels = state.GetComponentLookup<EffectTargetLevel>();
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
@@ -1669,6 +1693,7 @@ public partial struct EffectSystem : ISystem
         __prefabType.Update(ref state);
         __inputMessageType.Update(ref state);
         __targetDamages.Update(ref state);
+        __targetLevels.Update(ref state);
         __delayDestroies.Update(ref state);
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
@@ -1703,6 +1728,7 @@ public partial struct EffectSystem : ISystem
         collect.statusTargetType = __statusTargetType;
         collect.statusType = __statusType;
         collect.targetDamages = __targetDamages;
+        collect.targetLevels = __targetLevels;
         collect.delayDestroies = __delayDestroies;
         collect.dropToDamages = __dropToDamages;
         collect.characterBodies = __characterBodies;

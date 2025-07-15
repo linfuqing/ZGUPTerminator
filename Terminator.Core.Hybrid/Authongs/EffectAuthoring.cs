@@ -65,7 +65,11 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
     [Serializable]
     internal struct DamageData : IEquatable<DamageData>
     {
+        [Tooltip("碰撞体标签来判断这次伤害是否有效")]
         public LayerMask layerMask;
+        
+        [Tooltip("子弹标签来判断这次伤害是否有效")]
+        public LayerMask bulletLayerMask;
 
         [Tooltip("用来判断是否计算次数,配合messageLayerMask可以配出弹板不被黑球影响")]
         public LayerMask entityLayerMask;
@@ -79,6 +83,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("掉落伤害")]
         public int valueToDrop;
         
+        [Tooltip("掉落金币倍率")]
+        public float goldMultiplier;
+
         [Tooltip("弹射速度，向Y轴匀速弹射")]
         public float spring;
 
@@ -236,10 +243,12 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     var source = damageDatas[i];
                     ref var destination = ref damages[i];
                     destination.layerMask = source.layerMask;
+                    destination.bulletLayerMask = source.bulletLayerMask;
                     destination.entityLayerMask = source.entityLayerMask.value;
                     destination.messageLayerMask = source.messageLayerMask.value;
                     destination.value = source.value;
                     destination.valueToDrop = source.valueToDrop;
+                    destination.goldMultiplier = source.goldMultiplier;
                     destination.spring = source.spring;
                     destination.explosion = source.explosion;
                     destination.delayDestroyTime = source.delayDestroyTime;

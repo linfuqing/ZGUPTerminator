@@ -45,12 +45,15 @@ public struct EffectDefinition
     public struct Damage
     {
         public int layerMask;
+        public int bulletLayerMask;
         public int entityLayerMask;
         public int messageLayerMask;
 
         public int value;
 
         public int valueToDrop;
+
+        public float goldMultiplier;
 
         public float spring;
 
