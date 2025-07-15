@@ -36,11 +36,11 @@ public partial struct EffectSystem : ISystem
     private struct DamageInstance
     {
         public int index;
-        public int layerMask;
         public float scale;
         public RigidTransform transform;
         public Entity entity;
         public Entity parent;
+        public BulletLayerMask bulletLayerMask;
         public EntityPrefabReference entityPrefabReference;
     }
 
@@ -86,7 +86,7 @@ public partial struct EffectSystem : ISystem
                         entityManager.AddComponent(entity, damageParent);
                     }
 
-                    damage.layerMask = damageInstance.layerMask;
+                    damage.bulletLayerMask = damageInstance.bulletLayerMask;
                     damage.scale = damageInstance.scale;
                     entityManager.AddComponent(entity, damage);
                 }
@@ -427,7 +427,7 @@ public partial struct EffectSystem : ISystem
                             ref var damageTemp = ref definition.damages[damageIndex];
                             //layerMask = definition.damages[damageIndex].layerMask;
                             if ((damageTemp.layerMask == 0 || (damageTemp.layerMask & belongsTo) != 0) &&
-                                (damageTemp.bulletLayerMask == 0 || (damageTemp.bulletLayerMask & instanceDamage.layerMask) != 0))
+                                damageTemp.bulletLayerMask.BelongsTo(instanceDamage.bulletLayerMask))
                                 break;
                         }
 
@@ -1820,9 +1820,9 @@ public partial struct EffectSystem : ISystem
 
         DamageInstance damageInstance;
         damageInstance.index = instanceDamageParent.index;
-        damageInstance.layerMask = instanceDamage.layerMask;
         damageInstance.scale = instanceDamage.scale;
         damageInstance.entity = instanceDamageParent.entity;
+        damageInstance.bulletLayerMask = instanceDamage.bulletLayerMask;
 
         bool isContains = false;
         float chance = random.NextFloat(), totalChance = 0.0f;
@@ -1830,7 +1830,7 @@ public partial struct EffectSystem : ISystem
         for (int i = 0; i < numPrefabs; ++i)
         {
             ref var prefab = ref prefabsDefinition[i];
-            if(prefab.layerMask != 0 && (prefab.layerMask & instanceDamage.layerMask) == 0)
+            if(!prefab.bulletLayerMask.BelongsTo(instanceDamage.bulletLayerMask))
                 continue;
             
             totalChance += prefab.chance;

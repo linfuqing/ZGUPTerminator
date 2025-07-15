@@ -37,15 +37,14 @@ public struct EffectDefinition
     public struct Prefab
     {
         public EffectSpace space;
-        public int layerMask;
         public int index;
         public float chance;
+        public BulletLayerMask bulletLayerMask;
     }
     
     public struct Damage
     {
         public int layerMask;
-        public int bulletLayerMask;
         public int entityLayerMask;
         public int messageLayerMask;
 
@@ -60,6 +59,8 @@ public struct EffectDefinition
         public float explosion;
 
         public float delayDestroyTime;
+        
+        public BulletLayerMask bulletLayerMask;
         
         public BlobArray<int> messageIndices;
         
@@ -129,8 +130,9 @@ public struct EffectDamageParent : IComponentData
 
 public struct EffectDamage : IComponentData
 {
-    public int layerMask;
     public float scale;
+
+    public BulletLayerMask bulletLayerMask;
 }
 
 public struct EffectDamageStatistic : IBufferElementData

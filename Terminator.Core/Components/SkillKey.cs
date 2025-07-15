@@ -24,16 +24,13 @@ public struct SkillKeyDefinition
     public BlobArray<Skill> skills;
     public BlobArray<Key> keys;
 
-    public void GetBulletTags(
+    public FixedList512Bytes<FixedString32Bytes> GetBulletTags(
         in NativeArray<SkillActiveIndex> skillActiveIndices,
-        ref DynamicBuffer<global::BulletTag> results, 
         ref UnsafeHashMap<int, int> counts)
     {
         if(counts.IsCreated)
             counts.Clear();
-        
-        results.Clear();
-        
+
         int i, j, count, numKeyIndices, numSkills = skills.Length;
         foreach (var skillActiveIndex in skillActiveIndices)
         {
@@ -59,7 +56,7 @@ public struct SkillKeyDefinition
         }
 
         int numBulletTags;
-        global::BulletTag result;
+        FixedList512Bytes<FixedString32Bytes> tags = default;
         foreach (var pair in counts)
         {
             ref var key = ref keys[pair.Key];
@@ -71,13 +68,13 @@ public struct SkillKeyDefinition
                 if(bulletTag.count > pair.Value)
                     continue;
                 
-                result.value = bulletTag.value;
-
-                results.Add(result);
+                tags.Add(bulletTag.value);
 
                 break;
             }
         }
+
+        return tags;
     }
 }
 

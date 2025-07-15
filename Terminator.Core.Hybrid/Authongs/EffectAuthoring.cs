@@ -42,9 +42,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
         public EffectSpace space;
         
-        public LayerMask layerMask;
-
         public float chance;
+
+        public BulletAuthoring.LayerMaskData bulletLayerMask;
 
         public GameObject gameObject;
     }
@@ -68,14 +68,14 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("碰撞体标签来判断这次伤害是否有效")]
         public LayerMask layerMask;
         
-        [Tooltip("子弹标签来判断这次伤害是否有效")]
-        public LayerMask bulletLayerMask;
-
         [Tooltip("用来判断是否计算次数,配合messageLayerMask可以配出弹板不被黑球影响")]
         public LayerMask entityLayerMask;
 
         [Tooltip("命中后激活对应标签动画")]
         public LayerMask messageLayerMask;
+
+        [Tooltip("子弹标签来判断这次伤害是否有效")]
+        public BulletAuthoring.LayerMaskData bulletLayerMask;
 
         [Tooltip("掉落伤害")]
         public int value;
@@ -104,6 +104,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public bool Equals(DamageData other)
         {
             return layerMask == other.layerMask &&
+                   entityLayerMask == other.entityLayerMask &&
+                   messageLayerMask == other.messageLayerMask &&
+                   bulletLayerMask.Equals(other.bulletLayerMask) &&
                    value == other.value &&
                    valueToDrop == other.valueToDrop &&
                    Mathf.Approximately(spring, other.spring) &&
@@ -222,7 +225,6 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         ref var sourcePrefab = ref source.prefabs[j];
                         ref var destinationPrefab = ref prefabs[j];
                         destinationPrefab.space = sourcePrefab.space;
-                        destinationPrefab.layerMask = sourcePrefab.layerMask;
                         
                         UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                         if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
@@ -233,6 +235,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         }
 
                         destinationPrefab.chance = sourcePrefab.chance;
+                        destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
                     }
                 }
 
@@ -243,9 +246,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     var source = damageDatas[i];
                     ref var destination = ref damages[i];
                     destination.layerMask = source.layerMask;
-                    destination.bulletLayerMask = source.bulletLayerMask;
                     destination.entityLayerMask = source.entityLayerMask.value;
                     destination.messageLayerMask = source.messageLayerMask.value;
+                    destination.bulletLayerMask = source.bulletLayerMask;
                     destination.value = source.value;
                     destination.valueToDrop = source.valueToDrop;
                     destination.goldMultiplier = source.goldMultiplier;
@@ -281,7 +284,6 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         ref var sourcePrefab = ref source.prefabs[j];
                         ref var destinationPrefab = ref prefabs[j];
                         destinationPrefab.space = sourcePrefab.space;
-                        destinationPrefab.layerMask = sourcePrefab.layerMask;
                         
                         UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                         if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
@@ -292,6 +294,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                         }
 
                         destinationPrefab.chance = sourcePrefab.chance;
+                        destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
                     }
                 }
 
@@ -303,7 +306,6 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     ref var destinationPrefab = ref prefabs[i];
                     
                     destinationPrefab.space = sourcePrefab.space;
-                    destinationPrefab.layerMask = sourcePrefab.layerMask;
                         
                     UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
                     if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
@@ -314,6 +316,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     }
 
                     destinationPrefab.chance = sourcePrefab.chance;
+                    destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
                 }
 
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);

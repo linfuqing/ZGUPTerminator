@@ -466,17 +466,17 @@ public struct BulletDefinition
 
         public int prefabLoaderIndex;
 
-        public int layerMask;
-
         public BulletLocation location;
         public BulletLocation targetLocation;
         public BulletSpace space;
         public BulletSpace targetSpace;
         public BulletDirection direction;
         public BulletFollowTarget followTarget;
+        
+        public BulletLayerMask layerMask;
+
         public BlobArray<int> messageIndices;
         public BlobArray<int> standTimeIndices;
-        public BlobArray<FixedString32Bytes> tags;
     }
 
     public struct StandTime
@@ -493,7 +493,6 @@ public struct BulletDefinition
 
     public bool Update(
         BulletLocation location, 
-        int layerMask, 
         int index,
         int version,
         float damageScale,
@@ -503,10 +502,10 @@ public struct BulletDefinition
         in float4x4 transform,
         in Entity parent,
         in Entity lookAt, 
+        in BulletLayerMask layerMask, 
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
-        in DynamicBuffer<BulletTag> tags, 
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
@@ -522,8 +521,7 @@ public struct BulletDefinition
 
         ref var data = ref bullets[index];
 
-        bool result = (data.layerMask == 0 || (data.layerMask & layerMask) != 0) && 
-            (data.location == 0 || (data.location & location) != 0);
+        bool result = (data.location == 0 || (data.location & location) != 0) && data.layerMask.BelongsTo(layerMask);
         
         if (targetStates.Length <= data.targetIndex)
             targetStates.Resize(targets.Length, NativeArrayOptions.ClearMemory);
@@ -532,67 +530,31 @@ public struct BulletDefinition
 
         if (result)
         {
-            int numTags = data.tags.Length;
-            if (numTags > 0)
-            {
-                if (tags.IsEmpty)
-                    result = false;
-                else
-                {
-                    bool isContains;
-                    for (int i = 0; i < numTags; ++i)
-                    {
-                        ref var dataTag = ref data.tags[i];
+            ref var target = ref targets[data.targetIndex];
+            result = //(isLocation || target.minDistance >= target.maxDistance) &&
+                target.Update(
+                    version,
+                    time,
+                    up,
+                    cameraRotation,
+                    transform,
+                    lookAt,
+                    collisionWorld,
+                    physicsColliders,
+                    characterBodies,
+                    prefabs,
+                    targetStates.AsNativeArray(),
+                    ref prefabLoader,
+                    ref targetStatus,
+                    ref random);
 
-                        isContains = false;
-                        foreach (var tag in tags)
-                        {
-                            if (tag.value == dataTag)
-                            {
-                                isContains = true;
-
-                                break;
-                            }
-                        }
-
-                        if (!isContains)
-                        {
-                            result = false;
-
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (result)
-            {
-                ref var target = ref targets[data.targetIndex];
-                result = //(isLocation || target.minDistance >= target.maxDistance) &&
-                    target.Update(
-                        version,
-                        time,
-                        up,
-                        cameraRotation,
-                        transform,
-                        lookAt,
-                        collisionWorld,
-                        physicsColliders,
-                        characterBodies,
-                        prefabs,
-                        targetStates.AsNativeArray(),
-                        ref prefabLoader,
-                        ref targetStatus,
-                        ref random);
-
-                if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
-                    result = __Check(
-                        data.targetLocation,
-                        uint.MaxValue,
-                        targetStatus.target,
-                        collisionWorld,
-                        characterBodies);
-            }
+            if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
+                result = __Check(
+                    data.targetLocation,
+                    uint.MaxValue,
+                    targetStatus.target,
+                    collisionWorld,
+                    characterBodies);
         }
 
         /*if (!result || !isLocation && data.capacity < 2 && data.times == 1)
@@ -809,7 +771,6 @@ public struct BulletDefinition
 
     public void Update(
         BulletLocation location, 
-        int layerMask, 
         float damageScale, 
         double time,
         in float3 up, 
@@ -817,12 +778,12 @@ public struct BulletDefinition
         in float4x4 transform,
         in Entity entity,
         in Entity lookAt, 
+        in BulletLayerMask layerMask, 
         in CollisionWorld collisionWorld,
         in ComponentLookup<Parent> parents,
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
-        in DynamicBuffer<BulletTag> tags, 
         in DynamicBuffer<BulletPrefab> prefabs,
         in DynamicBuffer<BulletActiveIndex> activeIndices, 
         in DynamicBuffer<BulletMessage> inputMessages,
@@ -870,7 +831,6 @@ public struct BulletDefinition
             activeIndex = activeIndices[i];
             Update(
                 location, 
-                layerMask, 
                 activeIndex.value, 
                 version.value,
                 activeIndex.damageScale * damageScale,
@@ -880,10 +840,10 @@ public struct BulletDefinition
                 transform,
                 entity, 
                 lookAt, 
+                layerMask, 
                 collisionWorld,
                 physicsColliders,
                 characterBodies, 
-                tags, 
                 prefabs, 
                 inputMessages,
                 ref outputMessages,
@@ -962,17 +922,56 @@ public struct BulletDefinitionData : IComponentData
 public struct BulletLayerMask : IComponentData
 {
     public int value;
-}
+    public FixedList512Bytes<FixedString32Bytes> tags;
 
-public struct BulletTag : IBufferElementData
-{
-    public FixedString32Bytes value;
+    public bool BelongsTo(in BulletLayerMask layerMask)
+    {
+        if (value != 0 && (value & layerMask.value) == 0)
+            return false;
+
+        if (!tags.IsEmpty)
+        {
+            bool isContains;
+            foreach (var destination in tags)
+            {
+                isContains = false;
+                foreach (var source in layerMask.tags)
+                {
+                    if (source == destination)
+                    {
+                        isContains = true;
+                        
+                        break;
+                    }
+                }
+
+                if (!isContains)
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static BulletLayerMask operator |(in BulletLayerMask x, in BulletLayerMask y)
+    {
+        BulletLayerMask result;
+        result.value = x.value | y.value;
+        result.tags = default;
+        
+        foreach (var tag in x.tags)
+            result.tags.Add(tag);
+        
+        foreach (var tag in y.tags)
+            result.tags.Add(tag);
+
+        return result;
+    }
 }
 
 public struct BulletInstance : IBufferElementData
 {
     public int index;
-    public int layerMask;
     public float damageScale;
     public double time;
     public float3 targetPosition;
@@ -980,6 +979,7 @@ public struct BulletInstance : IBufferElementData
     public RigidTransform transform;
     public Entity target;
     public Entity parent;
+    public BulletLayerMask layerMask;
     public EntityPrefabReference entityPrefabReference;
 
     public bool Apply(
@@ -1137,8 +1137,8 @@ public struct BulletInstance : IBufferElementData
         if (damageScale > math.FLT_MIN_NORMAL)
         {
             EffectDamage effectDamage;
-            effectDamage.layerMask = layerMask;
             effectDamage.scale = damageScale;
+            effectDamage.bulletLayerMask = layerMask;
             entityManager.AddComponent(1, entity, effectDamage);
         }
 

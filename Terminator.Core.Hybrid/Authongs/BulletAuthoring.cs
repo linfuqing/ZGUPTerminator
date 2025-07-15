@@ -3,23 +3,44 @@ using System.Collections.Generic;
 using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.Entities.Serialization;
-using Unity.Scenes;
 using Unity.Mathematics;
-using Unity.Physics;
-using Unity.Transforms;
 using UnityEngine;
-using Collider = Unity.Physics.Collider;
-using Math = ZG.Mathematics.Math;
 using Object = UnityEngine.Object;
-using Random = Unity.Mathematics.Random;
 
 #if UNITY_EDITOR
 using UnityEditor;
 using ZG;
+
 public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 {
+    [Serializable]
+    public struct LayerMaskData : IEquatable<LayerMaskData>
+    {
+        public LayerMask value;
+
+        public string[] tags;
+
+        public bool Equals(LayerMaskData other)
+        {
+            return value == other.value && Array.Equals(tags, other.tags);
+        }
+
+        public static implicit operator BulletLayerMask(LayerMaskData data)
+        {
+            BulletLayerMask result;
+            result.value = data.value;
+            result.tags = default;
+            if (data.tags != null)
+            {
+                foreach (var tag in data.tags)
+                    result.tags.Add(tag);
+            }
+
+            return result;
+        }
+    }
+
     [Serializable]
     public struct MessageData
     {
@@ -290,9 +311,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("释放次数，每次打空弹夹算一次，填零为无限次释放。注意：每次条件不满足时，则释放次数将被清空，满足条件后重新计数")]
         public int times;
 
-        [Tooltip("子弹标签，用技能开关")]
-        public LayerMask layerMask;
-
         public BulletSpace space;
         public BulletSpace targetSpace;
         public BulletLocation location;
@@ -301,7 +319,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public BulletDirection direction;
         public BulletFollowTarget followTarget;
         
-        public string[] tags;
+        [Tooltip("子弹标签，用技能开关")]
+        public LayerMaskData layerMask;
 
         public string[] messageNames;
 
@@ -322,7 +341,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
-                tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
+                layerMask.tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
         }
 
@@ -510,7 +529,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
-                layerMask = value;
+                layerMask.value = value;
             }
         }
 
@@ -669,7 +688,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                 string messageName;
                 BulletMessage destinationMessage;
                 BlobBuilderArray<int> indices;
-                BlobBuilderArray<FixedString32Bytes> tags;
                 int count, index, numMessages = authoring._messages == null ? 0 : authoring._messages.Length, k;
                 for (i = 0; i < numBullets; ++i)
                 {
@@ -740,11 +758,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                         indices[j] = index;
                     }
                     
-                    count = source.tags == null ? 0 : source.tags.Length;
-                    tags = builder.Allocate(ref destination.tags, count);
-                    for (j = 0; j < count; ++j)
-                        tags[j] = source.tags[j];
-                    
                     destination.transform = math.RigidTransform(source.rotation, source.position);
                     destination.angularSpeed = source.angularSpeed;
                     destination.linearSpeed = source.linearSpeed;
@@ -772,13 +785,13 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                         Debug.LogError(
                             $"Bullet target {source.targetName} of bullet {source.name} can not been found!");
                     
-                    destination.layerMask = source.layerMask.value;
                     destination.space = source.space;
                     destination.targetSpace = source.targetSpace;
                     destination.location = source.location;
                     destination.targetLocation = source.targetLocation;
                     destination.direction = source.direction;
                     destination.followTarget = source.followTarget;
+                    destination.layerMask = source.layerMask;
                 }
                 
                 var standTimes = builder.Allocate(ref root.standTimes, standTimeIndices.Count);
@@ -796,11 +809,9 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             damageScale.value = authoring._damageScale;
             AddComponent(entity, damageScale);*/
 
-            BulletLayerMask layerMask;
-            layerMask.value = authoring._layerMask.value;
-            AddComponent(entity, layerMask);
+            AddComponent(entity, (BulletLayerMask)authoring._layerMask);
             
-            AddComponent<BulletTag>(entity);
+            //AddComponent<BulletTag>(entity);
             
             AddComponent<BulletStatus>(entity);
             AddComponent<BulletTargetStatus>(entity);
@@ -847,7 +858,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     internal float _maxAirSpeed = 0.1f;
     
     [SerializeField]
-    internal LayerMask _layerMask;
+    internal LayerMaskData _layerMask;
 
     //[SerializeField] 
     //internal float _damageScale = 1.0f;
