@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class SkillStyle : MonoBehaviour
@@ -22,18 +23,27 @@ public class SkillStyle : MonoBehaviour
     public StringEvent onName;
     public StringEvent onDetail;
 
-    [UnityEngine.Serialization.FormerlySerializedAs("onImage")]
     public SpriteEvent onSprite;
     
-    [UnityEngine.Serialization.FormerlySerializedAs("onImage")]
     public SpriteEvent onIcon;
     
-    //public ZG.UI.Progressbar cooldown;
+    public SkillKeyStyle keyStyle;
     
     public GameObject[] levels;
     public GameObject[] rarities;
     
     public ParentOverride[] parentOverrides;
+
+    private List<SkillKeyStyle> __keyStyles;
+    
+    public IReadOnlyList<SkillKeyStyle> keyStyles => __keyStyles;
+
+    public static void SetActive(GameObject[] gameObjects, int index)
+    {
+        int numGameObjects = gameObjects.Length;
+        for(int i = 0; i < numGameObjects; ++i)
+            gameObjects[i].SetActive(i == index);
+    }
 
     public Transform GetParent(int flag)
     {
@@ -49,8 +59,10 @@ public class SkillStyle : MonoBehaviour
         return transform.parent;
     }
 
-    public void SetAsset(in SkillAsset value)
+    public void SetAsset(in SkillAsset value, Sprite[] keys = null)
     {
+        OnDestroy();
+        
         if(onName != null)
             onName.Invoke(value.name);
             
@@ -63,9 +75,28 @@ public class SkillStyle : MonoBehaviour
         if(onIcon != null)
             onIcon.Invoke(value.icon);
 
-        __SetActive(levels, value.level);
+        SetActive(levels, value.level);
         
-        __SetActive(rarities, value.rarity);
+        SetActive(rarities, value.rarity);
+
+        if (keyStyle != null && keys != null && keys.Length > 0)
+        {
+            SkillKeyStyle keyStyle;
+            Transform keyStyleParent = this.keyStyle.transform.parent;
+            foreach (var key in keys)
+            {
+                keyStyle = Instantiate(this.keyStyle, keyStyleParent);
+                
+                keyStyle.onSprite.Invoke(key);
+                
+                keyStyle.gameObject.SetActive(true);
+                
+                if(__keyStyles == null)
+                    __keyStyles = new List<SkillKeyStyle>();
+                
+                __keyStyles.Add(keyStyle);
+            }
+        }
         
         var parent = GetParent(value.flag);
         if(parent != transform.parent)
@@ -74,10 +105,14 @@ public class SkillStyle : MonoBehaviour
         gameObject.SetActive(true);
     }
     
-    private static void __SetActive(GameObject[] gameObjects, int index)
+    private void OnDestroy()
     {
-        int numGameObjects = gameObjects.Length;
-        for(int i = 0; i < numGameObjects; ++i)
-            gameObjects[i].SetActive(i == index);
+        if (__keyStyles != null)
+        {
+            foreach (var keyStyle in __keyStyles)
+                Destroy(keyStyle.gameObject);
+            
+            __keyStyles.Clear();
+        }
     }
 }

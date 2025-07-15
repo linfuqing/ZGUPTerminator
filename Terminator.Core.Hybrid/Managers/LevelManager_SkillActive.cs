@@ -10,7 +10,6 @@ public partial class LevelManager
 {
     private struct SkillActive
     {
-        //private ActiveSkillStyle[] __styles;
         private List<ActiveSkillStyle[]> __styles;
         
         public SkillActive(
@@ -19,7 +18,7 @@ public partial class LevelManager
         {
             int numStyles = instances == null ? 0 : instances.Length;
             ActiveSkillStyle style;
-            var results = new ActiveSkillStyle[numStyles];
+            var styles = new ActiveSkillStyle[numStyles];
             for (int i = 0; i < numStyles; ++i)
             {
                 style = instances[i].style;
@@ -30,11 +29,11 @@ public partial class LevelManager
                 
                 style.transform.SetSiblingIndex(siblingIndex);
                 
-                results[i] = style;
+                styles[i] = style;
             }
 
             __styles = new List<ActiveSkillStyle[]>();
-            __styles.Add(results);
+            __styles.Add(styles);
         }
 
         public bool Dispose(int level)
@@ -60,7 +59,7 @@ public partial class LevelManager
             return true;
         }
 
-        public void Reset(int level, in SkillAsset asset)
+        public void Reset(int level, in SkillAsset asset, Sprite[] keySprites)
         {
             while(__styles.Count < level)
                 __styles.Add(null);
@@ -89,19 +88,8 @@ public partial class LevelManager
                 if(style == null)
                     continue;
                 
-                style.SetAsset(asset);
+                style.SetAsset(asset, keySprites);
             }
-
-            /*ActiveSkillStyle style;
-            int numStyles = __styles == null ? 0 : __styles.Length;
-            for (int i = 0; i < numStyles; ++i)
-            {
-                style = __styles[i];
-                if(style == null)
-                    continue;
-
-                style.SetAsset(asset);
-            }*/
         }
         
         public bool Contains(int level)
@@ -140,15 +128,29 @@ public partial class LevelManager
         public string name;
 
         public ActiveSkillStyle style;
+
+        public LevelSkillKeyStyle keyStyle;
     }
 
-    //[SerializeField] 
-    //internal ActiveSkillStyle[] _activeSkillStyles;
-
+    private struct SkillActiveKeyData
+    {
+        public int count;
+        public LevelSkillKeyStyle[] styles;
+    }
+    
     [SerializeField] 
     internal SkillActiveData[] _skillActiveDatas;
 
     private Pool<SkillActive> __skillActives;
+
+    private Dictionary<string, SkillActiveKeyData> __skillActiveKeys;
+
+    public int GetSkillActiveKeyCount(string keyName)
+    {
+        return __skillActiveKeys != null && __skillActiveKeys.TryGetValue(keyName, out var skillActiveKey)
+            ? skillActiveKey.count
+            : 0;
+    }
 
     public bool HasActiveSkill(int index, int level)
     {
@@ -161,52 +163,146 @@ public partial class LevelManager
     {
         return __skillActives[index].Get(level);
     }
-    
-    public void SetActiveSkill(int index, int level, in FixedString128Bytes name, in SkillAsset? value)
-    {
-        if (value == null)
-        {
-            if (!__skillActiveNames.Remove((index, level)))
-            {
-                Debug.LogError($"Skill {name} has not been active in the level {level} of {index}");
 
-                return;
+    public bool UnsetActiveSkill(int index, int level, in FixedString128Bytes name)
+    {
+        if (!__skillActiveNames.Remove((index, level)))
+        {
+            Debug.LogError($"Skill {name} has not been active in the level {level} of {index}");
+
+            return false;
+        }
+
+        if (__skillActives != null && __skillActives.TryGetValue(index, out var origin) && origin.Dispose(level) &&
+            __skillActives.RemoveAt(index))
+        {
+            if(SkillManager.TryGetAsset(name, out _, out var keys, out _) && keys != null)
+            {
+                foreach (var key in keys)
+                    __RemoveActiveSkillKey(key);
             }
 
-            if (__skillActives != null && __skillActives.TryGetValue(index, out var origin) && origin.Dispose(level))
-                __skillActives.RemoveAt(index);
+            return true;
         }
-        else
+
+        return false;
+    }
+
+    public void SetActiveSkill(int index, int level, in FixedString128Bytes name)
+    {
+        if (__skillActiveNames == null)
+            __skillActiveNames = new Dictionary<(int, int), FixedString128Bytes>();
+
+        if ((!__skillActiveNames.TryGetValue((index, level), out var oldName) || oldName != name) &&
+            SkillManager.TryGetAsset(name, out var asset, out var keys, out var keySprites))
         {
-            if (__skillActiveNames == null)
-                __skillActiveNames = new Dictionary<(int, int), FixedString128Bytes>();
+            __skillActiveNames[(index, level)] = name;
 
-            if (!__skillActiveNames.TryGetValue((index, level), out var oldName) || oldName != name)
+            IAnalytics.instance?.SetActiveSkill(asset.name);
+
+            if (__skillActives == null)
+                __skillActives = new Pool<SkillActive>();
+
+            if (!__skillActives.TryGetValue(index, out var origin))
             {
-                __skillActiveNames[(index, level)] = name;
+                origin = new SkillActive(index, _skillActiveDatas);
 
-                IAnalytics.instance?.SetActiveSkill(value.Value.name);
+                __skillActives.Insert(index, origin);
+            }
 
-                if (__skillActives == null)
-                    __skillActives = new Pool<SkillActive>();
+            origin.Reset(level, asset, keySprites);
 
-                if (!__skillActives.TryGetValue(index, out var origin))
-                {
-                    origin = new SkillActive(index, _skillActiveDatas);
+            if (keys != null)
+            {
+                foreach (var key in keys)
+                    __AddActiveSkillKey(key);
+            }
 
-                    __skillActives.Insert(index, origin);
-                }
-
-                origin.Reset(level, value.Value);
+            if (!oldName.IsEmpty && SkillManager.TryGetAsset(oldName, out _, out keys, out _) && keys != null)
+            {
+                foreach (var key in keys)
+                    __RemoveActiveSkillKey(key);
             }
         }
     }
-    
+
     public void SetActiveSkill(int index, int level, float cooldown, float elapsedTime)
     {
         if (!__skillActives.TryGetValue(index, out var value))
             return;
         
         value.Set(level, cooldown, elapsedTime);
+    }
+
+    private void __AddActiveSkillKey(string name)
+    {
+        if (__skillActiveKeys == null)
+            __skillActiveKeys = new Dictionary<string, SkillActiveKeyData>();
+
+        if (!__skillActiveKeys.TryGetValue(name, out var result))
+        {
+            result.count = 0;
+
+            int numStyles = _skillActiveDatas.Length;
+            LevelSkillKeyStyle style;
+            result.styles = new LevelSkillKeyStyle[numStyles];
+            for (int i = 0; i < numStyles; ++i)
+            {
+                style = _skillActiveDatas[i].keyStyle;
+                
+                result.styles[i] = style == null ? null : Instantiate(style, style.transform.parent);
+            }
+        }
+
+        ++result.count;
+
+        if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
+        {
+            foreach (var style in result.styles)
+            {
+                if(style == null)
+                    continue;
+                    
+                style.SetAsset(asset, result.count);
+            }
+        }
+        
+        __skillActiveKeys[name] = result;
+    }
+
+    private bool __RemoveActiveSkillKey(string name)
+    {
+        if (__skillActiveKeys == null || !__skillActiveKeys.TryGetValue(name, out var result))
+            return false;
+
+        if (result.count > 1)
+        {
+            --result.count;
+
+            if (result.styles != null && SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
+            {
+                foreach (var style in result.styles)
+                {
+                    if(style == null)
+                        continue;
+                    
+                    style.SetAsset(asset, result.count);
+                }
+            }
+
+            __skillActiveKeys[name] = result;
+        }
+        else
+        {
+            if (result.styles != null)
+            {
+                foreach (var style in result.styles)
+                    Destroy(style.gameObject);
+            }
+
+            __skillActiveKeys.Remove(name);
+        }
+
+        return true;
     }
 }

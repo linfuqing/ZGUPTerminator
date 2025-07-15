@@ -31,7 +31,7 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 
     public Progressbar progressbar;
     
-    public Button button;
+    //public Button button;
 
     public Scene[] scenes;
 

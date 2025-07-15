@@ -13,7 +13,7 @@ public struct LevelSkillData
 
     public int selectIndex;
 
-    public SkillAsset value;
+    //public SkillAsset value;
 }
 
 public partial class LevelManager
@@ -207,11 +207,17 @@ public partial class LevelManager
                     recommendPriority = 0,
                     guideIndex = -1,
                     recommendIndex = -1;
-                LevelSkillData? skill = null;
+                SkillAsset asset;
+                string[] keyNames;
+                Sprite[] keySprites;
                 LevelSkillStyle style;
+                LevelSkillData? skill = null;
                 for (int i = 0; i < numSkills; ++i)
                 {
                     var source = skills[i];
+                    if(!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keySprites))
+                        continue;
+                    
                     if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
                     {
                         if (source.selectIndex == -1 && destination.style.child == null)
@@ -226,11 +232,11 @@ public partial class LevelManager
                     }
 
                     if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
-                        (guideIndex == -1 || guidePriority < source.value.priority) &&
+                        (guideIndex == -1 || guidePriority < asset.priority) &&
                         _skillSelectionGuides != null &&
                         Array.IndexOf(_skillSelectionGuides, source.name) != -1)
                     {
-                        guidePriority = source.value.priority;
+                        guidePriority = asset.priority;
                         guideIndex = i;
                     }
 
@@ -252,11 +258,13 @@ public partial class LevelManager
                         });
                     }
 
-                    style.SetAsset(source.value);
+                    style.SetAsset(asset, keySprites);
 
-                    if ((recommendIndex == -1 || recommendPriority < source.value.priority))
+                    __SetSkillKeyStyles(style.keyStyles, keyNames);
+
+                    if ((recommendIndex == -1 || recommendPriority < asset.priority))
                     {
-                        recommendPriority = source.value.priority;
+                        recommendPriority = asset.priority;
                         recommendIndex = i;
                     }
 
@@ -362,13 +370,16 @@ public partial class LevelManager
 
         __DestroyGameObjects();
 
-        if (selectedSkillSelectionIndex != -1)
+        if (selectedSkillSelectionIndex != -1 && 
+            SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keySprites))
         {
             var selection = _skillSelections[selectedSkillSelectionIndex];
             var style = selection.style == null ? null : Instantiate(selection.style, selection.style.transform.parent);
             if (style != null)
             {
-                style.SetAsset(value.value);
+                style.SetAsset(asset, keySprites);
+                
+                __SetSkillKeyStyles(style.keyStyles, keyNames);
 
                 if (style.close == null)
                     Destroy(style.gameObject, selection.destroyTime);
@@ -505,6 +516,26 @@ public partial class LevelManager
                 Destroy(gameObjectToDestroy);
             
             __gameObjectsToDestroy.Clear();
+        }
+    }
+
+    private void __SetSkillKeyStyles(IReadOnlyList<SkillKeyStyle> styles, string[] names)
+    {
+        string name;
+        LevelSkillKeyStyle style; 
+        SkillKeyAsset asset;
+        int numKeys = Mathf.Min(styles == null ? 0 : styles.Count, names == null ? 0 : names.Length);
+        for (int i = 0; i < numKeys; ++i)
+        {
+            style = styles[i] as LevelSkillKeyStyle;
+            if (style == null)
+                continue;
+            
+            name = names[i];
+            if(!SkillManager.TryGetAsset(name, out asset))
+                continue;
+            
+            style.SetAsset(asset, GetSkillActiveKeyCount(name));
         }
     }
 

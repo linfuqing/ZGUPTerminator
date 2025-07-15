@@ -192,7 +192,7 @@ public partial class LevelSystemManaged
                     
                     __indices[key] = -1;
                     
-                    manager.SetActiveSkill(index, level, skillNames[key].ToString(), null);
+                    manager.UnsetActiveSkill(index, level, skillNames[key]);//, null);
                 }
             }
         }
@@ -202,7 +202,6 @@ public partial class LevelSystemManaged
         private bool __Set(
             int index, 
             int value, 
-            //in DynamicBuffer<LevelSkillDesc> descs, 
             ref SkillDefinition definition, 
             ref BlobArray<FixedString32Bytes> skillNames, 
             LevelManager manager)
@@ -212,9 +211,8 @@ public partial class LevelSystemManaged
             {
                 bool result = false, isCompleted = true;
                 int temp, level;
-                FixedString128Bytes skillName;
+                //FixedString128Bytes skillName;
                 SkillAsset asset;
-                //LevelSkillDesc desc;
                 foreach (var key in keys)
                 {
                     temp = __indices[key];
@@ -225,18 +223,11 @@ public partial class LevelSystemManaged
                     if(level == -1)
                         continue;
 
-                    skillName = skillNames[key];
+                    /*skillName = skillNames[key];
                     if (!SkillManager.TryGetAsset(skillName, out asset))
                     {
                         isCompleted = false;
                         
-                        continue;
-                    }
-                    /*desc = descs[key];
-                    if (LevelSkillDesc.LoadingStatus.Completed != desc.loadingStatus)
-                    {
-                        isCompleted = false;
-
                         continue;
                     }*/
                     
@@ -244,7 +235,7 @@ public partial class LevelSystemManaged
                     {
                         __indices[key] = index;
 
-                        manager.SetActiveSkill(index, level, skillName, asset/*desc.ToAsset()*/);
+                        manager.SetActiveSkill(index, level, skillNames[key]);//skillName, asset/*desc.ToAsset()*/);
                     }
 
                     result = true;

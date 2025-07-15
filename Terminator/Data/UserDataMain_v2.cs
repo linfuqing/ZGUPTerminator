@@ -42,6 +42,8 @@ public partial class UserDataMain
             public int minLevel;
             public int maxLevel;
 
+            public int maxUnits;
+
             public float unitTime;
 
             public float chance;
@@ -101,6 +103,15 @@ public partial class UserDataMain
                 }
             }
             
+            [CSVField]
+            public int 游荡奖励最大刷新次数
+            {
+                set
+                {
+                    maxUnits = value;
+                }
+            }
+
             [CSVField]
             public float 游荡奖励刷新时间
             {
@@ -192,6 +203,7 @@ public partial class UserDataMain
                 destination.type = source.type;
                 destination.min = source.minCount;
                 destination.max = source.maxCount;
+                destination.maxUnits = source.maxUnits;
                 destination.unitTime = (long)Math.Round(source.unitTime * TimeSpan.TicksPerSecond);
                 destination.chance = source.chance;
             }

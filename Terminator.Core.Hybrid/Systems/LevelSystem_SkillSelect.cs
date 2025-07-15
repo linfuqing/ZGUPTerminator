@@ -498,11 +498,9 @@ public partial class LevelSystemManaged
                         {
                             if (!skillNames.TryGetValue(skill.originIndex, out result./*value.*/name))
                             {
-                                //activeDesc = descs[skill.originIndex];
                                 result.selectIndex = -1;
                                 result.name = skillAssetNames[skill.originIndex].ToString();
-                                SkillManager.TryGetAsset(result.name, out result.value);
-                                //result.value = activeDesc.ToAsset();
+                                //SkillManager.TryGetAsset(result.name, out result.value);
 
                                 results.Add(result);
 
@@ -512,11 +510,9 @@ public partial class LevelSystemManaged
                             result.parentName = result./*value.*/name;
                         }
 
-                        //desc = descs[skill.index];
                         result.selectIndex = i;
                         result.name = skillAssetNames[skill.index].ToString();
-                        SkillManager.TryGetAsset(result.name, out result.value);
-                        //result.value = desc.ToAsset();
+                        //SkillManager.TryGetAsset(result.name, out result.value);
 
                         results.Add(result);
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 public partial interface IUserData
@@ -15,6 +16,8 @@ public partial interface IUserData
 
             public int min;
             public int max;
+
+            public int maxUnits;
 
             public long unitTime;
 
@@ -57,7 +60,7 @@ public partial interface IUserData
             var random = new Unity.Mathematics.Random(hash);
 
             bool isContains;
-            int numRewards = rewards.Length, accessoryIndex = numRewards;
+            int uints, numRewards = rewards.Length, accessoryIndex = numRewards;
             long ticks = Math.Min(deltaTicks == 0 ? DateTime.UtcNow.Ticks - this.ticks : deltaTicks, maxTime);
             UserRewardData result;
             var results = new Dictionary<int, UserRewardData>();
@@ -67,8 +70,11 @@ public partial interface IUserData
                 isContains = false;
                 for(int i = 0; i < numRewards; ++i)
                 {
+                    uints = ++rewardTimes[i];
+                    
                     ref var reward = ref rewards[i];
-                    if (++rewardTimes[i] * reward.unitTime > ticks ||
+                    if (reward.maxUnits > 0 && reward.maxUnits < uints || 
+                        uints * reward.unitTime > ticks ||
                         reward.chance < random.NextFloat())
                         continue;
                     
@@ -82,12 +88,13 @@ public partial interface IUserData
                     }
 
                     result.count += random.NextInt(reward.min, reward.max);
-
+                    
                     if (reward.type == UserRewardType.Accessory)
                         results[accessoryIndex++] = result;
                     else
                         results[i] = result;
                 }
+
             } while (isContains);
 
             var values = new UserRewardData[results.Count];

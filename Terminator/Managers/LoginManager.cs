@@ -665,11 +665,11 @@ public sealed class LoginManager : MonoBehaviour
                 }
             });
 
-            if (style.button != null)
+            /*if (style.button != null)
             {
                 style.button.onClick.RemoveListener(__ApplyStart);
                 style.button.onClick.AddListener(__ApplyStart);
-            }
+            }*/
 
             style.gameObject.SetActive(true);
             
