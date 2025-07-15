@@ -277,7 +277,7 @@ public class SkillManager : MonoBehaviour
         keyNames = null;
         keySprites = null;
 
-        return true;
+        return false;
     }
     
     public static bool TryGetAsset(in string name, out SkillKeyAsset result)
