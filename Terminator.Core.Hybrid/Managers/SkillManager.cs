@@ -220,13 +220,19 @@ public class SkillManager : MonoBehaviour
     [SerializeField]
     internal SkillData[] _skills;
 
+    #region CSV
+    [SerializeField]
+    [CSV("_skills", guidIndex = -1, nameIndex = 0)]
+    internal string _skillsPath;
+    #endregion
+
     [SerializeField]
     internal SkillKeyData[] _keys;
     
     #region CSV
     [SerializeField]
-    [CSV("_skills", guidIndex = -1, nameIndex = 0)]
-    internal string _skillsPath;
+    [CSV("_keys", guidIndex = -1, nameIndex = 0)]
+    internal string _keysPath;
     #endregion
 
     private static Dictionary<FixedString128Bytes, Asset> __assets = new Dictionary<FixedString128Bytes, Asset>();
