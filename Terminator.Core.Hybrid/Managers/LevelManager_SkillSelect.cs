@@ -537,7 +537,7 @@ public partial class LevelManager
             
             style.SetAsset(asset, GetSkillActiveKeyCount(name));
             
-            style.gameObject.SetActive(true);
+            //style.gameObject.SetActive(true);
         }
     }
 
