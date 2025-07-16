@@ -276,8 +276,8 @@ public partial struct BulletSystem : ISystem
                         out var bulletLayerMask,
                         out _))
                     layerMask |= bulletLayerMask;
-                else if(layerMask.value == 0)
-                    layerMask.value = -1;
+                else if(layerMask.isEmpty)
+                    layerMask = BulletLayerMask.AllLayers;
             }
             else
             {

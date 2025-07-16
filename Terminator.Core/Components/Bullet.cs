@@ -609,10 +609,9 @@ public struct BulletDefinition
             {
                 if (data.interval > math.FLT_MIN_NORMAL)
                 {
-                    count = data.capacity - status.count;
-                    count = math.min(count, (int)math.floor((time - status.cooldown) / data.interval) + 1);
+                    count = (int)math.floor((time - status.cooldown) / data.interval) + 1;
 
-                    if (status.count + count > data.capacity)
+                    if (count + status.count > data.capacity)
                         count = data.capacity - status.count;
                     
                     status.cooldown += data.interval * count;
@@ -924,6 +923,14 @@ public struct BulletLayerMask : IComponentData
     public int value;
     public FixedList512Bytes<FixedString32Bytes> tags;
 
+    public static readonly BulletLayerMask AllLayers = new BulletLayerMask()
+    {
+        value = -1,
+        tags = default
+    };
+    
+    public bool isEmpty => value == 0 && tags.IsEmpty;
+    
     public bool BelongsTo(in BulletLayerMask layerMask)
     {
         if (value != 0 && (value & layerMask.value) == 0)

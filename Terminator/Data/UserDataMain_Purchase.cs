@@ -207,10 +207,13 @@ public partial class UserDataMain
 
                 key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
 
-                if (output.times > 0 && !(PlayerPrefs.HasKey(key) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(key))))
+                if (output.times > 0)
                 {
                     if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
-                        value.flag = 0;
+                        value.flag =
+                            PlayerPrefs.HasKey(key) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(key))
+                                ? UserPurchaseToken.Flag.Locked
+                                : 0;
                     else
                         value.flag = UserPurchaseToken.Flag.Collected;
                 }
