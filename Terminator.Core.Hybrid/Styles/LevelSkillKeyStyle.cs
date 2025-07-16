@@ -20,7 +20,7 @@ public class LevelSkillKeyStyle : SkillKeyStyle
         
         int index = value.ranks.BinarySearch(count);
         
-        SkillStyle.SetActive(ranks, index);
+        SkillStyle.SetActive(ranks, index + 1);
 
         progressbar.value = count * 1.0f / value.capacity;
 

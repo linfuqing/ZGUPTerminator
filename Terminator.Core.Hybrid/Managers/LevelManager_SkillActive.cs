@@ -130,6 +130,9 @@ public partial class LevelManager
         public ActiveSkillStyle style;
 
         public LevelSkillKeyStyle keyStyle;
+
+        public UnityEvent onKeyEnable;
+        public UnityEvent onKeyDisable;
     }
 
     private struct SkillActiveKeyData
@@ -241,16 +244,25 @@ public partial class LevelManager
 
         if (!__skillActiveKeys.TryGetValue(name, out var result))
         {
+            int numStyles = _skillActiveDatas.Length;
+            if (__skillActiveKeys.Count < 1)
+            {
+                for (int i = 0; i < numStyles; ++i)
+                {
+                    ref var skillActiveData = ref _skillActiveDatas[i];
+                    skillActiveData.onKeyEnable?.Invoke();
+                }
+            }
+
             result.count = 0;
 
-            int numStyles = _skillActiveDatas.Length;
-            LevelSkillKeyStyle style;
             result.styles = new LevelSkillKeyStyle[numStyles];
             for (int i = 0; i < numStyles; ++i)
             {
-                style = _skillActiveDatas[i].keyStyle;
+                ref var skillActiveData = ref _skillActiveDatas[i];
                 
-                result.styles[i] = style == null ? null : Instantiate(style, style.transform.parent);
+                result.styles[i] = skillActiveData.keyStyle == null ? null : 
+                    Instantiate(skillActiveData.keyStyle, skillActiveData.keyStyle.transform.parent);
             }
         }
 
@@ -301,6 +313,16 @@ public partial class LevelManager
             }
 
             __skillActiveKeys.Remove(name);
+            
+            if (__skillActiveKeys.Count < 1)
+            {
+                int numStyles = _skillActiveDatas.Length;
+                for (int i = 0; i < numStyles; ++i)
+                {
+                    ref var skillActiveData = ref _skillActiveDatas[i];
+                    skillActiveData.onKeyDisable?.Invoke();
+                }
+            }
         }
 
         return true;
