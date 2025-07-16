@@ -708,6 +708,8 @@ public sealed class LoginManager : MonoBehaviour
         }
         else if(_onHotDisable != null)
             _onHotDisable.Invoke();
+        
+        onLevelLoaded?.Invoke();
     }
 
     private void __ApplyLevel(Memory<UserReward> rewards)
