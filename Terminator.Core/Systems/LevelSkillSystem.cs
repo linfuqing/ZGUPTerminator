@@ -172,6 +172,7 @@ public partial struct LevelSkillPickableSystem : ISystem
                 if(version.index == 0)
                     ++version.value;
 
+                version.timeScale = 0.0f;
                 version.entity = result.version;
 
                 versions[entity] = version;

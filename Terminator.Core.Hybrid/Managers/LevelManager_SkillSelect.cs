@@ -30,14 +30,14 @@ public partial class LevelManager
     [Serializable]
     internal struct SkillSelection
     {
-        public enum Flag
+        /*public enum Flag
         {
             DontPause = 0x01, 
-        }
+        }*/
         
         public string name;
 
-        public Flag flag;
+        //public Flag flag;
 
         public float startTime;
         public float destroyTime;
@@ -115,18 +115,18 @@ public partial class LevelManager
         return result;
     }
 
-    public void SelectSkillBegin(int selectionIndex)
+    public void SelectSkillBegin(int selectionIndex, float timeScale)
     {
         IAnalytics.instance?.SelectSkillBegin(selectionIndex);
 
         if (selectionIndex == -1)
-            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f, 0.0f));
+            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f, timeScale));
         else
         {
             var selection = _skillSelections[selectionIndex];
             selection.onEnable.Invoke();
 
-            float timeScale = (selection.flag & SkillSelection.Flag.DontPause) == SkillSelection.Flag.DontPause ? 1.0f : 0.0f;
+            //float timeScale = (selection.flag & SkillSelection.Flag.DontPause) == SkillSelection.Flag.DontPause ? 1.0f : 0.0f;
 
             if (selection.start == null)
                 StartCoroutine(__StartSkillSelection(

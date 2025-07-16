@@ -523,7 +523,7 @@ public partial class LevelSystemManaged
                     {
                         __skillSelection.status = SkillSelectionStatus.Begin;
 
-                        manager.SelectSkillBegin(skillVersion.selection);
+                        manager.SelectSkillBegin(skillVersion.selection, skillVersion.timeScale);
                     }
 
                     manager.SelectSkills(skillVersion.priority, results.ToArray());

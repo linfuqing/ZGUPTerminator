@@ -424,6 +424,7 @@ public struct LevelSkillVersion : IComponentData
     public int count;
     public int priority;
     public int selection;
+    public float timeScale;
     public Entity entity;
 }
 
