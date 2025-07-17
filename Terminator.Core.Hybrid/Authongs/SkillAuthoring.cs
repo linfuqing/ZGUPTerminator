@@ -365,7 +365,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     Debug.LogError(
                         $"Active skill {source.name} can not been found!");
 
-                destination.damageScale = source.damageScale;
+                destination.damageScale = Mathf.Abs(source.damageScale) > Mathf.Epsilon ?  source.damageScale : 1.0f;
             }
             AddComponent<SkillStatus>(entity);
 
