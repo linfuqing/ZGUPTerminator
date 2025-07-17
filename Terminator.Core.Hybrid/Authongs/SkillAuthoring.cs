@@ -174,6 +174,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
     internal struct ActiveData
     {
         public string name;
+
+        public float damageScale;
         
         #region CSV
         [CSVField]
@@ -182,6 +184,15 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             set
             {
                 name = value;
+            }
+        }
+        
+        [CSVField]
+        public float 技能激活伤害倍率
+        {
+            set
+            {
+                damageScale = value;
             }
         }
         #endregion
@@ -353,6 +364,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                 if (destination.value == -1)
                     Debug.LogError(
                         $"Active skill {source.name} can not been found!");
+
+                destination.damageScale = source.damageScale;
             }
             AddComponent<SkillStatus>(entity);
 

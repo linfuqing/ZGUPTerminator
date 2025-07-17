@@ -1,9 +1,7 @@
 using System;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.Profiling;
-using UnityEngine;
 
 public partial class LevelSystemManaged
 {
@@ -209,7 +207,7 @@ public partial class LevelSystemManaged
             using(__set.Auto())
             using (var keys = __indices.GetKeyArray(Allocator.Temp))
             {
-                bool result = false, isCompleted = true;
+                bool result = false;//, isCompleted = true;
                 int temp, level;
                 //FixedString128Bytes skillName;
                 //SkillAsset asset;
@@ -241,7 +239,7 @@ public partial class LevelSystemManaged
                     result = true;
                 }
 
-                return result && isCompleted;
+                return result;// && isCompleted;
             }
         }
         
