@@ -923,7 +923,7 @@ public struct BulletLayerMask : IComponentData
     public int value;
     public FixedList512Bytes<FixedString32Bytes> tags;
 
-    public static readonly BulletLayerMask AllLayers = new BulletLayerMask()
+    public static readonly BulletLayerMask AllLayers = new ()
     {
         value = -1,
         tags = default

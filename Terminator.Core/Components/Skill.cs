@@ -1,3 +1,4 @@
+using System;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -11,10 +12,18 @@ public enum SkillMessageType
     Running
 }
 
+[Flags]
+public enum SkillBulletFlag
+{
+    DontCooldown = 0x01
+}
+
 public struct SkillDefinition
 {
     public struct Bullet
     {
+        public SkillBulletFlag flag;
+        
         public int index;
         public float damageScale;
         public float chance;
@@ -172,7 +181,8 @@ public struct SkillDefinition
                     for (j = 0; j < numBulletIndices; ++j)
                     {
                         ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                        if (bullet.index < bulletStates.Length)
+                        if ((bullet.flag & SkillBulletFlag.DontCooldown) != SkillBulletFlag.DontCooldown && 
+                            bullet.index < bulletStates.Length)
                         {
                             ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
                             bulletStatus.cooldown =

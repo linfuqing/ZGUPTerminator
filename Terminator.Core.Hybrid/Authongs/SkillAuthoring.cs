@@ -31,6 +31,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
     public struct BulletData : IEquatable<BulletData>
     {
         public string name;
+        public SkillBulletFlag flag;
+
         public float damageScale;
         public float chance;
 
@@ -126,6 +128,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     if (index == -1)
                     {
                         bullet.name = parameter;
+                        bullet.flag = 0;
                         bullet.damageScale = 0.0f;
                         bullet.chance = 1.0f;
                     }
@@ -136,13 +139,25 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                         count = parameter.IndexOf(':', index + 1);
                         if (count == -1)
                         {
+                            bullet.flag = 0;
                             bullet.damageScale = float.Parse(parameter.Substring(index + 1));
                             bullet.chance = 1.0f;
                         }
                         else
                         {
                             bullet.damageScale = float.Parse(parameter.Substring(index + 1, count - index - 1));
-                            bullet.chance = float.Parse(parameter.Substring(count + 1));
+                            
+                            index = parameter.IndexOf(':', count + 1);
+                            if (index == -1)
+                            {
+                                bullet.chance = float.Parse(parameter.Substring(count + 1));
+                                bullet.flag = 0;
+                            }
+                            else
+                            {
+                                bullet.chance = float.Parse(parameter.Substring(count + 1, index - count - 1));
+                                bullet.flag = (SkillBulletFlag)int.Parse(parameter.Substring(index + 1));
+                            }
                         }
                     }
                 }
@@ -262,6 +277,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                             }
                             else
                             {
+                                destinationBullet.flag = sourceBullet.flag;
                                 destinationBullet.damageScale = sourceBullet.damageScale;
                                 destinationBullet.chance = sourceBullet.chance;
 
