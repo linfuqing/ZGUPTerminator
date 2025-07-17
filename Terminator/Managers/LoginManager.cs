@@ -44,7 +44,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public static event Action<Memory<UserRewardData>> onAwake;
     
-    public static event Action onLevelLoaded;
+    public static event Action<IUserData.Levels> onLevelLoaded;
 
     public static event Action<Stage> onStageChanged;
     
@@ -709,7 +709,7 @@ public sealed class LoginManager : MonoBehaviour
         else if(_onHotDisable != null)
             _onHotDisable.Invoke();
         
-        onLevelLoaded?.Invoke();
+        onLevelLoaded?.Invoke(levels);
     }
 
     private void __ApplyLevel(Memory<UserReward> rewards)
