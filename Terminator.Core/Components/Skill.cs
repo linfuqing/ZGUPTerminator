@@ -23,9 +23,9 @@ public struct SkillDefinition
 {
     public struct Bullet
     {
+        public int index;
         public SkillBulletFlag flag;
         
-        public int index;
         public float damageScale;
         public float chance;
     }

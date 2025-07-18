@@ -225,19 +225,17 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
                 var bulletAuthoring = GetComponent<BulletAuthoring>();
-                var bulletList = new List<SkillDefinition.Bullet>();
-                var bulletDataIndices = new Dictionary<BulletData, int>();
+                var bulletDataIndices = new Dictionary<BulletData, (int, int)>();
                 
                 ref var root = ref builder.ConstructRoot<SkillDefinition>();
 
                 int k,
-                    bulletDataIndex,
                     numMessageIndices,
                     numPreIndices,
                     numBulletIndices,
                     numBullets = bulletAuthoring._bullets.Length;
+                (int, int) bulletDataIndex;
                 string messageName, preName;
-                SkillDefinition.Bullet destinationBullet;
                 BlobBuilderArray<int> bulletIndices, messageIndices, preIndices;
                 var skills = builder.Allocate(ref root.skills, numSkills);
                 for (i = 0; i < numSkills; ++i)
@@ -254,41 +252,32 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     bulletIndices = builder.Allocate(ref destination.bulletIndices, numBulletIndices);
                     for (j = 0; j < numBulletIndices; ++j)
                     {
-                        ref var sourceBullet = ref source.bullets[j];
-                        if (!bulletDataIndices.TryGetValue(sourceBullet, out bulletDataIndex))
+                        ref var bullet = ref source.bullets[j];
+                        if (!bulletDataIndices.TryGetValue(bullet, out bulletDataIndex))
                         {
-                            destinationBullet.index = -1;
+                            bulletDataIndex.Item1 = -1;
+                            bulletDataIndex.Item2 = -1;
                             for (k = 0; k < numBullets; ++k)
                             {
-                                if (bulletAuthoring._bullets[k].name == sourceBullet.name)
+                                if (bulletAuthoring._bullets[k].name == bullet.name)
                                 {
-                                    destinationBullet.index = k;
+                                    bulletDataIndex.Item2 = k;
 
                                     break;
                                 }
                             }
 
-                            if (destinationBullet.index == -1)
-                            {
+                            if (bulletDataIndex.Item2 == -1)
                                 Debug.LogError(
-                                    $"Bullet {sourceBullet.name} of skill {source.name} can not been found!");
-
-                                bulletDataIndex = -1;
-                            }
+                                    $"Bullet {bullet.name} of skill {source.name} can not been found!");
                             else
                             {
-                                destinationBullet.flag = sourceBullet.flag;
-                                destinationBullet.damageScale = sourceBullet.damageScale;
-                                destinationBullet.chance = sourceBullet.chance;
-
-                                bulletDataIndex = bulletList.Count;
-                                bulletDataIndices[sourceBullet] = bulletDataIndex;
-                                
-                                bulletList.Add(destinationBullet);
+                                bulletDataIndex.Item1 = bulletDataIndices.Count;
+                                bulletDataIndices[bullet] = bulletDataIndex;
                             }
                         }
 
-                        bulletIndices[j] = bulletDataIndex;
+                        bulletIndices[j] = bulletDataIndex.Item1;
                     }
 
                     numMessageIndices = source.messageNames == null ? 0 : source.messageNames.Length;
@@ -339,10 +328,18 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     }
                 }
 
-                numBullets = bulletList.Count;
+                BulletData bulletSource;
+                numBullets = bulletDataIndices.Count;
                 var bullets = builder.Allocate(ref root.bullets, numBullets);
-                for (i = 0; i < numBullets; ++i)
-                    bullets[i] = bulletList[i];
+                foreach (var bulletDataIndexTemp in bulletDataIndices)
+                {
+                    bulletSource = bulletDataIndexTemp.Key;
+                    ref var bulletDestination = ref bullets[bulletDataIndexTemp.Value.Item2];
+                    bulletDestination.index =  bulletDataIndexTemp.Value.Item1;
+                    bulletDestination.flag = bulletSource.flag;
+                    bulletDestination.chance = bulletSource.chance;
+                    bulletDestination.damageScale = bulletSource.damageScale;
+                }
 
                 instance.definition = builder.CreateBlobAssetReference<SkillDefinition>(Allocator.Persistent);
             }
