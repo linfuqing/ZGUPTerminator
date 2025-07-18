@@ -334,8 +334,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                 foreach (var bulletDataIndexTemp in bulletDataIndices)
                 {
                     bulletSource = bulletDataIndexTemp.Key;
-                    ref var bulletDestination = ref bullets[bulletDataIndexTemp.Value.Item2];
-                    bulletDestination.index =  bulletDataIndexTemp.Value.Item1;
+                    ref var bulletDestination = ref bullets[bulletDataIndexTemp.Value.Item1];
+                    bulletDestination.index =  bulletDataIndexTemp.Value.Item2;
                     bulletDestination.flag = bulletSource.flag;
                     bulletDestination.chance = bulletSource.chance;
                     bulletDestination.damageScale = bulletSource.damageScale;
