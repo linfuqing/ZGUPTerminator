@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -13,7 +14,7 @@ public enum SkillMessageType
 }
 
 [Flags]
-public enum SkillBulletFlag
+public enum SkillBulletFlag : int
 {
     DontCooldown = 0x01
 }

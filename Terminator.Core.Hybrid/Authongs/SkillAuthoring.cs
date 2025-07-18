@@ -38,7 +38,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
 
         public bool Equals(BulletData other)
         {
-            return name == other.name && damageScale == other.damageScale && chance.Equals(other.chance);
+            return name == other.name && flag == other.flag && damageScale == other.damageScale && chance.Equals(other.chance);
         }
     }
 
