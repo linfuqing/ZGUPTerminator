@@ -5,12 +5,14 @@ public struct DropToDamage : IComponentData, IEnableableComponent
 {
     public bool isGrounded;
     public int value;
+    public int valueImmunized;
 
     public int layerMask;
 
-    public void Add(int value, int layerMask)
+    public void Add(int value, int valueImmunized, int layerMask)
     {
         Interlocked.Add(ref this.value, value);
+        Interlocked.Add(ref this.valueImmunized, valueImmunized);
 
         if (layerMask == -1)
             this.layerMask = -1;

@@ -13,6 +13,7 @@ public class DropToDamageAuthoring : MonoBehaviour
             DropToDamage instance;
             instance.isGrounded = true;
             instance.value = authoring._value;
+            instance.valueImmunized = authoring._valueImmunized;
             instance.layerMask = authoring._layerMask.value;
             AddComponent(entity, instance);
             
@@ -23,9 +24,13 @@ public class DropToDamageAuthoring : MonoBehaviour
             AddComponent(entity, range);*/
         }
     }
+    
     [SerializeField]
     internal int _value;
 
+    [SerializeField]
+    internal int _valueImmunized;
+    
     [SerializeField]
     internal LayerMask _layerMask;
 

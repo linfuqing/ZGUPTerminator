@@ -82,6 +82,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("掉落伤害")]
         public int value;
         
+        [Tooltip("可被免疫的伤害")]
+        public int valueImmunized;
+
         [Tooltip("掉落伤害")]
         public int valueToDrop;
         
@@ -110,6 +113,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                    messageLayerMask == other.messageLayerMask &&
                    bulletLayerMask.Equals(other.bulletLayerMask) &&
                    value == other.value &&
+                   valueImmunized == other.valueImmunized &&
                    valueToDrop == other.valueToDrop &&
                    Mathf.Approximately(spring, other.spring) &&
                    Mathf.Approximately(explosion, other.explosion) &&
@@ -253,6 +257,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.messageLayerMask = source.messageLayerMask.value;
                     destination.bulletLayerMask = source.bulletLayerMask;
                     destination.value = source.value;
+                    destination.valueImmunized = source.valueImmunized;
                     destination.valueToDrop = source.valueToDrop;
                     destination.goldMultiplier = source.goldMultiplier;
                     destination.spring = source.spring;

@@ -35,7 +35,7 @@ public partial struct DropToDamageSystem : ISystem
             }
 
             var effectTargetDamage = effectTargetDamages[index];
-            effectTargetDamage.Add(instance.value, instance.layerMask);
+            effectTargetDamage.Add(instance.value, instance.valueImmunized, instance.layerMask);
             effectTargetDamages[index] = effectTargetDamage;
 
             return true;

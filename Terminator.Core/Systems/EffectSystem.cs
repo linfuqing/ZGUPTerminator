@@ -391,6 +391,7 @@ public partial struct EffectSystem : ISystem
                     int totalCount = 0, 
                         totalDamageValue = 0, 
                         damageValue,
+                        damageValueImmunized, 
                         dropDamageValue, 
                         //layerMask,
                         belongsTo,
@@ -448,16 +449,20 @@ public partial struct EffectSystem : ISystem
 
                             damageValue = (int)math.ceil(damage.value * instanceDamage.scale);
 
-                            totalDamageValue += damageValue;
+                            damageValueImmunized = (int)math.ceil(damage.valueImmunized * instanceDamage.scale);
 
-                            isResult = damageValue != 0;
+                            totalDamageValue += damageValue + damageValueImmunized;
+
+                            isResult = damageValue != 0 || damageValueImmunized != 0;
 
                             ref var targetDamage = ref targetDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
                             if (isResult)
                             {
-                                targetDamage.Add(damageValue, damage.messageLayerMask);
+                                targetDamage.Add(damageValue,  damageValueImmunized, damage.messageLayerMask);
                                 targetDamages.SetComponentEnabled(simulationEvent.entity, true);
+
+                                damageValue += damageValueImmunized;
                             }
 
                             if (characterBody.IsValid)
@@ -472,7 +477,7 @@ public partial struct EffectSystem : ISystem
 
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
-                                    dropToDamage.Add(dropDamageValue, damage.messageLayerMask);
+                                    dropToDamage.Add(dropDamageValue, 0, damage.messageLayerMask);
 
                                     dropToDamage.isGrounded = characterBody.ValueRO.IsGrounded;
 
@@ -925,15 +930,23 @@ public partial struct EffectSystem : ISystem
             if (target.invincibleTime >= 0.0f)
                 target.invincibleTime -= deltaTime;
             
-            if (target.invincibleTime < 0.0f)
+            var targetDamage = targetDamages[index];
+            var targetHP = targetHPs[index];
+            if (targetHP.value != 0 || 
+                targetDamage.value != 0 || 
+                target.invincibleTime < 0.0f)
             {
                 var targetInstance = targetInstances[index];
 
-                int damage, damageLayerMask;
-
-                var targetHP = targetHPs[index];
-                if (targetHP.value != 0)
+                int damage = (int)math.ceil((targetDamage.value + targetDamage.valueImmunized) *
+                                        (index < targetDamageScales.Length
+                                            ? targetDamageScales[index].value
+                                            : 1.0f)), 
+                    damageLayerMask;
+                if (targetHP.value > targetDamage.value)
                 {
+                    targetHP.value -=  targetDamage.value;
+                    
                     damage = 0;
 
                     damageLayerMask = targetHP.layerMask;
@@ -951,14 +964,8 @@ public partial struct EffectSystem : ISystem
                 }
                 else
                 {
-                    var targetDamage = targetDamages[index];
-
                     damageLayerMask = targetDamage.layerMask;
 
-                    damage = (int)math.ceil(targetDamage.value *
-                                            (index < targetDamageScales.Length
-                                                ? targetDamageScales[index].value
-                                                : 1.0f));
                     if (damage > 0 && index < targetInvulnerabilityStates.Length)
                     {
                         bool isInvulnerability;

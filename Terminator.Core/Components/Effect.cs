@@ -53,6 +53,8 @@ public struct EffectDefinition
 
         public int valueToDrop;
 
+        public int valueImmunized;
+        
         public float goldMultiplier;
 
         public float spring;
@@ -238,10 +240,12 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
 {
     public int layerMask;
     public int value;
+    public int valueImmunized;
     
-    public void Add(int value, int layerMask)
+    public void Add(int value, int valueImmunized, int layerMask)
     {
         Interlocked.Add(ref this.value, value);
+        Interlocked.Add(ref this.valueImmunized, valueImmunized);
 
         if (layerMask == -1)
             this.layerMask = -1;
