@@ -439,10 +439,10 @@ public partial class UserDataMain
                     accessoryStageIndices = __GetAccessoryStageIndices(i);
 
                     numAccessoryStages = accessoryStageIndices.Count;
-                    for (j = 0; j < numAccessoryStages; ++j)
+                    for (j = 0; j <= numAccessoryStages; ++j)
                     {
                         key =
-                            $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{_accessoryStages[accessoryStageIndices[j]].name}";
+                            $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{j}";
                         key = PlayerPrefs.GetString(key);
                         if (string.IsNullOrEmpty(key))
                             continue;

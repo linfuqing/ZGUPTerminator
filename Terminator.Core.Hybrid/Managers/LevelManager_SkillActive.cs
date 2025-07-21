@@ -130,6 +130,9 @@ public partial class LevelManager
         public ActiveSkillStyle style;
 
         public LevelSkillKeyStyle keyStyle;
+        public LevelSkillKeyStyle resultKeyStyle;
+        
+        public float resultKeyStyleDestroyTime;
 
         public UnityEvent onKeyEnable;
         public UnityEvent onKeyDisable;
@@ -138,6 +141,7 @@ public partial class LevelManager
     private struct SkillActiveKeyData
     {
         public int count;
+        public int rank;
         public LevelSkillKeyStyle[] styles;
     }
     
@@ -267,6 +271,7 @@ public partial class LevelManager
         }
 
         ++result.count;
+        int rank = result.rank;
 
         if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
         {
@@ -274,11 +279,34 @@ public partial class LevelManager
             {
                 if(style == null)
                     continue;
-                    
-                style.gameObject.SetActive(style.SetAsset(asset, result.count));
+
+                result.rank = style.SetAsset(asset, result.count);
+                
+                style.gameObject.SetActive(result.rank >= 0);
             }
-        }
+            
+            if (result.rank != rank)
+            {
+                GameObject gameObject;
+                LevelSkillKeyStyle resultKeyStyle;
+                foreach (var skillActiveData in _skillActiveDatas)
+                {
+                    if(skillActiveData.resultKeyStyle == null)
+                        continue;
+                    
+                    resultKeyStyle = Instantiate(skillActiveData.resultKeyStyle, skillActiveData.resultKeyStyle.transform.parent);
+                    resultKeyStyle.SetAsset(asset, result.count);
+
+                    gameObject = resultKeyStyle.gameObject;
+                    gameObject.SetActive(true);
         
+                    if(skillActiveData.resultKeyStyleDestroyTime > 0.0f)
+                        Destroy(gameObject, skillActiveData.resultKeyStyleDestroyTime);
+                }
+            }
+
+        }
+
         __skillActiveKeys[name] = result;
     }
 
@@ -298,7 +326,9 @@ public partial class LevelManager
                     if(style == null)
                         continue;
                     
-                    style.gameObject.SetActive(style.SetAsset(asset, result.count));
+                    result.rank = style.SetAsset(asset, result.count);
+
+                    style.gameObject.SetActive(result.rank >= 0);
                 }
             }
 

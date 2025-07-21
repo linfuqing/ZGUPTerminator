@@ -936,9 +936,7 @@ public partial class UserDataMain
     {
         public string name;
 
-        public string stageName;
-
-        public int count;
+        public int stage;
     }
 
     [Serializable]
@@ -1333,29 +1331,17 @@ public partial class UserDataMain
         if (isCreated && _accessoryDefaults != null)
         {
             uint id;
-            int accessoryIndex, numAccessoryStageIndices;
+            int accessoryIndex;
             UserRewardData reward;
             reward.type = UserRewardType.Accessory;
             foreach (var accessoryDefault in _accessoryDefaults)
             {
                 reward.name = accessoryDefault.name;
-                reward.count = -1;
-
-                accessoryIndex = __GetAccessoryIndex(accessoryDefault.name);
-                accessoryStageIndices = __GetAccessoryStageIndices(accessoryIndex);
-                numAccessoryStageIndices = accessoryStageIndices.Count;
-                for (i = 0; i < numAccessoryStageIndices; ++i)
-                {
-                    if (_accessoryStages[accessoryStageIndices[i]].name == accessoryDefault.stageName)
-                    {
-                        reward.count = i;
-                        
-                        break;
-                    }
-                }
+                reward.count = accessoryDefault.stage;
 
                 id = __ApplyReward(reward);
 
+                accessoryIndex = __GetAccessoryIndex(accessoryDefault.name);
                 accessory = _accessories[accessoryIndex];
                 for (j = 0; j < numAccessorySlots; ++j)
                 {
@@ -1410,10 +1396,10 @@ public partial class UserDataMain
             accessoryStageIndices = __GetAccessoryStageIndices(i);
 
             numAccessoryStages = accessoryStageIndices.Count;
-            for (j = 0; j < numAccessoryStages; ++j)
+            for (j = 0; j <= numAccessoryStages; ++j)
             {
                 key =
-                    $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{_accessoryStages[accessoryStageIndices[j]].name}";
+                    $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{j}";
                 key = PlayerPrefs.GetString(key);
                 ids = string.IsNullOrEmpty(key) ? null : key.Split(UserData.SEPARATOR);
                 if (ids == null || ids.Length < 1)
@@ -1421,7 +1407,7 @@ public partial class UserDataMain
 
                 userAccessory.stage = j;
 
-                accessoryStage = _accessoryStages[accessoryStageIndices[j]];
+                accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
 
                 userAccessory.stageDesc.name = accessoryStage.name;
                 userAccessory.stageDesc.count = accessoryStage.count;
@@ -1960,14 +1946,13 @@ public partial class UserDataMain
             userAccessoryStage.name = accessoryStage.name;
             userAccessoryStage.count = accessoryStage.count;
             userAccessoryStage.property = accessoryStage.property;
-            
-            __AppendQuest(UserQuest.Type.Accessories, 1);
-            
-            if(stage > 1)
-                __AppendQuest(UserQuest.Type.Accessories + stage - 1, 1);
         }
         else
             userAccessoryStage = default;
+        
+        __AppendQuest(UserQuest.Type.Accessories, 1);
+            
+        __AppendQuest(UserQuest.Type.Accessories + stage - 1, 1);
         
         __AppendQuest(UserQuest.Type.AccessoryToUprank, 1);
 

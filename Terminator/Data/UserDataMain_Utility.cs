@@ -328,12 +328,12 @@ public partial class UserDataMain
 
                 accessoryStageIndices = __GetAccessoryStageIndices(i);
                 numAccessoryStages = accessoryStageIndices.Count;
-                for (j = 0; j < numAccessoryStages; ++j)
+                for (j = 0; j <= numAccessoryStages; ++j)
                 {
                     accessoryInfo.stage = j;
                     
                     key =
-                        $"{NAME_SPACE_USER_ACCESSORY_IDS}{name}{UserData.SEPARATOR}{_accessoryStages[accessoryStageIndices[j]].name}";
+                        $"{NAME_SPACE_USER_ACCESSORY_IDS}{name}{UserData.SEPARATOR}{j}";
                     key = PlayerPrefs.GetString(key);
                     ids = string.IsNullOrEmpty(key) ? null : key.Split(UserData.SEPARATOR);
                     if (ids == null || ids.Length < 1)
@@ -355,10 +355,8 @@ public partial class UserDataMain
 
         __accessoryIDToInfos.Remove(id);
 
-        int accessoryStageIndex = __GetAccessoryStageIndices(info.index)[info.stage];
-        string accessoryStageName = _accessoryStages[accessoryStageIndex].name, 
-            accessoryName = _accessories[info.index].name, 
-            key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{accessoryStageName}", 
+        string accessoryName = _accessories[info.index].name, 
+            key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{info.stage}", 
             idsString = PlayerPrefs.GetString(key);
 
         if (string.IsNullOrEmpty(idsString))
@@ -382,10 +380,8 @@ public partial class UserDataMain
 
     private void __CreateAccessory(uint id, int index, int stage)
     {
-        int accessoryStageIndex = __GetAccessoryStageIndices(index)[stage];
-        string accessoryStageName = _accessoryStages[accessoryStageIndex].name, 
-            accessoryName = _accessories[index].name, 
-            key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{accessoryStageName}", 
+        string accessoryName = _accessories[index].name, 
+            key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{stage}", 
             idsString = PlayerPrefs.GetString(key);
         
         idsString = string.IsNullOrEmpty(idsString) ? id.ToString() : $"{idsString}{UserData.SEPARATOR}{id}";
@@ -1383,11 +1379,10 @@ public partial class UserDataMain
                         indices = __GetAccessoryStageIndices(skillInfo.index);
                         int numIndices = indices.Count;
                         string userAccessoryIDs;
-                        for (j = numIndices - 1; j >= 0; --j)
+                        for (j = numIndices; j >= 0; --j)
                         {
-                            ref var accessoryStage = ref _accessoryStages[indices[j]];
                             userAccessoryIDs = PlayerPrefs.GetString(
-                                $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{accessoryStage.name}");
+                                $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{j}");
 
                             if (string.IsNullOrEmpty(userAccessoryIDs))
                                 continue;
