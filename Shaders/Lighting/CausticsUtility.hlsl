@@ -24,11 +24,11 @@ half3 RGBSplit(UnityTexture2D causticsTex, float2 uv, float mipLod, float split)
 	float4 uvg = float4(uv + float2(split, -split), 0, mipLod);
 	float4 uvb = float4(uv + float2(-split, -split), 0, mipLod);
 
-	half r = tex2Dlod(causticsTex, uvr).r;
-	half g = tex2Dlod(causticsTex, uvg).g;
-	half b = tex2Dlod(causticsTex, uvb).b;
+	half3 r = tex2Dlod(causticsTex, uvr);
+	half3 g = tex2Dlod(causticsTex, uvg);
+	half3 b = tex2Dlod(causticsTex, uvb);
 
-	return half3(r, g, b);
+	return (r + g + b) / 3.0f;//half3(r, g, b);
 }
 
 half3 TexCaustics(UnityTexture2D causticsTex, float4 st1, float4 st2, float2 uv, float mipLod)
