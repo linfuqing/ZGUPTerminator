@@ -897,9 +897,9 @@ public partial struct EffectSystem : ISystem
         public NativeArray<EffectTargetDamageScale> targetDamageScales;
 
         [ReadOnly]
-        public NativeArray<EffectTargetInvulnerabilityDefinitionData> targetInvulnerabilities;
+        public NativeArray<EffectTargetImmunityDefinitionData> targetImmunities;
 
-        public NativeArray<EffectTargetInvulnerabilityStatus> targetInvulnerabilityStates;
+        public NativeArray<EffectTargetImmunityStatus> targetImmunityStates;
 
         public NativeArray<EffectTargetDamage> targetDamages;
 
@@ -927,18 +927,22 @@ public partial struct EffectSystem : ISystem
         {
             EnabledFlags result = 0;
             var target = targets[index];
+            if (target.immunizedTime >= 0.0f)
+                target.immunizedTime -= deltaTime;
+            
             if (target.invincibleTime >= 0.0f)
                 target.invincibleTime -= deltaTime;
             
             var targetDamage = targetDamages[index];
             var targetHP = targetHPs[index];
-            if (targetHP.value != 0 || 
+            if ((targetHP.value != 0 || 
                 targetDamage.value != 0 || 
+                target.immunizedTime < 0.0f) && 
                 target.invincibleTime < 0.0f)
             {
                 var targetInstance = targetInstances[index];
 
-                int damage = (int)math.ceil((targetDamage.value + targetDamage.valueImmunized) *
+                int damage = (int)math.ceil((targetDamage.value + (target.immunizedTime > 0.0f ? 0.0f : targetDamage.valueImmunized)) *
                                         (index < targetDamageScales.Length
                                             ? targetDamageScales[index].value
                                             : 1.0f)), 
@@ -951,13 +955,17 @@ public partial struct EffectSystem : ISystem
 
                     damageLayerMask = targetHP.layerMask;
 
-                    target.hp += targetHP.value;
-
-                    if (targetHP.value >= targetInstance.hpMax && 
-                        targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
+                    if (targetHP.value > 0)
+                        target.hp += targetHP.value;
+                    else
                     {
-                        target.invincibleTime = targetInstance.recoveryInvincibleTime;
-                        result |= EnabledFlags.Invincible;
+                        target.hp = targetHP.value;
+                        
+                        if (targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
+                        {
+                            target.invincibleTime = targetInstance.recoveryInvincibleTime;
+                            result |= EnabledFlags.Invincible;
+                        }
                     }
 
                     result |= EnabledFlags.Recovery;
@@ -966,87 +974,87 @@ public partial struct EffectSystem : ISystem
                 {
                     damageLayerMask = targetDamage.layerMask;
 
-                    if (damage > 0 && index < targetInvulnerabilityStates.Length)
+                    if (damage > 0 && index < targetImmunityStates.Length)
                     {
-                        bool isInvulnerability;
-                        var targetInvulnerabilityStatus = targetInvulnerabilityStates[index];
-                        if (targetInvulnerabilityStatus.damage > damage || targetInvulnerabilityStatus.times > 0)
+                        bool isImmunity;
+                        var targetImmunityStatus = targetImmunityStates[index];
+                        if (targetImmunityStatus.damage > damage || targetImmunityStatus.times > 0)
                         {
-                            if (targetInvulnerabilityStatus.damage > damage)
-                                targetInvulnerabilityStatus.damage -= damage;
-                            else if (targetInvulnerabilityStatus.damage > 0)
+                            if (targetImmunityStatus.damage > damage)
+                                targetImmunityStatus.damage -= damage;
+                            else if (targetImmunityStatus.damage > 0)
                             {
-                                damage = targetInvulnerabilityStatus.damage;
+                                damage = targetImmunityStatus.damage;
 
-                                targetInvulnerabilityStatus.damage = 0;
+                                targetImmunityStatus.damage = 0;
                             }
 
-                            if (targetInvulnerabilityStatus.times > 0)
-                                --targetInvulnerabilityStatus.times;
+                            if (targetImmunityStatus.times > 0)
+                                --targetImmunityStatus.times;
 
-                            isInvulnerability = true;
+                            isImmunity = true;
                         }
                         else
-                            isInvulnerability = false;
+                            isImmunity = false;
 
-                        if (targetInvulnerabilityStatus.damage == 0 &&
-                            targetInvulnerabilityStatus.times == 0 &&
-                            index < targetInvulnerabilities.Length)
+                        if (targetImmunityStatus.damage == 0 &&
+                            targetImmunityStatus.times == 0 &&
+                            index < targetImmunities.Length)
                         {
-                            ref var definition = ref targetInvulnerabilities[index].definition.Value;
-                            while (definition.invulnerabilities.Length > targetInvulnerabilityStatus.index)
+                            ref var definition = ref targetImmunities[index].definition.Value;
+                            while (definition.immunities.Length > targetImmunityStatus.index)
                             {
-                                ref var invulnerablilitity =
-                                    ref definition.invulnerabilities[targetInvulnerabilityStatus.index];
+                                ref var immunity =
+                                    ref definition.immunities[targetImmunityStatus.index];
 
-                                if (isInvulnerability)
+                                if (isImmunity)
                                 {
-                                    if (invulnerablilitity.time > math.FLT_MIN_NORMAL)
+                                    if (immunity.time > math.FLT_MIN_NORMAL)
                                     {
-                                        target.invincibleTime = invulnerablilitity.time;
+                                        target.immunizedTime = immunity.time;
                                         
                                         result |= EnabledFlags.Invincible;
                                     }
 
-                                    ++targetInvulnerabilityStatus.count;
+                                    ++targetImmunityStatus.count;
                                 }
 
-                                if (invulnerablilitity.count == 0 ||
-                                    invulnerablilitity.count > targetInvulnerabilityStatus.count)
+                                if (immunity.count == 0 ||
+                                    immunity.count > targetImmunityStatus.count)
                                 {
-                                    targetInvulnerabilityStatus.damage = invulnerablilitity.damage;
-                                    targetInvulnerabilityStatus.times = invulnerablilitity.times;
+                                    targetImmunityStatus.damage = immunity.damage;
+                                    targetImmunityStatus.times = immunity.times;
 
-                                    if (!isInvulnerability)
+                                    if (!isImmunity)
                                     {
-                                        if (targetInvulnerabilityStatus.damage > damage)
-                                            targetInvulnerabilityStatus.damage -= damage;
-                                        else if (targetInvulnerabilityStatus.damage > 0)
+                                        if (targetImmunityStatus.damage > damage)
+                                            targetImmunityStatus.damage -= damage;
+                                        else if (targetImmunityStatus.damage > 0)
                                         {
-                                            damage = targetInvulnerabilityStatus.damage;
+                                            damage = targetImmunityStatus.damage;
 
-                                            targetInvulnerabilityStatus.damage = 0;
+                                            targetImmunityStatus.damage = 0;
                                         }
 
-                                        if (targetInvulnerabilityStatus.times > 0)
-                                            --targetInvulnerabilityStatus.times;
+                                        if (targetImmunityStatus.times > 0)
+                                            --targetImmunityStatus.times;
 
-                                        isInvulnerability = targetInvulnerabilityStatus.damage == 0 &&
-                                                            targetInvulnerabilityStatus.times == 0;
+                                        isImmunity = targetImmunityStatus.damage == 0 &&
+                                                     targetImmunityStatus.times == 0;
 
-                                        if (isInvulnerability)
+                                        if (isImmunity)
                                             continue;
                                     }
 
                                     break;
                                 }
 
-                                targetInvulnerabilityStatus.count = 0;
-                                ++targetInvulnerabilityStatus.index;
+                                targetImmunityStatus.count = 0;
+                                ++targetImmunityStatus.index;
                             }
                         }
 
-                        targetInvulnerabilityStates[index] = targetInvulnerabilityStatus;
+                        targetImmunityStates[index] = targetImmunityStatus;
                     }
 
                     if (target.hp > 0)
@@ -1184,6 +1192,7 @@ public partial struct EffectSystem : ISystem
                     {
                         result |= EnabledFlags.Drop;
 
+                        target.immunizedTime = 0.0f;
                         target.invincibleTime = 0.0f;
 
                         if (index < characterGravityFactors.Length)
@@ -1346,9 +1355,9 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<EffectTargetDamageScale> targetDamageScaleType;
 
         [ReadOnly]
-        public ComponentTypeHandle<EffectTargetInvulnerabilityDefinitionData> targetInvulnerabilityType;
+        public ComponentTypeHandle<EffectTargetImmunityDefinitionData> targetImmunityType;
 
-        public ComponentTypeHandle<EffectTargetInvulnerabilityStatus> targetInvulnerabilityStatusType;
+        public ComponentTypeHandle<EffectTargetImmunityStatus> targetImmunityStatusType;
 
         public ComponentTypeHandle<EffectTargetDamage> targetDamageType;
 
@@ -1396,8 +1405,8 @@ public partial struct EffectSystem : ISystem
             apply.targetInstances = chunk.GetNativeArray(ref targetInstanceType);
             apply.targetLevels = chunk.GetNativeArray(ref targetLevelType);
             apply.targetDamageScales = chunk.GetNativeArray(ref targetDamageScaleType);
-            apply.targetInvulnerabilities = chunk.GetNativeArray(ref targetInvulnerabilityType);
-            apply.targetInvulnerabilityStates = chunk.GetNativeArray(ref targetInvulnerabilityStatusType);
+            apply.targetImmunities = chunk.GetNativeArray(ref targetImmunityType);
+            apply.targetImmunityStates = chunk.GetNativeArray(ref targetImmunityStatusType);
             apply.targetHPs = chunk.GetNativeArray(ref targetHPType);
             apply.targetDamages = chunk.GetNativeArray(ref targetDamageType);
             apply.targets = chunk.GetNativeArray(ref targetType);
@@ -1496,9 +1505,9 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<EffectTargetLevel> __targetLevelType;
 
-    private ComponentTypeHandle<EffectTargetInvulnerabilityDefinitionData> __targetInvulnerabilityType;
+    private ComponentTypeHandle<EffectTargetImmunityDefinitionData> __targetImmunityType;
 
-    private ComponentTypeHandle<EffectTargetInvulnerabilityStatus> __targetInvulnerabilityStatusType;
+    private ComponentTypeHandle<EffectTargetImmunityStatus> __targetImmunityStatusType;
 
     private ComponentTypeHandle<EffectTargetDamageScale> __targetDamageScaleType;
 
@@ -1582,8 +1591,8 @@ public partial struct EffectSystem : ISystem
         __statusTargetType = state.GetBufferTypeHandle<EffectStatusTarget>();
         __statusType = state.GetComponentTypeHandle<EffectStatus>();
         __targetLevelType = state.GetComponentTypeHandle<EffectTargetLevel>(true);
-        __targetInvulnerabilityType = state.GetComponentTypeHandle<EffectTargetInvulnerabilityDefinitionData>(true);
-        __targetInvulnerabilityStatusType = state.GetComponentTypeHandle<EffectTargetInvulnerabilityStatus>();
+        __targetImmunityType = state.GetComponentTypeHandle<EffectTargetImmunityDefinitionData>(true);
+        __targetImmunityStatusType = state.GetComponentTypeHandle<EffectTargetImmunityStatus>();
         __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __targetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
@@ -1755,8 +1764,8 @@ public partial struct EffectSystem : ISystem
         __delayDestroyType.Update(ref state);
         __targetInstanceType.Update(ref state);
         __targetLevelType.Update(ref state);
-        __targetInvulnerabilityType.Update(ref state);
-        __targetInvulnerabilityStatusType.Update(ref state);
+        __targetImmunityType.Update(ref state);
+        __targetImmunityStatusType.Update(ref state);
         __targetMessageType.Update(ref state);
         __targetDamageScaleType.Update(ref state);
         __targetHPType.Update(ref state);
@@ -1791,8 +1800,8 @@ public partial struct EffectSystem : ISystem
         apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;
         apply.targetHPType = __targetHPType;
-        apply.targetInvulnerabilityType = __targetInvulnerabilityType;
-        apply.targetInvulnerabilityStatusType = __targetInvulnerabilityStatusType;
+        apply.targetImmunityType = __targetImmunityType;
+        apply.targetImmunityStatusType = __targetImmunityStatusType;
         apply.targetType = __targetType;
         apply.characterBodyType = __characterBodyType;
         apply.characterGravityFactorType = __characterGravityFactorType;

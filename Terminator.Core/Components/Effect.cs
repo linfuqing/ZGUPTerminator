@@ -19,9 +19,9 @@ public enum EffectSpace
     Local
 }
 
-public struct EffectTargetInvulnerabilityDefinition
+public struct EffectTargetImmunityDefinition
 {
-    public struct Invulnerability
+    public struct Immunity
     {
         public int count;
         public int times;
@@ -29,7 +29,7 @@ public struct EffectTargetInvulnerabilityDefinition
         public float time;
     }
 
-    public BlobArray<Invulnerability> invulnerabilities;
+    public BlobArray<Immunity> immunities;
 }
 
 public struct EffectDefinition
@@ -208,6 +208,7 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 {
     public int times;
     public int hp;
+    public float immunizedTime;
     public float invincibleTime;
 }
 
@@ -275,12 +276,12 @@ public struct EffectTargetLevel : IComponentData
     public int gold;
 }
 
-public struct EffectTargetInvulnerabilityDefinitionData : IComponentData
+public struct EffectTargetImmunityDefinitionData : IComponentData
 {
-    public BlobAssetReference<EffectTargetInvulnerabilityDefinition> definition;
+    public BlobAssetReference<EffectTargetImmunityDefinition> definition;
 }
 
-public struct EffectTargetInvulnerabilityStatus : IComponentData
+public struct EffectTargetImmunityStatus : IComponentData
 {
     public int count;
     public int index;
