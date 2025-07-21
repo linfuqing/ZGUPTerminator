@@ -1102,7 +1102,8 @@ public partial class UserDataMain
     
     private IUserData.Property __ApplyProperty(uint userID, string[] cacheSkills)
     {
-        if (cacheSkills == null || cacheSkills.Length < 1)
+        int numCacheSkills = cacheSkills == null ?  0 : cacheSkills.Length;
+        if (numCacheSkills < 1)
             return __ApplyProperty(userID);
         
         string cardGroupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
@@ -1118,46 +1119,95 @@ public partial class UserDataMain
         string roleKeyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroupName}", 
             accessoryKeyPrefix = $"{roleKeyPrefix}{UserData.SEPARATOR}";
 
-        bool isContains = true;
+        string cacheSkill;
         SkillInfo skillInfo;
-        foreach (var cacheSkill in cacheSkills)
+        int i, j;
+        bool isContains = true;
         {
-            if (!__TryGetSkill(cacheSkill, out skillInfo))
-                continue;
-
-            switch (skillInfo.belongTo)
+            Dictionary<string, int> accessoryStyleSlotIndices = null;
+            for (i = 0; i < numCacheSkills; ++i)
             {
-                case SkillInfo.BelongTo.Card:
-                    if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) == -1)
-                        isContains = false;
-                    break;
-                case SkillInfo.BelongTo.Role:
-                    if (PlayerPrefs.GetString(roleKeyPrefix) != _roles[skillInfo.index].name)
-                        isContains = false;
-                    break;
-                case SkillInfo.BelongTo.Accessory:
-                    AccessoryInfo accessoryInfo;
-                    int i, accessoryID, numAccessorySlots = _accessorySlots.Length;
-                    for (i = 0; i < numAccessorySlots; ++i)
-                    {
-                        ref var accessorySlot = ref _accessorySlots[i];
-                        accessoryID = PlayerPrefs.GetInt(
-                            $"{accessoryKeyPrefix}{accessorySlot.name}");
+                cacheSkill = cacheSkills[i];
+                if (!__TryGetSkill(cacheSkill, out skillInfo))
+                    continue;
 
-                        if (!__TryGetAccessory((uint)accessoryID, out accessoryInfo))
-                            continue;
+                switch (skillInfo.belongTo)
+                {
+                    case SkillInfo.BelongTo.Card:
+                        if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) == -1)
+                            isContains = false;
+                        break;
+                    case SkillInfo.BelongTo.Role:
+                        if (PlayerPrefs.GetString(roleKeyPrefix) != _roles[skillInfo.index].name)
+                            isContains = false;
+                        break;
+                    case SkillInfo.BelongTo.Accessory:
+                        string accessoryStyleName = _accessories[skillInfo.index].styleName;
+                        if (accessoryStyleSlotIndices == null ||
+                            !accessoryStyleSlotIndices.TryGetValue(accessoryStyleName, out int accessoryStyleSlotCount))
+                            accessoryStyleSlotCount = 1;
                         
-                        if(accessoryInfo.index == skillInfo.index)
-                            break;
-                    }
+                        AccessoryInfo accessoryInfo = default;
+                        int accessoryID = 0, 
+                            accessoryStyleSlotIndex = 0, 
+                            numAccessorySlots = _accessorySlots.Length;
+                        for (j = 0; j < numAccessorySlots; ++j)
+                        {
+                            ref var accessorySlot = ref _accessorySlots[j];
+                            if(accessorySlot.styleName != accessoryStyleName)
+                                continue;
+                            
+                            accessoryID = PlayerPrefs.GetInt(
+                                $"{accessoryKeyPrefix}{accessorySlot.name}");
 
-                    if (i == numAccessorySlots)
-                        isContains = false;
+                            if (!__TryGetAccessory((uint)accessoryID, out accessoryInfo))
+                            {
+                                accessoryID = 0;
+                                
+                                continue;
+                            }
 
-                    break;
+                            if (accessoryInfo.index == skillInfo.index)
+                                break;
+
+                            if (++accessoryStyleSlotIndex < accessoryStyleSlotCount)
+                                accessoryID = 0;
+                        }
+
+                        if (i == numAccessorySlots && accessoryID != 0)
+                        {
+                            var skillName = _accessories[accessoryInfo.index].skillName;
+                            if (string.IsNullOrEmpty(skillName))
+                                Array.Copy(
+                                    cacheSkills, 
+                                    i + 1, 
+                                    cacheSkills, 
+                                    i, 
+                                    --numCacheSkills - i);
+                            else
+                            {
+                                string cacheSkillGroupName = __GetSkillGroupName(cacheSkill);
+                                if (string.IsNullOrEmpty(cacheSkillGroupName))
+                                    cacheSkills[i] = skillName;
+                                else
+                                {
+                                    int skillIndex = __GetSkillGroupSkillNames(cacheSkillGroupName).IndexOf(cacheSkillGroupName);
+                                    
+                                    cacheSkills[i] = __GetSkillGroupSkillNames(__GetSkillGroupName(skillName))[skillIndex];
+                                }
+                            }
+
+                            if (accessoryStyleSlotIndices == null)
+                                accessoryStyleSlotIndices = new Dictionary<string, int>();
+
+                            accessoryStyleSlotIndices[accessoryStyleName] = accessoryStyleSlotCount + 1;
+                        }
+
+                        break;
+                }
             }
         }
-
+        
         IUserData.Property result;
         if (isContains)
         {
@@ -1166,7 +1216,7 @@ public partial class UserDataMain
             string skillGroupName;
             SkillInfo temp;
             int numSkills = result.skills == null ? 0 : result.skills.Length;
-            for(int i = 0; i < numSkills; ++i)
+            for(i = 0; i < numSkills; ++i)
             {
                 ref var skill = ref result.skills[i];
                 if(skill.type != UserSkillType.Individual)
@@ -1177,8 +1227,10 @@ public partial class UserDataMain
 
                 skillGroupName = __GetSkillGroupName(skill.name);
 
-                foreach (var cacheSkill in cacheSkills)
+                for (j = 0; j < numCacheSkills; ++j)
                 {
+                    cacheSkill = cacheSkills[j];
+                    
                     if (!__TryGetSkill(cacheSkill, out temp))
                         continue;
                     
@@ -1207,8 +1259,10 @@ public partial class UserDataMain
             IUserData.Skill skill;
             string instanceName = null;
             int level, styleIndex;
-            foreach (var cacheSkill in cacheSkills)
+            for (i = 0; i < numCacheSkills; ++i)
             {
+                cacheSkill = cacheSkills[i];
+
                 if (!__TryGetSkill(cacheSkill, out skillInfo))
                     continue;
 
@@ -1270,10 +1324,10 @@ public partial class UserDataMain
                         result.spawnerLayerMask |= accessory.spawnerLayerMask.value;
 
                         level = 0;
-                        int numAccessorySlots = _accessorySlots.Length, i;
-                        for (i = 0; i < numAccessorySlots; ++i)
+                        int numAccessorySlots = _accessorySlots.Length;
+                        for (j = 0; j < numAccessorySlots; ++j)
                         {
-                            ref var accessorySlot = ref _accessorySlots[i];
+                            ref var accessorySlot = ref _accessorySlots[j];
                             if (accessorySlot.styleName != accessory.styleName)
                                 continue;
 
@@ -1284,15 +1338,15 @@ public partial class UserDataMain
                         int numAttributes = attributes.Count,
                             accessoryStyleIndex = __GetAccessoryStyleIndex(accessory.styleName);
                         ref var accessoryStyle = ref _accessoryStyles[accessoryStyleIndex];
-                        for (i = 0; i < numAttributes; ++i)
+                        for (j = 0; j < numAttributes; ++j)
                         {
-                            if (attributes[i].type == accessoryStyle.attributeType)
+                            if (attributes[j].type == accessoryStyle.attributeType)
                                 break;
                         }
 
                         UserAttributeData attribute;
-                        if (i < numAttributes)
-                            attribute = attributes[i];
+                        if (j < numAttributes)
+                            attribute = attributes[j];
                         else
                         {
                             ++numAttributes;
@@ -1318,7 +1372,7 @@ public partial class UserDataMain
                             skill.damage = 0.0f;
                         }
 
-                        attributes[i] = attribute;
+                        attributes[j] = attribute;
                         skills.Add(skill);
 
                         skill.type = UserSkillType.Group;
@@ -1329,9 +1383,9 @@ public partial class UserDataMain
                         indices = __GetAccessoryStageIndices(skillInfo.index);
                         int numIndices = indices.Count;
                         string userAccessoryIDs;
-                        for (i = numIndices - 1; i >= 0; --i)
+                        for (j = numIndices - 1; j >= 0; --j)
                         {
-                            ref var accessoryStage = ref _accessoryStages[indices[i]];
+                            ref var accessoryStage = ref _accessoryStages[indices[j]];
                             userAccessoryIDs = PlayerPrefs.GetString(
                                 $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{accessoryStage.name}");
 
@@ -1341,7 +1395,7 @@ public partial class UserDataMain
                             break;
                         }
 
-                        property = i > 0 ? _accessoryStages[indices[i - 1]].property : accessory.property;
+                        property = j > 0 ? _accessoryStages[indices[j - 1]].property : accessory.property;
                         if (property.attributes != null && property.attributes.Length > 0)
                         {
                             if (accessoryStageAttributes == null)
