@@ -130,7 +130,7 @@ public partial class LevelManager
         public ActiveSkillStyle style;
 
         public LevelSkillKeyStyle keyStyle;
-        public LevelSkillKeyStyle resultKeyStyle;
+        public ResultSkillKeyStyle resultKeyStyle;
         
         public float resultKeyStyleDestroyTime;
 
@@ -345,7 +345,7 @@ public partial class LevelManager
 
     private IEnumerator __ReturnResultKey(
         LevelSkillKeyStyle[] styles,
-        LevelSkillKeyStyle style, 
+        ResultSkillKeyStyle style, 
         SkillKeyAsset asset, 
         int count, 
         float destroyTime)
@@ -357,8 +357,21 @@ public partial class LevelManager
             style = Instantiate(style, style.transform.parent);
             style.SetAsset(asset, count);
 
+            bool isConform = style.button == null;
+            if (!isConform)
+            {
+                style.button.onClick.RemoveAllListeners();
+                style.button.onClick.AddListener(() =>
+                {
+                    isConform = true;
+                });
+            }
+
             var gameObject = style.gameObject;
             gameObject.SetActive(true);
+
+            while (!isConform)
+                yield return null;
 
             yield return new WaitForSecondsRealtime(destroyTime);
 
