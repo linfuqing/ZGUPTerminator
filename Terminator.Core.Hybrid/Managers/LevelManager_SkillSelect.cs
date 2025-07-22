@@ -83,7 +83,7 @@ public partial class LevelManager
     private List<int> __selectedSkillIndices;
 
     private List<ResultSkillStyle> __resultSkillStyles;
-    private Queue<IEnumerator> __skillSelectionCoroutines;
+    private Queue<Coroutine> __skillSelectionCoroutines;
     
     private Dictionary<string, LevelSkillStyle> __skillStyles;
 
@@ -158,19 +158,6 @@ public partial class LevelManager
         IAnalytics.instance?.SelectSkills(styleIndex, skills);
 
         __StartCoroutine(__SelectSkills(styleIndex, skills));
-    }
-
-    public bool EnqueueSkillSelectionCoroutine(IEnumerator coroutine)
-    {
-        if (__skillSelectionStatus == 0)
-            return false;
-        
-        if (__skillSelectionCoroutines == null)
-            __skillSelectionCoroutines = new Queue<IEnumerator>();
-        
-        __skillSelectionCoroutines.Enqueue(coroutine);
-
-        return true;
     }
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)
@@ -371,6 +358,10 @@ public partial class LevelManager
 
         __selectedSkillIndices.Add(value.selectIndex);
 
+        float time = Time.realtimeSinceStartup;
+        while (__skillSelectionCoroutines != null && __skillSelectionCoroutines.TryDequeue(out var coroutine))
+            yield return coroutine;
+
         if (isEnd)
         {
             UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
@@ -382,12 +373,11 @@ public partial class LevelManager
                 __CloseSkillSelectionRightNow();
         }
         
-        yield return new WaitForSecondsRealtime(destroyTime);
+        destroyTime -= Time.realtimeSinceStartup - time;
+        if(destroyTime > 0.0f)
+            yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
-
-        while (__skillSelectionCoroutines != null && __skillSelectionCoroutines.TryDequeue(out var coroutine))
-            yield return coroutine;
 
         if (selectedSkillSelectionIndex != -1 && 
             SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keySprites))

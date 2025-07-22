@@ -219,17 +219,24 @@ public partial class LevelManager
 
             origin.Reset(level, asset, keySprites);
 
-            if (keys != null)
+            int numKeys = keys == null ? 0 : keys.Length;
+            if (!oldName.IsEmpty && SkillManager.TryGetAsset(oldName, out _, out var oldKeys, out _) && oldKeys != null)
             {
-                foreach (var key in keys)
-                    __AddActiveSkillKey(key);
-            }
-
-            if (!oldName.IsEmpty && SkillManager.TryGetAsset(oldName, out _, out keys, out _) && keys != null)
-            {
-                foreach (var key in keys)
+                keys = keys?.Clone() as string[];
+                
+                int keyIndex;
+                foreach (var key in oldKeys)
+                {
                     __RemoveActiveSkillKey(key);
+
+                    keyIndex = keys == null ? -1 : Array.IndexOf(keys, key);
+                    if (keyIndex != -1)
+                        keys[keyIndex] = keys[--numKeys];
+                }
             }
+            
+            for(int i = 0; i < numKeys; ++i)
+                __AddActiveSkillKey(keys[i]);
         }
     }
 
@@ -351,21 +358,23 @@ public partial class LevelManager
                     }
                 }
                 
-                IEnumerator coroutine;
+                Coroutine coroutine;
                 for (int i = 0; i < numStyles; ++i)
                 {
                     ref var skillActiveData = ref _skillActiveDatas[i];
 
-                    coroutine = __ReturnResultKey(
+                    coroutine = StartCoroutine(__ReturnResultKey(
                         isEnable ? skillActiveData.onKeyEnable : null, 
                         result.styles[i], 
                         skillActiveData.resultKeyStyle, 
                         asset, 
                         result.count,
-                        skillActiveData.resultKeyStyleDestroyTime);
+                        skillActiveData.resultKeyStyleDestroyTime));
                     
-                    if(!EnqueueSkillSelectionCoroutine(coroutine))
-                        __StartCoroutine(coroutine);
+                    if (__skillSelectionCoroutines == null)
+                        __skillSelectionCoroutines = new Queue<Coroutine>();
+        
+                    __skillSelectionCoroutines.Enqueue(coroutine);
                 }
             }
 
