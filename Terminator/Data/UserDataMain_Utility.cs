@@ -512,9 +512,6 @@ public partial class UserDataMain
                     isDirty = true;
                 }
 
-                if (isDirty)
-                    UserDataMain.flag = flag;
-
                 id = __ToID(cardIndex);
                 key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
                 
@@ -522,6 +519,28 @@ public partial class UserDataMain
                 int level = PlayerPrefs.GetInt(levelKey, -1);
                 if (level == -1)
                 {
+                    if ((flag & Flag.CardReplace) == 0)
+                    {
+                        int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
+                        foreach (var card in _cards)
+                        {
+                            if(PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1) == -1)
+                                continue;
+
+                            if (++length >= capacity)
+                            {
+                                flag |= Flag.CardReplace;
+
+                                isDirty = true;
+                                
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (isDirty)
+                        UserDataMain.flag = flag;
+                    
                     int cardCount = PlayerPrefs.GetInt(key) + reward.count;
                     
                     PlayerPrefs.SetInt(key, cardCount - 1);
@@ -529,6 +548,10 @@ public partial class UserDataMain
 
                     return id;
                 }
+                
+                if (isDirty)
+                    UserDataMain.flag = flag;
+
                 break;
             case UserRewardType.Role:
                 id = __ToID(__GetRoleIndex(reward.name));

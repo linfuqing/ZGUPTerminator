@@ -531,6 +531,9 @@ public partial class UserDataMain
         if ((flag & Flag.CardUpgradeFirst) == Flag.CardUpgradeFirst)
             result.flag |= IUserData.Cards.Flag.CardUpgrade;
 
+        if ((flag & Flag.CardReplaceFirst) == Flag.CardReplaceFirst)
+            result.flag |= IUserData.Cards.Flag.CardReplace;
+
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
 
         result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, 3);
