@@ -358,10 +358,7 @@ public partial class LevelManager
 
         __selectedSkillIndices.Add(value.selectIndex);
 
-        float time = Time.realtimeSinceStartup;
-        while (__skillSelectionCoroutines != null && __skillSelectionCoroutines.TryDequeue(out var coroutine))
-            yield return coroutine;
-
+        bool isCloseSkillSelectionRightNow = false;
         if (isEnd)
         {
             UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
@@ -370,16 +367,25 @@ public partial class LevelManager
             __skillSelectionStatus |= SkillSelectionStatus.End;
 
             if (selectedSkillSelectionIndex == -1)
-                __CloseSkillSelectionRightNow();
+            {
+                isCloseSkillSelectionRightNow =
+                    __skillSelectionCoroutines != null && __skillSelectionCoroutines.Count > 0;
+                
+                if(!isCloseSkillSelectionRightNow)
+                    __CloseSkillSelectionRightNow();
+            }
         }
         
-        destroyTime -= Time.realtimeSinceStartup - time;
-        if(destroyTime > 0.0f)
-            yield return new WaitForSecondsRealtime(destroyTime);
+        yield return new WaitForSecondsRealtime(destroyTime);
 
         __DestroyGameObjects();
 
-        if (selectedSkillSelectionIndex != -1 && 
+        while (__skillSelectionCoroutines != null && __skillSelectionCoroutines.TryDequeue(out var coroutine))
+            yield return coroutine;
+        
+        if(isCloseSkillSelectionRightNow)
+            __CloseSkillSelectionRightNow();
+        else if (selectedSkillSelectionIndex != -1 && 
             SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keySprites))
         {
             var selection = _skillSelections[selectedSkillSelectionIndex];
