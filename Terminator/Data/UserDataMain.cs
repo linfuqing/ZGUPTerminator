@@ -26,7 +26,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         CardUpgrade = 0x0400 | CardUpgradeFirst, 
         
         CardReplaceFirst = 0x0800,
-        CardReplace = 0x1000 | CardUpgradeFirst, 
+        CardReplace = 0x1000 | CardReplaceFirst, 
 
         RolesCreated = 0x2000, 
         RolesUnlockFirst = 0x4000, 
