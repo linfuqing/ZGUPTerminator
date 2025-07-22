@@ -253,7 +253,7 @@ public partial class LevelManager
 
             if (result.styles != null && SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
             {
-                result.rank = asset.ranks.BinarySearch(result.count);
+                result.rank = asset.BinarySearch(result.count);
                 if (result.rank < 0)
                 {
                     isDisable = true;
@@ -324,7 +324,7 @@ public partial class LevelManager
 
         if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
         {
-            result.rank = asset.ranks.BinarySearch(result.count);
+            result.rank = asset.BinarySearch(result.count);
             if (result.rank != rank && result.rank >= 0)
             {
                 bool isEnable = false;

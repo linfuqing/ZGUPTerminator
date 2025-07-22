@@ -14,11 +14,12 @@ public class LevelSkillKeyStyle : SkillKeyStyle
     public int SetAsset(in SkillKeyAsset value, int count)
     {
         onTitle.Invoke(value.name);
-        onDetail.Invoke(value.detail);
 
         onSprite.Invoke(value.sprite);
         
-        int index = value.ranks.BinarySearch(count);
+        int index = value.BinarySearch(count);
+        if(index >= 0 && onDetail != null)
+            onDetail.Invoke(value.ranks[index].detail);
         
         SkillStyle.SetActive(ranks, index + 1);
 

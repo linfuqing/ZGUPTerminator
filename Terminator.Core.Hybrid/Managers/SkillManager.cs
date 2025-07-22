@@ -22,14 +22,41 @@ public struct SkillAsset
 
 public struct SkillKeyAsset
 {
+    [Serializable]
+    public struct Rank
+    {
+        public int value;
+        
+        public string detail;
+    }
+    
+    private struct Wrapper : IReadOnlyListWrapper<int, Rank[]>
+    {
+        public int GetCount(Rank[] list) => list.Length;
+
+        public int Get(Rank[] list, int index) => list[index].value;
+    }
+
+    private struct Comparer : IComparer<int>
+    {
+        public int Compare(int x, int y)
+        {
+            return x.CompareTo(y);
+        }
+    }
+
     public string name;
-    public string detail;
 
     public Sprite sprite;
 
     public int capacity;
     
-    public int[] ranks;
+    public Rank[] ranks;
+
+    public int BinarySearch(int count)
+    {
+        return ranks.BinarySearch(count, new Comparer(), new Wrapper());
+    }
 }
 
 public class SkillManager : MonoBehaviour
@@ -148,19 +175,17 @@ public class SkillManager : MonoBehaviour
         public string name;
 
         public string title;
-        public string detail;
 
         public Sprite sprite;
 
         public int capacity;
     
-        public int[] ranks;
-        
+        public SkillKeyAsset.Rank[] ranks;
+
         public SkillKeyAsset ToAsset()
         {
             SkillKeyAsset asset;
             asset.name = title;
-            asset.detail = detail;
             asset.sprite = sprite;
             asset.capacity = capacity;
             asset.ranks = ranks;
@@ -179,11 +204,6 @@ public class SkillManager : MonoBehaviour
                 name = value;
 
                 capacity = 9;
-
-                ranks = new int[]
-                {
-                    3, 5, 7, 9
-                };
             }
         }
         
@@ -196,7 +216,27 @@ public class SkillManager : MonoBehaviour
         [CSVField]
         public string 关卡技能词条描述详情
         {
-            set { detail = value; }
+            set
+            {
+                int[] defaultRanks = new[]
+                {
+                    3, 5, 7, 9
+                };
+                
+                string[] parameters = value.Split('/');
+                string parameter;
+                SkillKeyAsset.Rank rank;
+                int index, numParameters = parameters.Length;
+                ranks = new SkillKeyAsset.Rank[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    index = parameter.IndexOf(':');
+                    rank.value = index == -1 ? defaultRanks[i] : int.Parse(parameter.Remove(index));
+                    rank.detail = index == -1 ? parameter : parameter.Substring(index + 1);
+                    ranks[i] = rank;
+                }
+            }
         }
 
         [CSVField]
