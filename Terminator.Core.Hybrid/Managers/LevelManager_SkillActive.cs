@@ -295,9 +295,9 @@ public partial class LevelManager
         if (__skillActiveKeys == null)
             __skillActiveKeys = new Dictionary<string, SkillActiveKeyData>();
 
+        int numStyles = _skillActiveDatas.Length;
         if (!__skillActiveKeys.TryGetValue(name, out var result))
         {
-            int numStyles = _skillActiveDatas.Length;
             if (__skillActiveKeys.Count < 1)
             {
                 for (int i = 0; i < numStyles; ++i)
@@ -328,9 +328,11 @@ public partial class LevelManager
             if (result.rank != rank && result.rank >= 0)
             {
                 IEnumerator coroutine;
-                foreach (var skillActiveData in _skillActiveDatas)
+                for (int i = 0; i < numStyles; ++i)
                 {
-                    coroutine = __ReturnResultKey(result.styles, skillActiveData.resultKeyStyle, asset, result.count,
+                    ref var skillActiveData = ref _skillActiveDatas[i];
+
+                    coroutine = __ReturnResultKey(result.styles[i], skillActiveData.resultKeyStyle, asset, result.count,
                         skillActiveData.resultKeyStyleDestroyTime);
                     
                     if(!EnqueueSkillSelectionCoroutine(coroutine))
@@ -344,30 +346,30 @@ public partial class LevelManager
     }
 
     private IEnumerator __ReturnResultKey(
-        LevelSkillKeyStyle[] styles,
-        ResultSkillKeyStyle style, 
+        LevelSkillKeyStyle style,
+        ResultSkillKeyStyle resultStyle, 
         SkillKeyAsset asset, 
         int count, 
         float destroyTime)
     {
         yield return null;
 
-        if (style != null)
+        if (resultStyle != null)
         {
-            style = Instantiate(style, style.transform.parent);
-            style.SetAsset(asset, count);
+            resultStyle = Instantiate(resultStyle, resultStyle.transform.parent);
+            resultStyle.SetAsset(asset, count);
 
-            bool isConform = style.button == null;
+            bool isConform = resultStyle.button == null;
             if (!isConform)
             {
-                style.button.onClick.RemoveAllListeners();
-                style.button.onClick.AddListener(() =>
+                resultStyle.button.onClick.RemoveAllListeners();
+                resultStyle.button.onClick.AddListener(() =>
                 {
                     isConform = true;
                 });
             }
 
-            var gameObject = style.gameObject;
+            var gameObject = resultStyle.gameObject;
             gameObject.SetActive(true);
 
             while (!isConform)
@@ -378,13 +380,10 @@ public partial class LevelManager
             Destroy(gameObject);
         }
 
-        foreach (var temp in styles)
+        if(style != null)
         {
-            if(temp == null)
-                continue;
-
-            temp.SetAsset(asset, count);
-            temp.gameObject.SetActive(true);
+            style.gameObject.SetActive(true);
+            style.SetAsset(asset, count);
         }
     }
 }

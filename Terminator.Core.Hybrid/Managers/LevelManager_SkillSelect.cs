@@ -265,8 +265,6 @@ public partial class LevelManager
 
                             __skillSelectionGuideNames.Add(source.name);
 
-                            destination.onDisable.Invoke();
-
                             skill = source;
                             //__StartCoroutine(__SelectSkill(true, destination.destroyTime, source));
                         });
@@ -316,6 +314,8 @@ public partial class LevelManager
                         yield return null;
                     
                     yield return __SelectSkill(true, destination.destroyTime, skill.Value);
+                    
+                    destination.onDisable.Invoke();
                 }
             }
         }
