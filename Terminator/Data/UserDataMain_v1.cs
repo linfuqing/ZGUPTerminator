@@ -733,6 +733,7 @@ public partial class UserDataMain
         var flag = UserDataMain.flag;
         flag &= ~Flag.CardsUnlockFirst;
         flag &= ~Flag.CardUnlockFirst;
+        flag &= ~Flag.CardReplaceFirst;
 
         UserDataMain.flag = flag;
         
