@@ -23,8 +23,7 @@ public partial class LevelManager
     {
         Start = 0x01, 
         End = 0x02, 
-        Finish = 0x04, 
-        Complete = 0x08,  
+        Complete = 0x04,  
     }
     
     [Serializable]
@@ -84,6 +83,8 @@ public partial class LevelManager
     private List<int> __selectedSkillIndices;
 
     private List<ResultSkillStyle> __resultSkillStyles;
+    private Queue<IEnumerator> __skillSelectionCoroutines;
+    
     private Dictionary<string, LevelSkillStyle> __skillStyles;
 
     public bool isClear => __gameObjectsToDestroy == null || __gameObjectsToDestroy.Count < 1;
@@ -157,6 +158,19 @@ public partial class LevelManager
         IAnalytics.instance?.SelectSkills(styleIndex, skills);
 
         __StartCoroutine(__SelectSkills(styleIndex, skills));
+    }
+
+    public bool EnqueueSkillSelectionCoroutine(IEnumerator coroutine)
+    {
+        if (__skillSelectionStatus == 0)
+            return false;
+        
+        if (__skillSelectionCoroutines == null)
+            __skillSelectionCoroutines = new Queue<IEnumerator>();
+        
+        __skillSelectionCoroutines.Enqueue(coroutine);
+
+        return true;
     }
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)
@@ -370,6 +384,9 @@ public partial class LevelManager
 
         __DestroyGameObjects();
 
+        while (__skillSelectionCoroutines != null && __skillSelectionCoroutines.TryDequeue(out var coroutine))
+            yield return coroutine;
+
         if (selectedSkillSelectionIndex != -1 && 
             SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keySprites))
         {
@@ -486,7 +503,7 @@ public partial class LevelManager
             yield return null;
         }
         while ((__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start);
-
+        
         if (selectedSkillSelectionIndex == -1)
             yield return __CompleteSkillSelection();
         else

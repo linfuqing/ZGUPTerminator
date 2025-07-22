@@ -241,75 +241,6 @@ public partial class LevelManager
         value.Set(level, cooldown, elapsedTime);
     }
 
-    private void __AddActiveSkillKey(string name)
-    {
-        if (__skillActiveKeys == null)
-            __skillActiveKeys = new Dictionary<string, SkillActiveKeyData>();
-
-        if (!__skillActiveKeys.TryGetValue(name, out var result))
-        {
-            int numStyles = _skillActiveDatas.Length;
-            if (__skillActiveKeys.Count < 1)
-            {
-                for (int i = 0; i < numStyles; ++i)
-                {
-                    ref var skillActiveData = ref _skillActiveDatas[i];
-                    skillActiveData.onKeyEnable?.Invoke();
-                }
-            }
-
-            result.count = 0;
-
-            result.styles = new LevelSkillKeyStyle[numStyles];
-            for (int i = 0; i < numStyles; ++i)
-            {
-                ref var skillActiveData = ref _skillActiveDatas[i];
-                
-                result.styles[i] = skillActiveData.keyStyle == null ? null : 
-                    Instantiate(skillActiveData.keyStyle, skillActiveData.keyStyle.transform.parent);
-            }
-        }
-
-        ++result.count;
-        int rank = result.rank;
-
-        if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
-        {
-            foreach (var style in result.styles)
-            {
-                if(style == null)
-                    continue;
-
-                result.rank = style.SetAsset(asset, result.count);
-                
-                style.gameObject.SetActive(result.rank >= 0);
-            }
-            
-            if (result.rank != rank)
-            {
-                GameObject gameObject;
-                LevelSkillKeyStyle resultKeyStyle;
-                foreach (var skillActiveData in _skillActiveDatas)
-                {
-                    if(skillActiveData.resultKeyStyle == null)
-                        continue;
-                    
-                    resultKeyStyle = Instantiate(skillActiveData.resultKeyStyle, skillActiveData.resultKeyStyle.transform.parent);
-                    resultKeyStyle.SetAsset(asset, result.count);
-
-                    gameObject = resultKeyStyle.gameObject;
-                    gameObject.SetActive(true);
-        
-                    if(skillActiveData.resultKeyStyleDestroyTime > 0.0f)
-                        Destroy(gameObject, skillActiveData.resultKeyStyleDestroyTime);
-                }
-            }
-
-        }
-
-        __skillActiveKeys[name] = result;
-    }
-
     private bool __RemoveActiveSkillKey(string name)
     {
         if (__skillActiveKeys == null || !__skillActiveKeys.TryGetValue(name, out var result))
@@ -356,5 +287,91 @@ public partial class LevelManager
         }
 
         return true;
+    }
+    
+    
+    private void __AddActiveSkillKey(string name)
+    {
+        if (__skillActiveKeys == null)
+            __skillActiveKeys = new Dictionary<string, SkillActiveKeyData>();
+
+        if (!__skillActiveKeys.TryGetValue(name, out var result))
+        {
+            int numStyles = _skillActiveDatas.Length;
+            if (__skillActiveKeys.Count < 1)
+            {
+                for (int i = 0; i < numStyles; ++i)
+                {
+                    ref var skillActiveData = ref _skillActiveDatas[i];
+                    skillActiveData.onKeyEnable?.Invoke();
+                }
+            }
+
+            result.count = 0;
+
+            result.styles = new LevelSkillKeyStyle[numStyles];
+            for (int i = 0; i < numStyles; ++i)
+            {
+                ref var skillActiveData = ref _skillActiveDatas[i];
+                
+                result.styles[i] = skillActiveData.keyStyle == null ? null : 
+                    Instantiate(skillActiveData.keyStyle, skillActiveData.keyStyle.transform.parent);
+            }
+        }
+
+        ++result.count;
+        int rank = result.rank;
+
+        if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
+        {
+            result.rank = asset.ranks.BinarySearch(result.count);
+            if (result.rank != rank && result.rank >= 0)
+            {
+                IEnumerator coroutine;
+                foreach (var skillActiveData in _skillActiveDatas)
+                {
+                    coroutine = __ReturnResultKey(result.styles, skillActiveData.resultKeyStyle, asset, result.count,
+                        skillActiveData.resultKeyStyleDestroyTime);
+                    
+                    if(!EnqueueSkillSelectionCoroutine(coroutine))
+                        __StartCoroutine(coroutine);
+                }
+            }
+
+        }
+
+        __skillActiveKeys[name] = result;
+    }
+
+    private IEnumerator __ReturnResultKey(
+        LevelSkillKeyStyle[] styles,
+        LevelSkillKeyStyle style, 
+        SkillKeyAsset asset, 
+        int count, 
+        float destroyTime)
+    {
+        yield return null;
+
+        if (style != null)
+        {
+            style = Instantiate(style, style.transform.parent);
+            style.SetAsset(asset, count);
+
+            var gameObject = style.gameObject;
+            gameObject.SetActive(true);
+
+            yield return new WaitForSecondsRealtime(destroyTime);
+
+            Destroy(gameObject);
+        }
+
+        foreach (var temp in styles)
+        {
+            if(temp == null)
+                continue;
+
+            temp.SetAsset(asset, count);
+            temp.gameObject.SetActive(true);
+        }
     }
 }
