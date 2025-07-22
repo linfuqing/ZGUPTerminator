@@ -246,43 +246,59 @@ public partial class LevelManager
         if (__skillActiveKeys == null || !__skillActiveKeys.TryGetValue(name, out var result))
             return false;
 
+        bool isDisable = false;
         if (result.count > 1)
         {
             --result.count;
 
             if (result.styles != null && SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
             {
-                foreach (var style in result.styles)
+                result.rank = asset.ranks.BinarySearch(result.count);
+                if (result.rank < 0)
                 {
-                    if(style == null)
-                        continue;
+                    isDisable = true;
                     
-                    result.rank = style.SetAsset(asset, result.count);
+                    foreach (var style in result.styles)
+                    {
+                        if(style == null)
+                            continue;
 
-                    style.gameObject.SetActive(result.rank >= 0);
+                        Destroy(style.gameObject);
+                    }
+                }
+                else
+                {
+                    foreach (var style in result.styles)
+                    {
+                        if (style == null)
+                            continue;
+
+                        style.SetAsset(asset, result.count);
+                    }
                 }
             }
 
             __skillActiveKeys[name] = result;
         }
         else
+            __skillActiveKeys.Remove(name);
+
+        if (isDisable)
         {
-            if (result.styles != null)
+            foreach (var value in __skillActiveKeys.Values)
             {
-                foreach (var style in result.styles)
-                    Destroy(style.gameObject);
+                if (value.rank >= 0)
+                {
+                    isDisable = false;
+
+                    break;
+                }
             }
 
-            __skillActiveKeys.Remove(name);
-            
-            if (__skillActiveKeys.Count < 1)
+            if (isDisable)
             {
-                int numStyles = _skillActiveDatas.Length;
-                for (int i = 0; i < numStyles; ++i)
-                {
-                    ref var skillActiveData = ref _skillActiveDatas[i];
+                foreach (var skillActiveData in _skillActiveDatas)
                     skillActiveData.onKeyDisable?.Invoke();
-                }
             }
         }
 
@@ -298,25 +314,9 @@ public partial class LevelManager
         int numStyles = _skillActiveDatas.Length;
         if (!__skillActiveKeys.TryGetValue(name, out var result))
         {
-            if (__skillActiveKeys.Count < 1)
-            {
-                for (int i = 0; i < numStyles; ++i)
-                {
-                    ref var skillActiveData = ref _skillActiveDatas[i];
-                    skillActiveData.onKeyEnable?.Invoke();
-                }
-            }
-
             result.count = 0;
 
-            result.styles = new LevelSkillKeyStyle[numStyles];
-            for (int i = 0; i < numStyles; ++i)
-            {
-                ref var skillActiveData = ref _skillActiveDatas[i];
-                
-                result.styles[i] = skillActiveData.keyStyle == null ? null : 
-                    Instantiate(skillActiveData.keyStyle, skillActiveData.keyStyle.transform.parent);
-            }
+            result.styles = null;
         }
 
         ++result.count;
@@ -327,12 +327,41 @@ public partial class LevelManager
             result.rank = asset.ranks.BinarySearch(result.count);
             if (result.rank != rank && result.rank >= 0)
             {
+                bool isEnable = false;
+                if (result.styles == null)
+                {
+                    isEnable = true;
+                    foreach (var value in __skillActiveKeys.Values)
+                    {
+                        if (value.rank >= 0)
+                        {
+                            isEnable = false;
+                            
+                            break;
+                        }
+                    }
+
+                    result.styles = new LevelSkillKeyStyle[numStyles];
+                    for (int i = 0; i < numStyles; ++i)
+                    {
+                        ref var skillActiveData = ref _skillActiveDatas[i];
+                
+                        result.styles[i] = skillActiveData.keyStyle == null ? null : 
+                            Instantiate(skillActiveData.keyStyle, skillActiveData.keyStyle.transform.parent);
+                    }
+                }
+                
                 IEnumerator coroutine;
                 for (int i = 0; i < numStyles; ++i)
                 {
                     ref var skillActiveData = ref _skillActiveDatas[i];
 
-                    coroutine = __ReturnResultKey(result.styles[i], skillActiveData.resultKeyStyle, asset, result.count,
+                    coroutine = __ReturnResultKey(
+                        isEnable ? skillActiveData.onKeyEnable : null, 
+                        result.styles[i], 
+                        skillActiveData.resultKeyStyle, 
+                        asset, 
+                        result.count,
                         skillActiveData.resultKeyStyleDestroyTime);
                     
                     if(!EnqueueSkillSelectionCoroutine(coroutine))
@@ -346,6 +375,7 @@ public partial class LevelManager
     }
 
     private IEnumerator __ReturnResultKey(
+        UnityEvent onEnable, 
         LevelSkillKeyStyle style,
         ResultSkillKeyStyle resultStyle, 
         SkillKeyAsset asset, 
@@ -385,5 +415,7 @@ public partial class LevelManager
             style.gameObject.SetActive(true);
             style.SetAsset(asset, count);
         }
+        
+        onEnable?.Invoke();
     }
 }
