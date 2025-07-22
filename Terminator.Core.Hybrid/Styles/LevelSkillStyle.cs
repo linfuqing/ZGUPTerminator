@@ -9,6 +9,7 @@ public class LevelSkillStyle : SkillStyle
 {
     public UnityEvent onGuide;
     public UnityEvent onRecommend;
+    public UnityEvent onDestroy;
 
     public Button button;
 

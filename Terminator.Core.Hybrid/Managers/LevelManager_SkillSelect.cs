@@ -355,6 +355,8 @@ public partial class LevelManager
         {
             foreach (var skillStyle in __skillStyles.Values)
             {
+                skillStyle.onDestroy?.Invoke();
+                
                 if (__gameObjectsToDestroy == null)
                     __gameObjectsToDestroy = new List<GameObject>();
 
