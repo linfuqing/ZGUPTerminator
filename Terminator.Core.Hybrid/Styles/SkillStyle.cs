@@ -102,7 +102,7 @@ public class SkillStyle : MonoBehaviour
         if(parent != transform.parent)
             transform.SetParent(parent);
         
-        gameObject.SetActive(true);
+        gameObject.SetActive(value.sprite != null);
     }
     
     private void OnDestroy()

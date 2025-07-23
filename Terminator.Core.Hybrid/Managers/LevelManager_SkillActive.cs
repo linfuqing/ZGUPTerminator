@@ -219,16 +219,30 @@ public partial class LevelManager
 
             origin.Reset(level, asset, keySprites);
 
+            int numKeys = keys == null ? 0 : keys.Length;
             if (!oldName.IsEmpty && SkillManager.TryGetAsset(oldName, out _, out var oldKeys, out _) && oldKeys != null)
             {
-                foreach (var key in oldKeys)
-                    __RemoveActiveSkillKey(key);
-            }
+                keys = keys?.Clone() as string[];
 
-            if (keys != null)
+                int keyIndex;
+                foreach (var key in oldKeys)
+                {
+                    keyIndex = keys == null ? -1 : Array.IndexOf(keys, key);
+                    if (keyIndex != -1)
+                    {
+                        keys[keyIndex] = keys[--numKeys];
+                        
+                        continue;
+                    }
+                    
+                    __RemoveActiveSkillKey(key);
+                }
+            }
+            
+            if (numKeys > 0)
             {
-                foreach (var key in keys)
-                    __AddActiveSkillKey(key);
+                for(int i = 0; i < numKeys; ++i)
+                    __AddActiveSkillKey(keys[i]);
             }
         }
     }
