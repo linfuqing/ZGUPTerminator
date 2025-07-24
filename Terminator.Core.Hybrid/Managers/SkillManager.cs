@@ -325,7 +325,7 @@ public class SkillManager : MonoBehaviour
         
         result = default;
         keyNames = null;
-        keySprites = null;
+        keyIcons = null;
 
         return false;
     }

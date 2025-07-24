@@ -259,7 +259,7 @@ public partial class LevelManager
                         });
                     }
 
-                    style.SetAsset(asset, keySprites);
+                    style.SetAsset(asset, keyIcons);
 
                     __SetSkillKeyStyles(style.keyStyles, keyNames);
 
