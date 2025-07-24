@@ -11,11 +11,11 @@ public class LevelSkillKeyStyle : SkillKeyStyle
     
     public Progressbar progressbar;
 
-    public int SetAsset(in SkillKeyAsset value, int count)
+    public int SetAsset(in SkillKeyAsset value, int count, bool isIcon = true)
     {
         onTitle.Invoke(value.name);
 
-        onSprite.Invoke(value.sprite);
+        onSprite.Invoke(isIcon ? value.icon : value.sprite);
         
         int index = value.BinarySearch(count);
         if(index >= 0 && onDetail != null)
