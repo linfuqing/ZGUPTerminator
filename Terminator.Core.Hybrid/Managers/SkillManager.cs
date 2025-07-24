@@ -48,6 +48,7 @@ public struct SkillKeyAsset
     public string name;
 
     public Sprite sprite;
+    public Sprite icon;
 
     public int capacity;
     
@@ -176,6 +177,8 @@ public class SkillManager : MonoBehaviour
 
         public string title;
 
+        public Sprite icon;
+
         public Sprite sprite;
 
         public int capacity;
@@ -186,6 +189,7 @@ public class SkillManager : MonoBehaviour
         {
             SkillKeyAsset asset;
             asset.name = title;
+            asset.icon = icon;
             asset.sprite = sprite;
             asset.capacity = capacity;
             asset.ranks = ranks;
@@ -242,6 +246,12 @@ public class SkillManager : MonoBehaviour
         [CSVField]
         public string 关卡技能词条描述图标
         {
+            set { icon = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(value); }
+        }
+
+        [CSVField]
+        public string 关卡技能词条描述精灵
+        {
             set { sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(value); }
         }
 
@@ -254,7 +264,7 @@ public class SkillManager : MonoBehaviour
 
         public string[] keyNames;
         
-        public Sprite[] keySprites;
+        public Sprite[] keyIcons;
     }
     
     [SerializeField]
@@ -302,13 +312,13 @@ public class SkillManager : MonoBehaviour
         in FixedString128Bytes name, 
         out SkillAsset result, 
         out string[] keyNames, 
-        out Sprite[] keySprites)
+        out Sprite[] keyIcons)
     {
         if (__assets.TryGetValue(name, out var asset))
         {
             result = asset.value;
             keyNames = asset.keyNames;
-            keySprites = asset.keySprites;
+            keyIcons = asset.keyIcons;
             
             return true;
         }
@@ -334,7 +344,7 @@ public class SkillManager : MonoBehaviour
         }
         
         Asset asset;
-        asset.keySprites = null;
+        asset.keyIcons = null;
         
         SkillKeyAsset keyAsset;
         int i, j, numKeys, numSkills = _skills.Length;
@@ -346,10 +356,10 @@ public class SkillManager : MonoBehaviour
             asset.keyNames = skill.keys;
 
             numKeys = skill.keys == null ? 0 : skill.keys.Length;
-            asset.keySprites = new Sprite[numKeys];
+            asset.keyIcons = new Sprite[numKeys];
 
             for (j = 0; j < numKeys; ++j)
-                asset.keySprites[j] = __keyAssets.TryGetValue(skill.keys[j], out keyAsset) ? keyAsset.sprite : null;
+                asset.keyIcons[j] = __keyAssets.TryGetValue(skill.keys[j], out keyAsset) ? keyAsset.icon : null;
             
             __assets.Add(skill.name, asset);
         }

@@ -211,13 +211,13 @@ public partial class LevelManager
                     recommendIndex = -1;
                 SkillAsset asset;
                 string[] keyNames;
-                Sprite[] keySprites;
+                Sprite[] keyIcons;
                 LevelSkillStyle style;
                 LevelSkillData? skill = null;
                 for (int i = 0; i < numSkills; ++i)
                 {
                     var source = skills[i];
-                    if(!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keySprites))
+                    if(!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keyIcons))
                         continue;
                     
                     if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
@@ -400,13 +400,13 @@ public partial class LevelManager
             yield return coroutine;
         
         if (selectedSkillSelectionIndex != -1 && 
-            SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keySprites))
+            SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keyIcons))
         {
             var selection = _skillSelections[selectedSkillSelectionIndex];
             var style = selection.style == null ? null : Instantiate(selection.style, selection.style.transform.parent);
             if (style != null)
             {
-                style.SetAsset(asset, keySprites);
+                style.SetAsset(asset, keyIcons);
                 
                 __SetSkillKeyStyles(style.keyStyles, keyNames);
 

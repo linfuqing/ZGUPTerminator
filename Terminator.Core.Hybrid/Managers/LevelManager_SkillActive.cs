@@ -59,7 +59,7 @@ public partial class LevelManager
             return true;
         }
 
-        public void Reset(int level, in SkillAsset asset, Sprite[] keySprites)
+        public void Reset(int level, in SkillAsset asset, Sprite[] keyIcons)
         {
             while(__styles.Count < level)
                 __styles.Add(null);
@@ -88,7 +88,7 @@ public partial class LevelManager
                 if(style == null)
                     continue;
                 
-                style.SetAsset(asset, keySprites);
+                style.SetAsset(asset, keyIcons);
             }
         }
         
@@ -201,7 +201,7 @@ public partial class LevelManager
             __skillActiveNames = new Dictionary<(int, int), FixedString128Bytes>();
 
         if ((!__skillActiveNames.TryGetValue((index, level), out var oldName) || oldName != name) &&
-            SkillManager.TryGetAsset(name, out var asset, out var keys, out var keySprites))
+            SkillManager.TryGetAsset(name, out var asset, out var keys, out var keyIcons))
         {
             __skillActiveNames[(index, level)] = name;
 
@@ -217,7 +217,7 @@ public partial class LevelManager
                 __skillActives.Insert(index, origin);
             }
 
-            origin.Reset(level, asset, keySprites);
+            origin.Reset(level, asset, keyIcons);
 
             int numKeys = keys == null ? 0 : keys.Length;
             if (!oldName.IsEmpty && SkillManager.TryGetAsset(oldName, out _, out var oldKeys, out _) && oldKeys != null)
