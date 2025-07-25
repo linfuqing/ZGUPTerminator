@@ -152,13 +152,25 @@ public partial struct LookAtSystem : ISystem
             var instance = instances[index];
             var localTransform = localTransforms[entity];
 
+            float3 position = localTransform.Position;
+            float4x4 parentToWorld;
+            if (parents.TryGetComponent(entity, out var parent) &&
+                TryGetLocalToWorld(parent.Value, parents, localTransforms, out var matrix))
+            {
+                parentToWorld = matrix;
+
+                position = math.transform(matrix, position);
+            }
+            else
+                parentToWorld = float4x4.identity;
+
             CollisionFilter filter;
             filter.GroupIndex = 0;
             filter.BelongsTo = ~0u;
             filter.CollidesWith = (uint)instance.layerMask;
             PointDistanceInput pointDistanceInput = default;
             pointDistanceInput.MaxDistance = instance.maxDistance;
-            pointDistanceInput.Position = localTransform.Position;
+            pointDistanceInput.Position = position;
             pointDistanceInput.Filter = filter;
 
             float minDistance = instance.minDistance, maxDistance = instance.maxDistance;
@@ -183,7 +195,7 @@ public partial struct LookAtSystem : ISystem
                         instance.minDot, 
                         minDistance, 
                         maxDistance, 
-                        localTransform.Position, 
+                        position, 
                         cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
@@ -195,7 +207,6 @@ public partial struct LookAtSystem : ISystem
                 index < lookAtAndFollows.Length && 
                 index < followTargetParents.Length)
             {
-                Parent parent;
                 FollowTarget followTarget;
                 Entity followTargetParent = followTargetParents[index].entity;
                 while (!followTargets.TryGetComponent(followTargetParent, out followTarget))
@@ -215,7 +226,7 @@ public partial struct LookAtSystem : ISystem
                         instance.minDot, 
                         instance.minDistance, 
                         instance.maxDistance,  
-                        localTransform.Position, 
+                        position, 
                         cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
@@ -231,7 +242,7 @@ public partial struct LookAtSystem : ISystem
                     instance.minDot, 
                     instance.minDistance, 
                     instance.maxDistance,  
-                    localTransform.Position, 
+                    position, 
                     cameraDirection, 
                     characterBodies);
                 if (collisionWorld.CalculateDistance(pointDistanceInput, ref collector))
@@ -260,11 +271,13 @@ public partial struct LookAtSystem : ISystem
                 }
             }
             else
-                __Apply(index, entity, closestHit, ref localTransform);
+                __Apply(index, position, parentToWorld, entity, closestHit, ref localTransform);
         }
 
         private void __Apply(
             int index, 
+            in float3 position, 
+            in float4x4 parentToWorld, 
             in Entity entity, 
             in DistanceHit closestHit, 
             ref LocalTransform localTransform)
@@ -302,16 +315,9 @@ public partial struct LookAtSystem : ISystem
                 return;
             }
 
-            float4x4 parentToWorld;
-            if (parents.TryGetComponent(entity, out var parent) &&
-                TryGetLocalToWorld(parent.Value, parents, localTransforms, out var matrix))
-                parentToWorld = matrix;
-            else
-                parentToWorld = float4x4.identity;
-            
             quaternion rotation = MathUtilities.CreateRotationWithUpPriority(
                 characterBodies.TryGetComponent(entity, out var characterBody) ? characterBody.GroundingUp : math.up(), 
-                math.normalizesafe(closestHit.Position - math.transform(parentToWorld, localTransform.Position)));
+                math.normalizesafe(closestHit.Position - position));
 
             if (index < characterLookAts.Length)
             {
