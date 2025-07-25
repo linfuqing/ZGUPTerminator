@@ -403,7 +403,7 @@ public partial class LevelManager
         if (resultStyle != null)
         {
             resultStyle = Instantiate(resultStyle, resultStyle.transform.parent);
-            resultStyle.SetAsset(asset, count);
+            resultStyle.SetAsset(asset, count, false);
 
             bool isConform = resultStyle.button == null;
             if (!isConform)
@@ -429,7 +429,7 @@ public partial class LevelManager
         if(style != null)
         {
             style.gameObject.SetActive(true);
-            style.SetAsset(asset, count, false);
+            style.SetAsset(asset, count);
         }
         
         onEnable?.Invoke();

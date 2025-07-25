@@ -329,7 +329,7 @@ public partial struct LookAtSystem : ISystem
 
             quaternion rotation = localTransform.Rotation;
             while (parents.TryGetComponent(entity, out var parent))
-                return math.mul(__GetRotation(entity), rotation);
+                return math.mul(__GetRotation(parent.entity), rotation);
 
             return rotation;
         }
