@@ -302,9 +302,16 @@ public partial struct LookAtSystem : ISystem
                 return;
             }
 
+            float4x4 parentToWorld;
+            if (parents.TryGetComponent(entity, out var parent) &&
+                TryGetLocalToWorld(parent.Value, parents, localTransforms, out var matrix))
+                parentToWorld = matrix;
+            else
+                parentToWorld = float4x4.identity;
+            
             quaternion rotation = MathUtilities.CreateRotationWithUpPriority(
                 characterBodies.TryGetComponent(entity, out var characterBody) ? characterBody.GroundingUp : math.up(), 
-                math.normalizesafe(closestHit.Position - localTransform.Position));
+                math.normalizesafe(closestHit.Position - math.transform(parentToWorld, localTransform.Position)));
 
             if (index < characterLookAts.Length)
             {
@@ -314,24 +321,34 @@ public partial struct LookAtSystem : ISystem
             }
             else
             {
-                if (parents.TryGetComponent(entity, out var parent))
-                    rotation = math.mul(math.inverse(__GetRotation(parent.Value)), rotation);
-                
-                localTransform.Rotation = rotation;
+                localTransform.Rotation = math.mul(math.inverse(math.quaternion(parentToWorld)), rotation);
                 localTransforms[entity] = localTransform;
             }
         }
 
-        private quaternion __GetRotation(in Entity entity)
+        public static bool TryGetLocalToWorld(
+            in Entity entity, 
+            in ComponentLookup<Parent> parents, 
+            in ComponentLookup<LocalTransform> localTransforms, 
+            out float4x4 matrix)
         {
-            if(!localTransforms.TryGetComponent(entity, out var localTransform))
-                return quaternion.identity;
+            if (!localTransforms.TryGetComponent(entity, out var localTransform))
+            {
+                matrix = float4x4.identity;
 
-            quaternion rotation = localTransform.Rotation;
-            while (parents.TryGetComponent(entity, out var parent))
-                return math.mul(__GetRotation(parent.Value), rotation);
+                return false;
+            }
 
-            return rotation;
+            matrix = localTransform.ToMatrix();
+            if (parents.TryGetComponent(entity, out var parent) && 
+                TryGetLocalToWorld(
+                    parent.Value, 
+                    parents, 
+                    localTransforms, 
+                    out var parentMatrix))
+                matrix = math.mul(parentMatrix, matrix);
+
+            return true;
         }
     }
 
