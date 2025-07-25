@@ -429,7 +429,7 @@ public partial class LevelManager
         if(style != null)
         {
             style.gameObject.SetActive(true);
-            style.SetAsset(asset, count);
+            style.SetAsset(asset, count, false);
         }
         
         onEnable?.Invoke();

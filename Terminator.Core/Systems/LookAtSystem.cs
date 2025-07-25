@@ -140,7 +140,8 @@ public partial struct LookAtSystem : ISystem
 
         public NativeArray<ThirdPersonCharacterLookAt> characterLookAts;
 
-        public NativeArray<LocalTransform> localTransforms;
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<LocalTransform> localTransforms;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<FollowTarget> followTargets;
@@ -149,7 +150,7 @@ public partial struct LookAtSystem : ISystem
         {
             Entity entity = entityArray[index];
             var instance = instances[index];
-            var localTransform = localTransforms[index];
+            var localTransform = localTransforms[entity];
 
             CollisionFilter filter;
             filter.GroupIndex = 0;
@@ -313,9 +314,24 @@ public partial struct LookAtSystem : ISystem
             }
             else
             {
+                if (parents.TryGetComponent(entity, out var parent))
+                    rotation = math.mul(math.inverse(__GetRotation(parent.Value)), rotation);
+                
                 localTransform.Rotation = rotation;
-                localTransforms[index] = localTransform;
+                localTransforms[entity] = localTransform;
             }
+        }
+
+        private quaternion __GetRotation(in Entity entity)
+        {
+            if(!localTransforms.TryGetComponent(entity, out var localTransform))
+                return quaternion.identity;
+
+            quaternion rotation = localTransform.Rotation;
+            while (parents.TryGetComponent(entity, out var parent))
+                return math.mul(__GetRotation(entity), rotation);
+
+            return rotation;
         }
     }
 
@@ -349,7 +365,8 @@ public partial struct LookAtSystem : ISystem
 
         public ComponentTypeHandle<ThirdPersonCharacterLookAt> characterLookAtType;
 
-        public ComponentTypeHandle<LocalTransform> localTransformType;
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<LocalTransform> localTransforms;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<FollowTarget> followTargets;
@@ -367,7 +384,7 @@ public partial struct LookAtSystem : ISystem
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.lookAtAndFollows = chunk.GetNativeArray(ref lookAtAndFollowType);
             apply.characterLookAts = chunk.GetNativeArray(ref characterLookAtType);
-            apply.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            apply.localTransforms = localTransforms;
             apply.followTargets = followTargets;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -377,6 +394,8 @@ public partial struct LookAtSystem : ISystem
     }
     
     private EntityTypeHandle __entityType;
+
+    private ComponentLookup<LocalTransform> __localTransforms;
 
     private ComponentLookup<Parent> __parents;
 
@@ -394,14 +413,13 @@ public partial struct LookAtSystem : ISystem
 
     private ComponentTypeHandle<ThirdPersonCharacterLookAt> __characterLookAtType;
 
-    private ComponentTypeHandle<LocalTransform> __localTransformType;
-
     private EntityQuery __group;
     
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __entityType = state.GetEntityTypeHandle();
+        __localTransforms = state.GetComponentLookup<LocalTransform>();
         __parents = state.GetComponentLookup<Parent>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __followTargets = state.GetComponentLookup<FollowTarget>();
@@ -410,7 +428,6 @@ public partial struct LookAtSystem : ISystem
         __instanceType = state.GetComponentTypeHandle<LookAt>(true);
         __targetType = state.GetComponentTypeHandle<LookAtTarget>();
         __characterLookAtType = state.GetComponentTypeHandle<ThirdPersonCharacterLookAt>();
-        __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -426,6 +443,7 @@ public partial struct LookAtSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __entityType.Update(ref state);
+        __localTransforms.Update(ref state);
         __parents.Update(ref state);
         __characterBodies.Update(ref state);
         __followTargets.Update(ref state);
@@ -434,7 +452,6 @@ public partial struct LookAtSystem : ISystem
         __instanceType.Update(ref state);
         __targetType.Update(ref state);
         __characterLookAtType.Update(ref state);
-        __localTransformType.Update(ref state);
         
         ApplyEx apply;
         apply.cameraDirection = math.forward(SystemAPI.GetSingleton<MainCameraTransform>().rotation);
@@ -442,13 +459,13 @@ public partial struct LookAtSystem : ISystem
         apply.entityType = __entityType;
         apply.parents = __parents;
         apply.characterBodies = __characterBodies;
-        apply.followTargets = __followTargets;
         apply.followTargetParentType = __followTargetParentType;
         apply.lookAtAndFollowType = __lookAtAndFollowType;
         apply.instanceType = __instanceType;
         apply.targetType = __targetType;
         apply.characterLookAtType = __characterLookAtType;
-        apply.localTransformType = __localTransformType;
+        apply.localTransforms = __localTransforms;
+        apply.followTargets = __followTargets;
 
         state.Dependency = apply.ScheduleParallelByRef(__group, state.Dependency);
     }

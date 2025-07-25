@@ -218,7 +218,13 @@ public partial struct BulletSystem : ISystem
             float3 up = math.up();
             ref var definition = ref definitions[index].definition.Value;
             DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes;
-            if (character != Entity.Null)
+            if (character == Entity.Null)
+            {
+                characterStandTimes = default;
+
+                location = (BulletLocation)~0;
+            }
+            else
             {
                 up = characterBody.GroundingUp;
 
@@ -233,8 +239,6 @@ public partial struct BulletSystem : ISystem
 
                 this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
             }
-            else
-                characterStandTimes = default;
 
             bool isFire = this.isFire;
             
