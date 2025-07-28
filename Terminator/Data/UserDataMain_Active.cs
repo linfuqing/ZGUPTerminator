@@ -427,6 +427,14 @@ public partial class UserDataMain
                     maxCardLevel = Mathf.Max(maxCardLevel,
                         PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}"));
                 return maxCardLevel;
+            case UserQuest.Type.AchievementCardStyles:
+                int cardCount = 0;
+                foreach (var card in _cards)
+                {
+                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1) != -1)
+                        ++cardCount;
+                }
+                return cardCount;
             case UserQuest.Type.AchievementAccessoryStyles:
                 HashSet<string> accessoryStyles = null;
                 List<int> accessoryStageIndices;

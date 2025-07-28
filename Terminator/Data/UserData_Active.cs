@@ -176,6 +176,11 @@ public struct UserQuest
         AchievementCard,
         
         /// <summary>
+        /// 技能卡种类
+        /// </summary>
+        AchievementCardStyles,
+
+        /// <summary>
         /// 获得装备种类
         /// </summary>
         AchievementAccessoryStyles,
