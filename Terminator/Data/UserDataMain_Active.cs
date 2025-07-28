@@ -212,7 +212,7 @@ public partial class UserDataMain
                 result.quests = new UserQuest[count];
                 for (int i = 0; i < count; ++i)
                 {
-                    quest = _quests[__GetQuestIndex(_activesForDay.activeNames[i])];
+                    quest = _quests[__GetQuestIndex(_activesForDay.questNames[i])];
                     userQuest.name = quest.name;
                     userQuest.id = __ToID(i);
                     userQuest.type = quest.type;
@@ -251,7 +251,7 @@ public partial class UserDataMain
                 result.quests = new UserQuest[count];
                 for (int i = 0; i < count; ++i)
                 {
-                    quest = _quests[__GetQuestIndex(_activesForWeek.activeNames[i])];
+                    quest = _quests[__GetQuestIndex(_activesForWeek.questNames[i])];
                     userQuest.name = quest.name;
                     userQuest.id = __ToID(i);
                     userQuest.type = quest.type;
