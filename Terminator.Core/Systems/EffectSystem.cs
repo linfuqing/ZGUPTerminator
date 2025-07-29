@@ -485,7 +485,7 @@ public partial struct EffectSystem : ISystem
                                 }
                             }
 
-                            if (result)
+                            //if (result)
                                 ++totalCount;
                         }
                         else
@@ -496,8 +496,8 @@ public partial struct EffectSystem : ISystem
                             ref var characterBodyRW = ref characterBody.ValueRW;
                             if (!characterBodyRW.IsGrounded)
                             {
-                                if (!isResult)
-                                    continue;
+                                /*if (!isResult)
+                                    continue;*/
                             }
                             else if (damage.explosion > math.FLT_MIN_NORMAL ||
                                      damage.spring > math.FLT_MIN_NORMAL)
