@@ -43,6 +43,8 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField] 
     internal StringEvent _onKillCount;
     [SerializeField] 
+    internal StringEvent _onKillBossCount;
+    [SerializeField] 
     internal StringEvent _onGoldCount;
     
     [SerializeField] 
@@ -60,7 +62,8 @@ public partial class LevelManager : MonoBehaviour
     private int __value;
     private int __exp;
     private int __maxExp;
-    private int __count;
+    private int __killCount;
+    private int __killBossCount;
     private int __gold;
     private int __stage;
 
@@ -121,7 +124,8 @@ public partial class LevelManager : MonoBehaviour
         int max, 
         int maxExp, 
         int exp, 
-        int count, 
+        int killCount, 
+        int killBossCount, 
         int gold, 
         int stage)
     {
@@ -146,7 +150,8 @@ public partial class LevelManager : MonoBehaviour
                     __StartCoroutine(levelData.SubmitStage(
                         __dataFlag, 
                         stage,
-                        __count, 
+                        __killCount, 
+                        __killBossCount, 
                         gold,
                         rage, 
                         exp,
@@ -200,16 +205,31 @@ public partial class LevelManager : MonoBehaviour
             __maxExp = maxExp;
         }
 
-        if (count != __count)
+        if (killCount != __killCount)
         {
-            if (count > 0)
+            if (killCount > 0)
             {
                 isDirty = true;
 
                 if (_onKillCount != null)
-                    _onKillCount.Invoke(count.ToString());
+                    _onKillCount.Invoke(killCount.ToString());
 
-                __count = count;
+                __killCount = killCount;
+            }
+            else
+                __ShowTime();
+        }
+        
+        if (killBossCount != __killBossCount)
+        {
+            if (killBossCount > 0)
+            {
+                isDirty = true;
+
+                if (_onKillCount != null)
+                    _onKillCount.Invoke(killBossCount.ToString());
+
+                __killBossCount = killBossCount;
             }
             else
                 __ShowTime();
@@ -234,7 +254,7 @@ public partial class LevelManager : MonoBehaviour
         }
         
         if(isDirty)
-            IAnalytics.instance?.Set(value, max, maxExp, exp, count, gold, stage);
+            IAnalytics.instance?.Set(value, max, maxExp, exp, killCount, killBossCount, gold, stage);
     }
 
     public bool EnableStage(string name)
@@ -344,7 +364,8 @@ public partial class LevelManager : MonoBehaviour
             __StartCoroutine(levelData.SubmitLevel(
                 __dataFlag, 
                 __stage,
-                __count, 
+                __killCount,
+                __killBossCount, 
                 __gold,
                 __OnQuit));
         }

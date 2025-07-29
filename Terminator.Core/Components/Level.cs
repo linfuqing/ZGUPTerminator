@@ -389,7 +389,8 @@ public struct LevelStageOption
                 status.exp = value;
                 break;
             case Type.Stage:
-                status.count = 0;
+                status.killCount = 0;
+                status.killBossCount = 0;
                 status.stage = value;
                 break;
             case Type.SpawnerTime:
@@ -541,13 +542,19 @@ public struct LevelDefinitionData : IComponentData
     public BlobAssetReference<LevelDefinition> definition;
 }
 
+public struct LevelLayerMask : IComponentData
+{
+    public int boss;
+}
+
 public struct LevelStatus : IComponentData
 {
     public int value;
     public int max;
     public int expMax;
     public int exp;
-    public int count;
+    public int killCount;
+    public int killBossCount;
     public int gold;
     public int stage;
 }

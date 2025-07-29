@@ -179,6 +179,7 @@ public partial interface IUserData : IGameUserData
         StageFlag flag,
         int stage, 
         int killCount, 
+        int killBossCount, 
         int gold, 
         Action<bool> onComplete);
 
@@ -241,9 +242,25 @@ public partial class UserData : MonoBehaviour, IUserData
         set => PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, value);
     }
     
+    private const string NAME_SPACE_USER_KILL_COUNT = "UserKillCount";
+    private const string NAME_SPACE_USER_KILL_BOSS_COUNT = "UserKillBossCount";
     private const string NAME_SPACE_USER_STAGE_KILL_COUNT = "UserStageKillCount";
     private const string NAME_SPACE_USER_STAGE_CACHE = "UserStageCache";
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
+
+    public static int killCount
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_KILL_COUNT);
+
+        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_KILL_COUNT, value);
+    }
+    
+    public static int killBossCount
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_KILL_BOSS_COUNT);
+
+        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_KILL_BOSS_COUNT, value);
+    }
     
     public static LevelCache? levelCache
     {
@@ -296,6 +313,7 @@ public partial class UserData : MonoBehaviour, IUserData
         IUserData.StageFlag flag,
         int stage,
         int killCount, 
+        int killBossCount, 
         int gold,
         Action<bool> onComplete)
     {
@@ -312,6 +330,8 @@ public partial class UserData : MonoBehaviour, IUserData
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
+
+        UserData.killBossCount += killBossCount;
 
         temp.stage = stage;
         temp.gold = gold;
@@ -417,6 +437,8 @@ public partial class UserData : MonoBehaviour, IUserData
         string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage);
         value = Mathf.Max(value, PlayerPrefs.GetInt(key));
         PlayerPrefs.SetInt(key, value);
+
+        killCount += value;
     }
 
     void Awake()

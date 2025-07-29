@@ -416,9 +416,6 @@ public sealed partial class UserDataMain : MonoBehaviour
             userLevels[i] = userLevel;
         }
 
-        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
-            __AppendQuest(UserQuest.Type.Login, 1);
-
         IUserData.Levels result;
         result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.Levels.Flag.UnlockFirst;
         result.levels = userLevels;
@@ -550,6 +547,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         for(int i = 0; i < levelCache.stage; ++i)
         {
             stage = __GetStage(level, i);
+            
             key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stage.name}";
             if(PlayerPrefs.GetInt(key) != 0)
                 continue;

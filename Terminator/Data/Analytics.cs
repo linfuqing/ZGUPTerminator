@@ -125,13 +125,14 @@ public class Analytics : MonoBehaviour, IAnalyticsEx
         int max,
         int maxExp,
         int exp,
-        int count,
+        int killCount,
+        int killBossCount,
         int gold,
         int stage)
     {
         foreach (var instance in instances)
         {
-            instance.Set(value, max, maxExp, exp, count, gold, stage);
+            instance.Set(value, max, maxExp, exp, killCount, killBossCount, gold, stage);
         }
     }
 
@@ -273,7 +274,8 @@ public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
         int max,
         int maxExp,
         int exp,
-        int count,
+        int killCount,
+        int killBossCount, 
         int gold,
         int stage)
     {

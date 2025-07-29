@@ -1772,11 +1772,16 @@ public partial class UserDataMain
         result.property = accessory.property;
 
         var accessoryStageIndices = __GetAccessoryStageIndices(info.index);
-        var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
+        if (info.stage < accessoryStageIndices.Count)
+        {
+            var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
 
-        result.stageDesc.name = accessoryStage.name;
-        result.stageDesc.count = accessoryStage.count;
-        result.stageDesc.property = accessoryStage.property;
+            result.stageDesc.name = accessoryStage.name;
+            result.stageDesc.count = accessoryStage.count;
+            result.stageDesc.property = accessoryStage.property;
+        }
+        else
+            result.stageDesc = default;
 
         int i, j, numRoleGroups = _roleGroups.Length, numAccessorySlots = _accessorySlots.Length;
         string userAccessoryGroupKey;
@@ -2387,6 +2392,7 @@ public partial class UserData
         IUserData.StageFlag flag,
         int stage,
         int killCount, 
+        int killBossCount, 
         int gold, 
         int rage, 
         int exp, 
@@ -2407,6 +2413,8 @@ public partial class UserData
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
+
+        UserData.killBossCount += killBossCount;
 
         int result = (int)GetStageFlag(temp.name, temp.stage);
 

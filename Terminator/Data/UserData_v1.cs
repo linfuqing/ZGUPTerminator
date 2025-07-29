@@ -680,6 +680,7 @@ public partial interface IUserData
         StageFlag flag,
         int stage,
         int killCount, 
+        int killBossCount, 
         int gold,
         int rage, 
         int exp,

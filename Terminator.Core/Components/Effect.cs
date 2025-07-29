@@ -195,6 +195,13 @@ public struct EffectStatusTarget : IBufferElementData, IEnableableComponent
 
 public struct EffectTargetData : IComponentData
 {
+    public enum TargetType
+    {
+        Normal, 
+        Boss
+    }
+
+    public TargetType targetType;
     public int hpMax;
     public float recoveryChance;
     public float recoveryTime;

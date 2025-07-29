@@ -159,7 +159,8 @@ public partial class LevelSystemManaged : SystemBase
 
                 status.exp = LevelShared.exp;
                 status.expMax = LevelShared.expMax;
-                status.count = 0;
+                status.killCount = 0;
+                status.killBossCount = 0;
                 if (SystemAPI.Exists(player))
                 {
                     if (SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
@@ -194,7 +195,8 @@ public partial class LevelSystemManaged : SystemBase
                 status.max, 
                 status.expMax, 
                 status.exp, 
-                status.count, 
+                status.killCount, 
+                status.killBossCount, 
                 status.gold, 
                 status.stage);
         

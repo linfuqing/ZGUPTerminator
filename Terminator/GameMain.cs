@@ -84,6 +84,7 @@ public class GameLevelData : ILevelData
         ILevelData.Flag flag, 
         int stage, 
         int killCount, 
+        int killBossCount, 
         int gold, 
         int rage, 
         int exp, 
@@ -96,6 +97,7 @@ public class GameLevelData : ILevelData
             ToStageFlag(flag),
             stage, 
             killCount, 
+            killBossCount, 
             gold, 
             rage, 
             exp, 
@@ -108,6 +110,7 @@ public class GameLevelData : ILevelData
         ILevelData.Flag flag, 
         int stage,
         int killCount, 
+        int killBossCount, 
         int gold,
         Action<bool> onComplete)
     {
@@ -116,6 +119,7 @@ public class GameLevelData : ILevelData
             ToStageFlag(flag),
             stage, 
             killCount, 
+            killBossCount, 
             gold, 
             onComplete);
     }

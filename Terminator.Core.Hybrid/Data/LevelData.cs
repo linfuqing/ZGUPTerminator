@@ -15,6 +15,7 @@ public interface ILevelData
         Flag flag, 
         int stage, 
         int killCount, 
+        int killBossCount, 
         int gold, 
         int rage, 
         int exp, 
@@ -26,6 +27,7 @@ public interface ILevelData
         Flag flag, 
         int stage, 
         int killCount, 
+        int killBossCount, 
         int gold, 
         Action<bool> onComplete);
 }

@@ -11,7 +11,8 @@ public interface IAnalytics
         int max,
         int maxExp,
         int exp,
-        int count,
+        int killCount,
+        int killBossCount,
         int gold,
         int stage);
     

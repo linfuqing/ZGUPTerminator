@@ -92,6 +92,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
+        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
+            __AppendQuest(UserQuest.Type.Login, 1);
+
         IUserData.SignIn result;
         result.day = __GetQuest(UserQuest.Type.Login, ActiveType.Week);
 
@@ -419,6 +422,8 @@ public partial class UserDataMain
     {
         switch (questType)
         {
+            case UserQuest.Type.KillCount:
+                return UserData.killCount;
             case UserQuest.Type.AchievementLevels:
                 return UserData.level;
             case UserQuest.Type.AchievementCard:
@@ -458,7 +463,7 @@ public partial class UserDataMain
                         break;
                     }
                     
-                    if(j == numAccessoryStages)
+                    if(j > numAccessoryStages)
                         continue;
 
                     if (accessoryStyles == null)

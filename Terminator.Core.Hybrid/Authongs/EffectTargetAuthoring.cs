@@ -59,6 +59,8 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             var entity = GetEntity(TransformUsageFlags.None);
 
             EffectTargetData instance;
+            instance.targetType =
+                9 == GetLayer() ? EffectTargetData.TargetType.Boss : EffectTargetData.TargetType.Normal;
             instance.hpMax = authoring._hp;
             instance.recoveryChance = authoring._recoveryChance;
             instance.recoveryTime = authoring._recoveryTime;
@@ -183,7 +185,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
     [SerializeField] 
     internal int _gold = 1;
-
+    
     [SerializeField] 
     internal float _damageScale = 1.0f;
 

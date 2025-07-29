@@ -12,7 +12,8 @@ public struct UserActive
     [Flags]
     public enum Flag
     {
-        Collected = 0x01
+        Locked = 0x01, 
+        Collected = 0x02
     }
     
     public string name;

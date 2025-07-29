@@ -1245,7 +1245,10 @@ public partial struct EffectSystem : ISystem
                             Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
                             Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
 
-                            Interlocked.Increment(ref levelStatus.count);
+                            Interlocked.Increment(ref levelStatus.killCount);
+                            
+                            if(EffectTargetData.TargetType.Boss == targetInstance.targetType)
+                                Interlocked.Increment(ref levelStatus.killBossCount);
                         }
 
                         if (index < instances.Length && index < prefabs.Length)
