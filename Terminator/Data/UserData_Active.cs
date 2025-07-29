@@ -172,7 +172,7 @@ public struct UserQuest
         AchievementLevels, 
         
         /// <summary>
-        /// 技能卡达到最高级别
+        /// 技能卡升级最高次数
         /// </summary>
         AchievementCard,
         

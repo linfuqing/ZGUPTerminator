@@ -424,6 +424,8 @@ public partial class UserDataMain
         {
             case UserQuest.Type.KillCount:
                 return UserData.killCount;
+            case UserQuest.Type.KillBoss:
+                return UserData.killBossCount;
             case UserQuest.Type.AchievementLevels:
                 return UserData.level;
             case UserQuest.Type.AchievementCard:
@@ -431,7 +433,7 @@ public partial class UserDataMain
                 foreach (var card in _cards)
                     maxCardLevel = Mathf.Max(maxCardLevel,
                         PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}"));
-                return maxCardLevel;
+                return maxCardLevel - 1;
             case UserQuest.Type.AchievementCardStyles:
                 int cardCount = 0;
                 foreach (var card in _cards)
