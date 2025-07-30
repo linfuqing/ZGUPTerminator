@@ -16,6 +16,7 @@ public partial class UserDataMain
     }
 
     [Header("Buy")] 
+    [SerializeField]
     internal Energies _energies;
 
     public const string NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND = "UserEnergiesBuyTimesByDiamond";
@@ -29,9 +30,9 @@ public partial class UserDataMain
         energies.energyPerTime = _energies.energyPerTime;
         energies.diamondPerTime = _energies.diamondPerTime;
         energies.buyTimesByDiamond = _energies.buyTimesByDiamond -
-                                     PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND);
+                                     new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND), __Parse).ToDay();
         energies.buyTimesByAd = _energies.buyTimesByAd -
-                                PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD);
+                                new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD), __Parse).ToDay();
         
         onComplete(energies);
     }
@@ -43,14 +44,14 @@ public partial class UserDataMain
         int diamond = UserDataMain.diamond;
         if (diamond >= _energies.diamondPerTime)
         {
-            int buyTimesByDiamond = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND);
+            int buyTimesByDiamond = new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND), __Parse).ToDay();
             if (buyTimesByDiamond < _energies.buyTimesByDiamond)
             {
-                UserDataMain.diamond -= diamond;
+                UserDataMain.diamond -= _energies.diamondPerTime;
 
                 __ApplyEnergy(-_energies.energyPerTime);
                 
-                PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND, ++buyTimesByDiamond);
+                PlayerPrefs.SetString(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND, new Active<int>(++buyTimesByDiamond).ToString());
                 
                 onComplete(true);
                 

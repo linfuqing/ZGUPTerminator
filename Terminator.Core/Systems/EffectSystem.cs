@@ -494,13 +494,13 @@ public partial struct EffectSystem : ISystem
                         if (characterBody.IsValid)
                         {
                             ref var characterBodyRW = ref characterBody.ValueRW;
-                            /*if (!characterBodyRW.IsGrounded)
+                            if (!characterBodyRW.IsGrounded)
                             {
                                 //弹板
-                                if (!isResult)
+                                if (!isResult && (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) == 0))
                                     continue;
                             }
-                            else */if (damage.explosion > math.FLT_MIN_NORMAL ||
+                            else if (damage.explosion > math.FLT_MIN_NORMAL ||
                                      damage.spring > math.FLT_MIN_NORMAL)
                             {
                                 forceResult = float3.zero;

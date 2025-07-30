@@ -95,8 +95,10 @@ public partial class UserDataMain
         if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
             __AppendQuest(UserQuest.Type.Login, 1);
 
+        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = day / 7;
+
         IUserData.SignIn result;
-        result.day = __GetQuest(UserQuest.Type.Login, ActiveType.Week);
+        result.day = day & 0x7;
 
         int numSignInActives = _signInActiveNames.Length;
         Active signInActive;
@@ -108,9 +110,9 @@ public partial class UserDataMain
             userActive.name = signInActive.name;
             userActive.id = __ToID(i);
             userActive.flag =
-                new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_SIGN_IN_ACTIVE}{signInActive.name}"), __Parse).ToWeek() == 0
-                    ? 0
-                    : UserActive.Flag.Collected;
+                PlayerPrefs.GetInt($"{NAME_SPACE_USER_SIGN_IN_ACTIVE}{signInActive.name}") > week
+                    ? UserActive.Flag.Collected
+                    : 0;
             userActive.exp = signInActive.exp;
             userActive.rewards = signInActive.rewards;
             result.actives[i] = userActive;
@@ -123,21 +125,22 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Week);
+        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = day / 7, mask = day & 0x7;
+        
         string key;
         Active signInActive;
         List<UserRewardData> rewards = null;
         foreach (var signInActiveName in _signInActiveNames)
         {
             signInActive = _actives[__GetActiveIndex(signInActiveName)];
-            if(signInActive.exp > day)
+            if(signInActive.exp > mask)
                 continue;
 
             key = $"{NAME_SPACE_USER_SIGN_IN_ACTIVE}{signInActive.name}";
-            if(new Active<int>(PlayerPrefs.GetString(key), __Parse).ToWeek() != 0)
+            if(PlayerPrefs.GetInt(key) > week)
                 continue;
 
-            PlayerPrefs.SetString(key, new Active<int>(1).ToString());
+            PlayerPrefs.SetInt(key, week + 1);
 
             if (rewards == null)
                 rewards = new List<UserRewardData>();

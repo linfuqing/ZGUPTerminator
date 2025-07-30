@@ -103,4 +103,9 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
 
         onComplete(true);
     }
+
+    void Awake()
+    {
+        IAdvertisementData.instance = this;
+    }
 }

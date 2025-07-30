@@ -49,13 +49,13 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
-        int buyTimesByAd = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD);
+        int buyTimesByAd = new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD), __Parse).ToDay();
         if (buyTimesByAd < _energies.buyTimesByAd && 
             AdvertisementData.Exchange(AdvertisementType.Energy, string.Empty, NAME_SPACE_USER_ENERGY_AD))
         {
             __ApplyEnergy(-_energies.energyPerTime);
             
-            PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD, ++buyTimesByAd);
+            PlayerPrefs.SetString(NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD, new Active<int>(++buyTimesByAd).ToString());
             
             onComplete(true);
             
