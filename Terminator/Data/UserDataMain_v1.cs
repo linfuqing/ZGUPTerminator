@@ -2414,8 +2414,8 @@ public partial class UserData
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
 
-        UserData.killBossCount += killBossCount;
-
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+        
         int result = (int)GetStageFlag(temp.name, temp.stage);
 
         IUserData.StageCache stageCache;

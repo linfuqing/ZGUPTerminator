@@ -244,6 +244,7 @@ public partial class UserData : MonoBehaviour, IUserData
     
     private const string NAME_SPACE_USER_KILL_COUNT = "UserKillCount";
     private const string NAME_SPACE_USER_KILL_BOSS_COUNT = "UserKillBossCount";
+    private const string NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT = "UserStageKillBossCount";
     private const string NAME_SPACE_USER_STAGE_KILL_COUNT = "UserStageKillCount";
     private const string NAME_SPACE_USER_STAGE_CACHE = "UserStageCache";
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";
@@ -298,6 +299,11 @@ public partial class UserData : MonoBehaviour, IUserData
         return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage));
     }
 
+    public static int GetStageKillBossCount(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT, levelName, stage));
+    }
+    
     public IEnumerator QueryUser(
         string channelName,
         string channelUser,
@@ -330,6 +336,7 @@ public partial class UserData : MonoBehaviour, IUserData
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
 
         UserData.killBossCount += killBossCount;
 
@@ -410,7 +417,7 @@ public partial class UserData : MonoBehaviour, IUserData
                 PlayerPrefs.SetInt(stageFlagKey,
                     PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
             }
-
+            
             //PlayerPrefs.DeleteKey(stageCacheTimesKey);
             //PlayerPrefs.DeleteKey(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, i));
         }
@@ -435,10 +442,25 @@ public partial class UserData : MonoBehaviour, IUserData
     private static void __SetStageKillCount(string levelName, int stage, int value)
     {
         string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage);
-        value = Mathf.Max(value, PlayerPrefs.GetInt(key));
-        PlayerPrefs.SetInt(key, value);
+        int origin = PlayerPrefs.GetInt(key);
+        if (origin < value)
+        {
+            killCount += value - origin;
+            
+            PlayerPrefs.SetInt(key, value);
+        }
+    }
 
-        killCount += value;
+    private static void __SetStageKillBossCount(string levelName, int stage, int value)
+    {
+        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT, levelName, stage);
+        int origin = PlayerPrefs.GetInt(key);
+        if (origin < value)
+        {
+            killBossCount += value - origin;
+            
+            PlayerPrefs.SetInt(key, value);
+        }
     }
 
     void Awake()
