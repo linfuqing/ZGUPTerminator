@@ -249,7 +249,21 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         #endregion
     }
-    
+
+    [Serializable]
+    public struct DamageData
+    {
+        public string name;
+        
+        public float goldScale;
+        public float goldMin;
+        public float goldMax;
+
+        public float killCountScale;
+        public float killCountMin;
+        public float killCountMax;
+    }
+
     [Serializable]
     public struct BulletData
     {
@@ -281,6 +295,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public string name;
 
         public string targetName;
+        public string damageName;
         
         [Tooltip("碰撞体")]
         public GameObject prefab;
@@ -397,6 +412,15 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             }
         }
         
+        [CSVField]
+        public string 子弹伤害
+        {
+            set
+            {
+                damageName = value;
+            }
+        }
+
         [CSVField]
         public string 子弹预制体路径
         {
@@ -680,6 +704,21 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.coordinate = source.coordinate;
                     //destination.direction = source.direction;
                 }
+                
+                var numDamages = authoring._damages == null ? 0 : authoring._damages.Length;
+                var damages = builder.Allocate(ref root.damages, numDamages);
+                for (i = 0; i < numDamages; ++i)
+                {
+                    ref var source = ref authoring._damages[i];
+                    ref var destination = ref damages[i];
+                    
+                    destination.goldScale =  source.goldScale;
+                    destination.goldMin =  source.goldMin;
+                    destination.goldMax =  source.goldMax;
+                    destination.killCountScale =  source.killCountScale;
+                    destination.killCountMin =  source.killCountMin;
+                    destination.killCountMax =  source.killCountMax;
+                }
 
                 var bullets = builder.Allocate(ref root.bullets, numBullets);
 
@@ -713,6 +752,24 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 
                         prefab.entityPrefabReference = new EntityPrefabReference(source.prefab);
                         prefabs.Add(prefab);
+                    }
+
+                    destination.damageIndex = -1;
+                    if (!string.IsNullOrEmpty(source.damageName))
+                    {
+                        for (j = 0; j < numDamages; ++j)
+                        {
+                            if (authoring._damages[j].name == source.damageName)
+                            {
+                                destination.damageIndex = j;
+
+                                break;
+                            }
+                        }
+                        
+                        if (destination.damageIndex == -1)
+                            Debug.LogError(
+                                $"Damage {source.damageName} of bullet {source.name} can not been found!");
                     }
 
                     count = source.messageNames == null ? 0 : source.messageNames.Length;
@@ -874,7 +931,16 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     [CSV("_targets", guidIndex = -1, nameIndex = 0)]
     internal string _targetsPath;
     #endregion
+
+    [SerializeField] 
+    internal DamageData[] _damages;
     
+    #region CSV
+    [SerializeField]
+    [CSV("_damages", guidIndex = -1, nameIndex = 0)]
+    internal string _damagesPath;
+    #endregion
+
     [SerializeField]
     internal BulletData[] _bullets;
 

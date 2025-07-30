@@ -463,6 +463,7 @@ public struct BulletDefinition
         public int times;
 
         public int targetIndex;
+        public int damageIndex;
 
         public int prefabLoaderIndex;
 
@@ -475,8 +476,48 @@ public struct BulletDefinition
         
         public BulletLayerMask layerMask;
 
-        public BlobArray<int> messageIndices;
         public BlobArray<int> standTimeIndices;
+        public BlobArray<int> messageIndices;
+    }
+
+    public struct Damage
+    {
+        public float goldScale;
+        public float goldMin;
+        public float goldMax;
+
+        public float killCountScale;
+        public float killCountMin;
+        public float killCountMax;
+        
+        public float GetScaleByGold(int value)
+        {
+            if (this.goldScale > math.FLT_MIN_NORMAL)
+            {
+                float goldScale = this.goldScale * value;
+
+                return math.clamp(goldScale, goldMin, goldMax);
+            }
+            
+            return 1.0f;
+        }
+        
+        public float GetScaleByKillCount(int value)
+        {
+            if (this.killCountScale > math.FLT_MIN_NORMAL)
+            {
+                float killCountScale = this.killCountScale * value;
+
+                return math.clamp(killCountScale, killCountMin, killCountMax);
+            }
+
+            return 1.0f;
+        }
+
+        public float GetScale(in LevelStatus status)
+        {
+            return GetScaleByGold(status.gold) * GetScaleByKillCount(status.killCount);
+        }
     }
 
     public struct StandTime
@@ -488,8 +529,9 @@ public struct BulletDefinition
     public float minAirSpeed;
     public float maxAirSpeed;
     public BlobArray<Target> targets;
-    public BlobArray<Bullet> bullets;
+    public BlobArray<Damage> damages;
     public BlobArray<StandTime> standTimes;
+    public BlobArray<Bullet> bullets;
 
     public bool Update(
         BulletLocation location, 
@@ -503,6 +545,7 @@ public struct BulletDefinition
         in Entity parent,
         in Entity lookAt, 
         in BulletLayerMask layerMask, 
+        in LevelStatus levelStatus,
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
@@ -720,7 +763,7 @@ public struct BulletDefinition
         BulletInstance instance;
         instance.index = index;
         instance.layerMask = layerMask;
-        instance.damageScale = damageScale;
+        instance.damageScale = damageScale * (data.damageIndex == -1 ? 1.0f : damages[data.damageIndex].GetScale(levelStatus));
         instance.time = cooldown + data.delayTime;
         instance.targetPosition = targetStatus.targetPosition;
         instance.parentPosition = transform.c3.xyz;
@@ -778,6 +821,7 @@ public struct BulletDefinition
         in Entity entity,
         in Entity lookAt, 
         in BulletLayerMask layerMask, 
+        in LevelStatus levelStatus,
         in CollisionWorld collisionWorld,
         in ComponentLookup<Parent> parents,
         in ComponentLookup<PhysicsCollider> physicsColliders,
@@ -840,6 +884,7 @@ public struct BulletDefinition
                 entity, 
                 lookAt, 
                 layerMask, 
+                levelStatus, 
                 collisionWorld,
                 physicsColliders,
                 characterBodies, 

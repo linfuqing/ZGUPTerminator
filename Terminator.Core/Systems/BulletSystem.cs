@@ -131,6 +131,8 @@ public partial struct BulletSystem : ISystem
 
         public quaternion cameraRotation;
 
+        public LevelStatus levelStatus;
+
         [ReadOnly] 
         public CollisionWorld collisionWorld;
 
@@ -305,6 +307,7 @@ public partial struct BulletSystem : ISystem
                 entity,
                 index < lookAtTargets.Length ? lookAtTargets[index].entity : Entity.Null, 
                 layerMask,
+                levelStatus, 
                 collisionWorld, 
                 parents, 
                 physicsColliders,
@@ -369,6 +372,8 @@ public partial struct BulletSystem : ISystem
 
         public quaternion cameraRotation;
 
+        public Entity levelEntity;
+
         [ReadOnly] 
         public CollisionWorld collisionWorld;
 
@@ -404,6 +409,9 @@ public partial struct BulletSystem : ISystem
 
         [ReadOnly] 
         public ComponentLookup<BulletLayerMask> bulletLayerMasks;
+
+        [ReadOnly] 
+        public ComponentLookup<LevelStatus> levelStates;
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
@@ -451,6 +459,7 @@ public partial struct BulletSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)((int)hash ^ (int)(hash >> 32) ^ unfilteredChunkIndex));
             collect.cameraRotation = cameraRotation;
+            collect.levelStatus = levelStates.TryGetComponent(levelEntity, out var levelStatus) ? levelStatus : default;
             collect.collisionWorld = collisionWorld;
             collect.parents = parents;
             collect.localTransforms = localTransforms;
@@ -510,6 +519,8 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<BulletLayerMask> __bulletLayerMasks;
 
+    private ComponentLookup<LevelStatus> __levelStates;
+
     private EntityTypeHandle __entityType;
 
     private ComponentTypeHandle<LookAtTarget> __lookAtType;
@@ -555,6 +566,7 @@ public partial struct BulletSystem : ISystem
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __bulletLayerMasks = state.GetComponentLookup<BulletLayerMask>(true);
+        __levelStates = state.GetComponentLookup<LevelStatus>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
         __definitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
@@ -609,6 +621,7 @@ public partial struct BulletSystem : ISystem
         __effectDamages.Update(ref state);
         __effectDamageParents.Update(ref state);
         __bulletLayerMasks.Update(ref state);
+        __levelStates.Update(ref state);
         __entityType.Update(ref state);
         __lookAtType.Update(ref state);
         __definitionType.Update(ref state);
@@ -628,6 +641,7 @@ public partial struct BulletSystem : ISystem
         collect.isFire = __targetGroup.CalculateEntityCount() > 1;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
+        SystemAPI.TryGetSingletonEntity<LevelStatus>(out collect.levelEntity);
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         collect.parents = __parents;
         collect.localTransforms = __localTransforms;
@@ -640,6 +654,7 @@ public partial struct BulletSystem : ISystem
         collect.effectDamages = __effectDamages;
         collect.effectDamageParents = __effectDamageParents;
         collect.bulletLayerMasks = __bulletLayerMasks;
+        collect.levelStates = __levelStates;
         collect.entityType = __entityType;
         collect.lookAtTargetType = __lookAtType;
         collect.definitionType = __definitionType;
