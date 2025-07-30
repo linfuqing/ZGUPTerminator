@@ -262,6 +262,71 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public float killCountScale;
         public float killCountMin;
         public float killCountMax;
+        
+        #region CSV
+        [CSVField]
+        public string 子弹伤害名称
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public float 子弹伤害金币缩放
+        {
+            set
+            {
+                goldScale = value;
+            }
+        }
+        
+        [CSVField]
+        public float 子弹伤害金币最小值
+        {
+            set
+            {
+                goldMin = value;
+            }
+        }
+        
+        [CSVField]
+        public float 子弹伤害金币最大值
+        {
+            set
+            {
+                goldMax = value;
+            }
+        }
+        
+        [CSVField]
+        public float 子弹伤害击杀数缩放
+        {
+            set
+            {
+                killCountScale = value;
+            }
+        }
+        
+        [CSVField]
+        public float 子弹伤害击杀数最小值
+        {
+            set
+            {
+                killCountMin = value;
+            }
+        }
+        
+        [CSVField]
+        public float 子弹伤害击杀数最大值
+        {
+            set
+            {
+                killCountMax = value;
+            }
+        }
+        #endregion
     }
 
     [Serializable]
