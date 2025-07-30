@@ -490,6 +490,8 @@ public sealed partial class UserDataMain : MonoBehaviour
         levelCache.id = levelID;
         levelCache.stage = result.stage;
         levelCache.gold = 0;
+        levelCache.killCount = 0;
+        levelCache.killBossCount = 0;
         UserData.levelCache = levelCache;
 
         result.spawnerAttribute = __GetStage(level, result.stage).spawnerAttribute;
@@ -540,8 +542,10 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
         }
 
-        int gold = levelCache.gold;
-        UserDataMain.gold += gold;
+        gold += levelCache.gold;
+        
+        __AppendQuest(UserQuest.Type.KillCount, levelCache.killCount);
+        __AppendQuest(UserQuest.Type.KillBoss, levelCache.killBossCount);
 
         string key;
         Stage stage;
@@ -675,8 +679,10 @@ public partial class UserData
             LevelCache levelCache;
             levelCache.name = _defaultSceneName;
             levelCache.id = levelID;
-            levelCache.gold = 0;
             levelCache.stage = closestStage;
+            levelCache.gold = 0;
+            levelCache.killCount = 0;
+            levelCache.killBossCount = 0;
 
             UserData.levelCache = levelCache;
         }

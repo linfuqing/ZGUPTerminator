@@ -434,10 +434,6 @@ public partial class UserDataMain
     {
         switch (questType)
         {
-            case UserQuest.Type.KillCount:
-                return UserData.killCount;
-            case UserQuest.Type.KillBoss:
-                return UserData.killBossCount;
             case UserQuest.Type.AchievementLevels:
                 return UserData.level;
             case UserQuest.Type.AchievementCard:

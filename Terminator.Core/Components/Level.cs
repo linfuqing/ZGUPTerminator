@@ -389,8 +389,8 @@ public struct LevelStageOption
                 status.exp = value;
                 break;
             case Type.Stage:
-                status.killCount = 0;
-                status.killBossCount = 0;
+                //status.killCount = 0;
+                //status.killBossCount = 0;
                 status.stage = value;
                 break;
             case Type.SpawnerTime:

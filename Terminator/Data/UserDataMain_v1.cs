@@ -2091,6 +2091,8 @@ public partial class UserDataMain
         levelCache.id = __ToID(levelIndex);
         levelCache.stage = stageIndex;
         levelCache.gold = 0;
+        levelCache.killCount = 0;
+        levelCache.killBossCount = 0;
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
