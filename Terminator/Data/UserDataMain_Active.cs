@@ -184,6 +184,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
+        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
+            __AppendQuest(UserQuest.Type.Login, 1);
+
         int count;
         UserQuest userQuest;
         UserActive userActive;
@@ -375,6 +378,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
+        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
+            __AppendQuest(UserQuest.Type.Login, 1);
+
         var quest = _quests[__GetQuestIndex(_achievementQuestNames[__ToIndex(questID)])];
         string key = $"{NAME_SPACE_USER_ACHIEVEMENT_QUEST}{quest.name}";
         if (PlayerPrefs.GetInt(key) == 0 && quest.capacity <= __GetQuest(quest.type, ActiveType.Achievement))
@@ -395,6 +401,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
+        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
+            __AppendQuest(UserQuest.Type.Login, 1);
+
         int numAchievementQuestNames = _achievementQuestNames.Length;
         Quest quest;
         UserQuest userQuest;

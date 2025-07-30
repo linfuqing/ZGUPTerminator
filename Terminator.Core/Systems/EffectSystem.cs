@@ -496,8 +496,9 @@ public partial struct EffectSystem : ISystem
                             ref var characterBodyRW = ref characterBody.ValueRW;
                             if (!characterBodyRW.IsGrounded)
                             {
-                                /*if (!isResult)
-                                    continue;*/
+                                //弹板
+                                if (!isResult)
+                                    continue;
                             }
                             else if (damage.explosion > math.FLT_MIN_NORMAL ||
                                      damage.spring > math.FLT_MIN_NORMAL)
