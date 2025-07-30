@@ -475,6 +475,8 @@ public sealed partial class UserDataMain : MonoBehaviour
         if(isDirty)
             UserDataMain.flag = flag;
         
+        __AppendQuest(UserQuest.Type.Stage, 1);
+
         IUserData.LevelProperty result;
 
         for (result.stage = closestStage; result.stage > 0; --result.stage)

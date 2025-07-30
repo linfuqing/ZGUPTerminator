@@ -2084,14 +2084,14 @@ public partial class UserDataMain
 
         //flag &= ~Flag.UnlockFirst;
 
+        __AppendQuest(UserQuest.Type.Stage, 1);
+
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = __ToID(levelIndex);
         levelCache.stage = stageIndex;
         levelCache.gold = 0;
         UserData.levelCache = levelCache;
-        
-        __AppendQuest(UserQuest.Type.Stage, 1);
         
         IUserData.StageProperty stageProperty;
         stageProperty.stage = stageIndex;

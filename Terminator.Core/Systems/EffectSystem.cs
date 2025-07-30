@@ -497,7 +497,7 @@ public partial struct EffectSystem : ISystem
                             if (!characterBodyRW.IsGrounded)
                             {
                                 //弹板
-                                if (!isResult && (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0))
+                                if (!isResult && (damage.entityLayerMask != 0 && (damage.entityLayerMask & belongsTo) != 0))
                                     continue;
                             }
                             else if (damage.explosion > math.FLT_MIN_NORMAL ||
