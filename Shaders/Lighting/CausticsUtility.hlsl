@@ -48,7 +48,6 @@ half3 ApplyCaustics(
 	float focalDepth, 
 	float invDepthOfField, 
 	float strength, 
-	half3 lightColor,
 	half3 lightDirectionWS,
 	float3 scenePos, 
 	float4 st1,
@@ -64,14 +63,13 @@ half3 ApplyCaustics(
 	float2 surfacePosXZ = scenePos.xz + lightDirectionWS.xz * (scenePos.y / (4.0 * lightDirectionWS.y));
 	
 	//return causticsStrength * tex2Dlod(_MainTex, uv).xyz;
-	return strength * lightColor * TexCaustics(causticsTex, st1, st2, surfacePosXZ, mipLod);
+	return strength * TexCaustics(causticsTex, st1, st2, surfacePosXZ, mipLod);
 }
 
 void ApplyCaustics_float(
 	float focalDepth, 
 	float invDepthOfField, 
 	float strength, 
-	half3 lightColor,
 	half3 lightDirectionWS,
 	float3 scenePos, 
 	float4 st1,
@@ -83,7 +81,6 @@ void ApplyCaustics_float(
 		focalDepth,
 		invDepthOfField,
 		strength,
-		lightColor,
 		lightDirectionWS,
 		scenePos,
 		st1,
@@ -95,7 +92,6 @@ void ApplyCaustics_half(
 	float focalDepth, 
 	float invDepthOfField, 
 	float strength, 
-	half3 lightColor,
 	half3 lightDirectionWS,
 	float3 scenePos, 
 	float4 st1,
@@ -107,7 +103,6 @@ void ApplyCaustics_half(
 		focalDepth,
 		invDepthOfField,
 		strength,
-		lightColor,
 		lightDirectionWS,
 		scenePos,
 		st1,
