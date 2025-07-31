@@ -265,7 +265,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         
         #region CSV
         [CSVField]
-        public string 子弹伤害名称
+        public string 子弹附加伤害名称
         {
             set
             {
@@ -274,7 +274,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public float 子弹伤害金币缩放
+        public float 子弹附加伤害金币缩放
         {
             set
             {
@@ -283,7 +283,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public float 子弹伤害金币最小值
+        public float 子弹附加伤害金币最小值
         {
             set
             {
@@ -292,7 +292,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public float 子弹伤害金币最大值
+        public float 子弹附加伤害金币最大值
         {
             set
             {
@@ -301,7 +301,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public float 子弹伤害击杀数缩放
+        public float 子弹附加伤害击杀数缩放
         {
             set
             {
@@ -310,7 +310,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public float 子弹伤害击杀数最小值
+        public float 子弹附加伤害击杀数最小值
         {
             set
             {
@@ -319,7 +319,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public float 子弹伤害击杀数最大值
+        public float 子弹附加伤害击杀数最大值
         {
             set
             {
@@ -478,7 +478,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         }
         
         [CSVField]
-        public string 子弹伤害
+        public string 子弹附加伤害
         {
             set
             {
