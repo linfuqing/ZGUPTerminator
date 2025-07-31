@@ -226,8 +226,8 @@ public partial class LevelManager : MonoBehaviour
             {
                 isDirty = true;
 
-                if (_onKillCount != null)
-                    _onKillCount.Invoke(killBossCount.ToString());
+                if (_onKillBossCount != null)
+                    _onKillBossCount.Invoke(killBossCount.ToString());
 
                 __killBossCount = killBossCount;
             }
