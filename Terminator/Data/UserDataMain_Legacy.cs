@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 public partial class UserDataMain
 {
@@ -15,9 +16,7 @@ public partial class UserDataMain
 
         public int GetValue(int value, uint utcTime, out uint time)
         {
-            var timeUnix = DateTime.UtcNow - Utc1970;
-
-            uint now = (uint)timeUnix.TotalSeconds;
+            uint now = DateTimeUtility.GetSeconds();
             
             time = now;
             if (uintTime > Mathf.Epsilon)
@@ -60,12 +59,10 @@ public partial class UserDataMain
     {
         yield return null;
 
-        var timeUnix = DateTime.UtcNow - Utc1970;
         int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
         if (time == 0)
         {
-            time = (int)timeUnix.TotalSeconds;
-            
+            time = (int)DateTimeUtility.GetSeconds();
             PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
         }
 
@@ -73,7 +70,7 @@ public partial class UserDataMain
         userTip.value = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
         userTip.max = _tip_v0.max;
         userTip.unitTime = (uint)Mathf.RoundToInt(_tip_v0.uintTime * 1000);
-        userTip.tick = (uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks;
+        userTip.tick = DateTimeUtility.GetTicks((uint)time);
         
         onComplete(userTip);
     }

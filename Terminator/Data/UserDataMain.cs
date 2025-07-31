@@ -93,21 +93,18 @@ public sealed partial class UserDataMain : MonoBehaviour
     {
         get
         {
-            var timeUnix = DateTime.UtcNow - Utc1970;
-
             int time = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME);
             if (time == 0)
             {
-                time = (int)timeUnix.TotalSeconds;
-            
+                time = (int)DateTimeUtility.GetSeconds();
                 PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, time);
             }
-        
+
             UserEnergy userEnergy;
             userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
             userEnergy.max = _energy.max + PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_MAX);
             userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
-            userEnergy.tick = (uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks;
+            userEnergy.tick = DateTimeUtility.GetTicks((uint)time);
 
             return userEnergy;
         }
@@ -577,8 +574,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     private bool __ApplyEnergy(int value)
     {
-        var timeUnix = DateTime.UtcNow - Utc1970;
-        uint now = (uint)timeUnix.TotalSeconds, time = now;
+        uint now = DateTimeUtility.GetSeconds(), time = now;
         int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         if (_energy.uintTime > Mathf.Epsilon)
         {
@@ -603,10 +599,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         if (energy < 0)
             return false;
 
-        if (value > 0)
-            __AppendQuest(UserQuest.Type.EnergiesToUse, value);
-        else
-            __AppendQuest(UserQuest.Type.EnergiesToBuy, -value);
+        __AppendQuest(UserQuest.Type.EnergiesToUse, Math.Sign(value));
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));

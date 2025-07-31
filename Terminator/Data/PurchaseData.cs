@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 public enum PurchaseType
 {
@@ -104,7 +105,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
     public const string NAME_SPACE_DEADLINE = "PurchaseDeadline";
     public const string NAME_SPACE_PAY_TIME = "PurchasePayTime";
     
-    public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    //public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     public static IPurchaseData.Output Query(in IPurchaseData.Input input)
     {
@@ -112,9 +113,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         
         result.times = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_TIMES));
         result.deadline = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_DEADLINE));
-        result.ticks = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_PAY_TIME)) * TimeSpan.TicksPerSecond;
-        if(result.ticks != 0)
-            result.ticks += UnixEpoch.Ticks;
+        result.ticks = DateTimeUtility.GetTicks((uint)PlayerPrefs.GetInt(input.ToString(NAME_SPACE_PAY_TIME)));
 
         return result;
     }
@@ -187,18 +186,16 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             case PurchaseType.Pass:
                 key = input.ToString(NAME_SPACE_DEADLINE);
                 seconds = PlayerPrefs.GetInt(key);
-                seconds = (int)((new DateTime(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks).ToLocalTime()
-                                     .AddMonths(1).ToUniversalTime().Ticks -
-                                 UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
+                seconds = (int)DateTimeUtility.GetSeconds(new DateTime(DateTimeUtility.GetTicks((uint)seconds)).ToLocalTime()
+                                                    .AddMonths(1).ToUniversalTime().Ticks);
                 
                 PlayerPrefs.SetInt(key, seconds);
                 break;
             case PurchaseType.GoldBank:
                 key = input.ToString(NAME_SPACE_DEADLINE);
                 seconds = PlayerPrefs.GetInt(key);
-                seconds = (int)((new DateTime(seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks).ToLocalTime()
-                                     .AddDays(1).ToUniversalTime().Ticks -
-                                 UnixEpoch.Ticks) / TimeSpan.TicksPerSecond);
+                seconds = (int)DateTimeUtility.GetSeconds(new DateTime(DateTimeUtility.GetTicks((uint)seconds)).ToLocalTime()
+                                                               .AddDays(1).ToUniversalTime().Ticks);
 
                 PlayerPrefs.SetInt(key, seconds);
                 break;
@@ -207,10 +204,9 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 break;
         }
 
-        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME),
-            (int)((DateTime.UtcNow.Ticks - UnixEpoch.Ticks) / TimeSpan.TicksPerSecond));
+        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME), (int)DateTimeUtility.GetSeconds());
 
-        return seconds == 0 ? 0 : seconds * TimeSpan.TicksPerSecond + UnixEpoch.Ticks;
+        return seconds == 0 ? 0 : (int)DateTimeUtility.GetTicks((uint)seconds);
     }
     
     public IEnumerator Query(

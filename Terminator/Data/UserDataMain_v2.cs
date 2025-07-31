@@ -165,13 +165,11 @@ public partial class UserDataMain
                 int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
                 if (time == 0)
                 {
-                    var timeUnix = DateTime.UtcNow - Utc1970;
-                    time = (int)timeUnix.TotalSeconds;
-            
+                    time = (int)DateTimeUtility.GetSeconds();
                     PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
                 }
 
-                return Create((uint)time * TimeSpan.TicksPerSecond + Utc1970.Ticks, used);
+                return Create(DateTimeUtility.GetTicks((uint)time), used);
             }
         }
 
@@ -215,7 +213,7 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
     private const string NAME_SPACE_USER_TIP_USED = "UserTipUsed";
     
-    private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    //private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [SerializeField]
     internal Tip _tip;
@@ -229,9 +227,7 @@ public partial class UserDataMain
         int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
         if (time == 0)
         {
-            var timeUnix = DateTime.UtcNow - Utc1970;
-            time = (int)timeUnix.TotalSeconds;
-            
+            time = (int)DateTimeUtility.GetSeconds();
             PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
         }
 
@@ -246,8 +242,7 @@ public partial class UserDataMain
 
         var results = _tip.instance.Generate();
 
-        var timeUnix = DateTime.UtcNow - Utc1970;
-        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)timeUnix.TotalSeconds);
+        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)DateTimeUtility.GetSeconds());
 
         var rewards = new List<UserReward>();
         __ApplyRewards(results, rewards);
