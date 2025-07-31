@@ -567,7 +567,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         reward.name = null;
         reward.id = 0;
         reward.type = UserRewardType.Gold;
-        reward.count = gold;
+        reward.count = levelCache.gold;
         rewards.Add(reward);
 
         __CollectLevelLegacy(isNextLevel, levelIndex, levelCache.stage);
