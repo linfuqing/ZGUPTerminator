@@ -492,26 +492,28 @@ public struct BulletDefinition
         
         public float GetScaleByGold(int value)
         {
+            float result = 1.0f;
             if (this.goldScale > math.FLT_MIN_NORMAL)
             {
                 float goldScale = this.goldScale * value;
 
-                return math.clamp(goldScale, goldMin, goldMax);
+                result += math.clamp(goldScale, goldMin, goldMax);
             }
             
-            return 1.0f;
+            return result;
         }
         
         public float GetScaleByKillCount(int value)
         {
+            float result = 1.0f;
             if (this.killCountScale > math.FLT_MIN_NORMAL)
             {
                 float killCountScale = this.killCountScale * value;
 
-                return math.clamp(killCountScale, killCountMin, killCountMax);
+                result += math.clamp(killCountScale, killCountMin, killCountMax);
             }
 
-            return 1.0f;
+            return result;
         }
 
         public float GetScale(in LevelStatus status)
