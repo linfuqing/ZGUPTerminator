@@ -338,7 +338,7 @@ public partial struct EffectSystem : ISystem
                         return 0;
 
                     result = (effect.count > 0 ? math.min(resultCount, effect.count - status.count) : resultCount) >
-                             (int)math.ceil((time - deltaTime - status.time) / effect.time);
+                             (int)math.ceil((time - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime) - status.time) / effect.time);
                 }
 
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
