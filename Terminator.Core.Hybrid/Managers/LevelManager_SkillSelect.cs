@@ -246,6 +246,7 @@ public partial class LevelManager
                     {
                         result = true;
 
+                        style.button.onClick.RemoveAllListeners();
                         style.button.onClick.AddListener(() =>
                         {
                             if (__skillSelectionGuideNames == null)

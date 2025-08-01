@@ -408,8 +408,9 @@ public partial class LevelManager
             bool isConform = resultStyle.button == null;
             if (!isConform)
             {
-                resultStyle.button.onClick.RemoveAllListeners();
-                resultStyle.button.onClick.AddListener(() =>
+                var onClick = resultStyle.button.onClick;
+                onClick.RemoveAllListeners();
+                onClick.AddListener(() =>
                 {
                     isConform = true;
                 });
