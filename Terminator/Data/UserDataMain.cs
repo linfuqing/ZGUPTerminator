@@ -600,7 +600,9 @@ public sealed partial class UserDataMain : MonoBehaviour
             return false;
         
         if(value < 0)
-            __AppendQuest(UserQuest.Type.EnergiesToUse, 1);
+            __AppendQuest(UserQuest.Type.EnergiesToBuy, 1);
+        else
+            __AppendQuest(UserQuest.Type.EnergiesToUse, value);
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));
