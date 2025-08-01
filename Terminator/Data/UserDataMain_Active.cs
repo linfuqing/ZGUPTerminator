@@ -125,7 +125,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = (day - 1) / 7, mask = (day - 1) & 0x7;
+        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = (day - 1) / 7, mask = ((day - 1) & 0x7) + 1;
         
         string key;
         Active signInActive;
