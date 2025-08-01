@@ -234,7 +234,7 @@ public sealed class LoginManager : MonoBehaviour
                 _onEnergyMax.Invoke(value.ToString());
         }
     }
-
+    
     public IReadOnlyCollection<int> levelIndices => __levelStyles.Keys;
 
     [Obsolete]

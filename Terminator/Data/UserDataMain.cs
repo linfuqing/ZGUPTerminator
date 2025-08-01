@@ -557,9 +557,14 @@ public sealed partial class UserDataMain : MonoBehaviour
             float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) /
                                 _energy.uintTime;
             int energyInt =  Mathf.FloorToInt(energyFloat);
-            energy += energyInt;
             if (energy < _energy.max)
-                time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+            {
+                energy += energyInt;
+                if (energy < _energy.max)
+                    time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
+                else
+                    energy = _energy.max;
+            }
         }
 
         energy -= value;
