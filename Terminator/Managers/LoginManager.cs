@@ -880,14 +880,24 @@ public sealed class LoginManager : MonoBehaviour
         energyMax = userEnergy.max;
 
         __energyUnitTime = userEnergy.unitTime * 0.001f;
-        float energyValueFloat = (float)((double)(DateTime.UtcNow.Ticks - userEnergy.tick) /
-                                      (TimeSpan.TicksPerMillisecond * userEnergy.unitTime));
-        int energyValueInt = Mathf.FloorToInt(energyValueFloat);
 
-        this.energy =
-            Mathf.Clamp(userEnergy.value + energyValueInt, 0, userEnergy.max);
+        if (userEnergy.value < userEnergy.max)
+        {
+            float energyValueFloat = (float)((double)(DateTime.UtcNow.Ticks - userEnergy.tick) /
+                                             (TimeSpan.TicksPerMillisecond * userEnergy.unitTime));
+            int energyValueInt = Mathf.FloorToInt(energyValueFloat);
 
-        __energyNextTime = (1.0f - (energyValueFloat - energyValueInt)) * __energyUnitTime;
+            this.energy =
+                Mathf.Clamp(userEnergy.value + energyValueInt, 0, userEnergy.max);
+
+            __energyNextTime = (1.0f - (energyValueFloat - energyValueInt)) * __energyUnitTime;
+        }
+        else
+        {
+            this.energy = userEnergy.value;
+            
+            __energyNextTime = 0.0f;
+        }
 
         InvokeRepeating(
             nameof(__IncreaseEnergy), 

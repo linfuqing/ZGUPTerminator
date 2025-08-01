@@ -558,7 +558,7 @@ public sealed partial class UserDataMain : MonoBehaviour
                                 _energy.uintTime;
             int energyInt =  Mathf.FloorToInt(energyFloat);
             energy += energyInt;
-            if (energy > _energy.max)
+            if (energy < _energy.max)
                 time -= (uint)Mathf.RoundToInt((energyFloat - energyInt) * _energy.uintTime);
         }
 
