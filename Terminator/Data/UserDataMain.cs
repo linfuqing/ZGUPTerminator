@@ -446,32 +446,8 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
 
-        var flag = UserDataMain.flag;
-        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
-        if(isDirty)
-            flag &= ~Flag.PurchasesUnlockFirst;
-        
-        isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
-        if(isDirty)
-            flag &= ~Flag.CardsUnlockFirst;
+        __SubmitStageFlag();
 
-        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
-        {
-            flag |= Flag.TalentsUnlock;
-
-            isDirty = true;
-        }
-
-        /*if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
-        {
-            flag |= Flag.RoleUnlock;
-
-            isDirty = true;
-        }*/
-        
-        if(isDirty)
-            UserDataMain.flag = flag;
-        
         __AppendQuest(UserQuest.Type.Stage, 1);
 
         IUserData.LevelProperty result;
@@ -599,6 +575,38 @@ public sealed partial class UserDataMain : MonoBehaviour
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));
 
         return true;
+    }
+
+    private void __SubmitStageFlag()
+    {
+        var flag = UserDataMain.flag;
+        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.PurchasesUnlockFirst;
+        
+        if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
+        {
+            flag &= ~Flag.CardsUnlockFirst;
+
+            isDirty = true;
+        }
+
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
+        {
+            flag |= Flag.TalentsUnlock;
+
+            isDirty = true;
+        }
+
+        /*if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
+        {
+            flag |= Flag.RoleUnlock;
+
+            isDirty = true;
+        }*/
+        
+        if(isDirty)
+            UserDataMain.flag = flag;
     }
 
     private uint __ToID(int index) => (uint)(index + 1);

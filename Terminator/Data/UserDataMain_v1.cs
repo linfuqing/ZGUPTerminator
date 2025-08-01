@@ -2065,12 +2065,16 @@ public partial class UserDataMain
             yield break;
         }
 
-        var flag = UserDataMain.flag;
-        bool isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
+        /*var flag = UserDataMain.flag;
+        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.PurchasesUnlockFirst;
+
+        isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
         if(isDirty)
             flag &= ~Flag.CardsUnlockFirst;
 
-        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0)
         {
             flag |= Flag.TalentsUnlock;
 
@@ -2078,8 +2082,10 @@ public partial class UserDataMain
         }
         
         if(isDirty)
-            UserDataMain.flag = flag;
+            UserDataMain.flag = flag;*/
         
+        __SubmitStageFlag();
+
         UserData.ApplyStageFlag(level.name, stageIndex);
 
         //flag &= ~Flag.UnlockFirst;
