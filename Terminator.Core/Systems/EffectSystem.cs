@@ -640,7 +640,7 @@ public partial struct EffectSystem : ISystem
                             ref damageStatistics);
                 }
 
-                resultCount = resultCount > 0 ? resultCount - 1 : entityCount;
+                resultCount = resultCount > 0 ? resultCount : entityCount;
                 if (resultCount > 0)
                 {
                     var transform = math.RigidTransform(source.Value);
