@@ -95,10 +95,10 @@ public partial class UserDataMain
         if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
             __AppendQuest(UserQuest.Type.Login, 1);
 
-        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = day / 7;
+        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = (day - 1) / 7;
 
         IUserData.SignIn result;
-        result.day = day & 0x7;
+        result.day = (day - 1) & 0x7;
 
         int numSignInActives = _signInActiveNames.Length;
         Active signInActive;
@@ -125,7 +125,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = day / 7, mask = day & 0x7;
+        int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = (day - 1) / 7, mask = (day - 1) & 0x7;
         
         string key;
         Active signInActive;
