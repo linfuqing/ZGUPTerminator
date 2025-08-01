@@ -14,7 +14,8 @@ public enum UserRewardType
     Gold, 
     Energy, 
     EnergyMax, 
-    Active
+    ActiveDay, 
+    ActiveWeek
 }
 
 public enum UserSkillType

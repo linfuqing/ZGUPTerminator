@@ -544,17 +544,27 @@ public partial class UserDataMain
         result += value;
         PlayerPrefs.SetString(key, new Active<int>(result).ToString());
 
-        if (type == UserQuest.Type.Unknown)
+        /*if (type == UserQuest.Type.Unknown)
         {
             result = __GetQuest(type, ActiveType.Month, out key);
             result += value;
             PlayerPrefs.SetString(key, new Active<int>(result).ToString());
-        }
+        }*/
     }
 
-    private static void __AppendActive(int value)
+    private static void __AppendActive(int value, ActiveType type)
     {
-        __AppendQuest(UserQuest.Type.Unknown, value);
+        var questType = UserQuest.Type.Unknown;
+        int result = __GetQuest(questType, type, out string key);
+        result += value;
+        PlayerPrefs.SetString(key, new Active<int>(result).ToString());
+        
+        if (ActiveType.Month != type)
+        {
+            result = __GetQuest(questType, ActiveType.Month, out key);
+            result += value;
+            PlayerPrefs.SetString(key, new Active<int>(result).ToString());
+        }
     }
 
     private static int __Parse(Memory<string> parameters)

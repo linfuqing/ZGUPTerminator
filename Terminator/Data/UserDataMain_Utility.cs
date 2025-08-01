@@ -585,8 +585,12 @@ public partial class UserDataMain
                 id = 1;
                 key = NAME_SPACE_USER_ENERGY_MAX;
                 break;
-            case UserRewardType.Active:
-                __AppendActive(reward.count);
+            case UserRewardType.ActiveDay:
+                __AppendActive(reward.count, ActiveType.Day);
+                
+                return 1;
+            case UserRewardType.ActiveWeek:
+                __AppendActive(reward.count, ActiveType.Week);
                 
                 return 1;
             default:
