@@ -659,34 +659,37 @@ public partial struct EffectSystem : ISystem
                         resultCount = effect.count - status.count;
 
                         status.time += resultCount * effect.time;
-                        status.count = 0;
-
-                        if (++status.index == numEffects)
+                        if (status.time < time)
                         {
-                            if (index < simulationCollisions.Length)
+                            status.count = 0;
+
+                            if (++status.index == numEffects)
                             {
-                                var closestHit = simulationCollisions[index].closestHit;
-                                if (closestHit.Entity != Entity.Null)
+                                if (index < simulationCollisions.Length)
                                 {
-                                    transform = math.RigidTransform(
-                                        Math.FromToRotation(math.up(), closestHit.SurfaceNormal),
-                                        closestHit.Position);
-                                    
-                                    LocalToWorld localToWorld;
-                                    localToWorld.Value = math.float4x4(transform);
-                                    localToWorlds[entity] = localToWorld;
+                                    var closestHit = simulationCollisions[index].closestHit;
+                                    if (closestHit.Entity != Entity.Null)
+                                    {
+                                        transform = math.RigidTransform(
+                                            Math.FromToRotation(math.up(), closestHit.SurfaceNormal),
+                                            closestHit.Position);
+
+                                        LocalToWorld localToWorld;
+                                        localToWorld.Value = math.float4x4(transform);
+                                        localToWorlds[entity] = localToWorld;
+                                    }
                                 }
+
+                                __Destroy(int.MaxValue, entity, children, ref entityManager);
+
+                                enabledFlags |= EnabledFlags.Destroyed;
                             }
+                            else
+                            {
+                                statusTargets.Clear();
 
-                            __Destroy(int.MaxValue, entity, children, ref entityManager);
-
-                            enabledFlags |= EnabledFlags.Destroyed;
-                        }
-                        else
-                        {
-                            statusTargets.Clear();
-                            
-                            status.time += definition.effects[status.index].startTime;
+                                status.time += definition.effects[status.index].startTime;
+                            }
                         }
                     }
 
