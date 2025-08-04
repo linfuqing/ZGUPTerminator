@@ -798,6 +798,8 @@ public partial struct EffectSystem : ISystem
                                 status.time += definition.effects[status.index].startTime;
                             }
                         }
+                        else 
+                            resultCount = 0;
                     }
 
                     for (int i = 0; i < resultCount; ++i)
