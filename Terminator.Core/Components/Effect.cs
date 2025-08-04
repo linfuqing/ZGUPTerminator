@@ -2,6 +2,7 @@ using System.Threading;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
+using Unity.Transforms;
 using Object = UnityEngine.Object;
 
 public enum EffectAttributeID
@@ -34,10 +35,18 @@ public struct EffectTargetImmunityDefinition
 
 public struct EffectDefinition
 {
+    public struct Buff
+    {
+        public int capacity;
+        public float damageScalePerCount;
+        public FixedString32Bytes name;
+    }
+    
     public struct Prefab
     {
         public EffectSpace space;
         public int index;
+        public int buffIndex;
         public float chance;
         public float damageScale;
         public BulletLayerMask bulletLayerMask;
@@ -83,9 +92,10 @@ public struct EffectDefinition
         public BlobArray<Prefab> prefabs;
     }
 
+    public BlobArray<Buff> buffs;
+    public BlobArray<Prefab> prefabs;
     public BlobArray<Damage> damages;
     public BlobArray<Effect> effects;
-    public BlobArray<Prefab> prefabs;
 }
 
 public struct EffectDefinitionData : IComponentData
@@ -305,4 +315,38 @@ public struct EffectTargetMessage : IBufferElementData
     public EntityPrefabReference entityPrefabReference;
     public FixedString128Bytes messageName;
     public UnityObjectRef<Object> messageValue;
+}
+
+public struct EffectTargetBuff : IComponentData
+{
+    public int times;
+    public FixedString32Bytes name;
+
+    public static Entity Append(
+        ref ComponentLookup<EffectTargetBuff> buffs,
+        in DynamicBuffer<Child> children, 
+        in FixedString32Bytes name, 
+        int capacity, 
+        out int times)
+    {
+        EffectTargetBuff buff;
+        foreach (var child in children)
+        {
+            if (buffs.TryGetComponent(child.Value, out buff) && buff.name == name)
+            {
+                if(buff.times < capacity)
+                    ++buff.times;
+
+                times = buff.times;
+                
+                buffs[child.Value] = buff;
+                
+                return child.Value;
+            }
+        }
+
+        times = 0;
+        
+        return Entity.Null;
+    }
 }

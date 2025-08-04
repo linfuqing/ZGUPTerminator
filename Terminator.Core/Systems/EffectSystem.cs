@@ -32,21 +32,116 @@ public partial struct EffectSystem : ISystem
         Recovery = 0x20, 
         Invincible = 0x40
     }
-    
+
     private struct DamageInstance
     {
         public int index;
+        public int buffCapacity;
+        public float buffScalePerCount;
         public float scale;
+        public FixedString32Bytes buffName;
         public RigidTransform transform;
         public Entity entity;
         public Entity parent;
         public BulletLayerMask bulletLayerMask;
         public EntityPrefabReference entityPrefabReference;
+
+        public Entity Instantiate(
+            ref EntityCommandBuffer entityManager,
+            ref PrefabLoader.Writer prefabLoader)
+        {
+            if (!prefabLoader.TryGetOrLoadPrefabRoot(entityPrefabReference, out Entity entity))
+                return Entity.Null;
+            
+            entity = entityManager.Instantiate(entity);
+
+            entityManager.SetComponent(entity,
+                LocalTransform.FromPositionRotation(transform.pos,
+                    transform.rot));
+
+            if (parent != Entity.Null)
+            {
+                Parent parent;
+                parent.Value = this.parent;
+                entityManager.AddComponent(entity, parent);
+            }
+
+            if (this.entity != Entity.Null)
+            {
+                EffectDamageParent damageParent;
+                damageParent.index = index;
+                damageParent.entity = this.entity;
+                entityManager.AddComponent(entity, damageParent);
+            }
+
+            EffectDamage damage;
+            damage.bulletLayerMask = bulletLayerMask;
+            damage.scale = scale * (buffScalePerCount > math.FLT_MIN_NORMAL ? buffScalePerCount : 1.0f);
+            entityManager.AddComponent(entity, damage);
+
+            if (!buffName.IsEmpty)
+            {
+                EffectTargetBuff buff;
+                buff.times = 1;
+                buff.name = buffName;
+                entityManager.AddComponent(entity, buff);
+            }
+
+            return entity;
+        }
+
+        public bool Instantiate(
+            in BufferLookup<Child> children, 
+            ref BufferLookup<SimulationEvent> simulationEvents,
+            ref ComponentLookup<EffectStatus> states,
+            ref ComponentLookup<EffectTargetDamageScale> targetDamageScales,
+            ref ComponentLookup<EffectTargetBuff> targetBuffs,
+            ref EntityCommandBuffer entityManager,
+            ref PrefabLoader.Writer prefabLoader)
+        {
+            if (!buffName.IsEmpty && children.TryGetBuffer(parent, out var childBuffer) )
+            {
+                Entity child = EffectTargetBuff.Append(ref targetBuffs, childBuffer, buffName, buffCapacity, out int times);
+
+                if (child != Entity.Null)
+                {
+                    if (simulationEvents.TryGetBuffer(child, out var simulationEventBuffer))
+                    {
+                        SimulationEvent simulationEvent;
+                        simulationEvent.entity = parent;
+                        simulationEvent.colliderKey = ColliderKey.Empty;
+                        SimulationEvent.Append(simulationEventBuffer, simulationEvent);
+                        simulationEvents.SetBufferEnabled(child, true);
+                    }
+
+                    if (states.HasComponent(child))
+                        states[child] = default;
+
+                    if (buffScalePerCount > math.FLT_MIN_NORMAL && targetDamageScales.HasComponent(child))
+                    {
+                        EffectTargetDamageScale targetDamageScale;
+                        targetDamageScale.value = scale * math.pow(buffScalePerCount, times);
+                        targetDamageScales[child] = targetDamageScale;
+                    }
+                    
+                    return true;
+                }
+            }
+
+            return Instantiate(ref entityManager, ref prefabLoader) != Entity.Null;
+        }
     }
 
     [BurstCompile]
     private struct Instantiate : IJob
     {
+        [ReadOnly]
+        public BufferLookup<Child> children;
+        public BufferLookup<SimulationEvent> simulationEvents;
+        public ComponentLookup<EffectStatus> states;
+        public ComponentLookup<EffectTargetBuff> targetBuffs;
+        public ComponentLookup<EffectTargetDamageScale> targetDamageScales;
+
         public NativeQueue<DamageInstance> damageInstances;
 
         public PrefabLoader.Writer prefabLoader;
@@ -66,7 +161,7 @@ public partial struct EffectSystem : ISystem
             for(int i = 0; i < count; ++i)
             {
                 damageInstance = damageInstances.Dequeue();
-                if (prefabLoader.TryGetOrLoadPrefabRoot(damageInstance.entityPrefabReference, out entity))
+                /*if (prefabLoader.TryGetOrLoadPrefabRoot(damageInstance.entityPrefabReference, out entity))
                 {
                     entity = entityManager.Instantiate(entity);
 
@@ -90,7 +185,15 @@ public partial struct EffectSystem : ISystem
                     damage.scale = damageInstance.scale;
                     entityManager.AddComponent(entity, damage);
                 }
-                else
+                else*/
+                if(!damageInstance.Instantiate(
+                       children, 
+                       ref simulationEvents, 
+                       ref states, 
+                       ref targetDamageScales, 
+                       ref targetBuffs, 
+                       ref entityManager, 
+                       ref prefabLoader))
                     damageInstances.Enqueue(damageInstance);
             }
         }
@@ -549,8 +652,9 @@ public partial struct EffectSystem : ISystem
                             instanceDamageParent,
                             prefabs,
                             ref damageInstances,
-                            ref entityManager, 
-                            ref prefabLoader,
+                            //ref entityManager, 
+                            //ref prefabLoader,
+                            ref definition.buffs, 
                             ref damage.prefabs, 
                             ref random);
 
@@ -701,8 +805,9 @@ public partial struct EffectSystem : ISystem
                             instanceDamageParent,
                             prefabs,
                             ref damageInstances,
-                            ref entityManager, 
-                            ref prefabLoader,
+                            //ref entityManager, 
+                            //ref prefabLoader,
+                            ref definition.buffs, 
                             ref effect.prefabs, 
                             ref random);
                 }
@@ -1257,8 +1362,8 @@ public partial struct EffectSystem : ISystem
 
                         if (index < instances.Length && index < prefabs.Length)
                         {
-                            ref var prefabsDefinition = ref instances[index].definition.Value.prefabs;
-                            if (prefabsDefinition.Length > 0)
+                            ref var definition = ref instances[index].definition.Value;
+                            if (definition.prefabs.Length > 0)
                             {
                                 Entity entity = entityArray[index];
 
@@ -1286,9 +1391,10 @@ public partial struct EffectSystem : ISystem
                                     instanceDamageParent,
                                     prefabs[index],
                                     ref damageInstances,
-                                    ref entityManager,
-                                    ref prefabLoader,
-                                    ref prefabsDefinition,
+                                    //ref entityManager,
+                                    //ref prefabLoader,
+                                    ref definition.buffs,
+                                    ref definition.prefabs,
                                     ref random);
                             }
                         }
@@ -1529,6 +1635,10 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
+    private ComponentLookup<EffectStatus> __states;
+    private ComponentLookup<EffectTargetBuff> __targetBuffs;
+    private ComponentLookup<EffectTargetDamageScale> __targetDamageScales;
+    
     private ComponentLookup<EffectTargetDamage> __targetDamages;
 
     private ComponentLookup<EffectTargetLevel> __targetLevels;
@@ -1542,6 +1652,8 @@ public partial struct EffectSystem : ISystem
     private BufferLookup<Message> __outputMessages;
 
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
+
+    private BufferLookup<SimulationEvent> __simulationEvents;
 
     private BufferLookup<Child> __children;
 
@@ -1607,6 +1719,9 @@ public partial struct EffectSystem : ISystem
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
+        __states = state.GetComponentLookup<EffectStatus>();
+        __targetBuffs = state.GetComponentLookup<EffectTargetBuff>();
+        __targetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
         __targetLevels = state.GetComponentLookup<EffectTargetLevel>();
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
@@ -1614,6 +1729,7 @@ public partial struct EffectSystem : ISystem
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
         __outputMessages = state.GetBufferLookup<Message>();
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
+        __simulationEvents = state.GetBufferLookup<SimulationEvent>();
         __children = state.GetBufferLookup<Child>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1673,8 +1789,19 @@ public partial struct EffectSystem : ISystem
             .CreateCommandBuffer(state.WorldUnmanaged);
 
         var entityManager = entityCommandBuffer.AsParallelWriter();
+        
+        __children.Update(ref state);
+        __simulationEvents.Update(ref state);
+        __states.Update(ref state);
+        __targetBuffs.Update(ref state);
+        __targetDamageScales.Update(ref state);
 
         Instantiate instantiate;
+        instantiate.children = __children;
+        instantiate.simulationEvents = __simulationEvents;
+        instantiate.states = __states;
+        instantiate.targetBuffs = __targetBuffs;
+        instantiate.targetDamageScales = __targetDamageScales;
         instantiate.damageInstances = __damageInstances;
         instantiate.entityManager = entityCommandBuffer;
         instantiate.prefabLoader = __prefabLoader.AsWriter();
@@ -1829,8 +1956,9 @@ public partial struct EffectSystem : ISystem
         in EffectDamageParent instanceDamageParent,
         in DynamicBuffer<EffectPrefab> prefabs,
         ref NativeQueue<DamageInstance>.ParallelWriter damageInstances,
-        ref EntityCommandBuffer.ParallelWriter entityManager,
-        ref PrefabLoader.ParallelWriter prefabLoader,
+        //ref EntityCommandBuffer.ParallelWriter entityManager,
+        //ref PrefabLoader.ParallelWriter prefabLoader,
+        ref BlobArray<EffectDefinition.Buff> buffsDefinition,
         ref BlobArray<EffectDefinition.Prefab> prefabsDefinition,
         ref Random random)
     {
@@ -1868,9 +1996,24 @@ public partial struct EffectSystem : ISystem
             if (isContains || totalChance < chance)
                 continue;
 
+            if (prefab.buffIndex >= 0 && prefab.buffIndex < buffsDefinition.Length)
+            {
+                ref var buff = ref buffsDefinition[prefab.buffIndex];
+
+                damageInstance.buffName = buff.name;
+                damageInstance.buffCapacity = buff.capacity;
+                damageInstance.buffScalePerCount = buff.damageScalePerCount;
+            }
+            else
+            {
+                damageInstance.buffName = default;
+                damageInstance.buffCapacity = 0;
+                damageInstance.buffScalePerCount = 0;
+            }
+            
             damageInstance.scale = instanceDamage.scale * (math.abs(prefab.damageScale) > math.FLT_MIN_NORMAL ? prefab.damageScale : 1.0f);
             damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
-            if (prefabLoader.TryGetOrLoadPrefabRoot(
+            /*if (prefabLoader.TryGetOrLoadPrefabRoot(
                     damageInstance.entityPrefabReference, out instance))
             {
                 instance = entityManager.Instantiate(0, instance);
@@ -1894,7 +2037,7 @@ public partial struct EffectSystem : ISystem
 
                 entityManager.AddComponent(2, instance, instanceDamage);
             }
-            else
+            else*/
             {
                 switch (prefab.space)
                 {

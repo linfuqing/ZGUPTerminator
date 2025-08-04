@@ -36,9 +36,21 @@ public interface IEffectAuthoring
 public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 {
     [Serializable]
+    internal struct BuffData
+    {
+        public string name;
+        [Tooltip("叠加次数")]
+        public int capacity;
+        [Tooltip("每次叠加的伤害增益（大于1）")]
+        public float damageScalePerCount;
+    }
+    
+    [Serializable]
     internal struct PrefabData
     {
         public string name;
+
+        public string buffName;
 
         public EffectSpace space;
         
@@ -49,6 +61,38 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public BulletAuthoring.LayerMaskData bulletLayerMask;
 
         public GameObject gameObject;
+
+        public void ToAsset(
+            ref EffectDefinition.Prefab prefab, 
+            Dictionary<GameObject, int> prefabIndices, 
+            BuffData[] buffs)
+        {
+            prefab.space = space;
+                        
+            UnityEngine.Assertions.Assert.IsNotNull(gameObject);
+            if (!prefabIndices.TryGetValue(gameObject, out prefab.index))
+            {
+                prefab.index = prefabIndices.Count;
+                            
+                prefabIndices[gameObject] = prefab.index;
+            }
+
+            prefab.buffIndex = -1;
+            int numBuffs = buffs == null ? 0 : buffs.Length;
+            for (int i = 0; i < numBuffs; ++i)
+            {
+                if (buffs[i].name == buffName)
+                {
+                    prefab.buffIndex = i;
+
+                    break;
+                }
+            }
+
+            prefab.chance = chance;
+            prefab.damageScale = damageScale;
+            prefab.bulletLayerMask = bulletLayerMask;
+        }
     }
     
     [Serializable]
@@ -56,7 +100,6 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
     {
         public string name;
 
-        [UnityEngine.Serialization.FormerlySerializedAs("name")]
         public string messageName;
 
         public Object value;
@@ -186,8 +229,20 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
                 ref var root = ref builder.ConstructRoot<EffectDefinition>();
+
+                int i, numBuffs = authoring._buffs == null ? 0 : authoring._buffs.Length;
+                var buffs = builder.Allocate(ref root.buffs, numBuffs);
+                for (i = 0; i < numBuffs; ++i)
+                {
+                    ref var source = ref authoring._buffs[i];
+                    ref var destination = ref buffs[i];
+
+                    destination.name = source.name;
+                    destination.capacity = source.capacity;
+                    destination.damageScalePerCount = source.damageScalePerCount;
+                }
                 
-                int i, j, k, damageIndex, numDamages, numPrefabs, numMessageNames, numEffects = authoring._effects.Length;
+                int j, k, damageIndex, numDamages, numPrefabs, numMessageNames, numEffects = authoring._effects.Length;
                 string messageName;
                 BlobBuilderArray<int> messageIndices, damageIndices;
                 BlobBuilderArray<EffectDefinition.Prefab> prefabs;
@@ -227,23 +282,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     numPrefabs = source.prefabs == null ? 0 : source.prefabs.Length;
                     prefabs = builder.Allocate(ref destination.prefabs, numPrefabs);
                     for(j = 0; j < numPrefabs; ++j)
-                    {
-                        ref var sourcePrefab = ref source.prefabs[j];
-                        ref var destinationPrefab = ref prefabs[j];
-                        destinationPrefab.space = sourcePrefab.space;
-                        
-                        UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
-                        if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
-                        {
-                            destinationPrefab.index = prefabIndices.Count;
-                            
-                            prefabIndices[sourcePrefab.gameObject] = destinationPrefab.index;
-                        }
-
-                        destinationPrefab.chance = sourcePrefab.chance;
-                        destinationPrefab.damageScale = sourcePrefab.damageScale;
-                        destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
-                    }
+                        source.prefabs[j].ToAsset(ref prefabs[j], prefabIndices, authoring._buffs);
                 }
 
                 numDamages = damageDatas.Count;
@@ -288,47 +327,14 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     numPrefabs = source.prefabs == null ? 0 : source.prefabs.Length;
                     prefabs = builder.Allocate(ref destination.prefabs, numPrefabs);
                     for(j = 0; j < numPrefabs; ++j)
-                    {
-                        ref var sourcePrefab = ref source.prefabs[j];
-                        ref var destinationPrefab = ref prefabs[j];
-                        destinationPrefab.space = sourcePrefab.space;
-                        
-                        UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
-                        if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
-                        {
-                            destinationPrefab.index = prefabIndices.Count;
-                            
-                            prefabIndices[sourcePrefab.gameObject] = destinationPrefab.index;
-                        }
-
-                        destinationPrefab.chance = sourcePrefab.chance;
-                        destinationPrefab.damageScale = sourcePrefab.damageScale;
-                        destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
-                    }
+                        source.prefabs[j].ToAsset(ref prefabs[j], prefabIndices, authoring._buffs);
                 }
 
                 numPrefabs = authoring._prefabs == null ? 0 : authoring._prefabs.Length;
                 prefabs = builder.Allocate(ref root.prefabs, numPrefabs);
                 for (i = 0; i < numPrefabs; ++i)
-                {
-                    ref var sourcePrefab = ref authoring._prefabs[i];
-                    ref var destinationPrefab = ref prefabs[i];
-                    
-                    destinationPrefab.space = sourcePrefab.space;
-                        
-                    UnityEngine.Assertions.Assert.IsNotNull(sourcePrefab.gameObject, authoring.name);
-                    if (!prefabIndices.TryGetValue(sourcePrefab.gameObject, out destinationPrefab.index))
-                    {
-                        destinationPrefab.index = prefabIndices.Count;
-                            
-                        prefabIndices[sourcePrefab.gameObject] = destinationPrefab.index;
-                    }
-
-                    destinationPrefab.chance = sourcePrefab.chance;
-                    destinationPrefab.damageScale = sourcePrefab.damageScale;
-                    destinationPrefab.bulletLayerMask = sourcePrefab.bulletLayerMask;
-                }
-
+                    authoring._prefabs[i].ToAsset(ref prefabs[i], prefabIndices, authoring._buffs);
+                
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);
             }
 
@@ -360,12 +366,15 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
     [SerializeField]
     internal MessageData[] _messages;
-    
-    [SerializeField]
-    internal EffectData[] _effects;
 
     [SerializeField] 
+    internal BuffData[] _buffs;
+    
+    [SerializeField] 
     internal PrefabData[] _prefabs;
+
+    [SerializeField]
+    internal EffectData[] _effects;
 
     /*private void OnValidate()
     {
