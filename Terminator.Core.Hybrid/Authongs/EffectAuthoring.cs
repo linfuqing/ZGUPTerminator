@@ -41,8 +41,10 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public string name;
         [Tooltip("叠加次数")]
         public int capacity;
-        [Tooltip("每次叠加的伤害增益（大于1）")]
+        [Tooltip("每次叠加的伤害增益（乘以次数）")]
         public float damageScalePerCount;
+        [Tooltip("基础伤害增益")]
+        public float damageScale;
     }
     
     [Serializable]
@@ -240,6 +242,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.name = source.name;
                     destination.capacity = source.capacity;
                     destination.damageScalePerCount = source.damageScalePerCount;
+                    destination.damageScale = source.damageScale;
                 }
                 
                 int j, k, damageIndex, numDamages, numPrefabs, numMessageNames, numEffects = authoring._effects.Length;

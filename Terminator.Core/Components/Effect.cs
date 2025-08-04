@@ -39,6 +39,7 @@ public struct EffectDefinition
     {
         public int capacity;
         public float damageScalePerCount;
+        public float damageScale;
         public FixedString32Bytes name;
     }
     

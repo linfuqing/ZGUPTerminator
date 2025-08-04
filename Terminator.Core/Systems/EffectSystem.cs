@@ -38,6 +38,7 @@ public partial struct EffectSystem : ISystem
         public int index;
         public int buffCapacity;
         public float buffScalePerCount;
+        public float buffScale;
         public float scale;
         public FixedString32Bytes buffName;
         public RigidTransform transform;
@@ -76,13 +77,13 @@ public partial struct EffectSystem : ISystem
 
             EffectDamage damage;
             damage.bulletLayerMask = bulletLayerMask;
-            damage.scale = scale * (buffScalePerCount > math.FLT_MIN_NORMAL ? buffScalePerCount : 1.0f);
+            damage.scale = buffScale > math.FLT_MIN_NORMAL ? buffScale * this.scale : this.scale;
             entityManager.AddComponent(entity, damage);
 
             if (!buffName.IsEmpty)
             {
                 EffectTargetBuff buff;
-                buff.times = 1;
+                buff.times = 0;
                 buff.name = buffName;
                 entityManager.AddComponent(entity, buff);
             }
@@ -119,8 +120,10 @@ public partial struct EffectSystem : ISystem
 
                     if (buffScalePerCount > math.FLT_MIN_NORMAL && targetDamageScales.HasComponent(child))
                     {
+                        float buffScale = this.buffScale + buffScalePerCount * times, 
+                            scale = buffScale > math.FLT_MIN_NORMAL ? buffScale * this.scale : this.scale;
                         EffectTargetDamageScale targetDamageScale;
-                        targetDamageScale.value = scale * math.pow(buffScalePerCount, times);
+                        targetDamageScale.value = scale;
                         targetDamageScales[child] = targetDamageScale;
                     }
                     
