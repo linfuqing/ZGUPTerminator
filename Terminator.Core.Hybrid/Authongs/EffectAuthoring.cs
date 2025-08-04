@@ -43,7 +43,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public int capacity;
         [Tooltip("每次叠加的伤害增益（乘以次数）")]
         public float damageScalePerCount;
-        [Tooltip("基础伤害增益")]
+        [Tooltip("基础伤害增益（大于1）")]
         public float damageScale;
     }
     

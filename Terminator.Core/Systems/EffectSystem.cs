@@ -2006,12 +2006,14 @@ public partial struct EffectSystem : ISystem
                 damageInstance.buffName = buff.name;
                 damageInstance.buffCapacity = buff.capacity;
                 damageInstance.buffScalePerCount = buff.damageScalePerCount;
+                damageInstance.buffScale = buff.damageScale;
             }
             else
             {
                 damageInstance.buffName = default;
                 damageInstance.buffCapacity = 0;
                 damageInstance.buffScalePerCount = 0;
+                damageInstance.buffScale = 0.0f;
             }
             
             damageInstance.scale = instanceDamage.scale * (math.abs(prefab.damageScale) > math.FLT_MIN_NORMAL ? prefab.damageScale : 1.0f);
