@@ -799,7 +799,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else 
-                            effect.count = status.count;
+                            status.count = effect.count;
                     }
 
                     for (int i = 0; i < resultCount; ++i)
