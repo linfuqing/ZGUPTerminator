@@ -869,7 +869,9 @@ public partial struct EffectSystem : ISystem
                         resultCount = effect.count - status.count;
 
                         status.time += resultCount * effect.time;
-                        if (status.time < time)
+                        if (status.time > time)
+                            status.count = effect.count;
+                        else
                         {
                             status.count = 0;
 
@@ -901,8 +903,6 @@ public partial struct EffectSystem : ISystem
                                 status.time += definition.effects[status.index].startTime;
                             }
                         }
-                        else 
-                            status.count = effect.count;
                     }
 
                     for (int i = 0; i < resultCount; ++i)
