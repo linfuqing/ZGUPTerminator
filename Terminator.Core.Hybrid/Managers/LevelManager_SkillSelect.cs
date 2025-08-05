@@ -242,6 +242,8 @@ public partial class LevelManager
                         guideIndex = i;
                     }
 
+                    style.onIndex?.Invoke(i.ToString());
+
                     if (style.button != null && source.selectIndex != -1)
                     {
                         result = true;
