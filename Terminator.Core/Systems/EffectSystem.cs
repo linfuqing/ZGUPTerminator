@@ -93,9 +93,8 @@ public partial struct EffectSystem : ISystem
 
         public bool Instantiate(
             in BufferLookup<Child> children, 
-            ref BufferLookup<SimulationEvent> simulationEvents,
             ref ComponentLookup<EffectStatus> states,
-            ref ComponentLookup<EffectTargetDamageScale> targetDamageScales,
+            ref ComponentLookup<EffectDamage> damages,
             ref ComponentLookup<EffectTargetBuff> targetBuffs,
             ref EntityCommandBuffer entityManager,
             ref PrefabLoader.Writer prefabLoader)
@@ -106,25 +105,24 @@ public partial struct EffectSystem : ISystem
 
                 if (child != Entity.Null)
                 {
-                    if (simulationEvents.TryGetBuffer(child, out var simulationEventBuffer))
+                    /*if (simulationEvents.TryGetBuffer(child, out var simulationEventBuffer))
                     {
                         SimulationEvent simulationEvent;
                         simulationEvent.entity = parent;
                         simulationEvent.colliderKey = ColliderKey.Empty;
                         SimulationEvent.Append(simulationEventBuffer, simulationEvent);
                         simulationEvents.SetBufferEnabled(child, true);
-                    }
+                    }*/
 
                     if (states.HasComponent(child))
                         states[child] = default;
 
-                    if (buffScalePerCount > math.FLT_MIN_NORMAL && targetDamageScales.HasComponent(child))
+                    if (buffScalePerCount > math.FLT_MIN_NORMAL && damages.TryGetComponent(child, out var damage))
                     {
                         float buffScale = this.buffScale + buffScalePerCount * times, 
                             scale = buffScale > math.FLT_MIN_NORMAL ? buffScale * this.scale : this.scale;
-                        EffectTargetDamageScale targetDamageScale;
-                        targetDamageScale.value = scale;
-                        targetDamageScales[child] = targetDamageScale;
+                        damage.scale = scale;
+                        damages[child] = damage;
                     }
                     
                     return true;
@@ -140,10 +138,9 @@ public partial struct EffectSystem : ISystem
     {
         [ReadOnly]
         public BufferLookup<Child> children;
-        public BufferLookup<SimulationEvent> simulationEvents;
         public ComponentLookup<EffectStatus> states;
+        public ComponentLookup<EffectDamage> damages;
         public ComponentLookup<EffectTargetBuff> targetBuffs;
-        public ComponentLookup<EffectTargetDamageScale> targetDamageScales;
 
         public NativeQueue<DamageInstance> damageInstances;
 
@@ -157,9 +154,6 @@ public partial struct EffectSystem : ISystem
             damageParent.index = -1;
             
             DamageInstance damageInstance;
-            EffectDamage damage;
-            Parent parent;
-            Entity entity;
             int count = damageInstances.Count;
             for(int i = 0; i < count; ++i)
             {
@@ -191,9 +185,8 @@ public partial struct EffectSystem : ISystem
                 else*/
                 if(!damageInstance.Instantiate(
                        children, 
-                       ref simulationEvents, 
                        ref states, 
-                       ref targetDamageScales, 
+                       ref damages, 
                        ref targetBuffs, 
                        ref entityManager, 
                        ref prefabLoader))
@@ -341,6 +334,44 @@ public partial struct EffectSystem : ISystem
         }
     }
 
+    private struct Spawn
+    {
+        [ReadOnly]
+        public NativeArray<Parent> parents;
+        
+        public BufferAccessor<SimulationEvent> simulationEvents;
+
+        public void Execute(int index)
+        {
+            SimulationEvent simulationEvent;
+            simulationEvent.entity = parents[index].Value;
+            simulationEvent.colliderKey = ColliderKey.Empty;
+            SimulationEvent.Append(simulationEvents[index], simulationEvent);
+        }
+    }
+
+    [BurstCompile]
+    private struct SpawnEx : IJobChunk
+    {
+        [ReadOnly]
+        public ComponentTypeHandle<Parent> parentType;
+        
+        public BufferTypeHandle<SimulationEvent> simulationEventType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            Spawn spawn;
+            spawn.parents = chunk.GetNativeArray(ref parentType);
+            spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while(iterator.NextEntityIndex(out int i))
+                spawn.Execute(i);
+            
+            chunk.SetComponentEnabledForAll(ref simulationEventType, true);
+        }
+    }
+    
     private struct Collect
     {
         public float deltaTime;
@@ -1589,6 +1620,8 @@ public partial struct EffectSystem : ISystem
 
     private EntityTypeHandle __entityType;
     
+    private ComponentTypeHandle<Parent> __parentType;
+
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
     private ComponentTypeHandle<FallToDestroy> __fallToDestroyType;
@@ -1642,7 +1675,6 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectStatus> __states;
     private ComponentLookup<EffectTargetBuff> __targetBuffs;
-    private ComponentLookup<EffectTargetDamageScale> __targetDamageScales;
     
     private ComponentLookup<EffectTargetDamage> __targetDamages;
 
@@ -1658,13 +1690,13 @@ public partial struct EffectSystem : ISystem
 
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
 
-    private BufferLookup<SimulationEvent> __simulationEvents;
-
     private BufferLookup<Child> __children;
 
     private EntityQuery __groupToDestroy;
 
     private EntityQuery __groupToClear;
+
+    private EntityQuery __groupToSpawn;
 
     private EntityQuery __groupToCollect;
 
@@ -1695,9 +1727,10 @@ public partial struct EffectSystem : ISystem
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __characterProperties = state.GetComponentLookup<KinematicCharacterProperties>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>();
-        __damages = state.GetComponentLookup<EffectDamage>(true);
+        __damages = state.GetComponentLookup<EffectDamage>();
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __entityType = state.GetEntityTypeHandle();
+        __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
         __fallToDestroyType = state.GetComponentTypeHandle<FallToDestroy>(true);
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
@@ -1705,7 +1738,7 @@ public partial struct EffectSystem : ISystem
         __targetInstanceType = state.GetComponentTypeHandle<EffectTargetData>(true);
         __delayDestroyType = state.GetComponentTypeHandle<DelayDestroy>();
         __simulationCollisionType = state.GetComponentTypeHandle<SimulationCollision>(true);
-        __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
+        __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
@@ -1726,7 +1759,6 @@ public partial struct EffectSystem : ISystem
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __states = state.GetComponentLookup<EffectStatus>();
         __targetBuffs = state.GetComponentLookup<EffectTargetBuff>();
-        __targetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
         __targetLevels = state.GetComponentLookup<EffectTargetLevel>();
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
@@ -1734,7 +1766,6 @@ public partial struct EffectSystem : ISystem
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
         __outputMessages = state.GetBufferLookup<Message>();
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
-        __simulationEvents = state.GetBufferLookup<SimulationEvent>();
         __children = state.GetBufferLookup<Child>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1748,6 +1779,12 @@ public partial struct EffectSystem : ISystem
             __groupToClear = builder
                 .WithAllRW<EffectStatusTarget>()
                 .WithPresent<SimulationEvent>()
+                .Build(ref state);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __groupToSpawn = builder
+                .WithAll<Parent, EffectTargetBuff>()
+                .WithPresentRW<SimulationEvent>()
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1796,17 +1833,15 @@ public partial struct EffectSystem : ISystem
         var entityManager = entityCommandBuffer.AsParallelWriter();
         
         __children.Update(ref state);
-        __simulationEvents.Update(ref state);
         __states.Update(ref state);
         __targetBuffs.Update(ref state);
-        __targetDamageScales.Update(ref state);
+        __damages.Update(ref state);
 
         Instantiate instantiate;
         instantiate.children = __children;
-        instantiate.simulationEvents = __simulationEvents;
         instantiate.states = __states;
         instantiate.targetBuffs = __targetBuffs;
-        instantiate.targetDamageScales = __targetDamageScales;
+        instantiate.damages = __damages;
         instantiate.damageInstances = __damageInstances;
         instantiate.entityManager = entityCommandBuffer;
         instantiate.prefabLoader = __prefabLoader.AsWriter();
@@ -1836,13 +1871,19 @@ public partial struct EffectSystem : ISystem
         clear.statusTargetType = __statusTargetType;
         clear.statusType = __statusType;
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
+        
+        __parentType.Update(ref state);
+
+        SpawnEx spawn;
+        spawn.parentType = __parentType;
+        spawn.simulationEventType = __simulationEventType;
+        jobHandle = clear.ScheduleParallelByRef(__groupToSpawn, jobHandle);
 
         __children.Update(ref state);
         __entityType.Update(ref state);
         __damageParents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
-        __damages.Update(ref state);
         __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
         __prefabType.Update(ref state);
@@ -1981,7 +2022,6 @@ public partial struct EffectSystem : ISystem
 
         bool isContains = false;
         float chance = random.NextFloat(), totalChance = 0.0f;
-        Entity instance;
         for (int i = 0; i < numPrefabs; ++i)
         {
             ref var prefab = ref prefabsDefinition[i];
