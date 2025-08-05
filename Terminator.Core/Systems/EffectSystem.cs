@@ -4,6 +4,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.CharacterController;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Jobs;
@@ -33,6 +34,30 @@ public partial struct EffectSystem : ISystem
         Invincible = 0x40
     }
 
+    private struct BuffKey : IEquatable<BuffKey>
+    {
+        public FixedString32Bytes name;
+        public Entity parent;
+        
+        public bool isEmpty => name.IsEmpty || parent == Entity.Null;
+
+        public bool Equals(BuffKey other)
+        {
+            return name == other.name && parent == other.parent;
+        }
+
+        public override int GetHashCode()
+        {
+            return name.GetHashCode() ^ parent.GetHashCode();
+        }
+    }
+    
+    private struct BuffValue
+    {
+        public Entity entity;
+        public int times;
+    }
+
     private struct DamageInstance
     {
         public int index;
@@ -46,6 +71,12 @@ public partial struct EffectSystem : ISystem
         public Entity parent;
         public BulletLayerMask bulletLayerMask;
         public EntityPrefabReference entityPrefabReference;
+
+        public float GetScale(float buffTimes)
+        {
+            float buffScale = this.buffScale + buffScalePerCount * buffTimes;
+            return buffScale > math.FLT_MIN_NORMAL ? buffScale * scale : scale;
+        }
 
         public Entity Instantiate(
             ref EntityCommandBuffer entityManager,
@@ -77,7 +108,7 @@ public partial struct EffectSystem : ISystem
 
             EffectDamage damage;
             damage.bulletLayerMask = bulletLayerMask;
-            damage.scale = buffScale > math.FLT_MIN_NORMAL ? buffScale * this.scale : this.scale;
+            damage.scale = GetScale(0);
             entityManager.AddComponent(entity, damage);
 
             if (!buffName.IsEmpty)
@@ -96,9 +127,33 @@ public partial struct EffectSystem : ISystem
             ref ComponentLookup<EffectStatus> states,
             ref ComponentLookup<EffectDamage> damages,
             ref ComponentLookup<EffectTargetBuff> targetBuffs,
+            ref UnsafeHashMap<BuffKey, BuffValue> buffs, 
             ref EntityCommandBuffer entityManager,
             ref PrefabLoader.Writer prefabLoader)
         {
+            BuffKey buffKey;
+            buffKey.name = buffName;
+            buffKey.parent = parent;
+            bool isBuff = !buffKey.isEmpty;
+            if (isBuff && buffs.IsCreated && buffs.TryGetValue(buffKey, out var buffValue))
+            {
+                ++buffValue.times;
+                
+                EffectDamage damage;
+                damage.bulletLayerMask = bulletLayerMask;
+                damage.scale = GetScale(buffValue.times);
+                entityManager.SetComponent(buffValue.entity, damage);
+
+                EffectTargetBuff buff;
+                buff.times = buffValue.times;
+                buff.name = buffName;
+                entityManager.SetComponent(buffValue.entity, buff);
+
+                buffs[buffKey] = buffValue;
+                
+                return true;
+            }
+
             if (!buffName.IsEmpty && children.TryGetBuffer(parent, out var childBuffer) )
             {
                 Entity child = EffectTargetBuff.Append(ref targetBuffs, childBuffer, buffName, buffCapacity, out int times);
@@ -119,9 +174,7 @@ public partial struct EffectSystem : ISystem
 
                     if (buffScalePerCount > math.FLT_MIN_NORMAL && damages.TryGetComponent(child, out var damage))
                     {
-                        float buffScale = this.buffScale + buffScalePerCount * times, 
-                            scale = buffScale > math.FLT_MIN_NORMAL ? buffScale * this.scale : this.scale;
-                        damage.scale = scale;
+                        damage.scale = GetScale(times);
                         damages[child] = damage;
                     }
                     
@@ -129,7 +182,24 @@ public partial struct EffectSystem : ISystem
                 }
             }
 
-            return Instantiate(ref entityManager, ref prefabLoader) != Entity.Null;
+            Entity entity = Instantiate(ref entityManager, ref prefabLoader);
+            if (entity != Entity.Null)
+            {
+                if (isBuff)
+                {
+                    buffValue.entity = entity;
+                    buffValue.times = 0;
+
+                    if (!buffs.IsCreated)
+                        buffs = new UnsafeHashMap<BuffKey, BuffValue>(1, Allocator.Temp);
+
+                    buffs.Add(buffKey, buffValue);
+                }
+
+                return true;
+            }
+
+            return false;
         }
     }
 
@@ -150,9 +220,10 @@ public partial struct EffectSystem : ISystem
 
         public void Execute()
         {
-            EffectDamageParent damageParent;
-            damageParent.index = -1;
-            
+            //EffectDamageParent damageParent;
+            //damageParent.index = -1;
+
+            UnsafeHashMap<BuffKey, BuffValue> buffs = default;
             DamageInstance damageInstance;
             int count = damageInstances.Count;
             for(int i = 0; i < count; ++i)
@@ -187,7 +258,8 @@ public partial struct EffectSystem : ISystem
                        children, 
                        ref states, 
                        ref damages, 
-                       ref targetBuffs, 
+                       ref targetBuffs,  
+                       ref buffs, 
                        ref entityManager, 
                        ref prefabLoader))
                     damageInstances.Enqueue(damageInstance);
@@ -1877,7 +1949,7 @@ public partial struct EffectSystem : ISystem
         SpawnEx spawn;
         spawn.parentType = __parentType;
         spawn.simulationEventType = __simulationEventType;
-        jobHandle = clear.ScheduleParallelByRef(__groupToSpawn, jobHandle);
+        jobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, jobHandle);
 
         __children.Update(ref state);
         __entityType.Update(ref state);
