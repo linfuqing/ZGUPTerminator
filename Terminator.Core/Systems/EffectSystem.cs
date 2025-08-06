@@ -850,13 +850,16 @@ public partial struct EffectSystem : ISystem
                             ref damageStatistics);
                 }
 
+                double endTime = status.count > 0 ? status.time - (status.count - 1) * effect.time : status.time;
+                bool isEnd = effect.endTime > math.FLT_MIN_NORMAL &&
+                             effect.endTime < (float)(time - endTime);
                 resultCount = resultCount > 0 ? resultCount : entityCount;
-                if (resultCount > 0)
+                if (resultCount > 0 || isEnd)
                 {
                     var transform = math.RigidTransform(source.Value);
                     
                     int count = resultCount + status.count;
-                    if (count < effect.count || effect.count < 1)
+                    if (!isEnd && (count < effect.count || effect.count < 1))
                     {
                         if(effect.time > math.FLT_MIN_NORMAL)
                             statusTargets.Clear();
@@ -866,9 +869,19 @@ public partial struct EffectSystem : ISystem
                     }
                     else
                     {
-                        resultCount = effect.count - status.count;
+                        if (isEnd)
+                        {
+                            resultCount = math.min(resultCount, effect.count - status.count);
 
-                        status.time += resultCount * effect.time;
+                            status.time = endTime + effect.endTime;
+                        }
+                        else
+                        {
+                            resultCount = effect.count - status.count;
+
+                            status.time += resultCount * effect.time;
+                        }
+
                         if (status.time > time)
                             status.count = effect.count;
                         else

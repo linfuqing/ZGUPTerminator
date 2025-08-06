@@ -180,6 +180,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("这组效果的开始时间，用来配合动画做受击延迟")]
         public float startTime;
 
+        [Tooltip("这组效果的结束时间，根据startTime作为起点经过的时间")] 
+        public float endTime;
+        
         //[Tooltip("消息名称，用来触发触碰动画")]
         //public string[] messageNames;
 
@@ -265,6 +268,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     //destination.suction = source.suction;
                     destination.time = source.time;
                     destination.startTime = source.startTime;
+                    destination.endTime = source.endTime;
 
                     numDamages = source.damages.Length;
                     damageIndices = builder.Allocate(ref destination.damageIndices, numDamages);

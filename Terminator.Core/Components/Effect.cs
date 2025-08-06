@@ -87,6 +87,7 @@ public struct EffectDefinition
         public float time;
         
         public float startTime;
+        public float endTime;
 
         public BlobArray<int> damageIndices;
         
