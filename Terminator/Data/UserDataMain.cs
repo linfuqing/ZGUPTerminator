@@ -295,7 +295,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
                 int i, j, numValues;
                 string parameter;
-                string[] values, values2;
+                string[] values;
                 for (i = 0; i < numParameters; ++i)
                 {
                     parameter = parameters[i];
@@ -321,16 +321,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
                     indirectReward.values = new UserRewardData[numValues];
                     for (j = 0; j < numValues; ++j)
-                    {
-                        ref var temp = ref indirectReward.values[j];
-                        
-                        values2 = values[j].Split('*');
-
-                        temp.name = values2[0];
-                        
-                        temp.type = (UserRewardType)int.Parse(values2[1]);
-                        temp.count = int.Parse(values2[2]);
-                    }
+                        indirectReward.values[j] = new UserRewardData(values[j]);
                 }
             }
         }

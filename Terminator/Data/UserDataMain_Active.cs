@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 public partial class UserDataMain
 {
@@ -77,15 +78,58 @@ public partial class UserDataMain
         public int exp;
         
         public UserRewardData[] rewards;
+#if UNITY_EDITOR
+        [CSVField]
+        public string 活跃名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 活跃值
+        {
+            set => exp = value;
+        }
+        
+        [CSVField]
+        public string 活跃奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewards = null;
+
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                rewards = new UserRewardData[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    rewards[i] = new UserRewardData(parameters[i]);
+            }
+        }
+#endif
     }
 
     [Header("Actives")] 
     [SerializeField] 
     internal Active[] _actives;
-
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_actives", guidIndex = -1, nameIndex = 0)] 
+    internal string _activesPath;
+#endif
+    
     [SerializeField] 
     internal string[] _signInActiveNames;
     
+#if UNITY_EDITOR
+    [SerializeField, CSV("_signInActiveNames", guidIndex = -1, nameIndex = 0)] 
+    internal string _signInActiveNamesPath;
+#endif
+
     public const string NAME_SPACE_USER_SIGN_IN_ACTIVE = "UserSignInActive";
     
     public IEnumerator QuerySignIn(uint userID, Action<IUserData.SignIn> onComplete)
@@ -163,10 +207,55 @@ public partial class UserDataMain
         public int capacity;
 
         public UserRewardData[] rewards;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 任务名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 任务类型
+        {
+            set => type = (UserQuest.Type)value;
+        }
+        
+        [CSVField]
+        public int 任务计数
+        {
+            set => capacity = value;
+        }
+        
+        [CSVField]
+        public string 任务奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewards = null;
+
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                rewards = new UserRewardData[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    rewards[i] = new UserRewardData(parameters[i]);
+            }
+        }
+#endif
     }
     
     [SerializeField]
     internal Quest[] _quests;
+
+#if UNITY_EDITOR
+    [SerializeField, CSV("_quests", guidIndex = -1, nameIndex = 0)] 
+    internal string _questsPath;
+#endif
 
     [Serializable]
     internal struct Actives
@@ -174,6 +263,15 @@ public partial class UserDataMain
         public string[] activeNames;
 
         public string[] questNames;
+        
+#if UNITY_EDITOR
+        [SerializeField, CSV("activeNames", guidIndex = -1, nameIndex = 0)] 
+        internal string _activeNamesPath;
+        
+        [SerializeField, CSV("questNames", guidIndex = -1, nameIndex = 0)] 
+        internal string _questNamesPath;
+#endif
+
     }
 
     [SerializeField]
@@ -374,6 +472,11 @@ public partial class UserDataMain
 
     [SerializeField] 
     internal string[] _achievementQuestNames;
+
+#if UNITY_EDITOR
+    [SerializeField, CSV("_achievementQuestNames", guidIndex = -1, nameIndex = 0)] 
+    internal string _achievementQuestNamesPath;
+#endif
 
     public const string NAME_SPACE_USER_ACHIEVEMENT_QUEST = "UserActivesQuest";
     public IEnumerator CollectAchievementQuest(

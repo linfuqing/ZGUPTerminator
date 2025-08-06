@@ -12,8 +12,6 @@ public class LevelSkillStyle : SkillStyle
     public UnityEvent onRecommend;
     public UnityEvent onDestroy;
 
-    public StringEvent onIndex;
-
     public Button button;
 
     public LevelSkillStyle child;

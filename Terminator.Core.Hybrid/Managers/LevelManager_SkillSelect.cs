@@ -205,7 +205,8 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
-                int guidePriority = 0,
+                int index = 0, 
+                    guidePriority = 0,
                     recommendPriority = 0,
                     guideIndex = -1,
                     recommendIndex = -1;
@@ -241,8 +242,6 @@ public partial class LevelManager
                         guidePriority = asset.priority;
                         guideIndex = i;
                     }
-
-                    style.onIndex?.Invoke(i.ToString());
 
                     if (style.button != null && source.selectIndex != -1)
                     {
