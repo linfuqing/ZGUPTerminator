@@ -1987,8 +1987,8 @@ public partial struct EffectSystem : ISystem
         clear.simulationEventType = __simulationEventType;
         clear.statusTargetType = __statusTargetType;
         clear.statusType = __statusType;
-        var jobHandle = clear.ScheduleParallelByRef(__groupToClear, spawnJobHandle);
-        jobHandle = JobHandle.CombineDependencies(jobHandle, instantiateJobHandle);
+        var jobHandle = JobHandle.CombineDependencies(spawnJobHandle, instantiateJobHandle);
+        jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
         __children.Update(ref state);
         __entityType.Update(ref state);
