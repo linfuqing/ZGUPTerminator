@@ -262,12 +262,14 @@ public partial class UserDataMain
     {
         public string[] activeNames;
 
-        public string[] questNames;
-        
 #if UNITY_EDITOR
         [SerializeField, CSV("activeNames", guidIndex = -1, nameIndex = 0)] 
         internal string _activeNamesPath;
+#endif
         
+        public string[] questNames;
+        
+#if UNITY_EDITOR
         [SerializeField, CSV("questNames", guidIndex = -1, nameIndex = 0)] 
         internal string _questNamesPath;
 #endif
