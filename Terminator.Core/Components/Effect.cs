@@ -336,11 +336,11 @@ public struct EffectTargetBuff : IComponentData
         {
             if (buffs.TryGetComponent(child.Value, out buff) && buff.name == name)
             {
+                times = buff.times;
+
                 if(buff.times < capacity)
                     ++buff.times;
 
-                times = buff.times;
-                
                 buffs[child.Value] = buff;
                 
                 return child.Value;
