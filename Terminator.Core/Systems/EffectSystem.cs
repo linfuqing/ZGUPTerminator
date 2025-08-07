@@ -2044,8 +2044,8 @@ public partial struct EffectSystem : ISystem
         collect.entityManager = entityManager;
         collect.prefabLoader = prefabLoader;
         collect.damageInstances = damageInstances;
-        jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
         jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
+        jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
 
         ApplyEx apply;
         SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
