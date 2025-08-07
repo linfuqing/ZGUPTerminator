@@ -370,6 +370,7 @@ public partial struct EffectSystem : ISystem
 
     private struct Clear
     {
+        public float deltaTime;
         public double time;
 
         [ReadOnly]
@@ -397,7 +398,12 @@ public partial struct EffectSystem : ISystem
 
                     ref var definition = ref instances[index].definition.Value;
 
-                    status.time += definition.effects.Length > 0 ? definition.effects[0].startTime : 0.0f;
+                    if (definition.effects.Length > 0)
+                    {
+                        ref var effect = ref definition.effects[0];
+                        
+                        status.time += effect.startTime - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime);
+                    }
 
                     states[index] = status;
                 }
@@ -438,6 +444,7 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct ClearEx : IJobChunk
     {
+        public float deltaTime;
         public double time;
 
         [ReadOnly]
@@ -454,6 +461,7 @@ public partial struct EffectSystem : ISystem
             in v128 chunkEnabledMask)
         {
             Clear clear;
+            clear.deltaTime = deltaTime;
             clear.time = time;
             clear.instances = chunk.GetNativeArray(ref instanceType);
             clear.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
@@ -1988,6 +1996,7 @@ public partial struct EffectSystem : ISystem
         double time = SystemAPI.Time.ElapsedTime;
 
         ClearEx clear;
+        clear.deltaTime = deltaTime;
         clear.time = time;
         clear.instanceType = __instanceType;
         clear.simulationEventType = __simulationEventType;
