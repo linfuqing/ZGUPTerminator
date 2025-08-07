@@ -798,7 +798,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     ref var destination = ref bullets[i];
                     ref var source = ref authoring._bullets[i];
                     if (source.prefab == null)
-                        Debug.LogError(source.name);
+                        Debug.LogError($"The prefab of {source.name} is null!", authoring.gameObject);
 
                     if (source.prefab == null)
                         destination.prefabLoaderIndex = -1;
