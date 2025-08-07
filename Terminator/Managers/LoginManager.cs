@@ -44,6 +44,16 @@ public sealed class LoginManager : MonoBehaviour
 
     public static event Action<Memory<UserRewardData>> onAwake;
     
+    /// <summary>
+    /// 可以激活商业化，不需要播放章节解锁或者下篇动画
+    /// </summary>
+    public static event Action onLevelActivated;
+
+    /// <summary>
+    /// 可以激活商业化，要先等待播放章节解锁或者下篇动画
+    /// </summary>
+    public static event Action onLevelActivatedFirst;
+
     public static event Action<IUserData.Levels> onLevelLoaded;
 
     public static event Action<Stage> onStageChanged;
@@ -64,7 +74,7 @@ public sealed class LoginManager : MonoBehaviour
 
     [SerializeField] 
     internal UnityEvent _onStageFailed;
-
+    
     [SerializeField]
     internal UnityEvent _onStart;
 
@@ -622,6 +632,9 @@ public sealed class LoginManager : MonoBehaviour
                                                     else
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
+                                                
+                                                if (__sceneActiveDepth == 0 && onLevelActivated != null)
+                                                    onLevelActivated();
                                             }
                                             else
                                             {
@@ -629,6 +642,9 @@ public sealed class LoginManager : MonoBehaviour
 
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
+                                                
+                                                if (onLevelActivatedFirst != null)
+                                                    onLevelActivatedFirst();
                                             }
 
                                             previousSceneIndex = currentSceneIndex;

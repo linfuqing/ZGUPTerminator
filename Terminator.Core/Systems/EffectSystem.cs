@@ -181,9 +181,13 @@ public partial struct EffectSystem : ISystem
 
                     if (states.HasComponent(child))
                         states[child] = default;
-                    
-                    if(statusTargets.TryGetBuffer(child, out var statusTargetBuffer))
+
+                    if (statusTargets.TryGetBuffer(child, out var statusTargetBuffer))
+                    {
                         statusTargetBuffer.Clear();
+                        
+                        statusTargets.SetBufferEnabled(child, true);
+                    }
 
                     if (times < buffCapacity && 
                         buffScalePerCount > math.FLT_MIN_NORMAL && damages.TryGetComponent(child, out var damage))
@@ -217,6 +221,45 @@ public partial struct EffectSystem : ISystem
             return false;
         }
     }
+    
+    
+    private struct Spawn
+    {
+        [ReadOnly]
+        public NativeArray<Parent> parents;
+        
+        public BufferAccessor<SimulationEvent> simulationEvents;
+
+        public void Execute(int index)
+        {
+            SimulationEvent simulationEvent;
+            simulationEvent.entity = parents[index].Value;
+            simulationEvent.colliderKey = ColliderKey.Empty;
+            SimulationEvent.Append(simulationEvents[index], simulationEvent);
+        }
+    }
+
+    [BurstCompile]
+    private struct SpawnEx : IJobChunk
+    {
+        [ReadOnly]
+        public ComponentTypeHandle<Parent> parentType;
+        public BufferTypeHandle<SimulationEvent> simulationEventType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            Spawn spawn;
+            spawn.parents = chunk.GetNativeArray(ref parentType);
+            spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while(iterator.NextEntityIndex(out int i))
+                spawn.Execute(i);
+            
+            chunk.SetComponentEnabledForAll(ref simulationEventType, true);
+        }
+    }
+
 
     [BurstCompile]
     private struct Instantiate : IJob
@@ -426,43 +469,6 @@ public partial struct EffectSystem : ISystem
         }
     }
 
-    private struct Spawn
-    {
-        [ReadOnly]
-        public NativeArray<Parent> parents;
-        
-        public BufferAccessor<SimulationEvent> simulationEvents;
-
-        public void Execute(int index)
-        {
-            SimulationEvent simulationEvent;
-            simulationEvent.entity = parents[index].Value;
-            simulationEvent.colliderKey = ColliderKey.Empty;
-            SimulationEvent.Append(simulationEvents[index], simulationEvent);
-        }
-    }
-
-    [BurstCompile]
-    private struct SpawnEx : IJobChunk
-    {
-        [ReadOnly]
-        public ComponentTypeHandle<Parent> parentType;
-        public BufferTypeHandle<SimulationEvent> simulationEventType;
-
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
-        {
-            Spawn spawn;
-            spawn.parents = chunk.GetNativeArray(ref parentType);
-            spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
-
-            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
-            while(iterator.NextEntityIndex(out int i))
-                spawn.Execute(i);
-            
-            chunk.SetComponentEnabledForAll(ref simulationEventType, true);
-        }
-    }
-    
     private struct Collect
     {
         public float deltaTime;
@@ -566,7 +572,7 @@ public partial struct EffectSystem : ISystem
                         return 0;
 
                     result = (effect.count > 0 ? math.min(resultCount, effect.count - status.count) : resultCount) >
-                             (int)math.ceil((time - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime) - status.time) / effect.time);
+                             (int)math.ceil((time - status.time - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime)) / effect.time);
                 }
 
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
@@ -1797,11 +1803,11 @@ public partial struct EffectSystem : ISystem
     private BufferLookup<EffectStatusTarget> __statusTargets;
     private BufferLookup<Child> __children;
 
+    private EntityQuery __groupToSpawn;
+
     private EntityQuery __groupToDestroy;
 
     private EntityQuery __groupToClear;
-
-    private EntityQuery __groupToSpawn;
 
     private EntityQuery __groupToCollect;
 
@@ -1875,6 +1881,12 @@ public partial struct EffectSystem : ISystem
         __children = state.GetBufferLookup<Child>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __groupToSpawn = builder
+                .WithAll<Parent, EffectTargetBuff>()
+                .WithPresentRW<SimulationEvent>()
+                .Build(ref state);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToDestroy = builder
                 .WithAll<FallToDestroy>()
                 .WithNone<EffectTarget>()
@@ -1885,12 +1897,6 @@ public partial struct EffectSystem : ISystem
             __groupToClear = builder
                 .WithAllRW<EffectStatusTarget>()
                 .WithPresent<SimulationEvent>()
-                .Build(ref state);
-
-        using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __groupToSpawn = builder
-                .WithAll<Parent, EffectTargetBuff>()
-                .WithPresentRW<SimulationEvent>()
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1935,14 +1941,6 @@ public partial struct EffectSystem : ISystem
 
         var inputDeps = state.Dependency;
         
-        __parentType.Update(ref state);
-        __simulationEventType.Update(ref state);
-
-        SpawnEx spawn;
-        spawn.parentType = __parentType;
-        spawn.simulationEventType = __simulationEventType;
-        var spawnJobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, inputDeps);
-
         var entityCommandBuffer = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged);
 
@@ -1965,6 +1963,14 @@ public partial struct EffectSystem : ISystem
         instantiate.prefabLoader = __prefabLoader.AsWriter();
         var instantiateJobHandle = instantiate.ScheduleByRef(inputDeps);
             
+        __parentType.Update(ref state);
+        __simulationEventType.Update(ref state);
+
+        SpawnEx spawn;
+        spawn.parentType = __parentType;
+        spawn.simulationEventType = __simulationEventType;
+        var spawnJobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, inputDeps);
+
         __characterBodyType.Update(ref state);
         __targetType.Update(ref state);
         __targetDamageType.Update(ref state);
@@ -1987,7 +1993,7 @@ public partial struct EffectSystem : ISystem
         clear.simulationEventType = __simulationEventType;
         clear.statusTargetType = __statusTargetType;
         clear.statusType = __statusType;
-        var jobHandle = JobHandle.CombineDependencies(spawnJobHandle, instantiateJobHandle);
+        var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
         __children.Update(ref state);
