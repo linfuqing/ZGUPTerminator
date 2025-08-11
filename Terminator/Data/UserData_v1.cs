@@ -207,12 +207,17 @@ public struct UserAccessory
     {
         public string name;
 
-        /// <summary>
-        /// 升阶需要的相同装备数量
-        /// </summary>
-        public int count;
+        //public int count;
 
+        /// <summary>
+        /// 升阶之后获得的属性
+        /// </summary>
         public Property property;
+
+        /// <summary>
+        /// 升阶需要的装备的品阶
+        /// </summary>
+        public string[] previousNames;
     }
 
     public struct Group

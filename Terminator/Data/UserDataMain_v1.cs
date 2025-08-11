@@ -1041,9 +1041,17 @@ public partial class UserDataMain
 
         public string accessoryName;
 
-        public int count;
+        //public int count;
 
+        /// <summary>
+        /// 升阶之后获得的属性
+        /// </summary>
         public UserAccessory.Property property;
+
+        /// <summary>
+        /// 升阶需要的装备的品阶
+        /// </summary>
+        public string[] previousNames;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -1065,11 +1073,18 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public int 装备品阶需要个数
+        public string 装备品阶需要的品阶
         {
             set
             {
-                count = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    previousNames = null;
+
+                    return;
+                }
+                
+                previousNames = value.Split('/');
             }
         }
         
@@ -1414,8 +1429,9 @@ public partial class UserDataMain
                 accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
 
                 userAccessory.stageDesc.name = accessoryStage.name;
-                userAccessory.stageDesc.count = accessoryStage.count;
+                //userAccessory.stageDesc.count = accessoryStage.count;
                 userAccessory.stageDesc.property = accessoryStage.property;
+                userAccessory.stageDesc.previousNames = accessoryStage.previousNames;
                 
                 foreach (var id in ids)
                 {
@@ -1777,8 +1793,9 @@ public partial class UserDataMain
             var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
 
             result.stageDesc.name = accessoryStage.name;
-            result.stageDesc.count = accessoryStage.count;
+            //result.stageDesc.count = accessoryStage.count;
             result.stageDesc.property = accessoryStage.property;
+            result.stageDesc.previousNames = accessoryStage.previousNames;
         }
         else
             result.stageDesc = default;
@@ -1836,8 +1853,8 @@ public partial class UserDataMain
             accessoryStage = _accessoryStages[stageIndices[i]];
 
             userAccessoryStage.name = accessoryStage.name;
-            userAccessoryStage.count = accessoryStage.count;
             userAccessoryStage.property = accessoryStage.property;
+            userAccessoryStage.previousNames = accessoryStage.previousNames;
             
             userAccessoryStages[i] = userAccessoryStage;
         }
@@ -1924,21 +1941,63 @@ public partial class UserDataMain
 
             yield break;
         }
+        
+        var stageIndices = __GetAccessoryStageIndices(info.index);
+        int numStages = stageIndices.Count;
+        if (numStages <= info.stage)
+        {
+            onComplete(null);
 
-        int index = info.index, stage = info.stage;
-        string styleName = _accessories[index].styleName;
+            yield break;
+        }
+
+        int numAccessoryIDs = sourceAccessoryIDs.Length;
+        string[] previousStageNames = _accessoryStages[stageIndices[info.stage]].previousNames;
+        if((previousStageNames == null ? 0 : previousStageNames.Length) != numAccessoryIDs)
+        {
+            onComplete(null);
+
+            yield break;
+        }
+        
+        int index = info.index, stage = info.stage, stageIndex;
+        string stageName, styleName = _accessories[index].styleName;
+        Dictionary<string, int> previousStageOffsets = null;
         foreach (var accessoryID in sourceAccessoryIDs)
         {
             if (!__TryGetAccessory(accessoryID, out info) || 
-                stage != -1 && stage != info.stage || 
+                //stage != -1 && stage != info.stage || 
+                info.stage >= numStages ||
                 styleName != null && styleName != _accessories[info.index].styleName)
             {
                 onComplete(null);
                 
                 yield break;
             }
+
+            stageName = _accessoryStages[stageIndices[info.stage]].name;
+            if (previousStageOffsets != null && previousStageOffsets.TryGetValue(stageName, out stageIndex))
+                ++stageIndex;
+            else
+                stageIndex = 0;
+            
+            stageIndex = Array.IndexOf(previousStageNames, stageName, stageIndex);
+            if(stageIndex == -1)
+            {
+                onComplete(null);
+                
+                yield break;
+            }
+
+            if (numAccessoryIDs > 1)
+            {
+                if (previousStageOffsets == null)
+                    previousStageOffsets = new Dictionary<string, int>();
+                
+                previousStageOffsets[stageName] = stageIndex;
+            }
         }
-        
+
         foreach (var accessoryID in sourceAccessoryIDs)
             __DeleteAccessory(accessoryID);
         
@@ -1947,14 +2006,14 @@ public partial class UserDataMain
         __CreateAccessory(destinationAccessoryID, index, ++stage);
 
         UserAccessory.Stage userAccessoryStage;
-        var stageIndices = __GetAccessoryStageIndices(index);
-        if (stage < stageIndices.Count)
+        if (stage < numStages)
         {
             var accessoryStage = _accessoryStages[stageIndices[stage]];
 
             userAccessoryStage.name = accessoryStage.name;
-            userAccessoryStage.count = accessoryStage.count;
+            //userAccessoryStage.count = accessoryStage.count;
             userAccessoryStage.property = accessoryStage.property;
+            userAccessoryStage.previousNames = accessoryStage.previousNames;
         }
         else
             userAccessoryStage = default;
