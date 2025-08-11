@@ -63,6 +63,7 @@ public partial struct EffectSystem : ISystem
     {
         public int index;
         public int buffCapacity;
+        public float buffInterval;
         public float buffScalePerCount;
         //public float buffScale;
         public float scale;
@@ -85,6 +86,7 @@ public partial struct EffectSystem : ISystem
         }*/
 
         public Entity Instantiate(
+            double time, 
             ref EntityCommandBuffer entityManager,
             ref PrefabLoader.Writer prefabLoader)
         {
@@ -121,6 +123,7 @@ public partial struct EffectSystem : ISystem
             {
                 EffectTargetBuff buff;
                 buff.times = 0;
+                buff.time = time;
                 buff.name = buffName;
                 entityManager.AddComponent(entity, buff);
             }
@@ -129,6 +132,7 @@ public partial struct EffectSystem : ISystem
         }
 
         public bool Instantiate(
+            double time, 
             in BufferLookup<Child> children, 
             ref BufferLookup<EffectStatusTarget> statusTargets, 
             ref ComponentLookup<EffectStatus> states,
@@ -155,6 +159,7 @@ public partial struct EffectSystem : ISystem
 
                     EffectTargetBuff buff;
                     buff.times = buffValue.times;
+                    buff.time = time;
                     buff.name = buffName;
                     entityManager.SetComponent(buffValue.entity, buff);
 
@@ -166,7 +171,14 @@ public partial struct EffectSystem : ISystem
 
             if (!buffName.IsEmpty && children.TryGetBuffer(parent, out var childBuffer) )
             {
-                Entity child = EffectTargetBuff.Append(ref targetBuffs, childBuffer, buffName, buffCapacity, out int times);
+                Entity child = EffectTargetBuff.Append(
+                    ref targetBuffs, 
+                    childBuffer, 
+                    buffName, 
+                    time, 
+                    buffInterval, 
+                    buffCapacity, 
+                    out int times);
 
                 if (child != Entity.Null)
                 {
@@ -200,7 +212,7 @@ public partial struct EffectSystem : ISystem
                 }
             }
 
-            Entity entity = Instantiate(ref entityManager, ref prefabLoader);
+            Entity entity = Instantiate(time, ref entityManager, ref prefabLoader);
             if (entity != Entity.Null)
             {
                 if (isBuff)
@@ -264,6 +276,8 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct Instantiate : IJob
     {
+        public double time;
+
         [ReadOnly]
         public BufferLookup<Child> children;
         public BufferLookup<EffectStatusTarget> statusTargets;
@@ -314,6 +328,7 @@ public partial struct EffectSystem : ISystem
                 }
                 else*/
                 if(!damageInstance.Instantiate(
+                       time, 
                        children, 
                        ref statusTargets, 
                        ref states, 
@@ -938,7 +953,7 @@ public partial struct EffectSystem : ISystem
                                     }
                                 }
 
-                                __Destroy(int.MaxValue, entity, children, ref entityManager);
+                                __Destroy(true, int.MaxValue, entity, children, ref entityManager);
 
                                 enabledFlags |= EnabledFlags.Destroyed;
                             }
@@ -1450,6 +1465,8 @@ public partial struct EffectSystem : ISystem
                             entityManager.AddComponent(0, entity, delayDestroy);
                         
                         entityManager.RemoveComponent<PhysicsCollider>(0, entity);
+                        
+                        __Destroy(false, int.MaxValue, entityArray[index], children, ref entityManager);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
@@ -1493,7 +1510,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                            __Destroy(int.MaxValue, entityArray[index], children, ref entityManager);
+                            __Destroy(true, int.MaxValue, entityArray[index], children, ref entityManager);
                     }
                     
                     if (!isFallToDestroy)
@@ -1826,6 +1843,7 @@ public partial struct EffectSystem : ISystem
     private NativeQueue<DamageInstance> __damageInstances;
 
     private static void __Destroy(
+        bool isRoot, 
         int sortKey, 
         in Entity entity, 
         in BufferLookup<Child> children, 
@@ -1834,10 +1852,11 @@ public partial struct EffectSystem : ISystem
         if (children.TryGetBuffer(entity, out var buffer))
         {
             foreach (var child in buffer)
-                __Destroy(sortKey - 1, child.Value, children, ref entityManager);
+                __Destroy(false, sortKey - 1, child.Value, children, ref entityManager);
         }
         
-        entityManager.DestroyEntity(sortKey, entity);
+        if(!isRoot)
+            entityManager.DestroyEntity(sortKey, entity);
     }
 
     [BurstCompile]
@@ -1954,6 +1973,8 @@ public partial struct EffectSystem : ISystem
 
         var entityManager = entityCommandBuffer.AsParallelWriter();
         
+        double time = SystemAPI.Time.ElapsedTime;
+
         __children.Update(ref state);
         __statusTargets.Update(ref state);
         __states.Update(ref state);
@@ -1961,6 +1982,7 @@ public partial struct EffectSystem : ISystem
         __damages.Update(ref state);
 
         Instantiate instantiate;
+        instantiate.time = time;
         instantiate.children = __children;
         instantiate.statusTargets = __statusTargets;
         instantiate.states = __states;
@@ -1993,8 +2015,6 @@ public partial struct EffectSystem : ISystem
         __statusTargetType.Update(ref state);
         __statusType.Update(ref state);
         
-        double time = SystemAPI.Time.ElapsedTime;
-
         ClearEx clear;
         clear.deltaTime = deltaTime;
         clear.time = time;
@@ -2176,6 +2196,7 @@ public partial struct EffectSystem : ISystem
 
                 damageInstance.buffName = buff.name;
                 damageInstance.buffCapacity = buff.capacity;
+                damageInstance.buffInterval = buff.interval;
                 damageInstance.buffScalePerCount = buff.damageScalePerCount * damageInstance.scale;
                 damageInstance.scale *= buff.damageScale > math.FLT_MIN_NORMAL ? buff.damageScale : 1.0f;
             }
@@ -2183,6 +2204,7 @@ public partial struct EffectSystem : ISystem
             {
                 damageInstance.buffName = default;
                 damageInstance.buffCapacity = 0;
+                damageInstance.buffInterval = 0.0f;
                 damageInstance.buffScalePerCount = 0;
             }
 

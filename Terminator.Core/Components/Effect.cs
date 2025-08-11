@@ -38,6 +38,7 @@ public struct EffectDefinition
     public struct Buff
     {
         public int capacity;
+        public float interval;
         public float damageScalePerCount;
         public float damageScale;
         public FixedString32Bytes name;
@@ -322,12 +323,15 @@ public struct EffectTargetMessage : IBufferElementData
 public struct EffectTargetBuff : IComponentData
 {
     public int times;
+    public double time;
     public FixedString32Bytes name;
 
     public static Entity Append(
         ref ComponentLookup<EffectTargetBuff> buffs,
         in DynamicBuffer<Child> children, 
         in FixedString32Bytes name, 
+        double time, 
+        float interval,
         int capacity, 
         out int times)
     {
@@ -336,6 +340,10 @@ public struct EffectTargetBuff : IComponentData
         {
             if (buffs.TryGetComponent(child.Value, out buff) && buff.name == name)
             {
+                if (buff.time + interval > time)
+                    break;
+
+                buff.time = time;
                 times = buff.times;
 
                 if(buff.times < capacity)

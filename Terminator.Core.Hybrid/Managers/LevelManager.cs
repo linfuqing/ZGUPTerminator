@@ -216,8 +216,8 @@ public partial class LevelManager : MonoBehaviour
 
                 __killCount = killCount;
             }
-            else
-                __ShowTime();
+            //else
+            //    __ShowTime();
         }
         
         if (killBossCount != __killBossCount)
@@ -231,8 +231,8 @@ public partial class LevelManager : MonoBehaviour
 
                 __killBossCount = killBossCount;
             }
-            else
-                __ShowTime();
+            //else
+            //    __ShowTime();
         }
 
         if (gold != __gold)
@@ -392,6 +392,8 @@ public partial class LevelManager : MonoBehaviour
 
     private void __OnStageChanged(int rankFlag)
     {
+        __ShowTime();
+        
         int numRanks = _ranks == null ? 0 : _ranks.Length;
         for (int i = 0; i < numRanks; ++i)
             _ranks[i].SetActive((rankFlag & (1 << i)) != 0);

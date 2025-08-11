@@ -41,6 +41,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public string name;
         [Tooltip("叠加次数")]
         public int capacity;
+        [Tooltip("间隔时间，在这个时间内不能叠加Buff")]
+        public float interval;
         [Tooltip("每次叠加的伤害增益（乘以次数）")]
         public float damageScalePerCount;
         [Tooltip("基础伤害增益（大于1）")]
@@ -244,6 +246,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
                     destination.name = source.name;
                     destination.capacity = source.capacity;
+                    destination.interval = source.interval;
                     destination.damageScalePerCount = source.damageScalePerCount;
                     destination.damageScale = source.damageScale;
                 }
