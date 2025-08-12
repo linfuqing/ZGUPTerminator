@@ -953,7 +953,7 @@ public partial struct EffectSystem : ISystem
                                     }
                                 }
 
-                                __Destroy(true, int.MaxValue, entity, children, ref entityManager);
+                                __Destroy(false, int.MaxValue, entity, children, ref entityManager);
 
                                 enabledFlags |= EnabledFlags.Destroyed;
                             }
@@ -1466,7 +1466,7 @@ public partial struct EffectSystem : ISystem
                         
                         entityManager.RemoveComponent<PhysicsCollider>(0, entity);
                         
-                        __Destroy(false, int.MaxValue, entityArray[index], children, ref entityManager);
+                        __Destroy(true, int.MaxValue, entityArray[index], children, ref entityManager);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
@@ -1510,7 +1510,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                            __Destroy(true, int.MaxValue, entityArray[index], children, ref entityManager);
+                            __Destroy(false, int.MaxValue, entityArray[index], children, ref entityManager);
                     }
                     
                     if (!isFallToDestroy)
@@ -1842,23 +1842,6 @@ public partial struct EffectSystem : ISystem
     
     private NativeQueue<DamageInstance> __damageInstances;
 
-    private static void __Destroy(
-        bool isRoot, 
-        int sortKey, 
-        in Entity entity, 
-        in BufferLookup<Child> children, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
-    {
-        if (children.TryGetBuffer(entity, out var buffer))
-        {
-            foreach (var child in buffer)
-                __Destroy(false, sortKey - 1, child.Value, children, ref entityManager);
-        }
-        
-        if(!isRoot)
-            entityManager.DestroyEntity(sortKey, entity);
-    }
-
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
@@ -2140,6 +2123,23 @@ public partial struct EffectSystem : ISystem
         apply.prefabLoader = prefabLoader;
         apply.damageInstances = damageInstances;
         state.Dependency = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
+    }
+
+    private static void __Destroy(
+        bool isRoot, 
+        int sortKey, 
+        in Entity entity, 
+        in BufferLookup<Child> children, 
+        ref EntityCommandBuffer.ParallelWriter entityManager)
+    {
+        if (children.TryGetBuffer(entity, out var buffer))
+        {
+            foreach (var child in buffer)
+                __Destroy(false, sortKey - 1, child.Value, children, ref entityManager);
+        }
+        
+        if(!isRoot)
+            entityManager.DestroyEntity(sortKey, entity);
     }
 
     private static void __Drop(
