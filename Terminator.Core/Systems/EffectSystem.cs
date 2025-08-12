@@ -171,16 +171,15 @@ public partial struct EffectSystem : ISystem
 
             if (!buffName.IsEmpty && children.TryGetBuffer(parent, out var childBuffer) )
             {
-                Entity child = EffectTargetBuff.Append(
-                    ref targetBuffs, 
-                    childBuffer, 
-                    buffName, 
-                    time, 
-                    buffInterval, 
-                    buffCapacity, 
-                    out int times);
-
-                if (child != Entity.Null)
+                if (EffectTargetBuff.Append(
+                        ref targetBuffs, 
+                        childBuffer, 
+                        buffName, 
+                        time, 
+                        buffInterval, 
+                        buffCapacity, 
+                        out int times, 
+                        out Entity buffEntity))
                 {
                     /*if (simulationEvents.TryGetBuffer(child, out var simulationEventBuffer))
                     {
@@ -191,25 +190,28 @@ public partial struct EffectSystem : ISystem
                         simulationEvents.SetBufferEnabled(child, true);
                     }*/
 
-                    if (states.HasComponent(child))
-                        states[child] = default;
+                    if (states.HasComponent(buffEntity))
+                        states[buffEntity] = default;
 
-                    if (statusTargets.TryGetBuffer(child, out var statusTargetBuffer))
+                    if (statusTargets.TryGetBuffer(buffEntity, out var statusTargetBuffer))
                     {
                         statusTargetBuffer.Clear();
                         
-                        statusTargets.SetBufferEnabled(child, true);
+                        statusTargets.SetBufferEnabled(buffEntity, true);
                     }
 
                     if (times < buffCapacity && 
-                        buffScalePerCount > math.FLT_MIN_NORMAL && damages.TryGetComponent(child, out var damage))
+                        buffScalePerCount > math.FLT_MIN_NORMAL && damages.TryGetComponent(buffEntity, out var damage))
                     {
                         damage.scale += buffScalePerCount;
-                        damages[child] = damage;
+                        damages[buffEntity] = damage;
                     }
                     
                     return true;
                 }
+                
+                if (buffEntity != Entity.Null)
+                    return true;
             }
 
             Entity entity = Instantiate(time, ref entityManager, ref prefabLoader);

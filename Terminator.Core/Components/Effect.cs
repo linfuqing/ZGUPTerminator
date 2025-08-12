@@ -326,37 +326,41 @@ public struct EffectTargetBuff : IComponentData
     public double time;
     public FixedString32Bytes name;
 
-    public static Entity Append(
+    public static bool Append(
         ref ComponentLookup<EffectTargetBuff> buffs,
         in DynamicBuffer<Child> children, 
         in FixedString32Bytes name, 
         double time, 
         float interval,
         int capacity, 
-        out int times)
+        out int times, 
+        out Entity entity)
     {
+        times = 0;
+        entity = Entity.Null;
+
         EffectTargetBuff buff;
         foreach (var child in children)
         {
             if (buffs.TryGetComponent(child.Value, out buff) && buff.name == name)
             {
+                entity = child.Value;
+                times = buff.times;
+                
                 if (buff.time + interval > time)
                     break;
 
                 buff.time = time;
-                times = buff.times;
 
                 if(buff.times < capacity)
                     ++buff.times;
 
                 buffs[child.Value] = buff;
                 
-                return child.Value;
+                return true;
             }
         }
 
-        times = 0;
-        
-        return Entity.Null;
+        return false;
     }
 }
