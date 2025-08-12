@@ -165,6 +165,42 @@ public struct UserAccessory
         Mul
     }
 
+    public enum StageMaterialType
+    {
+        /// <summary>
+        /// 需要同名装备
+        /// </summary>
+        Normal, 
+        /// <summary>
+        /// 需要同类型装备
+        /// </summary>
+        Style
+    }
+
+    public struct StageMaterial
+    {
+        public StageMaterialType type;
+
+        public int stage;
+
+        public StageMaterial(string text)
+        {
+            int index = text.IndexOf('*');
+            if (index == -1)
+            {
+                type = StageMaterialType.Normal;
+                
+                stage = int.Parse(text);
+            }
+            else
+            {
+                type = (StageMaterialType)int.Parse(text.Substring(index + 1));
+                
+                stage = int.Parse(text.Remove(index));
+            }
+        }
+    }
+
     [Serializable]
     public struct Skill : IComparable<Skill>
     {
@@ -207,8 +243,6 @@ public struct UserAccessory
     {
         public string name;
 
-        //public int count;
-
         /// <summary>
         /// 升阶之后获得的属性
         /// </summary>
@@ -217,7 +251,7 @@ public struct UserAccessory
         /// <summary>
         /// 升阶需要的装备的品阶
         /// </summary>
-        public string[] previousNames;
+        public StageMaterial[] materials;
     }
 
     public struct Group

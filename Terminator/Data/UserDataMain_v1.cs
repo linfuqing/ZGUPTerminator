@@ -1051,7 +1051,7 @@ public partial class UserDataMain
         /// <summary>
         /// 升阶需要的装备的品阶
         /// </summary>
-        public string[] previousNames;
+        public UserAccessory.StageMaterial[] materials;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -1073,18 +1073,22 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public string 装备品阶需要的品阶
+        public string 装备品阶材料
         {
             set
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    previousNames = null;
+                    materials = null;
 
                     return;
                 }
                 
-                previousNames = value.Split('/');
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                materials = new UserAccessory.StageMaterial[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    materials[i] = new UserAccessory.StageMaterial(parameters[i]);
             }
         }
         
@@ -1431,7 +1435,7 @@ public partial class UserDataMain
                 userAccessory.stageDesc.name = accessoryStage.name;
                 //userAccessory.stageDesc.count = accessoryStage.count;
                 userAccessory.stageDesc.property = accessoryStage.property;
-                userAccessory.stageDesc.previousNames = accessoryStage.previousNames;
+                userAccessory.stageDesc.materials = accessoryStage.materials;
                 
                 foreach (var id in ids)
                 {
@@ -1795,7 +1799,7 @@ public partial class UserDataMain
             result.stageDesc.name = accessoryStage.name;
             //result.stageDesc.count = accessoryStage.count;
             result.stageDesc.property = accessoryStage.property;
-            result.stageDesc.previousNames = accessoryStage.previousNames;
+            result.stageDesc.materials = accessoryStage.materials;
         }
         else
             result.stageDesc = default;
@@ -1854,7 +1858,7 @@ public partial class UserDataMain
 
             userAccessoryStage.name = accessoryStage.name;
             userAccessoryStage.property = accessoryStage.property;
-            userAccessoryStage.previousNames = accessoryStage.previousNames;
+            userAccessoryStage.materials = accessoryStage.materials;
             
             userAccessoryStages[i] = userAccessoryStage;
         }
@@ -1952,17 +1956,19 @@ public partial class UserDataMain
         }
 
         int numAccessoryIDs = sourceAccessoryIDs.Length;
-        string[] previousStageNames = _accessoryStages[stageIndices[info.stage]].previousNames;
-        if((previousStageNames == null ? 0 : previousStageNames.Length) != numAccessoryIDs)
+        var materials = _accessoryStages[stageIndices[info.stage]].materials;
+        if((materials == null ? 0 : materials.Length) != numAccessoryIDs)
         {
             onComplete(null);
 
             yield break;
         }
-        
-        int index = info.index, stage = info.stage, stageIndex;
-        string stageName, styleName = _accessories[index].styleName;
-        Dictionary<string, int> previousStageOffsets = null;
+
+        bool result;
+        int i, index = info.index, stage = info.stage, stageIndex;
+        string styleName = _accessories[index].styleName;
+        UserAccessory.StageMaterial material;
+        var materialIndices = new HashSet<int>();
         foreach (var accessoryID in sourceAccessoryIDs)
         {
             if (!__TryGetAccessory(accessoryID, out info) || 
@@ -1975,26 +1981,32 @@ public partial class UserDataMain
                 yield break;
             }
 
-            stageName = _accessoryStages[stageIndices[info.stage]].name;
-            if (previousStageOffsets != null && previousStageOffsets.TryGetValue(stageName, out stageIndex))
-                ++stageIndex;
-            else
-                stageIndex = 0;
+            for (i = 0; i < numAccessoryIDs; ++i)
+            {
+                material = materials[i];
+                result = material.stage == info.stage;
+                if (result)
+                {
+                    switch (material.type)
+                    {
+                        case UserAccessory.StageMaterialType.Normal:
+                            result = info.index == index;
+                            break;
+                        default:
+                            result = true;
+                            break;
+                    }
+                }
+
+                if (result && materialIndices.Add(i))
+                    break;
+            }
             
-            stageIndex = Array.IndexOf(previousStageNames, stageName, stageIndex);
-            if(stageIndex == -1)
+            if(i == numAccessoryIDs)
             {
                 onComplete(null);
                 
                 yield break;
-            }
-
-            if (numAccessoryIDs > 1)
-            {
-                if (previousStageOffsets == null)
-                    previousStageOffsets = new Dictionary<string, int>();
-                
-                previousStageOffsets[stageName] = stageIndex;
             }
         }
 
@@ -2013,7 +2025,7 @@ public partial class UserDataMain
             userAccessoryStage.name = accessoryStage.name;
             //userAccessoryStage.count = accessoryStage.count;
             userAccessoryStage.property = accessoryStage.property;
-            userAccessoryStage.previousNames = accessoryStage.previousNames;
+            userAccessoryStage.materials = accessoryStage.materials;
         }
         else
             userAccessoryStage = default;
