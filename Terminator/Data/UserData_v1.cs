@@ -177,6 +177,7 @@ public struct UserAccessory
         Style
     }
 
+    [Serializable]
     public struct StageMaterial
     {
         public StageMaterialType type;
