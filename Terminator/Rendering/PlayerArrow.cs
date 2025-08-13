@@ -4,6 +4,9 @@ using UnityEngine;
 public class PlayerArrow : MonoBehaviour
 {
     [SerializeField] 
+    internal bool _isUp;
+    
+    [SerializeField] 
     internal Vector2 _offsetSpeed = new float2(0, 2f);
     
     private Renderer __renderer;
@@ -32,7 +35,9 @@ public class PlayerArrow : MonoBehaviour
         var material = renderer.material;
         var transform = this.transform;
         var distance = player.transform.position - transform.position;
-        distance.y = 0.0f;
+        if(!_isUp)
+            distance.y = 0.0f;
+        
         float sqrMagnitude = distance.sqrMagnitude;
         if (sqrMagnitude > Mathf.Epsilon)
         {
