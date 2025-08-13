@@ -7,6 +7,7 @@
   "dependencies": {
     "com.unity.charactercontroller": "1.2.4",
     "cn.com.zerogame.unitypackages": "2.2.1",
+    "cn.com.zerogame.unitypackages.attributes": "2.2.1",
     "cn.com.zerogame.unitypackages.assets": "2.2.1",
     "cn.com.zerogame.unitypackages.ui": "2.2.1",
     "cn.com.zerogame.unitypackages.game.common": "2.2.1"
