@@ -36,7 +36,7 @@ public class PlayerArrow : MonoBehaviour
         float sqrMagnitude = distance.sqrMagnitude;
         if (sqrMagnitude > Mathf.Epsilon)
         {
-            var rotation = Quaternion.FromToRotation(Vector3.forward, distance * math.rsqrt(sqrMagnitude));
+            var rotation = Quaternion.LookRotation(distance * math.rsqrt(sqrMagnitude), Vector3.up);//Quaternion.FromToRotation(Vector3.forward, distance * math.rsqrt(sqrMagnitude));
             transform.rotation = rotation;
             Vector3 localScale = transform.localScale;
             localScale.z = (Quaternion.Inverse(rotation) * distance).z;
