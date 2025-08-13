@@ -240,14 +240,26 @@ public partial struct EffectSystem : ISystem
     private struct Spawn
     {
         [ReadOnly]
+        public ComponentLookup<EffectTarget> targets;
+        
+        [ReadOnly]
         public NativeArray<Parent> parents;
         
         public BufferAccessor<SimulationEvent> simulationEvents;
+        public EntityCommandBuffer.ParallelWriter entityManager;
 
         public void Execute(int index)
         {
+            Entity parent = parents[index].Value;
+            if (!targets.HasComponent(parent) || !targets.IsComponentEnabled(parent))
+            {
+                entityManager.DestroyEntity(int.MaxValue - 1, parent);
+                
+                return;
+            }
+            
             SimulationEvent simulationEvent;
-            simulationEvent.entity = parents[index].Value;
+            simulationEvent.entity = parent;
             simulationEvent.colliderKey = ColliderKey.Empty;
             SimulationEvent.Append(simulationEvents[index], simulationEvent);
         }
@@ -256,6 +268,8 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct SpawnEx : IJobChunk
     {
+        [ReadOnly]
+        public ComponentLookup<EffectTarget> targets;
         [ReadOnly]
         public EntityTypeHandle entityType;
         [ReadOnly]
@@ -270,8 +284,10 @@ public partial struct EffectSystem : ISystem
                 if (chunk.Has(ref simulationEventType))
                 {
                     Spawn spawn;
+                    spawn.targets = targets;
                     spawn.parents = chunk.GetNativeArray(ref parentType);
                     spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
+                    spawn.entityManager = entityManager;
 
                     var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
                     while (iterator.NextEntityIndex(out int i))
@@ -1829,6 +1845,8 @@ public partial struct EffectSystem : ISystem
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
     private ComponentLookup<EffectStatus> __states;
+    
+    private ComponentLookup<EffectTarget> __targets;
     private ComponentLookup<EffectTargetBuff> __targetBuffs;
     
     private ComponentLookup<EffectTargetDamage> __targetDamages;
@@ -1899,6 +1917,7 @@ public partial struct EffectSystem : ISystem
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __states = state.GetComponentLookup<EffectStatus>();
+        __targets = state.GetComponentLookup<EffectTarget>(true);
         __targetBuffs = state.GetComponentLookup<EffectTargetBuff>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
         __targetLevels = state.GetComponentLookup<EffectTargetLevel>();
@@ -1995,11 +2014,13 @@ public partial struct EffectSystem : ISystem
         instantiate.prefabLoader = __prefabLoader.AsWriter();
         var jobHandle = instantiate.ScheduleByRef(inputDeps);
             
+        __targets.Update(ref state);
         __entityType.Update(ref state);
         __parentType.Update(ref state);
         __simulationEventType.Update(ref state);
 
         SpawnEx spawn;
+        spawn.targets = __targets;
         spawn.entityType = __entityType;
         spawn.parentType = __parentType;
         spawn.simulationEventType = __simulationEventType;
@@ -2014,7 +2035,7 @@ public partial struct EffectSystem : ISystem
         destroy.characterBodyType = __characterBodyType;
         destroy.targetType = __targetType;
         destroy.targetDamageType = __targetDamageType;
-        var destroyJobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, inputDeps);
+        jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, jobHandle);
 
         __instanceType.Update(ref state);
         __statusTargetType.Update(ref state);
@@ -2083,7 +2104,7 @@ public partial struct EffectSystem : ISystem
         collect.entityManager = entityManager;
         collect.prefabLoader = prefabLoader;
         collect.damageInstances = damageInstances;
-        jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
+        //jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
         jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
 
         ApplyEx apply;
