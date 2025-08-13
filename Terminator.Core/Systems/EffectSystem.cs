@@ -1993,7 +1993,7 @@ public partial struct EffectSystem : ISystem
         instantiate.damageInstances = __damageInstances;
         instantiate.entityManager = entityCommandBuffer;
         instantiate.prefabLoader = __prefabLoader.AsWriter();
-        var instantiateJobHandle = instantiate.ScheduleByRef(inputDeps);
+        var jobHandle = instantiate.ScheduleByRef(inputDeps);
             
         __entityType.Update(ref state);
         __parentType.Update(ref state);
@@ -2004,7 +2004,7 @@ public partial struct EffectSystem : ISystem
         spawn.parentType = __parentType;
         spawn.simulationEventType = __simulationEventType;
         spawn.entityManager = entityManager;
-        var spawnJobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, inputDeps);
+        jobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, jobHandle);
 
         __characterBodyType.Update(ref state);
         __targetType.Update(ref state);
@@ -2027,7 +2027,7 @@ public partial struct EffectSystem : ISystem
         clear.simulationEventType = __simulationEventType;
         clear.statusTargetType = __statusTargetType;
         clear.statusType = __statusType;
-        var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
+        //var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
         __children.Update(ref state);
