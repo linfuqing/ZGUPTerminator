@@ -257,20 +257,38 @@ public partial struct EffectSystem : ISystem
     private struct SpawnEx : IJobChunk
     {
         [ReadOnly]
+        public EntityTypeHandle entityType;
+        [ReadOnly]
         public ComponentTypeHandle<Parent> parentType;
         public BufferTypeHandle<SimulationEvent> simulationEventType;
+        public EntityCommandBuffer.ParallelWriter entityManager;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            Spawn spawn;
-            spawn.parents = chunk.GetNativeArray(ref parentType);
-            spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
+            if (chunk.Has(ref parentType))
+            {
+                if (chunk.Has(ref simulationEventType))
+                {
+                    Spawn spawn;
+                    spawn.parents = chunk.GetNativeArray(ref parentType);
+                    spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
 
-            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
-            while(iterator.NextEntityIndex(out int i))
-                spawn.Execute(i);
-            
-            chunk.SetComponentEnabledForAll(ref simulationEventType, true);
+                    var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+                    while (iterator.NextEntityIndex(out int i))
+                        spawn.Execute(i);
+
+                    chunk.SetComponentEnabledForAll(ref simulationEventType, true);
+                }
+            }
+            else if (useEnabledMask)
+            {
+                var entityArray = chunk.GetNativeArray(entityType);
+                var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
+                while (iterator.NextEntityIndex(out int i))
+                    entityManager.DestroyEntity(int.MaxValue - 1, entityArray[i]);
+            }
+            else
+                entityManager.DestroyEntity(int.MaxValue - 1, chunk.GetNativeArray(entityType));
         }
     }
 
@@ -1894,8 +1912,7 @@ public partial struct EffectSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __groupToSpawn = builder
-                .WithAll<Parent, EffectTargetBuff>()
-                .WithPresentRW<SimulationEvent>()
+                .WithAll<EffectTargetBuff>()
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -1978,12 +1995,15 @@ public partial struct EffectSystem : ISystem
         instantiate.prefabLoader = __prefabLoader.AsWriter();
         var instantiateJobHandle = instantiate.ScheduleByRef(inputDeps);
             
+        __entityType.Update(ref state);
         __parentType.Update(ref state);
         __simulationEventType.Update(ref state);
 
         SpawnEx spawn;
+        spawn.entityType = __entityType;
         spawn.parentType = __parentType;
         spawn.simulationEventType = __simulationEventType;
+        spawn.entityManager = entityManager;
         var spawnJobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, inputDeps);
 
         __characterBodyType.Update(ref state);
@@ -2011,7 +2031,6 @@ public partial struct EffectSystem : ISystem
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
         __children.Update(ref state);
-        __entityType.Update(ref state);
         __damageParents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
@@ -2211,32 +2230,6 @@ public partial struct EffectSystem : ISystem
             }
 
             damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
-            /*if (prefabLoader.TryGetOrLoadPrefabRoot(
-                    damageInstance.entityPrefabReference, out instance))
-            {
-                instance = entityManager.Instantiate(0, instance);
-
-                switch (prefab.space)
-                {
-                    case EffectSpace.World:
-                        entityManager.SetComponent(2, instance,
-                            LocalTransform.FromPositionRotation(transform.pos,
-                                transform.rot));
-
-                        break;
-                    case EffectSpace.Local:
-                        entityManager.AddComponent(2, instance, instanceParent);
-
-                        break;
-                }
-
-                if (instanceDamageParent.entity != Entity.Null)
-                    entityManager.AddComponent(2, instance, instanceDamageParent);
-
-                entityManager.AddComponent(2, instance, instanceDamage);
-            }
-            else*/
-            {
                 switch (prefab.space)
                 {
                     case EffectSpace.World:
@@ -2254,7 +2247,6 @@ public partial struct EffectSystem : ISystem
 
                         break;
                 }
-            }
 
             isContains = true;
         }
