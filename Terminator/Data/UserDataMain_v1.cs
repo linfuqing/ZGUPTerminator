@@ -1965,7 +1965,7 @@ public partial class UserDataMain
         }
 
         bool result;
-        int i, index = info.index, stage = info.stage, stageIndex;
+        int i, index = info.index, stage = info.stage;
         string styleName = _accessories[index].styleName;
         UserAccessory.StageMaterial material;
         var materialIndices = new HashSet<int>();
