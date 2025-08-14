@@ -819,6 +819,9 @@ public partial class UserDataMain
 
         public LayerMask spawnerLayerMask;
         
+        [Tooltip("主技能伤害")]
+        public float roleSkillGroupDamage;
+        
         [Tooltip("基础属性值")]
         public float attributeValue;
         
@@ -858,6 +861,15 @@ public partial class UserDataMain
             set
             {
                 spawnerLayerMask = value;
+            }
+        }
+
+        [CSVField]
+        public float 装备主技能伤害
+        {
+            set
+            {
+                roleSkillGroupDamage = value;
             }
         }
 
@@ -977,6 +989,9 @@ public partial class UserDataMain
         [Tooltip("下一级技能伤害")]
         public float skillDamage;
         
+        [Tooltip("下一级技能组伤害加成")]
+        public float roleSkillGroupDamage;
+
 #if UNITY_EDITOR
         [CSVField]
         public string 装备槽等级名字
@@ -1029,6 +1044,16 @@ public partial class UserDataMain
             set
             {
                 skillDamage = value;
+            }
+        }
+        
+        
+        [CSVField]
+        public float 装备槽等级下一级主技能伤害
+        {
+            set
+            {
+                roleSkillGroupDamage = value;
             }
         }
 #endif
@@ -1313,7 +1338,7 @@ public partial class UserDataMain
             
             userRole.id = __ToID(i);
 
-            userRole.attributes = __CollectRoleAttributes(role.name, null, out userRole.skillGroupDamage)?.ToArray();
+            userRole.attributes = __CollectRoleAttributes(role.name, groupName, null, out userRole.skillGroupDamage)?.ToArray();
 
             userRoleGroupIDs.Clear();
             for (j = 0; j < numRoleGroups; ++j)
@@ -1566,7 +1591,7 @@ public partial class UserDataMain
 
         result.id = roleID;
 
-        result.attributes = __CollectRoleAttributes(role.name, null, out result.skillGroupDamage)?.ToArray();
+        result.attributes = __CollectRoleAttributes(role.name, null, null, out result.skillGroupDamage)?.ToArray();
 
         int numRoleGroups = _roleGroups.Length;
         var userRoleGroupIDs = new List<uint>();
@@ -1993,7 +2018,7 @@ public partial class UserDataMain
                             result = info.index == index;
                             break;
                         default:
-                            result = true;
+                            //result = true;
                             break;
                     }
                 }

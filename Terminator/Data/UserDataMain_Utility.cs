@@ -705,6 +705,7 @@ public partial class UserDataMain
 
     private List<UserAttributeData> __CollectRoleAttributes(
         string roleName, 
+        string groupName, 
         List<UserAttributeData> attributes, 
         out float skillGroupDamage)
     {
@@ -724,6 +725,44 @@ public partial class UserDataMain
                 attributes = new List<UserAttributeData>();
             
             attributes.Add(talent.attribute);
+        }
+
+        if (string.IsNullOrEmpty(groupName))
+        {
+            groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+            if(string.IsNullOrEmpty(groupName))
+                groupName = _roleGroups[0].name;
+        }
+        
+        int styleIndex, level, 
+            numAccessorySlots = _accessorySlots.Length;
+        uint accessoryID;
+        AccessoryInfo accessoryInfo;
+        string keyPrefix = $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}{UserData.SEPARATOR}";
+        List<int> indices;
+        for (int i = 0; i < numAccessorySlots; ++i)
+        {
+            ref var accessorySlot = ref _accessorySlots[i];
+            accessoryID = (uint)PlayerPrefs.GetInt(
+                $"{keyPrefix}{accessorySlot.name}");
+
+            if (!__TryGetAccessory(accessoryID, out accessoryInfo))
+                continue;
+
+            ref var accessory = ref _accessories[accessoryInfo.index];
+
+            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
+            if (level > 0)
+            {
+                styleIndex = __GetAccessoryStyleIndex(accessorySlot.styleName);
+                indices = __GetAccessoryStyleLevelIndices(styleIndex);
+
+                ref var accessoryLevel = ref _accessoryLevels[indices[level - 1]];
+
+                skillGroupDamage += accessoryLevel.roleSkillGroupDamage;
+            }
+            else
+                skillGroupDamage += accessory.roleSkillGroupDamage;
         }
 
         return attributes;
@@ -833,6 +872,7 @@ public partial class UserDataMain
 
         var attributes = __CollectRoleAttributes(
             role.name, 
+            groupName, 
             new List<UserAttributeData>(), 
             out skill.damage);
 
@@ -1320,6 +1360,7 @@ public partial class UserDataMain
 
                         attributes = __CollectRoleAttributes(
                             role.name,
+                            roleGroupName, 
                             attributes,
                             out skill.damage);
 
