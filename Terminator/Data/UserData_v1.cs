@@ -278,6 +278,8 @@ public struct UserAccessory
 
     public float attributeValue;
 
+    public float skillDamage;
+
     /// <summary>
     /// 技能
     /// </summary>

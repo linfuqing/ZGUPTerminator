@@ -1029,7 +1029,7 @@ public partial class UserDataMain
             }
             else
             {
-                skill.damage = 0.0f;
+                skill.damage = accessory.skillDamage;
 
                 attribute.value += accessory.attributeValue;
             }
@@ -1516,7 +1516,7 @@ public partial class UserDataMain
                         {
                             attribute.value += accessory.attributeValue;
 
-                            skill.damage = 0.0f;
+                            skill.damage = accessory.skillDamage;
                         }
 
                         attributes[j] = attribute;

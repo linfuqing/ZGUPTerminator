@@ -602,7 +602,7 @@ public partial class UserDataMain
                     minAccessorySlotLevel = Mathf.Min(minAccessorySlotLevel,
                         PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
                 
-                return minAccessorySlotLevel < int.MaxValue ? 0 : minAccessorySlotLevel;
+                return minAccessorySlotLevel < int.MaxValue ? minAccessorySlotLevel : 0;
             case UserQuest.Type.AchievementRoles:
                 int numRoles = 0;
                 foreach (var role in _roles)

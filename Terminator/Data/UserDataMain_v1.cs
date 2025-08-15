@@ -821,7 +821,10 @@ public partial class UserDataMain
         
         [Tooltip("主技能伤害")]
         public float roleSkillGroupDamage;
-        
+
+        [Tooltip("技能伤害")]
+        public float skillDamage;
+
         [Tooltip("基础属性值")]
         public float attributeValue;
         
@@ -870,6 +873,15 @@ public partial class UserDataMain
             set
             {
                 roleSkillGroupDamage = value;
+            }
+        }
+        
+        [CSVField]
+        public float 装备技能伤害
+        {
+            set
+            {
+                skillDamage = value;
             }
         }
 
@@ -1437,6 +1449,8 @@ public partial class UserDataMain
 
             userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
 
+            userAccessory.skillDamage = accessory.skillDamage;
+
             userAccessory.attributeValue = accessory.attributeValue;
 
             userAccessory.property = accessory.property;
@@ -1813,6 +1827,7 @@ public partial class UserDataMain
 
         result.stage = info.stage;
 
+        result.skillDamage = accessory.skillDamage;
         result.attributeValue = accessory.attributeValue;
         result.property = accessory.property;
 
