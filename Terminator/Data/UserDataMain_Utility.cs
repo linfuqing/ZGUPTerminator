@@ -871,6 +871,9 @@ public partial class UserDataMain
                         }
                         
                         break;
+                    default:
+                        result = false;
+                        break;
                 }
                 
                 if (result)
