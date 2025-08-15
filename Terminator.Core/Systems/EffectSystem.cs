@@ -421,7 +421,7 @@ public partial struct EffectSystem : ISystem
 
     private struct Clear
     {
-        public float deltaTime;
+        //public float deltaTime;
         public double time;
 
         [ReadOnly]
@@ -452,8 +452,8 @@ public partial struct EffectSystem : ISystem
                     if (definition.effects.Length > 0)
                     {
                         ref var effect = ref definition.effects[0];
-                        
-                        status.time += effect.startTime - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime);
+
+                        status.time += effect.startTime;// - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime);
                     }
 
                     states[index] = status;
@@ -495,7 +495,7 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct ClearEx : IJobChunk
     {
-        public float deltaTime;
+        //public float deltaTime;
         public double time;
 
         [ReadOnly]
@@ -512,7 +512,7 @@ public partial struct EffectSystem : ISystem
             in v128 chunkEnabledMask)
         {
             Clear clear;
-            clear.deltaTime = deltaTime;
+            //clear.deltaTime = deltaTime;
             clear.time = time;
             clear.instances = chunk.GetNativeArray(ref instanceType);
             clear.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
@@ -530,7 +530,7 @@ public partial struct EffectSystem : ISystem
 
     private struct Collect
     {
-        public float deltaTime;
+        //public float deltaTime;
         public double time;
 
         public quaternion inverseCameraRotation;
@@ -626,12 +626,14 @@ public partial struct EffectSystem : ISystem
                 int resultCount = 0, entityCount = 0;
                 if (effect.time > math.FLT_MIN_NORMAL)
                 {
-                    resultCount = (int)math.ceil((time - status.time) / effect.time);
-                    if (resultCount < 1)
+                    resultCount = (int)math.ceil((time + math.DBL_MIN_NORMAL - status.time) / effect.time);
+                    resultCount = math.min(resultCount, effect.count - status.count);
+                    result = resultCount > 0;
+                    /*if (resultCount < 1)
                         return 0;
 
                     result = (effect.count > 0 ? math.min(resultCount, effect.count - status.count) : resultCount) >
-                             (int)math.ceil((time - status.time - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime)) / effect.time);
+                             (int)math.ceil((time - status.time - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime)) / effect.time);*/
                 }
 
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
@@ -1029,7 +1031,7 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct CollectEx : IJobChunk
     {
-        public float deltaTime;
+        //public float deltaTime;
         public double time;
 
         public quaternion inverseCameraRotation;
@@ -1109,7 +1111,7 @@ public partial struct EffectSystem : ISystem
             ulong hash = math.asulong(time);
             
             Collect collect;
-            collect.deltaTime = deltaTime;
+            //collect.deltaTime = deltaTime;
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.inverseCameraRotation = inverseCameraRotation;
@@ -2042,7 +2044,7 @@ public partial struct EffectSystem : ISystem
         __statusType.Update(ref state);
         
         ClearEx clear;
-        clear.deltaTime = deltaTime;
+        //clear.deltaTime = deltaTime;
         clear.time = time;
         clear.instanceType = __instanceType;
         clear.simulationEventType = __simulationEventType;
@@ -2076,7 +2078,7 @@ public partial struct EffectSystem : ISystem
             : quaternion.identity;
         
         CollectEx collect;
-        collect.deltaTime = deltaTime;
+        //collect.deltaTime = deltaTime;
         collect.time = time;
         collect.inverseCameraRotation = inverseCameraRotation;
         collect.children = __children;
