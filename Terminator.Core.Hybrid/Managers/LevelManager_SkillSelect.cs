@@ -205,11 +205,12 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
-                int index = 0, 
-                    guidePriority = 0,
-                    recommendPriority = 0,
+                int //index = 0,
+                    //guidePriority = 0,
                     guideIndex = -1,
-                    recommendIndex = -1;
+                    recommendIndex = -1,
+                    recommendKeyCount = 1, 
+                    keyCount;
                 SkillAsset asset;
                 string[] keyNames;
                 Sprite[] keyIcons;
@@ -235,11 +236,11 @@ public partial class LevelManager
                     }
 
                     if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
-                        (guideIndex == -1 || guidePriority < asset.priority) &&
+                        (guideIndex == -1/* || guidePriority < asset.priority*/) &&
                         _skillSelectionGuides != null &&
                         Array.IndexOf(_skillSelectionGuides, source.name) != -1)
                     {
-                        guidePriority = asset.priority;
+                        //guidePriority = asset.priority;
                         guideIndex = i;
                     }
 
@@ -263,13 +264,15 @@ public partial class LevelManager
 
                     style.SetAsset(asset, keyIcons);
 
-                    __SetSkillKeyStyles(style.keyStyles, keyNames);
+                    keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames);
 
-                    if ((recommendIndex == -1 || recommendPriority < asset.priority))
+                    if (keyCount > recommendKeyCount)
                     {
-                        recommendPriority = asset.priority;
+                        recommendKeyCount = keyCount;
                         recommendIndex = i;
                     }
+                    else if (keyCount == recommendKeyCount)
+                        recommendIndex = -1;
 
                     if (__skillStyles == null)
                         __skillStyles = new Dictionary<string, LevelSkillStyle>();
@@ -557,8 +560,9 @@ public partial class LevelManager
         }
     }
 
-    private void __SetSkillKeyStyles(IReadOnlyList<SkillKeyStyle> styles, string[] names)
+    private int __SetSkillKeyStyles(IReadOnlyList<SkillKeyStyle> styles, string[] names)
     {
+        int maxCount = 0, count;
         string name;
         LevelSkillKeyStyle style; 
         SkillKeyAsset asset;
@@ -572,11 +576,17 @@ public partial class LevelManager
             name = names[i];
             if(!SkillManager.TryGetAsset(name, out asset))
                 continue;
+
+            count = GetSkillActiveKeyCount(name);
             
-            style.SetAsset(asset, GetSkillActiveKeyCount(name));
+            maxCount = Mathf.Max(maxCount, count);
+            
+            style.SetAsset(asset, count);
             
             //style.gameObject.SetActive(true);
         }
+
+        return maxCount;
     }
 
     void OnDestroy()

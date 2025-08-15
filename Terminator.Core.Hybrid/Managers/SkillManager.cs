@@ -16,8 +16,6 @@ public struct SkillAsset
     public int rarity;
 
     public int flag;
-
-    public int priority;
 }
 
 public struct SkillKeyAsset
@@ -76,8 +74,6 @@ public class SkillManager : MonoBehaviour
         public int level;
         public int rarity;
 
-        public int priority;
-        
         public int flag;
         
         public string[] keys;
@@ -92,7 +88,6 @@ public class SkillManager : MonoBehaviour
             asset.level = level;
             asset.rarity = rarity;
             asset.flag = flag;
-            asset.priority = priority;
             
             return asset;
         }
@@ -140,14 +135,14 @@ public class SkillManager : MonoBehaviour
             set { rarity = value; }
         }
         
-        [CSVField]
+        /*[CSVField]
         public int 关卡技能描述优先级
         {
             set
             {
                 priority = value;
             }
-        }
+        }*/
         
         [CSVField]
         public int 关卡技能描述标签
