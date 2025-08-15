@@ -44,7 +44,7 @@ public class GameRewardData : IRewardData
                     ref var destination = ref result.values[i];
                         
                     destination.name = source.name;
-                    destination.count = source.count;
+                    destination.count = UserRewardType.Accessory == source.type ? 1 : source.count;
                 }
 
                 onComplete(result);

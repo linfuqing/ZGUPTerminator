@@ -626,7 +626,7 @@ public partial struct EffectSystem : ISystem
                 int resultCount = 0, entityCount = 0;
                 if (effect.time > math.FLT_MIN_NORMAL)
                 {
-                    resultCount = (int)math.ceil((time + math.DBL_MIN_NORMAL - status.time) / effect.time);
+                    resultCount = time > status.time ? (int)math.ceil((time - status.time) / effect.time) : 1;
                     resultCount = math.min(resultCount, effect.count - status.count);
                     result = resultCount > 0;
                     /*if (resultCount < 1)
