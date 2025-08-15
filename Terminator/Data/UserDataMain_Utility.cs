@@ -812,19 +812,68 @@ public partial class UserDataMain
     }
 
     private void __ApplySkills(
+        string[] roleSkillNames,
         List<IUserData.Skill> skills, 
         List<UserAccessory.Skill> accessoryStageSkills)
     {
         accessoryStageSkills.Sort();
 
+        string skillGroupName;
         IUserData.Skill skill;
         int i, numSkills = skills.Count;
+        bool result;
         foreach (var accessoryStageSkill in accessoryStageSkills)
         {
             for (i = 0; i < numSkills; ++i)
             {
                 skill = skills[i];
-                if (skill.type == accessoryStageSkill.type && skill.name == accessoryStageSkill.name)
+                switch (accessoryStageSkill.type)
+                {
+                    case UserSkillType.Individual:
+                        result = UserSkillType.Individual == skill.type;
+                        if (result)
+                            result = string.IsNullOrEmpty(accessoryStageSkill.name)
+                                ? Array.IndexOf(roleSkillNames, skill.name) != -1
+                                : skill.name == accessoryStageSkill.name;
+                        break;
+                    case UserSkillType.Group:
+                        switch (skill.type)
+                        {
+                            case UserSkillType.Individual:
+                                skillGroupName = __GetSkillGroupName(skill.name);
+                                break;
+                            case UserSkillType.Group:
+                                skillGroupName = skill.name;
+                                break;
+                            default:
+                                skillGroupName = null;
+                                break;
+                        }
+
+                        result = !string.IsNullOrEmpty(skillGroupName);
+                        if (result)
+                        {
+                            if (string.IsNullOrEmpty(accessoryStageSkill.name))
+                            {
+                                result = false;
+                                foreach (var roleSkillName in roleSkillNames)
+                                {
+                                    if (__GetSkillGroupName(roleSkillName) == skillGroupName)
+                                    {
+                                        result = true;
+
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                                result = accessoryStageSkill.name == skillGroupName;
+                        }
+                        
+                        break;
+                }
+                
+                if (result)
                 {
                     switch (accessoryStageSkill.opcode)
                     {
@@ -844,12 +893,40 @@ public partial class UserDataMain
 
             if (i == numSkills)
             {
-                skill.name = accessoryStageSkill.name;
                 skill.type = accessoryStageSkill.type;
                 skill.damage = accessoryStageSkill.damage;
-                            
-                skills.Add(skill);
-                            
+                if (string.IsNullOrEmpty(accessoryStageSkill.name))
+                {
+                    switch (accessoryStageSkill.type)
+                    {
+                        case UserSkillType.Individual:
+                            foreach (var roleSkillName in roleSkillNames)
+                            {
+                                skill.name = roleSkillName;
+                                skills.Add(skill);
+                            }
+                            break;
+                        case UserSkillType.Group:
+                            foreach (var roleSkillName in roleSkillNames)
+                            {
+                                skill.name = __GetSkillGroupName(roleSkillName);
+                                if (string.IsNullOrEmpty(skill.name))
+                                    continue;
+                                
+                                skill.type = UserSkillType.Group;
+                                skills.Add(skill);
+                            }
+
+                            break;
+                    }
+                }
+                else
+                {
+                    skill.name = accessoryStageSkill.name;
+
+                    skills.Add(skill);
+                }
+
                 ++numSkills;
             }
         }
@@ -1036,7 +1113,7 @@ public partial class UserDataMain
         }
 
         if(accessoryStageSkills != null)
-            __ApplySkills(skills, accessoryStageSkills);
+            __ApplySkills(role.skillNames, skills, accessoryStageSkills);
 
         result.name = role.instanceName;
         result.attributes = attributes.ToArray();
@@ -1317,6 +1394,7 @@ public partial class UserDataMain
             var attributes = new List<UserAttributeData>();
             List<UserAccessory.Attribute> accessoryStageAttributes = null;
             List<UserAccessory.Skill> accessoryStageSkills = null;
+            string[] roleSkillNames = null;
             List<int> indices;
             UserAccessory.Property property;
             IUserData.Skill skill;
@@ -1357,6 +1435,8 @@ public partial class UserDataMain
                         ref var role = ref _roles[skillInfo.index];
 
                         instanceName = role.instanceName;
+
+                        roleSkillNames = role.skillNames;
 
                         attributes = __CollectRoleAttributes(
                             role.name,
@@ -1483,7 +1563,7 @@ public partial class UserDataMain
                 __ApplyAttributes(attributes, accessoryStageAttributes);
 
             if (accessoryStageSkills != null)
-                __ApplySkills(skills, accessoryStageSkills);
+                __ApplySkills(roleSkillNames, skills, accessoryStageSkills);
 
             result.name = instanceName;
             result.attributes = attributes.ToArray();
