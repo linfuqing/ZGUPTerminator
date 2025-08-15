@@ -629,6 +629,8 @@ public partial struct EffectSystem : ISystem
                     resultCount = time > status.time ? (int)math.ceil((time - status.time) / effect.time) : 1;
                     resultCount = effect.count > 0 ? math.min(resultCount, effect.count - status.count) : resultCount;
                     result = resultCount > 0;
+                    if (!result)
+                        resultCount = 1;
                     /*if (resultCount < 1)
                         return 0;
 
