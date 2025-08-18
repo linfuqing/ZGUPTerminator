@@ -106,14 +106,14 @@ public struct SpawnerAttribute
         public float gold;
     }
     
-    public int hp;
-    public int hpMax;
-    public int level;
-    public int levelMax;
-    public int exp;
-    public int expMax;
-    public int gold;
-    public int goldMax;
+    public float hp;
+    public float hpMax;
+    public float level;
+    public float levelMax;
+    public float exp;
+    public float expMax;
+    public float gold;
+    public float goldMax;
 
     public float damageScale;
     public float damageScaleMax;
@@ -135,8 +135,8 @@ public struct SpawnerAttribute
         SpawnerAttribute result;
         if (y.hp > math.FLT_MIN_NORMAL)
         {
-            result.hp = (int)math.round(x.hp * y.hp);
-            result.hpMax = (int)math.round(x.hpMax * y.hp);
+            result.hp = x.hp * y.hp;
+            result.hpMax = x.hpMax * y.hp;
             result.hpBuff = x.hpBuff * y.hp;
         }
         else
@@ -148,8 +148,8 @@ public struct SpawnerAttribute
 
         if (y.level > math.FLT_MIN_NORMAL)
         {
-            result.level = (int)math.round(x.level * y.level);
-            result.levelMax = (int)math.round(x.levelMax * y.level);
+            result.level = x.level * y.level;
+            result.levelMax = x.levelMax * y.level;
             result.levelBuff = x.levelBuff * y.level;
         }
         else
@@ -161,8 +161,8 @@ public struct SpawnerAttribute
 
         if (y.exp > math.FLT_MIN_NORMAL)
         {
-            result.exp = (int)math.round(x.exp * y.exp);
-            result.expMax = (int)math.round(x.expMax * y.exp);
+            result.exp = x.exp * y.exp;
+            result.expMax = x.expMax * y.exp;
             result.expBuff = x.expBuff * y.exp;
         }
         else
@@ -174,8 +174,8 @@ public struct SpawnerAttribute
         
         if (y.gold > math.FLT_MIN_NORMAL)
         {
-            result.gold = (int)math.round(x.gold * y.gold);
-            result.goldMax = (int)math.round(x.goldMax * y.gold);
+            result.gold = x.gold * y.gold;
+            result.goldMax = x.goldMax * y.gold;
             result.goldBuff = x.goldBuff * y.gold;
         }
         else
@@ -565,7 +565,7 @@ public struct SpawnerDefinition
             {
                 EffectTarget effectTarget;
                 effectTarget.times = 0;
-                effectTarget.hp = math.min((int)math.round(attribute.hp + attribute.hpBuff * times), attribute.hpMax);
+                effectTarget.hp = __Round(math.min(attribute.hp + attribute.hpBuff * times, attribute.hpMax), ref random);
                 effectTarget.immunizedTime = 0.0f;
                 effectTarget.invincibleTime = 0.0f;
                 entityManager.SetComponent(2, entity, effectTarget);
@@ -595,14 +595,20 @@ public struct SpawnerDefinition
                 attribute.gold != 0 && attribute.goldMax > 0)
             {
                 EffectTargetLevel effectTargetLevel;
-                effectTargetLevel.value = math.min((int)math.round(attribute.level + attribute.levelBuff * times), attribute.levelMax);
-                effectTargetLevel.exp = math.min((int)math.round(attribute.exp + attribute.expBuff * times), attribute.expMax);
-                effectTargetLevel.gold = math.min((int)math.round(attribute.gold + attribute.goldBuff * times), attribute.goldMax);
+                effectTargetLevel.value = __Round(math.min(attribute.level + attribute.levelBuff * times, attribute.levelMax), ref random);
+                effectTargetLevel.exp = __Round(math.min(attribute.exp + attribute.expBuff * times, attribute.expMax), ref random);
+                effectTargetLevel.gold = __Round(math.min(attribute.gold + attribute.goldBuff * times, attribute.goldMax), ref random);
                 entityManager.SetComponent(2, entity, effectTargetLevel);
             }
         }
 
         return true;
+    }
+
+    private static int __Round(float value, ref Random random)
+    {
+        return (int)math.select(math.floor(value), math.ceil(value),
+            math.frac(value) > random.NextFloat());
     }
 }
 
