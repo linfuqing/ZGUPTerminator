@@ -723,7 +723,7 @@ public static class SpawnerShared
     private struct AttributeScale
     {
         private static readonly SharedStatic<SpawnerAttribute.Scale> Value =
-            SharedStatic<SpawnerAttribute.Scale>.GetOrCreate<Attribute>();
+            SharedStatic<SpawnerAttribute.Scale>.GetOrCreate<AttributeScale>();
 
         public static ref SpawnerAttribute.Scale value => ref Value.Data;
     }

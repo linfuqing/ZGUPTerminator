@@ -605,10 +605,10 @@ public static class LevelShared
     
     private struct SpawnerAttributeScale
     {
-        private static readonly SharedStatic<FixedList128Bytes<SpawnerAttribute.Scale>> Value =
-            SharedStatic<FixedList128Bytes<SpawnerAttribute.Scale>>.GetOrCreate<SpawnerAttributeScale>();
+        private static readonly SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>> Value =
+            SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>>.GetOrCreate<SpawnerAttributeScale>();
 
-        public static ref FixedList128Bytes<SpawnerAttribute.Scale> values => ref Value.Data;
+        public static ref FixedList512Bytes<SpawnerAttribute.Scale> values => ref Value.Data;
     }
 
     public static int stage
@@ -632,5 +632,5 @@ public static class LevelShared
         set => ExpMax.Value.Data = value;
     }
 
-    public static ref FixedList128Bytes<SpawnerAttribute.Scale> spawnerAttributeScales => ref SpawnerAttributeScale.values;
+    public static ref FixedList512Bytes<SpawnerAttribute.Scale> spawnerAttributeScales => ref SpawnerAttributeScale.values;
 }
