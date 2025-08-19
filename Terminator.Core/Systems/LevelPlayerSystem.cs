@@ -196,8 +196,8 @@ public partial struct LevelPlayerSystem : ISystem
             }
             
             EffectDamage effectDamage;
-            if(!bulletLayerMasks.TryGetComponent(player, out effectDamage.bulletLayerMask))
-                effectDamage.bulletLayerMask = BulletLayerMask.AllLayers;
+            if (!bulletLayerMasks.TryGetComponent(player, out effectDamage.bulletLayerMask))
+                effectDamage.bulletLayerMask = default;//BulletLayerMask.AllLayers;
             
             effectDamage.scale = 1.0f + this.effectDamageScale;
 
