@@ -2214,11 +2214,15 @@ public partial class UserDataMain
         
         IUserData.StageProperty stageProperty;
         stageProperty.stage = stageIndex;
-        stageProperty.spawnerAttribute = stage.spawnerAttribute;
         stageProperty.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, stageIndex);
         stageProperty.value = __ApplyProperty(
             userID, 
             stageProperty.cache.skills);
+
+        int numStages = __GetStageCount(level);
+        stageProperty.spawnerAttributes = new SpawnerAttribute.Scale[numStages];
+        for (int i = 0; i < numStages; ++i)
+            stageProperty.spawnerAttributes[i] = __GetStage(level, i).spawnerAttribute;
         
         onComplete(stageProperty);
     }

@@ -603,6 +603,14 @@ public static class LevelShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ExpMax>();
     }
     
+    private struct SpawnerAttributeScale
+    {
+        private static readonly SharedStatic<FixedList128Bytes<SpawnerAttribute.Scale>> Value =
+            SharedStatic<FixedList128Bytes<SpawnerAttribute.Scale>>.GetOrCreate<SpawnerAttributeScale>();
+
+        public static ref FixedList128Bytes<SpawnerAttribute.Scale> values => ref Value.Data;
+    }
+
     public static int stage
     {
         get => Stage.Value.Data;
@@ -623,4 +631,6 @@ public static class LevelShared
         
         set => ExpMax.Value.Data = value;
     }
+
+    public static ref FixedList128Bytes<SpawnerAttribute.Scale> spawnerAttributeScales => ref SpawnerAttributeScale.values;
 }

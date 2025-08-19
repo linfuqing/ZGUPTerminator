@@ -349,6 +349,8 @@ public partial class LevelSystemManaged
                 return;
             
             __stage = value;
+
+            SpawnerShared.attributeScale = value < LevelShared.spawnerAttributeScales.Length ? LevelShared.spawnerAttributeScales[value] : default;
             
             __bulletEntityType.Update(system);
             __bulletDefinitions.Update(system);

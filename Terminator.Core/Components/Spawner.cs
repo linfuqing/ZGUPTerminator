@@ -542,7 +542,7 @@ public struct SpawnerDefinition
         if (attributeIndex != -1)
         {
             var attribute = attributes[attributeIndex];
-            attribute *= SpawnerShared.attribute;
+            attribute *= SpawnerShared.attributeScale;
 
             float times = attribute.interval > math.FLT_MIN_NORMAL ? math.floor(time / attribute.interval) : time;
             
@@ -730,5 +730,5 @@ public static class SpawnerShared
 
     public static ref int layerMask => ref LayerMask.value;
     
-    public static ref SpawnerAttribute.Scale attribute => ref AttributeScale.value;
+    public static ref SpawnerAttribute.Scale attributeScale => ref AttributeScale.value;
 }

@@ -458,8 +458,12 @@ public sealed partial class UserDataMain : MonoBehaviour
         levelCache.killBossCount = 0;
         UserData.levelCache = levelCache;
 
-        result.spawnerAttribute = __GetStage(level, result.stage).spawnerAttribute;
         result.value = __ApplyProperty(userID);
+
+        int numStages = __GetStageCount(level);
+        result.spawnerAttributes = new SpawnerAttribute.Scale[numStages];
+        for (int i = 0; i < numStages; ++i)
+            result.spawnerAttributes[i] = __GetStage(level, i).spawnerAttribute;
 
         onComplete(result);
     }

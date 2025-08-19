@@ -771,11 +771,15 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.LevelProperty property)
     {
-        SpawnerShared.attribute = property.spawnerAttribute;
+        LevelPlayerShared.skillRage = 0;
+
         SpawnerShared.layerMask = property.value.spawnerLayerMask;
 
-        LevelPlayerShared.skillRage = 0;
-        
+        LevelShared.spawnerAttributeScales.Clear();
+
+        foreach (var spawnerAttribute in property.spawnerAttributes)
+            LevelShared.spawnerAttributeScales.Add(spawnerAttribute);
+
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
         
@@ -798,10 +802,14 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
 
-        SpawnerShared.attribute = property.spawnerAttribute;
+        LevelPlayerShared.skillRage = property.cache.rage;
+
         SpawnerShared.layerMask = property.value.spawnerLayerMask;
         
-        LevelPlayerShared.skillRage = property.cache.rage;
+        LevelShared.spawnerAttributeScales.Clear();
+
+        foreach (var spawnerAttribute in property.spawnerAttributes)
+            LevelShared.spawnerAttributeScales.Add(spawnerAttribute);
         
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
