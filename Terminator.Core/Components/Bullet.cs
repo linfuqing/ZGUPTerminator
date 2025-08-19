@@ -612,18 +612,18 @@ public struct BulletDefinition
 
         if (data.times > 0 && data.times <= status.times)
         {
-            if (!result)
-            {
-                status.times = 0;
-                status.cooldown = 0.0f;
-            }
-
-            return false;
+            if (result)
+                return false;
+            
+            //status.times = 0;
+            status.cooldown = 0.0f;
         }
 
         if (status.cooldown < math.DBL_MIN_NORMAL)
         {
             status.cooldown = time + data.startTime;
+            
+            status.times = result ? data.times : 0;
 
             if (data.startTime > math.FLT_MIN_NORMAL)
                 return false;

@@ -485,12 +485,13 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
             for (int i = 0; i < numBullets; ++i)
             {
                 bulletIndex = skillDefinition.bullets[skill.bulletIndices[i]].index;
-                ref var bulletStatus = ref bulletStates.ElementAt(bulletIndex);
+                bulletStates[bulletIndex] = default;
+                /*ref var bulletStatus = ref bulletStates.ElementAt(bulletIndex);
                 ref var bullet = ref bulletDefinition.bullets[bulletIndex];
                 bulletStatus.cooldown = time + bullet.startTime;
                 bulletStatus.count = 0;
                 bulletStatus.times = bullet.times;
-                bulletStatus.version = 0;
+                bulletStatus.version = 0;*/
             }
         }
     }

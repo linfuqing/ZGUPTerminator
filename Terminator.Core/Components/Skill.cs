@@ -185,12 +185,13 @@ public struct SkillDefinition
                         if ((bullet.flag & SkillBulletFlag.DontCooldown) != SkillBulletFlag.DontCooldown && 
                             bullet.index < bulletStates.Length)
                         {
-                            ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
+                            bulletStates[bullet.index] = default;
+                            /*ref var bulletStatus = ref bulletStates.ElementAt(bullet.index);
                             bulletStatus.cooldown =
                                 time + bulletDefinition.bullets[bullet.index].startTime;
                             bulletStatus.times = 0;
                             bulletStatus.count = 0;
-                            bulletStatus.version = 0;
+                            bulletStatus.version = 0;*/
                         }
                     }
                 }
