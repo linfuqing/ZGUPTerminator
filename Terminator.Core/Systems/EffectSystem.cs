@@ -1255,6 +1255,7 @@ public partial struct EffectSystem : ISystem
             var targetHP = targetHPs[index];
             if ((targetHP.value != 0 || 
                 targetDamage.value != 0 || 
+                targetDamage.valueImmunized != 0 && 
                 target.immunizedTime < 0.0f) && 
                 target.invincibleTime < 0.0f)
             {
