@@ -67,7 +67,7 @@ public partial class LevelSystemManaged
 
             ref var bulletStatus = ref bulletStates.ElementAt(bulletEntity.index);
             bulletStatus = default;
-            bulletStatus.cooldown = time + startTime;
+            //bulletStatus.cooldown = time + startTime;
         }
     }
 

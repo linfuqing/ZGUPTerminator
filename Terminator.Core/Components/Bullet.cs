@@ -610,13 +610,21 @@ public struct BulletDefinition
             return false;
         }*/
 
-        if (data.times > 0 && data.times <= status.times)
+        if (data.times > 0)
         {
-            if (result)
-                return false;
-            
-            //status.times = 0;
-            status.cooldown = 0.0f;
+            if (data.times > status.times)
+            {
+                if (!result)
+                    return false;
+            }
+            else
+            {
+                if (result)
+                    return false;
+
+                //status.times = 0;
+                status.cooldown = 0.0f;
+            }
         }
 
         if (status.cooldown < math.DBL_MIN_NORMAL)
@@ -624,10 +632,7 @@ public struct BulletDefinition
             status.cooldown = time + data.startTime;
             
             status.times = result ? data.times : 0;
-            if (status.times > 0)
-                return false;
-
-            if (data.startTime > math.FLT_MIN_NORMAL)
+            if (data.times > 0 || data.startTime > math.FLT_MIN_NORMAL)
                 return false;
         }
 
@@ -695,7 +700,7 @@ public struct BulletDefinition
 
         if (!result)
         {
-            status.times = 0;
+            //status.times = 0;
             
             return false;
         }
