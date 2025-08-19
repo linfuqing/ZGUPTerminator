@@ -624,6 +624,8 @@ public struct BulletDefinition
             status.cooldown = time + data.startTime;
             
             status.times = result ? data.times : 0;
+            if (status.times > 0)
+                return false;
 
             if (data.startTime > math.FLT_MIN_NORMAL)
                 return false;
