@@ -439,6 +439,8 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         __SubmitStageFlag();
 
+        UserData.StartStage(level.name, 0);
+
         __AppendQuest(UserQuest.Type.Stage, 1);
 
         IUserData.LevelProperty result;
