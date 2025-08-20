@@ -1253,133 +1253,144 @@ public partial struct EffectSystem : ISystem
             
             var targetDamage = targetDamages[index];
             var targetHP = targetHPs[index];
-            if ((targetHP.value != 0 || 
-                targetDamage.value != 0 || 
-                targetDamage.valueImmunized != 0 && 
-                target.immunizedTime < 0.0f) && 
+            if ((isFallToDestroy || 
+                 targetHP.value != 0 || 
+                 targetDamage.value != 0 || 
+                 targetDamage.valueImmunized != 0 && 
+                 target.immunizedTime < 0.0f) && 
                 target.invincibleTime < 0.0f)
             {
                 var targetInstance = targetInstances[index];
 
-                int damage = (int)math.ceil((targetDamage.value + (target.immunizedTime > 0.0f ? 0.0f : targetDamage.valueImmunized)) *
-                                        (index < targetDamageScales.Length
-                                            ? targetDamageScales[index].value
-                                            : 1.0f)), 
-                    damageLayerMask;
-                if (targetHP.value > targetDamage.value)
+                int damage, damageLayerMask;
+                if (isFallToDestroy)
                 {
-                    targetHP.value -=  targetDamage.value;
-                    
                     damage = 0;
 
-                    damageLayerMask = targetHP.layerMask;
-
-                    if (targetHP.value > 0)
-                        target.hp += targetHP.value;
-                    else
-                    {
-                        target.hp = targetHP.value;
-                        
-                        if (targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
-                        {
-                            target.invincibleTime = targetInstance.recoveryInvincibleTime;
-                            result |= EnabledFlags.Invincible;
-                        }
-                    }
-
-                    result |= EnabledFlags.Recovery;
+                    damageLayerMask = 0;
                 }
                 else
                 {
-                    damageLayerMask = targetDamage.layerMask;
-
-                    if (damage > 0 && index < targetImmunityStates.Length)
+                    damage = (int)math.ceil(
+                        (targetDamage.value + (target.immunizedTime > 0.0f ? 0.0f : targetDamage.valueImmunized)) *
+                        (index < targetDamageScales.Length
+                            ? targetDamageScales[index].value
+                            : 1.0f));
+                    if (targetHP.value > targetDamage.value)
                     {
-                        bool isImmunity;
-                        var targetImmunityStatus = targetImmunityStates[index];
-                        if (targetImmunityStatus.damage > damage || targetImmunityStatus.times > 0)
-                        {
-                            if (targetImmunityStatus.damage > damage)
-                                targetImmunityStatus.damage -= damage;
-                            else if (targetImmunityStatus.damage > 0)
-                            {
-                                damage = targetImmunityStatus.damage;
+                        targetHP.value -= targetDamage.value;
 
-                                targetImmunityStatus.damage = 0;
-                            }
+                        damage = 0;
 
-                            if (targetImmunityStatus.times > 0)
-                                --targetImmunityStatus.times;
+                        damageLayerMask = targetHP.layerMask;
 
-                            isImmunity = true;
-                        }
+                        if (targetHP.value > 0)
+                            target.hp += targetHP.value;
                         else
-                            isImmunity = false;
-
-                        if (targetImmunityStatus.damage == 0 &&
-                            targetImmunityStatus.times == 0 &&
-                            index < targetImmunities.Length)
                         {
-                            ref var definition = ref targetImmunities[index].definition.Value;
-                            while (definition.immunities.Length > targetImmunityStatus.index)
+                            target.hp = targetHP.value;
+
+                            if (targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
                             {
-                                ref var immunity =
-                                    ref definition.immunities[targetImmunityStatus.index];
+                                target.invincibleTime = targetInstance.recoveryInvincibleTime;
+                                result |= EnabledFlags.Invincible;
+                            }
+                        }
 
-                                if (isImmunity)
+                        result |= EnabledFlags.Recovery;
+                    }
+                    else
+                    {
+                        damageLayerMask = targetDamage.layerMask;
+
+                        if (damage > 0 && index < targetImmunityStates.Length)
+                        {
+                            bool isImmunity;
+                            var targetImmunityStatus = targetImmunityStates[index];
+                            if (targetImmunityStatus.damage > damage || targetImmunityStatus.times > 0)
+                            {
+                                if (targetImmunityStatus.damage > damage)
+                                    targetImmunityStatus.damage -= damage;
+                                else if (targetImmunityStatus.damage > 0)
                                 {
-                                    if (immunity.time > math.FLT_MIN_NORMAL)
-                                    {
-                                        target.immunizedTime = immunity.time;
-                                        
-                                        result |= EnabledFlags.Invincible;
-                                    }
+                                    damage = targetImmunityStatus.damage;
 
-                                    ++targetImmunityStatus.count;
+                                    targetImmunityStatus.damage = 0;
                                 }
 
-                                if (immunity.count == 0 ||
-                                    immunity.count > targetImmunityStatus.count)
+                                if (targetImmunityStatus.times > 0)
+                                    --targetImmunityStatus.times;
+
+                                isImmunity = true;
+                            }
+                            else
+                                isImmunity = false;
+
+                            if (targetImmunityStatus.damage == 0 &&
+                                targetImmunityStatus.times == 0 &&
+                                index < targetImmunities.Length)
+                            {
+                                ref var definition = ref targetImmunities[index].definition.Value;
+                                while (definition.immunities.Length > targetImmunityStatus.index)
                                 {
-                                    targetImmunityStatus.damage = immunity.damage;
-                                    targetImmunityStatus.times = immunity.times;
+                                    ref var immunity =
+                                        ref definition.immunities[targetImmunityStatus.index];
 
-                                    if (!isImmunity)
+                                    if (isImmunity)
                                     {
-                                        if (targetImmunityStatus.damage > damage)
-                                            targetImmunityStatus.damage -= damage;
-                                        else if (targetImmunityStatus.damage > 0)
+                                        if (immunity.time > math.FLT_MIN_NORMAL)
                                         {
-                                            damage = targetImmunityStatus.damage;
+                                            target.immunizedTime = immunity.time;
 
-                                            targetImmunityStatus.damage = 0;
+                                            result |= EnabledFlags.Invincible;
                                         }
 
-                                        if (targetImmunityStatus.times > 0)
-                                            --targetImmunityStatus.times;
-
-                                        isImmunity = targetImmunityStatus.damage == 0 &&
-                                                     targetImmunityStatus.times == 0;
-
-                                        if (isImmunity)
-                                            continue;
+                                        ++targetImmunityStatus.count;
                                     }
 
-                                    break;
-                                }
+                                    if (immunity.count == 0 ||
+                                        immunity.count > targetImmunityStatus.count)
+                                    {
+                                        targetImmunityStatus.damage = immunity.damage;
+                                        targetImmunityStatus.times = immunity.times;
 
-                                targetImmunityStatus.count = 0;
-                                ++targetImmunityStatus.index;
+                                        if (!isImmunity)
+                                        {
+                                            if (targetImmunityStatus.damage > damage)
+                                                targetImmunityStatus.damage -= damage;
+                                            else if (targetImmunityStatus.damage > 0)
+                                            {
+                                                damage = targetImmunityStatus.damage;
+
+                                                targetImmunityStatus.damage = 0;
+                                            }
+
+                                            if (targetImmunityStatus.times > 0)
+                                                --targetImmunityStatus.times;
+
+                                            isImmunity = targetImmunityStatus.damage == 0 &&
+                                                         targetImmunityStatus.times == 0;
+
+                                            if (isImmunity)
+                                                continue;
+                                        }
+
+                                        break;
+                                    }
+
+                                    targetImmunityStatus.count = 0;
+                                    ++targetImmunityStatus.index;
+                                }
                             }
+
+                            targetImmunityStates[index] = targetImmunityStatus;
                         }
 
-                        targetImmunityStates[index] = targetImmunityStatus;
+                        if (target.hp > 0)
+                            target.hp += -damage;
+                        else
+                            damage = 0;
                     }
-
-                    if (target.hp > 0)
-                        target.hp += -damage;
-                    else
-                        damage = 0;
                 }
 
                 float delayTime = 0.0f, deadTime = 0.0f;
