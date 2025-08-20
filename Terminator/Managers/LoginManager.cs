@@ -463,7 +463,7 @@ public sealed class LoginManager : MonoBehaviour
                             if (__stageStyles == null)
                                 __stageStyles = new List<StageStyle>();
 
-                            bool isHot;
+                            bool isHot, isUnlocked;
                             int i,
                                 j,
                                 numRanks,
@@ -527,6 +527,8 @@ public sealed class LoginManager : MonoBehaviour
                                 
                                     sceneIndices.Add(sceneIndex);
 
+                                    isUnlocked = false;
+                                    
                                     isHot = false;
                                     numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
                                     numRewardFlags = stage.rewardFlags.Length;
@@ -535,6 +537,8 @@ public sealed class LoginManager : MonoBehaviour
                                         rewardFlag = stage.rewardFlags[j];
                                         if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock)
                                         {
+                                            isUnlocked = true;
+                                            
                                             rank = numRanks > j ? stageStyle.ranks[j] : null;
                                             if (rank != null)
                                                 rank.SetActive(true);
@@ -544,6 +548,9 @@ public sealed class LoginManager : MonoBehaviour
                                                 isHot = true;
                                         }
                                     }
+                                    
+                                    if(!isUnlocked)
+                                        __CreateRewards(stageStyle.rewardStyle, stage.rewards);
 
                                     if (stageStyle.onHot != null)
                                         stageStyle.onHot.Invoke(isHot);
@@ -705,7 +712,7 @@ public sealed class LoginManager : MonoBehaviour
                     if (GameMain.GetLevelTimes(_levels[i].name) < 1)
                         continue;
 
-                    scrollRect.MoveTo(i);
+                    scrollRect.SetTo(i);
 
                     break;
                 }
@@ -714,7 +721,12 @@ public sealed class LoginManager : MonoBehaviour
                 i = -1;
 
             if (i < 0)
-                scrollRect.MoveTo(end);
+            {
+                if(end - scrollRect.index.x < 2)
+                    scrollRect.MoveTo(end);
+                else
+                    scrollRect.SetTo(end);
+            }
         }
 
         if (isHot)
