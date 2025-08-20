@@ -203,7 +203,7 @@ public struct SpawnerAttribute
         else
         {
             result.hp = x.hp;
-            result.hpMax = x.hpMax ;
+            result.hpMax = x.hpMax;
             result.hpBuff = x.hpBuff;
         }
 
@@ -416,8 +416,12 @@ public struct SpawnerDefinition
         {
             if (status.count < data.countPerTime)
             {
-                if (data.maxCount > 0 && instanceCount > data.maxCount)
+                if (data.maxCount > 0 && System.Threading.Interlocked.Increment(ref instanceCount) - 1 > data.maxCount)
+                {
+                    System.Threading.Interlocked.Decrement(ref instanceCount);
+                    
                     break;
+                }
 
                 if (__Apply(
                         layerMask,
@@ -434,7 +438,7 @@ public struct SpawnerDefinition
                         ref entityManager,
                         ref data))
                 {
-                    System.Threading.Interlocked.Increment(ref instanceCount);
+                    //System.Threading.Interlocked.Increment(ref instanceCount);
 
                     ++entityCount;
                     
@@ -447,10 +451,15 @@ public struct SpawnerDefinition
                     
                     result = true;
                 }
-                else if(data.interval > math.FLT_MIN_NORMAL)
-                    status.cooldown = time + data.interval;
-                else
-                    ++status.count;
+                else 
+                {
+                    System.Threading.Interlocked.Decrement(ref instanceCount);
+                    
+                    if(data.interval > math.FLT_MIN_NORMAL)
+                        status.cooldown = time + data.interval;
+                    else
+                        ++status.count;
+                }
             }
             else if ((data.times < 1 || status.times + 1 < data.times) && data.minCountToNextTime >= entityCount)
             {
