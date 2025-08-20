@@ -95,6 +95,12 @@ public struct SpawnerInstance
 
 public struct SpawnerAttribute
 {
+    [Flags]
+    public enum Flag
+    {
+        ReplaceHPAndDamageScale = 0x01
+    }
+    
     [Serializable]
     public struct Scale
     {
@@ -105,7 +111,9 @@ public struct SpawnerAttribute
         public float exp;
         public float gold;
     }
-    
+
+    public Flag flag;
+
     public float hp;
     public float hpMax;
     public float level;
@@ -130,22 +138,11 @@ public struct SpawnerAttribute
 
     public float interval;
 
-    public static SpawnerAttribute operator *(SpawnerAttribute x, Scale y)
+    public static SpawnerAttribute operator *(in SpawnerAttribute x, in Scale y)
     {
         SpawnerAttribute result;
-        if (y.hp > math.FLT_MIN_NORMAL)
-        {
-            result.hp = x.hp * y.hp;
-            result.hpMax = x.hpMax * y.hp;
-            result.hpBuff = x.hpBuff * y.hp;
-        }
-        else
-        {
-            result.hp = x.hp;
-            result.hpMax = x.hpMax ;
-            result.hpBuff = x.hpBuff;
-        }
-
+        result.flag = x.flag;
+        
         if (y.level > math.FLT_MIN_NORMAL)
         {
             result.level = x.level * y.level;
@@ -185,11 +182,36 @@ public struct SpawnerAttribute
             result.goldBuff = x.goldBuff;
         }
         
-        if (y.damageScale > math.FLT_MIN_NORMAL)
+        float hp, damageScale;
+        if ((x.flag & Flag.ReplaceHPAndDamageScale) == Flag.ReplaceHPAndDamageScale)
         {
-            result.damageScale = x.damageScale * y.damageScale;
-            result.damageScaleMax = x.damageScaleMax * y.damageScale;
-            result.damageScaleBuff = x.damageScaleBuff * y.damageScale;
+            hp = y.damageScale;
+            damageScale = y.hp;
+        }
+        else
+        {
+            hp = y.hp;
+            damageScale = y.damageScale;
+        }
+        
+        if (hp > math.FLT_MIN_NORMAL)
+        {
+            result.hp = x.hp * hp;
+            result.hpMax = x.hpMax * hp;
+            result.hpBuff = x.hpBuff * hp;
+        }
+        else
+        {
+            result.hp = x.hp;
+            result.hpMax = x.hpMax ;
+            result.hpBuff = x.hpBuff;
+        }
+
+        if (damageScale > math.FLT_MIN_NORMAL)
+        {
+            result.damageScale = x.damageScale * damageScale;
+            result.damageScaleMax = x.damageScaleMax * damageScale;
+            result.damageScaleBuff = x.damageScaleBuff * damageScale;
         }
         else
         {
@@ -724,6 +746,14 @@ public static class SpawnerShared
     {
         private static readonly SharedStatic<SpawnerAttribute.Scale> Value =
             SharedStatic<SpawnerAttribute.Scale>.GetOrCreate<AttributeScale>();
+
+        public static ref SpawnerAttribute.Scale value => ref Value.Data;
+    }
+
+    private struct LevelAttributeScale
+    {
+        private static readonly SharedStatic<SpawnerAttribute.Scale> Value =
+            SharedStatic<SpawnerAttribute.Scale>.GetOrCreate<LevelAttributeScale>();
 
         public static ref SpawnerAttribute.Scale value => ref Value.Data;
     }

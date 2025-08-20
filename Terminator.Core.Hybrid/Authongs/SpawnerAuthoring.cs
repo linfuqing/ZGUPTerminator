@@ -48,6 +48,8 @@ public class SpawnerAuthoring : MonoBehaviour
     {
         public string name;
         
+        public SpawnerAttribute.Flag flag;
+        
         public int hp;
         public int hpMax;
         public int level;
@@ -79,6 +81,15 @@ public class SpawnerAuthoring : MonoBehaviour
             set
             {
                 name = value;
+            }
+        }
+        
+        [CSVField]
+        public int 刷怪属性标签
+        {
+            set
+            {
+                flag = (SpawnerAttribute.Flag)value;
             }
         }
         
@@ -555,6 +566,7 @@ public class SpawnerAuthoring : MonoBehaviour
                     ref var source = ref authoring._attributes[i];
                     ref var destination = ref attributes[i];
 
+                    destination.flag = source.flag;
                     destination.hp = source.hp;
                     destination.hpMax = source.hpMax;
                     destination.level = source.level;
