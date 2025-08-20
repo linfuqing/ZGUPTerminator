@@ -2197,7 +2197,7 @@ public partial class UserDataMain
         
         __SubmitStageFlag();
 
-        UserData.ApplyStageFlag(level.name, stageIndex);
+        UserData.StartStage(level.name, stageIndex);
 
         //flag &= ~Flag.UnlockFirst;
 

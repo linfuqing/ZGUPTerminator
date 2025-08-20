@@ -391,37 +391,38 @@ public partial class UserData : MonoBehaviour, IUserData
     }
 
     private const string NAME_SPACE_USER_STAGE_FLAG = "UserStageFlag";
-    private const string NAME_SPACE_USER_STAGE_CACHE_TIMES = "UserStageCacheTimes";
+    private const string NAME_SPACE_USER_LEVEL_START_STAGE = "UserLevelStartStage";
     
     public static IUserData.StageFlag GetStageFlag(string levelName, int stage)
     {
         return (IUserData.StageFlag)PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, stage));
     }
 
-    public static void ApplyStageFlag(string levelName, int stage)
+    public static void StartStage(string levelName, int stage)
     {
-        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE_TIMES, levelName, stage);
-        int times = PlayerPrefs.GetInt(key);
-        PlayerPrefs.SetInt(key, ++times);
+        //string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE_TIMES, levelName, stage);
+        //int times = PlayerPrefs.GetInt(key);
+        //PlayerPrefs.SetInt(key, ++times);
+        
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}", stage);
     }
 
-    public static void SubmitStageFlag(string levelName, int stage)
+    public static void EndStage(string levelName, int stage)
     {
-        string stageCacheTimesKey, stageFlagKey;
-        for (int i = 0; i < stage; ++i)
+        string levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
+        int startStage = PlayerPrefs.GetInt(levelStartStageKey);
+        if (startStage == 0)
         {
-            stageCacheTimesKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE_TIMES, levelName, i);
-            if (PlayerPrefs.GetInt(stageCacheTimesKey) < 2)
+            string stageFlagKey;
+            for (int i = 0; i < stage; ++i)
             {
                 stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
 
                 PlayerPrefs.SetInt(stageFlagKey,
                     PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
             }
-            
-            //PlayerPrefs.DeleteKey(stageCacheTimesKey);
-            //PlayerPrefs.DeleteKey(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, i));
         }
+        PlayerPrefs.DeleteKey(levelStartStageKey);
     }
 
     private static void __SubmitStageFlag(

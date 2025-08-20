@@ -496,12 +496,12 @@ public sealed partial class UserDataMain : MonoBehaviour
             yield break;
         }
 
-        bool isNextLevel = false;
         var level = _levels[levelIndex];
+        UserData.EndStage(level.name, levelCache.stage);
+
+        bool isNextLevel = false;
         if (__GetStageCount(level) == levelCache.stage)
         {
-            UserData.SubmitStageFlag(level.name, levelCache.stage);
-            
             if (userLevel == levelIndex)
             {
                 UserData.level = ++userLevel;
