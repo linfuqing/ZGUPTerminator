@@ -230,6 +230,8 @@ public struct EffectTarget : IComponentData, IEnableableComponent
     public int hp;
     public float immunizedTime;
     public float invincibleTime;
+
+    public double time;
 }
 
 public struct EffectTargetHP : IComponentData, IEnableableComponent
