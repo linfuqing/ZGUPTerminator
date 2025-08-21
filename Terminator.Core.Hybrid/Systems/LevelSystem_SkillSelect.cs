@@ -299,6 +299,8 @@ public partial class LevelSystemManaged
 
         public void Reset(LevelSystemManaged system)
         {
+            SpawnerShared.attributeScale = __stage < LevelShared.spawnerAttributeScales.Length ? LevelShared.spawnerAttributeScales[__stage] : default;
+
             version = default;
             
             system.__DestroyEntities(__bulletGroup);
