@@ -327,13 +327,23 @@ public partial class UserData : MonoBehaviour, IUserData
         var levelCache = UserData.levelCache;
         if (levelCache == null)
         {
+            UnityEngine.Debug.LogError("WTF?");
+
             onComplete(false);
             
-            yield break;
+            return null;
         }
 
         var temp = levelCache.Value;
-
+        if (temp.stage > stage)
+        {
+            UnityEngine.Debug.LogError("WTF?");
+            
+            onComplete(false);
+            
+            return null;
+        }
+        
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
@@ -346,6 +356,8 @@ public partial class UserData : MonoBehaviour, IUserData
         UserData.levelCache = temp;
         
         onComplete(true);
+        
+        return null;
     }
 
     public IEnumerator Activate(

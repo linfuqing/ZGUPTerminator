@@ -2526,12 +2526,24 @@ public partial class UserData
         var levelCache = UserData.levelCache;
         if (levelCache == null)
         {
+            UnityEngine.Debug.LogError("WTF?");
+
             onComplete(0);
             
-            yield break;
+            return null;
         }
 
         var temp = levelCache.Value;
+        if (temp.stage >= stage)
+        {
+            UnityEngine.Debug.LogError("WTF?");
+            
+            onComplete(0);
+            
+            return null;
+        }
+
+        //yield return null;
 
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
@@ -2553,6 +2565,8 @@ public partial class UserData
         UserData.levelCache = temp;
         
         onComplete(result);
+        
+        return null;
     }
     
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
