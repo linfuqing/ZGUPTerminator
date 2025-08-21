@@ -2,6 +2,7 @@ using System.Threading;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
+using Unity.Mathematics;
 using Unity.Transforms;
 using Object = UnityEngine.Object;
 
@@ -232,6 +233,20 @@ public struct EffectTarget : IComponentData, IEnableableComponent
     public float invincibleTime;
 
     public double time;
+
+    public float Update(double time)
+    {
+        float deltaTime = this.time > math.DBL_MIN_NORMAL ? (float)(time - this.time) : 0.0f;
+        this.time = time;
+            
+        if (this.immunizedTime >= 0.0f)
+            this.immunizedTime -= deltaTime;
+            
+        if (this.invincibleTime >= 0.0f)
+            this.invincibleTime -= deltaTime;
+
+        return deltaTime;
+    }
 }
 
 public struct EffectTargetHP : IComponentData, IEnableableComponent

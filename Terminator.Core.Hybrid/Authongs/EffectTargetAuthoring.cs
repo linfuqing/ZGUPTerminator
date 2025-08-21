@@ -74,6 +74,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             target.hp = authoring._hp;
             target.immunizedTime = 0.0f;
             target.invincibleTime = 0.0f;
+            target.time = 0.0;
             AddComponent(entity, target);
 
             EffectTargetLevel level;

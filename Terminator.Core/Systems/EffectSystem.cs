@@ -1164,6 +1164,8 @@ public partial struct EffectSystem : ISystem
     {
         public bool isFallToDestroy;
         
+        public float deltaTime;
+        
         public double time;
 
         public quaternion inverseCameraRotation;
@@ -1243,14 +1245,7 @@ public partial struct EffectSystem : ISystem
         {
             EnabledFlags result = 0;
             var target = targets[index];
-            float deltaTime = target.time > math.DBL_MIN_NORMAL ? (float)(time - target.time) : 0.0f;
-            target.time = time;
-            
-            if (target.immunizedTime >= 0.0f)
-                target.immunizedTime -= deltaTime;
-            
-            if (target.invincibleTime >= 0.0f)
-                target.invincibleTime -= deltaTime;
+            target.Update(time);
             
             var targetDamage = targetDamages[index];
             var targetHP = targetHPs[index];
@@ -1642,6 +1637,7 @@ public partial struct EffectSystem : ISystem
     private struct ApplyEx : IJobChunk
     {
         public uint frameCount;
+        public float deltaTime;
         public double time;
         
         public quaternion inverseCameraRotation;
@@ -1723,6 +1719,7 @@ public partial struct EffectSystem : ISystem
         {
             Apply apply;
             apply.isFallToDestroy = chunk.Has(ref fallToDestroyType);
+            apply.deltaTime = deltaTime;
             apply.time = time;
             apply.inverseCameraRotation = inverseCameraRotation;
             apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
@@ -1998,7 +1995,7 @@ public partial struct EffectSystem : ISystem
         if (fixedFrame.count <= __frameCount)
             return;
         
-        //float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
+        float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         __frameCount = fixedFrame.count;
 
@@ -2148,6 +2145,7 @@ public partial struct EffectSystem : ISystem
         ++__frameCount;*/
 
         apply.frameCount = (uint)__frameCount;
+        apply.deltaTime = deltaTime;
         apply.time = time;
         apply.inverseCameraRotation = inverseCameraRotation;
         apply.levelStates = __levelStates;

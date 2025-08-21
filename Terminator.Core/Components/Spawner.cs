@@ -599,6 +599,7 @@ public struct SpawnerDefinition
                 effectTarget.hp = __Round(math.min(attribute.hp + attribute.hpBuff * times, attribute.hpMax), ref random);
                 effectTarget.immunizedTime = 0.0f;
                 effectTarget.invincibleTime = 0.0f;
+                effectTarget.time = time;
                 entityManager.SetComponent(2, entity, effectTarget);
 
                 if (messageParameters.TryGetBuffer(prefab, out var source))

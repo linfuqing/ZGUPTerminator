@@ -65,7 +65,7 @@ public partial struct LevelSystem : ISystem
             stageResultStates.Resize(numStages, NativeArrayOptions.ClearMemory);
 
             var stageConditionStates = this.stageConditionStates[index];
-            bool isResultChanged = stageConditionStates.Length < 1;
+            bool isResultChanged = stageConditionStates.Length < 1, isEndOfStage = false;
             int conditionOffset = 0,
                 conditionCount,
                 numConditions,
@@ -238,6 +238,9 @@ public partial struct LevelSystem : ISystem
                     
                     stage.value = nextStageIndex;
 
+                    if (numResults < 1)
+                        isEndOfStage = true;
+
                     break;
                 }
                 
@@ -302,7 +305,7 @@ public partial struct LevelSystem : ISystem
 
             states[index] = status;
 
-            return isResultChanged;
+            return isEndOfStage;
         }
     }
 
@@ -408,7 +411,8 @@ public partial struct LevelSystem : ISystem
             if (result)
             {
                 ref var playerEffectTarget = ref effectTargets.GetRefRW(playerEntity).ValueRW;
-                playerEffectTarget.invincibleTime = math.max(playerEffectTarget.invincibleTime, deltaTime);
+                playerEffectTarget.invincibleTime = math.max(playerEffectTarget.invincibleTime, float.MaxValue);
+                playerEffectTarget.time = time;
             }
         }
 
