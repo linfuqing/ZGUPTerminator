@@ -1245,7 +1245,7 @@ public partial struct EffectSystem : ISystem
         {
             EnabledFlags result = 0;
             var target = targets[index];
-            target.Update(time);
+            target.Update(time, deltaTime);
             
             var targetDamage = targetDamages[index];
             var targetHP = targetHPs[index];

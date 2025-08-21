@@ -234,16 +234,16 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 
     public double time;
 
-    public float Update(double time)
+    public float Update(double time, float deltaTime)
     {
-        float deltaTime = this.time > math.DBL_MIN_NORMAL ? (float)(time - this.time) : 0.0f;
+        deltaTime = this.time > math.DBL_MIN_NORMAL ? (float)(time - this.time) : deltaTime;
         this.time = time;
             
-        if (this.immunizedTime >= 0.0f)
-            this.immunizedTime -= deltaTime;
+        if (immunizedTime >= 0.0f)
+            immunizedTime -= deltaTime;
             
-        if (this.invincibleTime >= 0.0f)
-            this.invincibleTime -= deltaTime;
+        if (invincibleTime >= 0.0f)
+            invincibleTime -= deltaTime;
 
         return deltaTime;
     }

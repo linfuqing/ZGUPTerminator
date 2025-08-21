@@ -411,8 +411,8 @@ public partial struct LevelSystem : ISystem
             if (result)
             {
                 ref var playerEffectTarget = ref effectTargets.GetRefRW(playerEntity).ValueRW;
+                playerEffectTarget.Update(time, deltaTime);
                 playerEffectTarget.invincibleTime = math.max(playerEffectTarget.invincibleTime, float.MaxValue);
-                playerEffectTarget.time = time;
             }
         }
 
