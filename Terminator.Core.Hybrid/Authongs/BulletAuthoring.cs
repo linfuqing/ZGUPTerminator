@@ -388,7 +388,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         //public float endTime;
         [Tooltip("弹夹容量")]
         public int capacity;
-        [Tooltip("释放次数，每次打空弹夹算一次，填零为无限次释放。注意：每次条件不满足时，则释放次数将被清空，满足条件后重新计数")]
+        [Tooltip("释放次数，每次打空弹夹算一次，填零为无限次释放。注意：每次条件不满足时，则释放次数将被清空，满足条件后重新计数。通过技能释放时，默认为打空状态，直到下次不满足条件才能被重置。")]
         public int times;
 
         public BulletSpace space;

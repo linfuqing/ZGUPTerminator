@@ -640,7 +640,7 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
                                                 
-                                                if (__sceneActiveDepth == 0 && onLevelActivated != null)
+                                                if (__sceneActiveDepth == 0 && currentSceneIndex + 1 == numScenes && onLevelActivated != null)
                                                     onLevelActivated();
                                             }
                                             else
@@ -650,7 +650,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
                                                 
-                                                if (onLevelActivatedFirst != null)
+                                                if (currentSceneIndex + 1 == numScenes && onLevelActivatedFirst != null)
                                                     onLevelActivatedFirst();
                                             }
 
