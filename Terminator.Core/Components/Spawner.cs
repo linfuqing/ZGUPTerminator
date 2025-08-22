@@ -454,11 +454,15 @@ public struct SpawnerDefinition
                 else 
                 {
                     System.Threading.Interlocked.Decrement(ref instanceCount);
-                    
-                    if(data.interval > math.FLT_MIN_NORMAL)
+
+                    if (data.interval > math.FLT_MIN_NORMAL)
+                    {
                         status.cooldown = time + data.interval;
-                    else
-                        ++status.count;
+
+                        break;
+                    }
+                    
+                    ++status.count;
                 }
             }
             else if ((data.times < 1 || status.times + 1 < data.times) && data.minCountToNextTime >= entityCount)
