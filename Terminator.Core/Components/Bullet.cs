@@ -600,7 +600,7 @@ public struct BulletDefinition
                         ref temp,
                         ref random))
                 {
-                    targetStatusIndex = i;
+                    targetStatusIndex = targetIndex;
 
                     result = temp.target == Entity.Null || data.targetLocation == 0 || __Check(
                         data.targetLocation,
