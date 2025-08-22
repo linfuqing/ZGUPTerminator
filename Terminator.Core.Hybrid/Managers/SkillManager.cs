@@ -77,6 +77,7 @@ public class SkillManager : MonoBehaviour
         public int flag;
         
         public string[] keys;
+        public string[] childKeys;
         
         public SkillAsset ToAsset()
         {
@@ -153,13 +154,21 @@ public class SkillManager : MonoBehaviour
             }
         }
         
-        
         [CSVField]
         public string 关卡技能描述词条名
         {
             set
             {
                 keys = string.IsNullOrEmpty(value) ? null : value.Split('/');
+            }
+        }
+        
+        [CSVField]
+        public string 关卡技能描述推荐词条名
+        {
+            set
+            {
+                childKeys = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
         }
 #endif
@@ -257,6 +266,7 @@ public class SkillManager : MonoBehaviour
     {
         public SkillAsset value;
 
+        public string[] childKeyNames;
         public string[] keyNames;
         
         public Sprite[] keyIcons;
@@ -330,6 +340,13 @@ public class SkillManager : MonoBehaviour
         return __keyAssets.TryGetValue(name, out result);
     }
 
+    public static string[] GetChildKeyNames(in FixedString128Bytes name)
+    {
+        if (__assets.TryGetValue(name, out var asset))
+            return asset.childKeyNames;
+        
+        return null;
+    }
     void OnEnable()
     {
         if (_keys != null)
@@ -348,6 +365,7 @@ public class SkillManager : MonoBehaviour
             ref var skill = ref _skills[i];
             
             asset.value = skill.ToAsset();
+            asset.childKeyNames = skill.childKeys;
             asset.keyNames = skill.keys;
 
             numKeys = skill.keys == null ? 0 : skill.keys.Length;

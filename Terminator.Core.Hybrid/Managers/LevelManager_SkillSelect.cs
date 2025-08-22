@@ -266,6 +266,13 @@ public partial class LevelManager
 
                     keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames);
 
+                    keyNames = SkillManager.GetChildKeyNames(source.name);
+                    if (keyNames != null)
+                    {
+                        foreach (var keyName in keyNames)
+                            keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName));
+                    }
+
                     if (keyCount > recommendKeyCount)
                     {
                         recommendKeyCount = keyCount;
