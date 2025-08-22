@@ -58,6 +58,9 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     private struct ClearEx : IJobChunk
     {
+        [ReadOnly]
+        public ComponentTypeHandle<SuctionTargetCharacterDisabled> targetCharacterDisabledType;
+
         public ComponentTypeHandle<SuctionTargetVelocity> targetVelocityType;
 
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
@@ -74,7 +77,7 @@ public partial struct SuctionSystem : ISystem
             //clear.physicsMasses = chunk.GetNativeArray(ref physicsMassType);
             clear.characterBodies = chunk.GetNativeArray(ref characterBodyType);
 
-            bool isCharacter = chunk.Has(ref characterBodyType);
+            bool isCharacter = chunk.Has(ref targetCharacterDisabledType) && chunk.Has(ref characterBodyType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
@@ -361,6 +364,9 @@ public partial struct SuctionSystem : ISystem
         public float deltaTime;
 
         [ReadOnly]
+        public ComponentTypeHandle<SuctionTargetCharacterDisabled> targetCharacterDisabledType;
+        
+        [ReadOnly]
         public ComponentTypeHandle<SuctionTargetVelocity> targetVelocityType;
 
         [ReadOnly]
@@ -391,7 +397,7 @@ public partial struct SuctionSystem : ISystem
             apply.localTransforms = chunk.GetNativeArray(ref localTransformType);
             apply.localToWorlds = chunk.Has(ref characterInterpolationType) ? chunk.GetNativeArray(ref localToWorldType) : default;
 
-            bool isCharacter = chunk.Has(ref characterBodyType);
+            bool isCharacter = chunk.Has(ref targetCharacterDisabledType) && chunk.Has(ref characterBodyType);
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -415,6 +421,8 @@ public partial struct SuctionSystem : ISystem
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
 
     private ComponentTypeHandle<Suction> __instanceType;
+    
+    private ComponentTypeHandle<SuctionTargetCharacterDisabled> __targetCharacterDisabledType;
 
     private ComponentTypeHandle<SuctionTargetVelocity> __targetVelocityType;
 
@@ -446,6 +454,7 @@ public partial struct SuctionSystem : ISystem
         __characterPropertiesType = state.GetComponentTypeHandle<KinematicCharacterProperties>(true);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __instanceType = state.GetComponentTypeHandle<Suction>(true);
+        __targetCharacterDisabledType = state.GetComponentTypeHandle<SuctionTargetCharacterDisabled>(true);
         __targetVelocityType = state.GetComponentTypeHandle<SuctionTargetVelocity>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>();
@@ -470,11 +479,13 @@ public partial struct SuctionSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __targetCharacterDisabledType.Update(ref state);
         __targetVelocityType.Update(ref state);
         __physicsVelocityType.Update(ref state);
         __characterBodyType.Update(ref state);
         
         ClearEx clear;
+        clear.targetCharacterDisabledType = __targetCharacterDisabledType;
         clear.targetVelocityType = __targetVelocityType;
         clear.physicsVelocityType = __physicsVelocityType;
         clear.characterBodyType = __characterBodyType;
@@ -510,6 +521,7 @@ public partial struct SuctionSystem : ISystem
 
             ApplyEx apply;
             apply.deltaTime = deltaTime;
+            apply.targetCharacterDisabledType = __targetCharacterDisabledType;
             apply.targetVelocityType = __targetVelocityType;
             apply.physicsVelocityType = __physicsVelocityType;
             apply.physicsMassType = __physicsMassType;

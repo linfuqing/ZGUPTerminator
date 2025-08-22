@@ -49,3 +49,8 @@ public struct SuctionTargetVelocity : IComponentData, IEnableableComponent
     public float3 angular;
     public float3 tangent;
 }
+
+public struct SuctionTargetCharacterDisabled : IComponentData
+{
+    
+}

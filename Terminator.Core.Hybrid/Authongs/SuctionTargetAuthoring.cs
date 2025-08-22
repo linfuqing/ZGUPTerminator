@@ -16,7 +16,13 @@ public class SuctionTargetAuthoring : MonoBehaviour
 
             AddComponent<SuctionTargetVelocity>(entity);
             SetComponentEnabled<SuctionTargetVelocity>(entity, false);
+            
+            if(authoring._isCharacterDisabled)
+                AddComponent<SuctionTargetCharacterDisabled>(entity);
         }
     }
+
+    [SerializeField] 
+    internal bool _isCharacterDisabled = true;
 }
 #endif
