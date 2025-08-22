@@ -172,7 +172,7 @@ public partial struct SuctionSystem : ISystem
                         UnityEngine.Assertions.Assert.AreApproximatelyEqual(velocity.z, math.forward(transform.rot).z);
 
                         springSpeed = instance.minDistance * distance;
-                        if (springSpeed > math.FLT_MIN_NORMAL && springSpeed > 1.0f)
+                        if (springSpeed > 1.0f)
                         {
                             springSpeed = instance.minDistance * (1.0f - math.rcp(springSpeed)) / deltaTime;
                             velocity *= -math.min(instance.linearSpeed, springSpeed);
@@ -291,6 +291,8 @@ public partial struct SuctionSystem : ISystem
     
     private struct Apply
     {
+        public bool isCharacterDisabled;
+        
         public float deltaTime;
 
         [ReadOnly]
@@ -332,29 +334,32 @@ public partial struct SuctionSystem : ISystem
             PhysicsVelocity physicsVelocity;
             physicsVelocity.Linear = targetVelocity.linear + targetVelocity.tangent;
             physicsVelocity.Angular = targetVelocity.angular;
-            
-            var localTransform = localTransforms[index];
-
-            //var temp = localTransform;
-
-            Unity.Physics.Extensions.PhysicsComponentExtensions.Integrate(
-                physicsVelocity, 
-                physicsMass, 
-                deltaTime, 
-                ref localTransform.Position, 
-                ref localTransform.Rotation);
-            
-            localTransforms[index] = localTransform;
-
-            if (localToWorlds.IsCreated && index < localToWorlds.Length)
+            if (isCharacterDisabled)
             {
-                LocalToWorld localToWorld;
-                localToWorld.Value = localTransform.ToMatrix();
-                localToWorlds[index] = localToWorld;
-            }
+                var localTransform = localTransforms[index];
 
-            physicsVelocities[index] = default;
-            //physicsVelocities[index] = physicsVelocity;
+                //var temp = localTransform;
+
+                Unity.Physics.Extensions.PhysicsComponentExtensions.Integrate(
+                    physicsVelocity,
+                    physicsMass,
+                    deltaTime,
+                    ref localTransform.Position,
+                    ref localTransform.Rotation);
+
+                localTransforms[index] = localTransform;
+
+                if (localToWorlds.IsCreated && index < localToWorlds.Length)
+                {
+                    LocalToWorld localToWorld;
+                    localToWorld.Value = localTransform.ToMatrix();
+                    localToWorlds[index] = localToWorld;
+                }
+
+                physicsVelocities[index] = default;
+            }
+            else
+                physicsVelocities[index] = physicsVelocity;
         }
     }
 
@@ -389,6 +394,7 @@ public partial struct SuctionSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
+            apply.isCharacterDisabled = chunk.Has(ref targetCharacterDisabledType);
             apply.deltaTime = deltaTime;
             apply.physicsMasses = chunk.GetNativeArray(ref physicsMassType);
             apply.characterProperties = chunk.GetNativeArray(ref characterPropertiesType);
@@ -397,7 +403,7 @@ public partial struct SuctionSystem : ISystem
             apply.localTransforms = chunk.GetNativeArray(ref localTransformType);
             apply.localToWorlds = chunk.Has(ref characterInterpolationType) ? chunk.GetNativeArray(ref localToWorldType) : default;
 
-            bool isCharacter = chunk.Has(ref targetCharacterDisabledType) && chunk.Has(ref characterBodyType);
+            bool isCharacter = apply.isCharacterDisabled && chunk.Has(ref characterBodyType);
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
