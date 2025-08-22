@@ -360,18 +360,24 @@ public sealed class LoginManager : MonoBehaviour
                 Destroy(style.gameObject);
         }
         
-        int numLevels = _levels.Length;
+        int i, numLevels = _levels.Length;
         var levelIndices = new Dictionary<string, int>(numLevels);
-        for (int i = 0; i < numLevels; ++i)
+        for (i = 0; i < numLevels; ++i)
             levelIndices[_levels[i].name] = i;
 
+        numLevels = levels.levels.Length;
         bool isHot = false;
+        int j;
+        UserLevel userLevel;
         Transform parent = _style.transform.parent;
         __levelStyles = new Dictionary<int, LevelStyle>(levels.levels.Length);
-        foreach (var userLevel in levels.levels)
+        for(i = 0; i < numLevels; ++i)
         {
+            userLevel = levels.levels[i];
             if(!levelIndices.TryGetValue(userLevel.name, out int index))
                 continue;
+            
+            bool isEndOfLevels = i + 1 == numLevels;
 
             if (!isHot && userLevel.stages != null)
             {
@@ -410,8 +416,8 @@ public sealed class LoginManager : MonoBehaviour
 
             int numScenes = style.scenes.Length, numPrefabs = Mathf.Min(numScenes, level.scenes.Length);
             var prefabs = new GameObject[numPrefabs];
-            for(int i = 0; i < numPrefabs; ++i)
-                prefabs[i] = Instantiate(level.scenes[i].prefab, style.scenes[i].root);
+            for(j = 0; j < numPrefabs; ++j)
+                prefabs[j] = Instantiate(level.scenes[j].prefab, style.scenes[j].root);
 
             style.toggle.onValueChanged.AddListener(x =>
             {
@@ -640,7 +646,7 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
                                                 
-                                                if (__sceneActiveDepth == 0 && currentSceneIndex + 1 == numScenes && onLevelActivated != null)
+                                                if (__sceneActiveDepth == 0 && isEndOfLevels && onLevelActivated != null)
                                                     onLevelActivated();
                                             }
                                             else
@@ -650,7 +656,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
                                                 
-                                                if (currentSceneIndex + 1 == numScenes && onLevelActivatedFirst != null)
+                                                if (isEndOfLevels && onLevelActivatedFirst != null)
                                                     onLevelActivatedFirst();
                                             }
 
@@ -704,23 +710,23 @@ public sealed class LoginManager : MonoBehaviour
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            int i, end = __levelStyles.Count - 1;
+            int end = __levelStyles.Count - 1;
             if (__sceneActiveDepth > 0)
             {
-                for (i = end; i >= 0; --i)
+                for (j = end; j >= 0; --j)
                 {
-                    if (GameMain.GetLevelTimes(_levels[i].name) < 1)
+                    if (GameMain.GetLevelTimes(_levels[j].name) < 1)
                         continue;
 
-                    scrollRect.SetTo(i);
+                    scrollRect.SetTo(j);
 
                     break;
                 }
             }
             else
-                i = -1;
+                j = -1;
 
-            if (i < 0)
+            if (j < 0)
             {
                 if(end - scrollRect.index.x < 2)
                     scrollRect.MoveTo(end);
