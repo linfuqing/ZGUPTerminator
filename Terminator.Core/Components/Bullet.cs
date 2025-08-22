@@ -462,7 +462,6 @@ public struct BulletDefinition
         public int capacity;
         public int times;
 
-        public int targetIndex;
         public int damageIndex;
 
         public int prefabLoaderIndex;
@@ -476,6 +475,7 @@ public struct BulletDefinition
         
         public BulletLayerMask layerMask;
 
+        public BlobArray<int> targetIndices;
         public BlobArray<int> standTimeIndices;
         public BlobArray<int> messageIndices;
     }
@@ -568,40 +568,52 @@ public struct BulletDefinition
 
         bool result = (data.location == 0 || (data.location & location) != 0) && data.layerMask.BelongsTo(layerMask);
         
-        if (targetStates.Length <= data.targetIndex)
-            targetStates.Resize(targets.Length, NativeArrayOptions.ClearMemory);
-
-        ref var targetStatus = ref targetStates.ElementAt(data.targetIndex);
-
+        int targetStatusIndex = -1;
         if (result)
         {
-            ref var target = ref targets[data.targetIndex];
-            result = //(isLocation || target.minDistance >= target.maxDistance) &&
-                target.Update(
-                    version,
-                    time,
-                    up,
-                    cameraRotation,
-                    transform,
-                    lookAt,
-                    collisionWorld,
-                    physicsColliders,
-                    characterBodies,
-                    prefabs,
-                    targetStates.AsNativeArray(),
-                    ref prefabLoader,
-                    ref targetStatus,
-                    ref random);
+            result = false;
+            
+            int numTargets = data.targetIndices.Length, i;
+            for(i = 0; i < numTargets; ++i)
+            {
+                ref int targetIndex = ref data.targetIndices[i];
+                
+                if (targetStates.Length <= targetIndex)
+                    targetStates.Resize(targets.Length, NativeArrayOptions.ClearMemory);
 
-            if (result && targetStatus.target != Entity.Null && data.targetLocation != 0)
-                result = __Check(
-                    data.targetLocation,
-                    uint.MaxValue,
-                    targetStatus.target,
-                    collisionWorld,
-                    characterBodies);
+                ref var temp = ref targetStates.ElementAt(targetIndex);
+
+                ref var target = ref targets[targetIndex];
+                if (target.Update(
+                        version,
+                        time,
+                        up,
+                        cameraRotation,
+                        transform,
+                        lookAt,
+                        collisionWorld,
+                        physicsColliders,
+                        characterBodies,
+                        prefabs,
+                        targetStates.AsNativeArray(),
+                        ref prefabLoader,
+                        ref temp,
+                        ref random))
+                {
+                    targetStatusIndex = i;
+
+                    result = temp.target == Entity.Null || data.targetLocation == 0 || __Check(
+                        data.targetLocation,
+                        uint.MaxValue,
+                        temp.target,
+                        collisionWorld,
+                        characterBodies);
+                    
+                    break;
+                }
+            }
         }
-
+        
         /*if (!result || !isLocation && data.capacity < 2 && data.times == 1)
         {
             status.times = 0;
@@ -736,6 +748,8 @@ public struct BulletDefinition
                 characterStandTimes.Add(destination);
             }
         }
+
+        ref var targetStatus = ref targetStates.ElementAt(targetStatusIndex);
 
         RigidTransform transformResult;
         transformResult.pos = targetStatus.transform.pos;

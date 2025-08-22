@@ -402,6 +402,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("子弹标签，用技能开关")]
         public LayerMaskData layerMask;
 
+        [UnityEngine.Serialization.FormerlySerializedAs("targetName")]
+        public string[] targetNames;
         public string[] messageNames;
 
         public StandTime[] standTimes;
@@ -837,6 +839,29 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                                 $"Damage {source.damageName} of bullet {source.name} can not been found!");
                     }
 
+                    count = 1;//source.targetNames == null ? 0 : source.targetNames.Length;
+                    indices = builder.Allocate(ref destination.targetIndices, count);
+                    for (j = 0; j < count; ++j)
+                    {
+                        indices[j] = -1;
+
+                        ref var targetName = ref source.targetName;//ref source.targetNames[j];
+
+                        for (k = 0; k < numTargets; ++k)
+                        {
+                            if (authoring._targets[k].name == targetName)
+                            {
+                                indices[j] = k;
+
+                                break;
+                            }
+                        }
+
+                        if (indices[j] == -1)
+                            Debug.LogError(
+                                $"Bullet target {targetName} of bullet {source.name} can not been found!");
+                    }
+
                     count = source.messageNames == null ? 0 : source.messageNames.Length;
                     indices = builder.Allocate(ref destination.messageIndices, count);
                     for (j = 0; j < count; ++j)
@@ -892,21 +917,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.capacity = source.capacity;
                     destination.times = source.times;
 
-                    destination.targetIndex = -1;
-                    for (j = 0; j < numTargets; ++j)
-                    {
-                        if (authoring._targets[j].name == source.targetName)
-                        {
-                            destination.targetIndex = j;
-
-                            break;
-                        }
-                    }
-
-                    if (destination.targetIndex == -1)
-                        Debug.LogError(
-                            $"Bullet target {source.targetName} of bullet {source.name} can not been found!");
-                    
                     destination.space = source.space;
                     destination.targetSpace = source.targetSpace;
                     destination.location = source.location;
