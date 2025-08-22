@@ -262,6 +262,8 @@ public class LevelAuthoring : MonoBehaviour
             {
                 ref var root = ref builder.ConstructRoot<LevelDefinition>();
 
+                root.mainStageIndex = authoring._mainStageIndex;
+
                 var defaultStage = builder.Allocate(ref root.defaultStages, numDefaultStages);
                 for (i = 0; i < numDefaultStages; ++i)
                 {
@@ -424,7 +426,10 @@ public class LevelAuthoring : MonoBehaviour
 
     [SerializeField] 
     internal int _expMax = 10;
-
+    
+    [SerializeField] 
+    internal int _mainStageIndex;
+    
     [SerializeField] 
     internal DefaultStage[] _defaultStages;
 

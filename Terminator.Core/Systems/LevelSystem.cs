@@ -238,7 +238,7 @@ public partial struct LevelSystem : ISystem
                     
                     stage.value = nextStageIndex;
 
-                    if (numResults < 1)
+                    if (numResults < 1 && i == definition.mainStageIndex)
                         isEndOfStage = true;
 
                     break;

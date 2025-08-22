@@ -532,6 +532,7 @@ public struct LevelDefinition
         }
     }
 
+    public int mainStageIndex;
     public BlobArray<DefaultStage> defaultStages;
     public BlobArray<Stage> stages;
     public BlobArray<Area> areas;
