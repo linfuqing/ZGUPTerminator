@@ -331,7 +331,7 @@ public partial class UserData : MonoBehaviour, IUserData
 
             onComplete(false);
             
-            return null;
+            yield break;
         }
 
         var temp = levelCache.Value;
@@ -341,8 +341,10 @@ public partial class UserData : MonoBehaviour, IUserData
             
             onComplete(false);
             
-            return null;
+            yield break;
         }
+        
+        yield return null;
         
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
@@ -357,7 +359,7 @@ public partial class UserData : MonoBehaviour, IUserData
         
         onComplete(true);
         
-        return null;
+        //return null;
     }
 
     public IEnumerator Activate(

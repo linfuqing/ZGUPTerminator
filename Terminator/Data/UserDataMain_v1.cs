@@ -2530,7 +2530,7 @@ public partial class UserData
 
             onComplete(0);
             
-            return null;
+            yield break;
         }
 
         var temp = levelCache.Value;
@@ -2540,10 +2540,10 @@ public partial class UserData
             
             onComplete(0);
             
-            return null;
+            yield break;
         }
 
-        //yield return null;
+        yield return null;
 
         __SubmitStageFlag(flag, temp.name, temp.stage, stage);
         
@@ -2566,7 +2566,7 @@ public partial class UserData
         
         onComplete(result);
         
-        return null;
+        //return null;
     }
     
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
