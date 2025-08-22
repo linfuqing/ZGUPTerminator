@@ -132,6 +132,7 @@ public partial class LevelManager : MonoBehaviour
         bool isDirty = false;
         if (stage != __stage)
         {
+            print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
             isDirty = true;
             
             if (!isRestart && stage > __stage)
