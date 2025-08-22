@@ -2176,32 +2176,11 @@ public partial class UserDataMain
             yield break;
         }
 
-        /*var flag = UserDataMain.flag;
-        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
-        if(isDirty)
-            flag &= ~Flag.PurchasesUnlockFirst;
-
-        isDirty = (flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst;
-        if(isDirty)
-            flag &= ~Flag.CardsUnlockFirst;
-
-        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0)
-        {
-            flag |= Flag.TalentsUnlock;
-
-            isDirty = true;
-        }
-        
-        if(isDirty)
-            UserDataMain.flag = flag;*/
-        
         __SubmitStageFlag();
 
-        UserData.StartStage(level.name, stageIndex);
-
-        //flag &= ~Flag.UnlockFirst;
-
         __AppendQuest(UserQuest.Type.Stage, 1);
+
+        //UserData.StartStage(level.name, stageIndex);
 
         UserData.LevelCache levelCache;
         levelCache.name = level.name;

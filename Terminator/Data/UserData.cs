@@ -424,18 +424,19 @@ public partial class UserData : MonoBehaviour, IUserData
     public static void EndStage(string levelName, int stage)
     {
         string levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
-        int startStage = PlayerPrefs.GetInt(levelStartStageKey);
-        if (startStage == 0)
+        int startStage = PlayerPrefs.GetInt(levelStartStageKey, -1);
+        if (startStage == -1)
+            return;
+        
+        string stageFlagKey;
+        for (int i = startStage; i < stage; ++i)
         {
-            string stageFlagKey;
-            for (int i = 0; i < stage; ++i)
-            {
-                stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
+            stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
 
-                PlayerPrefs.SetInt(stageFlagKey,
-                    PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
-            }
+            PlayerPrefs.SetInt(stageFlagKey,
+                PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
         }
+        
         PlayerPrefs.DeleteKey(levelStartStageKey);
     }
 

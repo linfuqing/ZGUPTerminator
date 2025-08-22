@@ -439,8 +439,6 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         __SubmitStageFlag();
 
-        UserData.StartStage(level.name, 0);
-
         __AppendQuest(UserQuest.Type.Stage, 1);
 
         IUserData.LevelProperty result;
@@ -450,6 +448,8 @@ public sealed partial class UserDataMain : MonoBehaviour
             if ((__GetStage(level, result.stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
                 break;
         }
+
+        UserData.StartStage(level.name, result.stage);
 
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
