@@ -475,7 +475,10 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
-                targetName = value;
+                if (string.IsNullOrEmpty(value))
+                    targetNames = null;
+                
+                targetNames = value.Split('/');
             }
         }
         
@@ -839,13 +842,13 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                                 $"Damage {source.damageName} of bullet {source.name} can not been found!");
                     }
 
-                    count = 1;//source.targetNames == null ? 0 : source.targetNames.Length;
+                    count = source.targetNames == null ? 0 : source.targetNames.Length;
                     indices = builder.Allocate(ref destination.targetIndices, count);
                     for (j = 0; j < count; ++j)
                     {
                         indices[j] = -1;
 
-                        ref var targetName = ref source.targetName;//ref source.targetNames[j];
+                        ref var targetName = ref source.targetNames[j];
 
                         for (k = 0; k < numTargets; ++k)
                         {
@@ -1066,5 +1069,56 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             }
         }
     }*/
+
+    
+    public static void UpdatePrefabs(string title, Predicate<GameObject> predicate)
+    {
+        string[] guids = AssetDatabase.FindAssets("t:prefab");
+        string path;
+        GameObject gameObject;
+        int numGuids = guids == null ? 0 : guids.Length;
+        for (int i = 0; i < numGuids; ++i)
+        {
+            if (EditorUtility.DisplayCancelableProgressBar(title, i.ToString() + "/" + numGuids, i * 1.0f / numGuids))
+                break;
+
+            path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            gameObject = PrefabUtility.LoadPrefabContents(path);
+
+            try
+            {
+                if (predicate(gameObject))
+                    PrefabUtility.SaveAsPrefabAsset(gameObject, path);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e.Message);
+            }
+
+            PrefabUtility.UnloadPrefabContents(gameObject);
+        }
+
+        EditorUtility.ClearProgressBar();
+    }
+    
+    [MenuItem("Assets/Temp/Replace Bullet Targets")]
+    public static void ReplaceBulletTargets()
+    {
+        UpdatePrefabs("Replace Bullet Targets..", x =>
+        {
+            var bulletAuthoring = x.GetComponentInChildren<BulletAuthoring>(true);
+            if (bulletAuthoring == null)
+                return false;
+
+            int numBullets = bulletAuthoring._bullets.Length;
+            for (int i = 0; i < numBullets; ++i)
+            {
+                ref var bullet = ref bulletAuthoring._bullets[i];
+                bullet.targetNames = new [] {bullet.targetName};
+            }
+
+            return true;
+        });
+    }
 }
 #endif
