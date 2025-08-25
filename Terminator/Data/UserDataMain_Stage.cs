@@ -158,7 +158,7 @@ public partial class UserDataMain
 #endif
     }
 
-    [Header("Stages")]
+    [Header("Stage")]
 
     [SerializeField]
     internal Stage[] _stages;

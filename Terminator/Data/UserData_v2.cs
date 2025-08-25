@@ -132,4 +132,9 @@ public partial interface IUserData
     IEnumerator QueryTalents(
         uint userID, 
         Action<Talents> onComplete);
+
+    IEnumerator CollectTalent(
+        uint userID,
+        uint talentID,
+        Action<bool> onComplete);
 }

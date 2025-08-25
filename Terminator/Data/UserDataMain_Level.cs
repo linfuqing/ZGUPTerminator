@@ -45,7 +45,7 @@ public partial class UserDataMain
 #endif
     }
     
-    [Header("Levels")]
+    [Header("Level")]
 
     [SerializeField]
     internal Level[] _levels;
