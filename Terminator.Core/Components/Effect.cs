@@ -337,7 +337,7 @@ public struct EffectTargetMessage : IBufferElementData
     public UnityObjectRef<Object> messageValue;
 }
 
-public struct EffectTargetBuff : IComponentData
+public struct EffectTargetBuff : IComponentData, IEnableableComponent
 {
     public int times;
     public double time;

@@ -270,11 +270,23 @@ public partial struct EffectSystem : ISystem
     {
         [ReadOnly]
         public ComponentLookup<EffectTarget> targets;
+        
+        [ReadOnly]
+        public BufferLookup<Child> children;
+
         [ReadOnly]
         public EntityTypeHandle entityType;
+        
         [ReadOnly]
         public ComponentTypeHandle<Parent> parentType;
+        
+        public ComponentTypeHandle<EffectTargetBuff> targetBuffType;
+        
         public BufferTypeHandle<SimulationEvent> simulationEventType;
+        
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -296,15 +308,15 @@ public partial struct EffectSystem : ISystem
                     chunk.SetComponentEnabledForAll(ref simulationEventType, true);
                 }
             }
-            else if (useEnabledMask)
+            else
             {
                 var entityArray = chunk.GetNativeArray(entityType);
                 var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
                 while (iterator.NextEntityIndex(out int i))
-                    entityManager.DestroyEntity(int.MaxValue - 1, entityArray[i]);
+                    __Destroy(false, entityArray[i], children, ref instanceIDs, ref entityManager);
+                
+                chunk.SetComponentEnabledForAll(ref targetBuffType, false);
             }
-            else
-                entityManager.DestroyEntity(int.MaxValue - 1, chunk.GetNativeArray(entityType));
         }
     }
 
@@ -996,7 +1008,7 @@ public partial struct EffectSystem : ISystem
                                     }
                                 }
 
-                                __Destroy(false, int.MaxValue, entity, children, ref instanceIDs, ref entityManager);
+                                __Destroy(false, entity, children, ref instanceIDs, ref entityManager);
 
                                 enabledFlags |= EnabledFlags.Destroyed;
                             }
@@ -1524,7 +1536,7 @@ public partial struct EffectSystem : ISystem
                         
                         entityManager.RemoveComponent<PhysicsCollider>(0, entity);
                         
-                        __Destroy(true, int.MaxValue, entityArray[index], children, ref instanceIDs, ref entityManager);
+                        __Destroy(true, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
@@ -1568,7 +1580,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                            __Destroy(false, int.MaxValue, entityArray[index], children, ref instanceIDs, ref entityManager);
+                            __Destroy(false, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
                     
                     if (!isFallToDestroy)
@@ -1862,6 +1874,8 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<EffectTargetDamage> __targetDamageType;
     private ComponentTypeHandle<EffectTargetHP> __targetHPType;
 
+    private ComponentTypeHandle<EffectTargetBuff> __targetBuffType;
+
     private ComponentTypeHandle<EffectTarget> __targetType;
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
@@ -1940,6 +1954,7 @@ public partial struct EffectSystem : ISystem
         __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __targetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
+        __targetBuffType = state.GetComponentTypeHandle<EffectTargetBuff>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
@@ -2044,15 +2059,21 @@ public partial struct EffectSystem : ISystem
         var jobHandle = instantiate.ScheduleByRef(inputDeps);
             
         __targets.Update(ref state);
+        __children.Update(ref state);
         __entityType.Update(ref state);
         __parentType.Update(ref state);
+        __targetBuffType.Update(ref state);
         __simulationEventType.Update(ref state);
+        __instanceIDs.Update(ref state);
 
         SpawnEx spawn;
         spawn.targets = __targets;
+        spawn.children = __children;
         spawn.entityType = __entityType;
         spawn.parentType = __parentType;
+        spawn.targetBuffType = __targetBuffType;
         spawn.simulationEventType = __simulationEventType;
+        spawn.instanceIDs = __instanceIDs;
         spawn.entityManager = entityManager;
         jobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, jobHandle);
 
@@ -2080,7 +2101,6 @@ public partial struct EffectSystem : ISystem
         //var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
-        __children.Update(ref state);
         __damageParents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
@@ -2094,7 +2114,6 @@ public partial struct EffectSystem : ISystem
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
-        __instanceIDs.Update(ref state);
         __outputMessages.Update(ref state);
         __damageStatistics.Update(ref state);
         
@@ -2201,16 +2220,17 @@ public partial struct EffectSystem : ISystem
 
     private static void __Destroy(
         bool isRoot, 
-        int sortKey, 
         in Entity entity, 
         in BufferLookup<Child> children, 
         ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
+        ref EntityCommandBuffer.ParallelWriter entityManager, 
+        int sortKey = int.MaxValue - 1)
     {
         if (children.TryGetBuffer(entity, out var buffer))
         {
+            int childSortKey = sortKey - 1;
             foreach (var child in buffer)
-                __Destroy(false, sortKey - 1, child.Value, children, ref instanceIDs, ref entityManager);
+                __Destroy(false, child.Value, children, ref instanceIDs, ref entityManager, childSortKey);
         }
 
         if (!isRoot)
