@@ -111,7 +111,7 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal Level[] _levels;
 
-    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_skills")] 
+    [SerializeField]
     internal Reward[] _rewards;
 
     private List<StageRewardStyle> __rewardStyles;
@@ -247,9 +247,6 @@ public sealed class LoginManager : MonoBehaviour
     
     public IReadOnlyCollection<int> levelIndices => __levelStyles.Keys;
 
-    [Obsolete]
-    public string[] activeSkillNames;
-
     [Preserve]
     public void RefreshLevel()
     {
@@ -317,38 +314,6 @@ public sealed class LoginManager : MonoBehaviour
         ApplyStart(true);
     }
 
-#if USER_DATA_LEGACY
-    private void __ApplySkills(Memory<UserSkill> skills)
-    {
-        ref var skillGroups = ref LevelPlayerShared.skillGroups;
-        skillGroups.Clear();
-
-        LevelPlayerSkillGroup skillGroup;
-        foreach (var skill in skills.Span)
-        {
-            skillGroup.name = skill.name;
-            skillGroups.Add(skillGroup);
-        }
-
-        ref var activeSkills = ref LevelPlayerShared.activeSkills;
-        activeSkills.Clear();
-        if (activeSkillNames != null && activeSkillNames.Length > 0)
-        {
-            LevelPlayerActiveSkill activeSkill;
-
-            foreach (var activeSkillName in activeSkillNames)
-            {
-                activeSkill.name = activeSkillName;
-                activeSkills.Add(activeSkill);
-            }
-        }
-
-        LevelPlayerShared.effectDamageScale = bulletDamageScale;
-        LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
-        LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
-    }
-#endif
-    
     private void __ApplyLevels(IUserData.Levels levels)
     {
         if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
