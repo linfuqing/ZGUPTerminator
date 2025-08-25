@@ -248,20 +248,18 @@ public partial struct EffectSystem : ISystem
         public BufferAccessor<SimulationEvent> simulationEvents;
         public EntityCommandBuffer.ParallelWriter entityManager;
 
-        public void Execute(int index)
+        public bool Execute(int index)
         {
             Entity parent = parents[index].Value;
             if (!targets.HasComponent(parent) || !targets.IsComponentEnabled(parent))
-            {
-                entityManager.DestroyEntity(int.MaxValue - 1, parent);
-                
-                return;
-            }
+                return false;
             
             SimulationEvent simulationEvent;
             simulationEvent.entity = parent;
             simulationEvent.colliderKey = ColliderKey.Empty;
             SimulationEvent.Append(simulationEvents[index], simulationEvent);
+
+            return true;
         }
     }
 
@@ -280,8 +278,6 @@ public partial struct EffectSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<Parent> parentType;
         
-        public ComponentTypeHandle<EffectTargetBuff> targetBuffType;
-        
         public BufferTypeHandle<SimulationEvent> simulationEventType;
         
         [NativeDisableParallelForRestriction] 
@@ -291,10 +287,12 @@ public partial struct EffectSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            if (chunk.Has(ref parentType))
+            if (chunk.Has(ref simulationEventType))
             {
-                if (chunk.Has(ref simulationEventType))
+                if (chunk.Has(ref parentType))
                 {
+                    var entityArray = chunk.GetNativeArray(entityType);
+
                     Spawn spawn;
                     spawn.targets = targets;
                     spawn.parents = chunk.GetNativeArray(ref parentType);
@@ -303,19 +301,36 @@ public partial struct EffectSystem : ISystem
 
                     var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
                     while (iterator.NextEntityIndex(out int i))
-                        spawn.Execute(i);
+                    {
+                        if (!spawn.Execute(i))
+                            __Destroy(false, entityArray[i], children, ref instanceIDs, ref entityManager);
+                    }
 
                     chunk.SetComponentEnabledForAll(ref simulationEventType, true);
+                }
+                else
+                {
+                    Entity entity;
+                    var entityArray = chunk.GetNativeArray(entityType);
+                    var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
+                    while (iterator.NextEntityIndex(out int i))
+                    {
+                        entity = entityArray[i];
+                        __Destroy(false, entity, children, ref instanceIDs, ref entityManager);
+                    }
                 }
             }
             else
             {
                 var entityArray = chunk.GetNativeArray(entityType);
-                var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
-                while (iterator.NextEntityIndex(out int i))
-                    __Destroy(false, entityArray[i], children, ref instanceIDs, ref entityManager);
-                
-                chunk.SetComponentEnabledForAll(ref targetBuffType, false);
+                if (useEnabledMask)
+                {
+                    var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
+                    while (iterator.NextEntityIndex(out int i))
+                        entityManager.RemoveComponent<EffectTargetBuff>(int.MaxValue - 2, entityArray[i]);
+                }
+                else
+                    entityManager.RemoveComponent<EffectTargetBuff>(int.MaxValue - 2, entityArray);
             }
         }
     }
@@ -1874,8 +1889,6 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<EffectTargetDamage> __targetDamageType;
     private ComponentTypeHandle<EffectTargetHP> __targetHPType;
 
-    private ComponentTypeHandle<EffectTargetBuff> __targetBuffType;
-
     private ComponentTypeHandle<EffectTarget> __targetType;
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
@@ -1954,7 +1967,6 @@ public partial struct EffectSystem : ISystem
         __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __targetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
-        __targetBuffType = state.GetComponentTypeHandle<EffectTargetBuff>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
@@ -2062,7 +2074,6 @@ public partial struct EffectSystem : ISystem
         __children.Update(ref state);
         __entityType.Update(ref state);
         __parentType.Update(ref state);
-        __targetBuffType.Update(ref state);
         __simulationEventType.Update(ref state);
         __instanceIDs.Update(ref state);
 
@@ -2071,7 +2082,6 @@ public partial struct EffectSystem : ISystem
         spawn.children = __children;
         spawn.entityType = __entityType;
         spawn.parentType = __parentType;
-        spawn.targetBuffType = __targetBuffType;
         spawn.simulationEventType = __simulationEventType;
         spawn.instanceIDs = __instanceIDs;
         spawn.entityManager = entityManager;
