@@ -37,7 +37,7 @@ public partial class LevelSystemManaged : SystemBase
             ref NativeList<Entity> entities)
         {
             CollectLinkedEntities collectLinkedEntities;
-            collectLinkedEntities.entityType = entityType;
+            //collectLinkedEntities.entityType = entityType;
             collectLinkedEntities.linkedEntityGroupType = linkedEntityGroupType;
             //collectLinkedEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
             collectLinkedEntities.entities = entities;
@@ -48,8 +48,8 @@ public partial class LevelSystemManaged : SystemBase
     [BurstCompile]
     private struct CollectLinkedEntities : IJobChunk
     {
-        [ReadOnly] 
-        public EntityTypeHandle entityType;
+        //[ReadOnly] 
+        //public EntityTypeHandle entityType;
         
         [ReadOnly]
         public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
@@ -61,10 +61,10 @@ public partial class LevelSystemManaged : SystemBase
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {
-            //if (!chunk.Has(ref linkedEntityGroupType))
-            //    return;
+            if (!chunk.Has(ref linkedEntityGroupType))
+                return;
 
-            NativeArray<Entity> entityArray = chunk.GetNativeArray(entityType), entities;
+            NativeArray<Entity> /*entityArray = chunk.GetNativeArray(entityType), */entities;
             var linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
