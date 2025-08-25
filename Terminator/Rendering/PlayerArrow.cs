@@ -5,10 +5,13 @@ public class PlayerArrow : MonoBehaviour
 {
     [SerializeField] 
     internal bool _isUp;
-    
+
     [SerializeField] 
     internal Vector2 _offsetSpeed = new float2(0, 2f);
     
+    [SerializeField] 
+    internal Vector3 _playerOffset;
+
     private Renderer __renderer;
     
     public 
@@ -34,7 +37,7 @@ public class PlayerArrow : MonoBehaviour
 
         var material = renderer.material;
         var transform = this.transform;
-        var distance = player.transform.position - transform.position;
+        var distance = player.transform.position + _playerOffset - transform.position;
         if(!_isUp)
             distance.y = 0.0f;
         
