@@ -20,7 +20,7 @@ public partial struct DelayDestroySystem : ISystem
         public NativeArray<Entity> entityArray;
         public NativeArray<DelayDestroy> delayDestroys;
         
-        public NativeArray<CopyMatrixToTransformInstanceID> instanceIDs;
+        //public NativeArray<CopyMatrixToTransformInstanceID> instanceIDs;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -32,12 +32,12 @@ public partial struct DelayDestroySystem : ISystem
                 delayDestroys[index] = delayDestroy;
             else
             {
-                if (index < instanceIDs.Length)
+                /*if (index < instanceIDs.Length)
                 {
                     var instanceID = instanceIDs[index];
                     instanceID.isSendMessageOnDestroy = false;
                     instanceIDs[index] = instanceID;
-                }
+                }*/
                 
                 __Destroy(0, entityArray[index], children, ref entityManager);
             }
@@ -70,7 +70,7 @@ public partial struct DelayDestroySystem : ISystem
         public EntityTypeHandle entityType;
         public ComponentTypeHandle<DelayDestroy> delayDestroyType;
 
-        public ComponentTypeHandle<CopyMatrixToTransformInstanceID> instanceIDType;
+        //public ComponentTypeHandle<CopyMatrixToTransformInstanceID> instanceIDType;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -82,7 +82,7 @@ public partial struct DelayDestroySystem : ISystem
             apply.children = children;
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
-            apply.instanceIDs = chunk.GetNativeArray(ref instanceIDType);
+            //apply.instanceIDs = chunk.GetNativeArray(ref instanceIDType);
             apply.entityManager = entityManager;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -95,7 +95,7 @@ public partial struct DelayDestroySystem : ISystem
     private EntityTypeHandle __entityType;
     private BufferLookup<Child> __children;
     private ComponentTypeHandle<DelayDestroy> __delayDestroyType;
-    private ComponentTypeHandle<CopyMatrixToTransformInstanceID> __instanceIDType;
+    //private ComponentTypeHandle<CopyMatrixToTransformInstanceID> __instanceIDType;
 
     private EntityQuery __group;
 
@@ -105,7 +105,7 @@ public partial struct DelayDestroySystem : ISystem
         __entityType = state.GetEntityTypeHandle();
         __children = state.GetBufferLookup<Child>();
         __delayDestroyType = state.GetComponentTypeHandle<DelayDestroy>();
-        __instanceIDType = state.GetComponentTypeHandle<CopyMatrixToTransformInstanceID>();
+        //__instanceIDType = state.GetComponentTypeHandle<CopyMatrixToTransformInstanceID>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -125,7 +125,7 @@ public partial struct DelayDestroySystem : ISystem
         
         __entityType.Update(ref state);
         __delayDestroyType.Update(ref state);
-        __instanceIDType.Update(ref state);
+        //__instanceIDType.Update(ref state);
         
         ApplyEx apply;
         apply.isFixedFrameUpdated = fixedFrameCount != __fixedFrameCount;
@@ -133,7 +133,7 @@ public partial struct DelayDestroySystem : ISystem
         apply.children = __children;
         apply.entityType = __entityType;
         apply.delayDestroyType = __delayDestroyType;
-        apply.instanceIDType = __instanceIDType;
+        //apply.instanceIDType = __instanceIDType;
         apply.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         state.Dependency = apply.ScheduleParallelByRef(__group, state.Dependency);

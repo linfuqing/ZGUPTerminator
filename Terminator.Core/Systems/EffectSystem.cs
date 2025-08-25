@@ -595,11 +595,14 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<LocalToWorld> localToWorlds;
 
-        [NativeDisableParallelForRestriction]
-        public BufferLookup<EffectDamageStatistic> damageStatistics;
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<Message> outputMessages;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<EffectDamageStatistic> damageStatistics;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
@@ -993,7 +996,7 @@ public partial struct EffectSystem : ISystem
                                     }
                                 }
 
-                                __Destroy(false, int.MaxValue, entity, children, ref entityManager);
+                                __Destroy(false, int.MaxValue, entity, children, ref instanceIDs, ref entityManager);
 
                                 enabledFlags |= EnabledFlags.Destroyed;
                             }
@@ -1096,11 +1099,14 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalToWorld> localToWorlds;
 
-        [NativeDisableParallelForRestriction]
-        public BufferLookup<EffectDamageStatistic> damageStatistics;
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<Message> outputMessages;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<EffectDamageStatistic> damageStatistics;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -1137,8 +1143,9 @@ public partial struct EffectSystem : ISystem
             collect.dropToDamages = dropToDamages;
             collect.characterBodies = characterBodies;
             collect.localToWorlds = localToWorlds;
-            collect.damageStatistics = damageStatistics;
+            collect.instanceIDs = instanceIDs;
             collect.outputMessages = outputMessages;
+            collect.damageStatistics = damageStatistics;
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
             collect.damageInstances = damageInstances;
@@ -1234,6 +1241,9 @@ public partial struct EffectSystem : ISystem
         public BufferAccessor<Message> messages;
 
         public BufferAccessor<MessageParameter> messageParameters;
+
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -1514,7 +1524,7 @@ public partial struct EffectSystem : ISystem
                         
                         entityManager.RemoveComponent<PhysicsCollider>(0, entity);
                         
-                        __Destroy(true, int.MaxValue, entityArray[index], children, ref entityManager);
+                        __Destroy(true, int.MaxValue, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
@@ -1558,7 +1568,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                            __Destroy(false, int.MaxValue, entityArray[index], children, ref entityManager);
+                            __Destroy(false, int.MaxValue, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
                     
                     if (!isFallToDestroy)
@@ -1709,6 +1719,9 @@ public partial struct EffectSystem : ISystem
 
         public BufferTypeHandle<MessageParameter> messageParameterType;
 
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
         
         public PrefabLoader.ParallelWriter prefabLoader;
@@ -1747,6 +1760,7 @@ public partial struct EffectSystem : ISystem
             apply.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             apply.messages = chunk.GetBufferAccessor(ref messageType);
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
+            apply.instanceIDs = instanceIDs;
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
             apply.damageInstances = damageInstances;
@@ -1871,6 +1885,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<LocalToWorld> __localToWorlds;
 
+    private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
+    
     private BufferLookup<Message> __outputMessages;
 
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
@@ -1936,6 +1952,7 @@ public partial struct EffectSystem : ISystem
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
+        __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>();
         __outputMessages = state.GetBufferLookup<Message>();
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
         __statusTargets = state.GetBufferLookup<EffectStatusTarget>();
@@ -2077,6 +2094,7 @@ public partial struct EffectSystem : ISystem
         __dropToDamages.Update(ref state);
         __characterBodies.Update(ref state);
         __localToWorlds.Update(ref state);
+        __instanceIDs.Update(ref state);
         __outputMessages.Update(ref state);
         __damageStatistics.Update(ref state);
         
@@ -2102,7 +2120,6 @@ public partial struct EffectSystem : ISystem
         collect.simulationCollisionType = __simulationCollisionType;
         collect.simulationEventType = __simulationEventType;
         collect.prefabType = __prefabType;
-        collect.outputMessages = __outputMessages;
         collect.inputMessageType = __inputMessageType;
         collect.statusTargetType = __statusTargetType;
         collect.statusType = __statusType;
@@ -2112,7 +2129,9 @@ public partial struct EffectSystem : ISystem
         collect.dropToDamages = __dropToDamages;
         collect.characterBodies = __characterBodies;
         collect.localToWorlds = __localToWorlds;
+        collect.instanceIDs = __instanceIDs;
         collect.damageStatistics = __damageStatistics;
+        collect.outputMessages = __outputMessages;
         collect.entityManager = entityManager;
         collect.prefabLoader = prefabLoader;
         collect.damageInstances = damageInstances;
@@ -2173,6 +2192,7 @@ public partial struct EffectSystem : ISystem
         apply.delayTimeType = __delayTimeType;
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;
+        apply.instanceIDs = __instanceIDs;
         apply.entityManager = entityManager;
         apply.prefabLoader = prefabLoader;
         apply.damageInstances = damageInstances;
@@ -2184,16 +2204,26 @@ public partial struct EffectSystem : ISystem
         int sortKey, 
         in Entity entity, 
         in BufferLookup<Child> children, 
+        ref ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         if (children.TryGetBuffer(entity, out var buffer))
         {
             foreach (var child in buffer)
-                __Destroy(false, sortKey - 1, child.Value, children, ref entityManager);
+                __Destroy(false, sortKey - 1, child.Value, children, ref instanceIDs, ref entityManager);
         }
-        
-        if(!isRoot)
+
+        if (!isRoot)
+        {
+            if (instanceIDs.TryGetComponent(entity, out var instanceID))
+            {
+                instanceID.isSendMessageOnDestroy = true;
+                
+                instanceIDs[entity] = instanceID;
+            }
+            
             entityManager.DestroyEntity(sortKey, entity);
+        }
     }
 
     private static void __Drop(

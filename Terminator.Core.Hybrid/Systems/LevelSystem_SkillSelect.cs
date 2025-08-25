@@ -104,8 +104,8 @@ public partial class LevelSystemManaged
 
         public BlobAssetReference<SkillDefinition> skillDefinition;
         
-        [ReadOnly] 
-        public BufferAccessor<LinkedEntityGroup> linkedEntityGroups;
+        //[ReadOnly] 
+        //public BufferAccessor<LinkedEntityGroup> linkedEntityGroups;
 
         [ReadOnly]
         public NativeArray<int> skillIndices;
@@ -118,7 +118,7 @@ public partial class LevelSystemManaged
 
         public NativeList<Entity> entities;
 
-        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
+        //public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
 
         public void Execute(int index)
         {
@@ -139,14 +139,14 @@ public partial class LevelSystemManaged
                         var entity = entityArray[index];
                         entities.Add(entity);
 
-                        Disable(entity);
+                        //Disable(entity);
 
-                        if (index <　linkedEntityGroups.Length)
+                        /*if (index <　linkedEntityGroups.Length)
                         {
                             var linkedEntityGroups = this.linkedEntityGroups[index];
                             foreach (var linkedEntityGroup in linkedEntityGroups)
                                 Disable(linkedEntityGroup.Value);
-                        }
+                        }*/
 
                         return;
                     }
@@ -154,7 +154,7 @@ public partial class LevelSystemManaged
             }
         }
 
-        public void Disable(in Entity entity)
+        /*public void Disable(in Entity entity)
         {
             if (copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID))
             {
@@ -162,7 +162,7 @@ public partial class LevelSystemManaged
                 
                 copyMatrixToTransformInstanceIDs[entity] = copyMatrixToTransformInstanceID;
             }
-        }
+        }*/
     }
 
     [BurstCompile]
@@ -176,8 +176,8 @@ public partial class LevelSystemManaged
         [ReadOnly]
         public EntityTypeHandle entityType;
 
-        [ReadOnly] 
-        public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
+        //[ReadOnly] 
+        //public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
 
         [ReadOnly]
         public ComponentTypeHandle<BulletEntity> bulletEntityType;
@@ -185,7 +185,7 @@ public partial class LevelSystemManaged
         [ReadOnly]
         public ComponentLookup<SkillDefinitionData> skills;
 
-        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
+        //public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
 
         public NativeList<Entity> entities;
 
@@ -195,10 +195,10 @@ public partial class LevelSystemManaged
             collectBulletEntities.parent = parent;
             collectBulletEntities.skillDefinition = skills[parent].definition;
             collectBulletEntities.skillIndices = skillIndices;
-            collectBulletEntities.linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
+            //collectBulletEntities.linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
             collectBulletEntities.entityArray = chunk.GetNativeArray(entityType);
             collectBulletEntities.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
-            collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
+            //collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
             collectBulletEntities.entities = entities;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -230,17 +230,17 @@ public partial class LevelSystemManaged
             in EntityQuery group,
             in EntityTypeHandle entityType,
             in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
-            ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
+            //ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
             ref NativeList<Entity> entities)
         {
             CollectBulletEntitiesEx collectBulletEntities;
             collectBulletEntities.skillIndices = SkillIndices;
             collectBulletEntities.parent = Parent;
-            collectBulletEntities.linkedEntityGroupType = linkedEntityGroupType;
+            //collectBulletEntities.linkedEntityGroupType = linkedEntityGroupType;
             collectBulletEntities.entityType = entityType;
             collectBulletEntities.bulletEntityType = BulletEntityType;
             collectBulletEntities.skills = Skills;
-            collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
+            //collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
             collectBulletEntities.entities = entities;
             
             collectBulletEntities.RunByRef(group);

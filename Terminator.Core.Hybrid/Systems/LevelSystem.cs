@@ -23,7 +23,7 @@ public partial class LevelSystemManaged : SystemBase
             in EntityQuery group, 
             in EntityTypeHandle entityType,
             in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
-            ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
+            //ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
             ref NativeList<Entity> entities);
     }
     
@@ -33,13 +33,13 @@ public partial class LevelSystemManaged : SystemBase
             in EntityQuery group,
             in EntityTypeHandle entityType,
             in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
-            ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
+            //ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
             ref NativeList<Entity> entities)
         {
             CollectLinkedEntities collectLinkedEntities;
             collectLinkedEntities.entityType = entityType;
             collectLinkedEntities.linkedEntityGroupType = linkedEntityGroupType;
-            collectLinkedEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
+            //collectLinkedEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
             collectLinkedEntities.entities = entities;
             collectLinkedEntities.RunByRef(group);
         }
@@ -54,32 +54,32 @@ public partial class LevelSystemManaged : SystemBase
         [ReadOnly]
         public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
 
-        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
+        //public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
 
         public NativeList<Entity> entities;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {
-            if (!chunk.Has(ref linkedEntityGroupType))
-                return;
+            //if (!chunk.Has(ref linkedEntityGroupType))
+            //    return;
 
             NativeArray<Entity> entityArray = chunk.GetNativeArray(entityType), entities;
             var linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
-                Disable(entityArray[i]);
+                //Disable(entityArray[i]);
                 
                 entities = linkedEntityGroups[i].AsNativeArray().Reinterpret<Entity>();
-                foreach (var entity in entities)
-                    Disable(entity);
+                /*foreach (var entity in entities)
+                    Disable(entity);*/
                 
                 this.entities.AddRange(entities);
             }
         }
         
-        public void Disable(in Entity entity)
+        /*public void Disable(in Entity entity)
         {
             if (copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID))
             {
@@ -87,14 +87,14 @@ public partial class LevelSystemManaged : SystemBase
                 
                 copyMatrixToTransformInstanceIDs[entity] = copyMatrixToTransformInstanceID;
             }
-        }
+        }*/
     }
 
     private EntityTypeHandle __entityType;
 
     private BufferTypeHandle<LinkedEntityGroup> __linkedEntityGroupType;
 
-    private ComponentLookup<CopyMatrixToTransformInstanceID> __copyMatrixToTransformInstanceIDs;
+    //private ComponentLookup<CopyMatrixToTransformInstanceID> __copyMatrixToTransformInstanceIDs;
 
     private EntityQuery __group;
     
@@ -106,7 +106,7 @@ public partial class LevelSystemManaged : SystemBase
 
         __entityType = GetEntityTypeHandle();
         __linkedEntityGroupType = GetBufferTypeHandle<LinkedEntityGroup>(true);
-        __copyMatrixToTransformInstanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
+        //__copyMatrixToTransformInstanceIDs = GetComponentLookup<CopyMatrixToTransformInstanceID>();
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
                 .WithAll<LevelObject>()
@@ -244,14 +244,14 @@ public partial class LevelSystemManaged : SystemBase
     {
         __entityType.Update(this);
         __linkedEntityGroupType.Update(this);
-        __copyMatrixToTransformInstanceIDs.Update(this);
+        //__copyMatrixToTransformInstanceIDs.Update(this);
         
         var entities = new NativeList<Entity>(Allocator.TempJob);
         collectLinkedEntitiesWrapper.Run(
             group, 
             __entityType, 
             __linkedEntityGroupType, 
-            ref __copyMatrixToTransformInstanceIDs,
+            //ref __copyMatrixToTransformInstanceIDs,
             ref entities);
         
         var entityManager = EntityManager;
