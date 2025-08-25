@@ -77,7 +77,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("最大索敌角度")]
         public float maxAngle;
         [Tooltip("自动索敌最大距离")]
-        [UnityEngine.Serialization.FormerlySerializedAs("distance")]
         public float maxDistance;
         
         [Tooltip("自动索敌最小距离")]
@@ -359,7 +358,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 
         public string name;
 
-        public string targetName;
         public string damageName;
         
         [Tooltip("碰撞体")]
@@ -402,7 +400,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("子弹标签，用技能开关")]
         public LayerMaskData layerMask;
 
-        [UnityEngine.Serialization.FormerlySerializedAs("targetName")]
         public string[] targetNames;
         public string[] messageNames;
 
@@ -1037,41 +1034,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     internal string _activesPath;
     #endregion
 
-    /*private void OnValidate()
-    {
-        int numBullets = _bullets == null ? 0 : _bullets.Length;
-        for (int i = 0; i < numBullets; ++i)
-        {
-            ref var bullet = ref _bullets[i];
-            if (bullet.rotation == default)
-                bullet.rotation = quaternion.identity;
-            
-            if (bullet.rotation == Quaternion.identity)
-            {
-                foreach (var target in _targets)
-                {
-                    if (target.name == bullet.targetName)
-                    {
-                        if ((target.flag & BulletTargetFlag.LookAt) != BulletTargetFlag.LookAt)
-                        {
-                            bullet.messageName = string.Empty;
-                            bullet.messageValue = default;
-                        }
-
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                bullet.messageName = string.Empty;
-                bullet.messageValue = default;
-            }
-        }
-    }*/
-
-    
-    public static void UpdatePrefabs(string title, Predicate<GameObject> predicate)
+    /*public static void UpdatePrefabs(string title, Predicate<GameObject> predicate)
     {
         string[] guids = AssetDatabase.FindAssets("t:prefab");
         string path;
@@ -1119,6 +1082,6 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 
             return true;
         });
-    }
+    }*/
 }
 #endif
