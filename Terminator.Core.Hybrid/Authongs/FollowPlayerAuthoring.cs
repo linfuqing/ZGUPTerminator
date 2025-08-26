@@ -13,10 +13,18 @@ public class FollowPlayerAuthoring : MonoBehaviour
             // duplicating the prefab entity everywhere it is used.
             
             var entity = GetEntity(TransformUsageFlags.None);
-            
-            AddComponent<FollowPlayer>(entity);
+            FollowPlayer followPlayer;
+            followPlayer.space = authoring._space;
+            followPlayer.offset = authoring._offset;
+            AddComponent(entity, followPlayer);
         }
     }
+    
+    [SerializeField]
+    internal FollowTargetSpace _space = FollowTargetSpace.World;
+    
+    [SerializeField] 
+    internal Vector3 _offset;
 }
 
 #endif

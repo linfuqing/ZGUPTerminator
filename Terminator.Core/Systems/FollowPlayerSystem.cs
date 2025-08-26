@@ -14,6 +14,9 @@ public partial struct FollowPlayerSystem : ISystem
     {
         public Entity playerEntity;
         
+        [ReadOnly]
+        public NativeArray<FollowPlayer> instances;
+
         public NativeArray<FollowTarget> followTargets;
         
         public NativeArray<LookAtTarget> lookAtTargets;
@@ -22,10 +25,12 @@ public partial struct FollowPlayerSystem : ISystem
         {
             if (index < followTargets.Length)
             {
+                var instance = instances[index];
+                
                 FollowTarget followTarget;
                 //followTarget.flag = 0;
-                followTarget.space = FollowTargetSpace.World;
-                followTarget.offset = float3.zero;
+                followTarget.space = instance.space;
+                followTarget.offset = instance.offset;
                 followTarget.entity = playerEntity;
                 followTargets[index] = followTarget;
             }
@@ -44,6 +49,9 @@ public partial struct FollowPlayerSystem : ISystem
     {
         public Entity playerEntity;
         
+        [ReadOnly]
+        public ComponentTypeHandle<FollowPlayer> instanceType;
+
         public ComponentTypeHandle<FollowTarget> followTargetType;
 
         public ComponentTypeHandle<LookAtTarget> lookAtTargetType;
@@ -52,6 +60,7 @@ public partial struct FollowPlayerSystem : ISystem
         {
             Apply apply;
             apply.playerEntity = playerEntity;
+            apply.instances = chunk.GetNativeArray(ref instanceType);
             apply.followTargets = chunk.GetNativeArray(ref followTargetType);
             apply.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
 
@@ -71,6 +80,8 @@ public partial struct FollowPlayerSystem : ISystem
         }
     }
     
+    private ComponentTypeHandle<FollowPlayer> __instanceType;
+    
     private ComponentTypeHandle<FollowTarget> __followTargetType;
 
     private ComponentTypeHandle<LookAtTarget> __lookAtTargetType;
@@ -80,6 +91,7 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __instanceType = state.GetComponentTypeHandle<FollowPlayer>(true);
         __followTargetType = state.GetComponentTypeHandle<FollowTarget>();
         
         __lookAtTargetType = state.GetComponentTypeHandle<LookAtTarget>();
@@ -102,11 +114,13 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __instanceType.Update(ref state);
         __followTargetType.Update(ref state);
         __lookAtTargetType.Update(ref state);
         
         ApplyEx apply;
         apply.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
+        apply.instanceType = __instanceType;
         apply.followTargetType = __followTargetType;
         apply.lookAtTargetType = __lookAtTargetType;
 
