@@ -236,34 +236,46 @@ public partial class UserDataMain
 
     public IEnumerator ApplyStage(
         uint userID,
-        uint stageID,
+        uint levelID,
+        int stage, 
         Action<IUserData.StageProperty> onComplete)
     {
         yield return __CreateEnumerator();
 
-        if (!__TryGetStage(stageID, out int stageIndex, out int levelIndex, out _))
+        /*if (!__TryGetStage(stageID, out int stageIndex, out int levelIndex, out _))
         {
             onComplete(default);
             
             yield break;
-        }
+        }*/
 
-        int userLevel = UserData.level;
+        int levelIndex = __ToIndex(levelID), userLevel = UserData.level;
         if (userLevel < levelIndex)
         {
             onComplete(default);
             
             yield break;
         }
-        
-        var level = _levels[levelIndex];
-        var stage = __GetStage(level, stageIndex);
-        if (!__ApplyEnergy(stage.energy))
-        {
-            onComplete(default);
 
-            yield break;
+        IUserData.StageCache stageCache;
+        var level = _levels[levelIndex];
+        int numStages = __GetStageCount(level);
+        if (numStages > stage)
+        {
+            var temp = __GetStage(level, stage);
+            if (!__ApplyEnergy(temp.energy))
+            {
+                onComplete(default);
+
+                yield break;
+            }
+
+            stageCache = (temp.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache
+                ? IUserData.StageCache.Empty
+                : UserData.GetStageCache(level.name, stage);
         }
+        else
+            stageCache = IUserData.StageCache.Empty;
 
         __SubmitStageFlag();
 
@@ -274,20 +286,19 @@ public partial class UserDataMain
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = __ToID(levelIndex);
-        levelCache.stage = stageIndex;
+        levelCache.stage = stage;
         levelCache.gold = 0;
         levelCache.killCount = 0;
         levelCache.killBossCount = 0;
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
-        stageProperty.stage = stageIndex;
-        stageProperty.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, stageIndex);
+        stageProperty.stage = stage;
+        stageProperty.cache = stageCache;
         stageProperty.value = __ApplyProperty(
             userID, 
             stageProperty.cache.skills);
 
-        int numStages = __GetStageCount(level);
         stageProperty.spawnerAttributes = new SpawnerAttribute.Scale[numStages];
         for (int i = 0; i < numStages; ++i)
             stageProperty.spawnerAttributes[i] = __GetStage(level, i).spawnerAttribute;
@@ -437,7 +448,7 @@ public partial class UserDataMain
         onComplete(rewards.Count > 0 ? rewards.ToArray() : null);
     }
     
-    private int __GetStageCount(in Level level)
+    private static int __GetStageCount(in Level level)
     {
 #if USER_DATA_VERSION_1
         return level.stages.Length;
@@ -516,10 +527,11 @@ public partial class UserData
 
     public IEnumerator ApplyStage(
         uint userID,
-        uint stageID,
+        uint levelID,
+        int stage, 
         Action<IUserData.StageProperty> onComplete)
     {
-        return UserDataMain.instance.ApplyStage(userID, stageID, onComplete);
+        return UserDataMain.instance.ApplyStage(userID, levelID, stage, onComplete);
     }
     
     public IEnumerator SubmitStage(

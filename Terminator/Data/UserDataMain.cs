@@ -191,9 +191,9 @@ public sealed partial class UserDataMain : MonoBehaviour
             UserDataMain.flag = flag;
     }
 
-    private uint __ToID(int index) => (uint)(index + 1);
+    private static uint __ToID(int index) => (uint)(index + 1);
     
-    private int __ToIndex(uint id) => (int)(id - 1);
+    private static int __ToIndex(uint id) => (int)(id - 1);
     
 #if UNITY_EDITOR
     [SerializeField]

@@ -136,7 +136,8 @@ public partial interface IUserData
     /// </summary>
     IEnumerator ApplyStage(
         uint userID,
-        uint stageID,
+        uint levelID,
+        int stage, 
         Action<StageProperty> onComplete);
 
     IEnumerator SubmitStage(

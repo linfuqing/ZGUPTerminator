@@ -34,6 +34,25 @@ public partial interface IUserData
         public UserLevel[] levels;
     }
 
+    public struct LevelTicket
+    {
+        /// <summary>
+        /// 对应Level的名字
+        /// </summary>
+        public string name;
+
+        /// <summary>
+        /// 门票数量
+        /// </summary>
+        public int count;
+    }
+
+    public struct LevelTickets
+    {
+        public LevelTicket[] tickets;
+        public UserLevel[] levels;
+    }
+
     public struct Skill
     {
         public UserSkillType type;
@@ -78,6 +97,16 @@ public partial interface IUserData
     IEnumerator CollectLevel(
         uint userID,
         Action<Memory<UserReward>> onComplete);
+
+    /// <summary>
+    /// 查找门票
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator QueryLevelTickets(
+        uint userID,
+        Action<IUserData.LevelTickets> onComplete);
 }
 
 

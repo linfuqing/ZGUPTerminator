@@ -135,7 +135,7 @@ public sealed class LoginManager : MonoBehaviour
     private int __selectedEnergy;
     //private int __selectedLevelIndex;
     private uint __selectedUserLevelID;
-    private uint __selectedUserStageID;
+    //private uint __selectedUserStageID;
     private int __selectedStageIndex;
 
     private int __sceneActiveDepth;
@@ -304,16 +304,21 @@ public sealed class LoginManager : MonoBehaviour
         StartCoroutine(__CollectAndQueryLevels());
     }
 
-    public void ApplyStart(bool isRestart)
+    public void ApplyStart(
+        bool isRestart, 
+        uint userLevelID, 
+        int stageIndex,
+        string levelName, 
+        string sceneName)
     {
-        StartCoroutine(__Start(isRestart));
-    }
-    
-    private void __ApplyStart()
-    {
-        ApplyStart(true);
+        StartCoroutine(__Start(isRestart, userLevelID,  stageIndex, levelName, sceneName));
     }
 
+    public void ApplyStart(bool isRestart)
+    {
+        ApplyStart(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
+    }
+    
     private void __ApplyLevels(IUserData.Levels levels)
     {
         if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
@@ -550,7 +555,7 @@ public sealed class LoginManager : MonoBehaviour
                                                     prefabs[i].SetActive(i == sceneIndex);*/
                                                 
                                                 __sceneName = level.scenes[sceneIndex].name;
-                                                __selectedUserStageID = stage.id;
+                                                //__selectedUserStageID = stage.id;
 
                                                 __selectedStageIndex = selectedStage;
 
@@ -982,10 +987,12 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
-    private void __LoadScene()
+    private IEnumerator __LoadScene(float time, string levelName, string sceneName)
     {
-        GameMain.IncrementLevelTimes(__levelName);
-        GameMain.IncrementSceneTimes(__sceneName);
+        yield return new WaitForSeconds(time);
+        
+        GameMain.IncrementLevelTimes(levelName);
+        GameMain.IncrementSceneTimes(sceneName);
         
         var assetManager = GameAssetManager.instance;
         if (assetManager == null)
@@ -995,7 +1002,7 @@ public sealed class LoginManager : MonoBehaviour
             assetManager = gameObject.AddComponent<GameAssetManager>();
         }
 
-        assetManager.LoadScene(__sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
+        assetManager.LoadScene(sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
     }
 
     private IEnumerator __CollectAndQueryLevels()
@@ -1005,7 +1012,12 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QueryLevels(userID.Value, __ApplyLevels);
     }
 
-    private IEnumerator __Start(bool isRestart)
+    private IEnumerator __Start(
+        bool isRestart, 
+        uint userLevelID, 
+        int stageIndex,
+        string levelName, 
+        string sceneName)
     {
         if(__isStart)
             yield break;
@@ -1029,9 +1041,9 @@ public sealed class LoginManager : MonoBehaviour
 #endif
 
         if (isRestart)
-            yield return userData.ApplyLevel(userID, __selectedUserLevelID, __selectedStageIndex, __ApplyLevel);
+            yield return userData.ApplyLevel(userID, userLevelID, stageIndex, __ApplyLevel);
         else
-            yield return userData.ApplyStage(userID, __selectedUserStageID, __ApplyStage);
+            yield return userData.ApplyStage(userID, userLevelID, stageIndex, __ApplyStage);
             
         if (!__isStart)
         {
@@ -1043,10 +1055,15 @@ public sealed class LoginManager : MonoBehaviour
         _onStart.Invoke();
         
         var analytics = IAnalytics.instance as IAnalyticsEx;
-        analytics?.StartLevel(__sceneName/*_levels[__selectedLevelIndex].name*/);
-        
-        Invoke(nameof(__LoadScene), _startTime);
+        analytics?.StartLevel(sceneName/*_levels[__selectedLevelIndex].name*/);
+
+        yield return __LoadScene(_startTime, levelName, sceneName);
     }
+    
+    /*private IEnumerator __Start(bool isRestart)
+    {
+        return __Start(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
+    }*/
 
     IEnumerator Start()
     {
