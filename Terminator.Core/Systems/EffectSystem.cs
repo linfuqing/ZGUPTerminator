@@ -774,9 +774,9 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageValue = (int)math.ceil(damage.value * instanceDamage.scale);
+                            damageValue = ComputeDamage(damage.value, instanceDamage.scale, ref random);
 
-                            damageValueImmunized = (int)math.ceil(damage.valueImmunized * instanceDamage.scale);
+                            damageValueImmunized = ComputeDamage(damage.valueImmunized, instanceDamage.scale, ref random);
 
                             totalDamageValue += damageValue + damageValueImmunized;
 
@@ -794,7 +794,7 @@ public partial struct EffectSystem : ISystem
 
                             if (characterBody.IsValid)
                             {
-                                dropDamageValue = (int)math.ceil(damage.valueToDrop * instanceDamage.scale);
+                                dropDamageValue = ComputeDamage(damage.valueToDrop, instanceDamage.scale, ref random);
 
                                 if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
@@ -896,10 +896,7 @@ public partial struct EffectSystem : ISystem
                             {
                                 ref var targetLevel = ref targetLevels.GetRefRW(simulationEvent.entity).ValueRW;
                                 int gold = targetLevel.gold;
-                                float goldMultiplier = gold * damage.goldMultiplier;
-
-                                gold = (int)math.select(math.floor(goldMultiplier), math.ceil(goldMultiplier),
-                                    math.frac(goldMultiplier) > random.NextFloat()) - gold;
+                                gold = ComputeDamage(gold, damage.goldMultiplier, ref random) - gold;
                                 
                                 Interlocked.Add(ref targetLevel.gold, gold);
                             }
@@ -1057,6 +1054,16 @@ public partial struct EffectSystem : ISystem
             states[index] = status;
 
             return enabledFlags;
+        }
+
+        public static int ComputeDamage(int value, float scale, ref Random random)
+        {
+            float result = value * scale;
+
+            return (int)math.select(
+                math.floor(result), 
+                math.ceil(result), 
+                math.frac(result) > random.NextFloat());
         }
     }
 

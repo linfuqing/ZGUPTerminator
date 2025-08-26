@@ -275,7 +275,6 @@ public partial class UserDataMain
             IUserData.LevelTicket destinationTicket;
             Active<int> active;
             int level = UserData.level;
-            bool isUnlock = true;
             foreach (var sourceTicket in _levelTickets)
             {
                 if(sourceTicket.level < level)

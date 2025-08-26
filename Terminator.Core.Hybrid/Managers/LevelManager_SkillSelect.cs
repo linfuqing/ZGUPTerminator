@@ -278,8 +278,8 @@ public partial class LevelManager
                         recommendKeyCount = keyCount;
                         recommendIndex = i;
                     }
-                    else if (keyCount == recommendKeyCount)
-                        recommendIndex = -1;
+                    /*else if (keyCount == recommendKeyCount)
+                        recommendIndex = -1;*/
 
                     if (__skillStyles == null)
                         __skillStyles = new Dictionary<string, LevelSkillStyle>();
