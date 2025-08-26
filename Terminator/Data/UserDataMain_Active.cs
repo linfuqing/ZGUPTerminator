@@ -595,14 +595,14 @@ public partial class UserDataMain
                 foreach (var accessorySlot in _accessorySlots)
                     maxAccessorySlotLevel = Mathf.Max(maxAccessorySlotLevel,
                         PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
-                return maxAccessorySlotLevel;
+                return maxAccessorySlotLevel + 1;
             case UserQuest.Type.AchievementAccessorySlots:
                 int minAccessorySlotLevel = int.MaxValue;
                 foreach (var accessorySlot in _accessorySlots)
                     minAccessorySlotLevel = Mathf.Min(minAccessorySlotLevel,
                         PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
                 
-                return minAccessorySlotLevel < int.MaxValue ? minAccessorySlotLevel : 0;
+                return minAccessorySlotLevel < int.MaxValue ? minAccessorySlotLevel + 1 : 0;
             case UserQuest.Type.AchievementRoles:
                 int numRoles = 0;
                 foreach (var role in _roles)
