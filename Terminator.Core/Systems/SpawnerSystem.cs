@@ -258,6 +258,9 @@ public partial struct SpawnerSystem : ISystem
         public ComponentLookup<CharacterInterpolation> characterInterpolations;
 
         [ReadOnly] 
+        public ComponentLookup<EffectTargetLevel> targetLevels;
+        
+        [ReadOnly] 
         public BufferLookup<MessageParameter> messageParameters;
         
         [ReadOnly] 
@@ -305,6 +308,7 @@ public partial struct SpawnerSystem : ISystem
                 colliders, 
                 physicsGraphicalInterpolationBuffers, 
                 characterInterpolations, 
+                targetLevels, 
                 messageParameters, 
                 entities, 
                 prefabs[index], 
@@ -337,9 +341,6 @@ public partial struct SpawnerSystem : ISystem
         [ReadOnly]
         public ComponentLookup<PhysicsCollider> colliders;
 
-        [ReadOnly] 
-        public BufferLookup<MessageParameter> messageParameters;
-
         [ReadOnly]
         public ComponentLookup<CharacterInterpolation> characterInterpolations;
 
@@ -348,6 +349,12 @@ public partial struct SpawnerSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectTargetLevel> targetLevels;
+
+        [ReadOnly] 
+        public BufferLookup<MessageParameter> messageParameters;
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
@@ -390,6 +397,7 @@ public partial struct SpawnerSystem : ISystem
             collect.colliders = colliders;
             collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
             collect.characterInterpolations = characterInterpolations;
+            collect.targetLevels = targetLevels;
             collect.messageParameters = messageParameters;
             collect.entities = entities;
             collect.entityArray = chunk.GetNativeArray(entityType);
@@ -411,6 +419,8 @@ public partial struct SpawnerSystem : ISystem
     }
 
     private BufferLookup<MessageParameter> __messageParameters;
+
+    private ComponentLookup<EffectTargetLevel> __targetLevels;
 
     private ComponentLookup<CharacterInterpolation> __characterInterpolations;
 
@@ -445,6 +455,7 @@ public partial struct SpawnerSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __messageParameters = state.GetBufferLookup<MessageParameter>(true);
+        __targetLevels = state.GetComponentLookup<EffectTargetLevel>(true);
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __colliders = state.GetComponentLookup<PhysicsCollider>(true);
@@ -509,6 +520,7 @@ public partial struct SpawnerSystem : ISystem
         var triggerJobHandle = trigger.ScheduleParallelByRef(__groupToTrigger, resetJobHandle);
 
         __messageParameters.Update(ref state);
+        __targetLevels.Update(ref state);
         __characterInterpolations.Update(ref state);
         __physicsGraphicalInterpolationBuffers.Update(ref state);
         __colliders.Update(ref state);
@@ -532,11 +544,12 @@ public partial struct SpawnerSystem : ISystem
         collect.instanceCount = spawnerSingleton.instanceCount;
         collect.entities = spawnerSingleton.entities;
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
-        collect.messageParameters = __messageParameters;
+        collect.colliders = __colliders;
         collect.characterInterpolations = __characterInterpolations;
         collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
-        collect.colliders = __colliders;
         collect.localTransforms = __localTransforms;
+        collect.targetLevels = __targetLevels;
+        collect.messageParameters = __messageParameters;
         collect.entityType = __entityType;
         collect.instanceType = __instanceType;
         collect.layerMaskType = __layerMaskType;

@@ -298,6 +298,7 @@ public struct SpawnerDefinition
         in ComponentLookup<PhysicsCollider> colliders, 
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
+        in ComponentLookup<EffectTargetLevel> targetLevels, 
         in BufferLookup<MessageParameter> messageParameters, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities,
         in DynamicBuffer<SpawnerPrefab> prefabs, 
@@ -327,6 +328,7 @@ public struct SpawnerDefinition
                 colliders, 
                 physicsGraphicalInterpolationBuffers, 
                 characterInterpolations, 
+                targetLevels, 
                 messageParameters, 
                 entities, 
                 prefabs,
@@ -351,6 +353,7 @@ public struct SpawnerDefinition
         in ComponentLookup<PhysicsCollider> colliders, 
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
+        in ComponentLookup<EffectTargetLevel> targetLevels, 
         in BufferLookup<MessageParameter> messageParameters, 
         in NativeParallelMultiHashMap<SpawnerEntity, Entity> entities, 
         in DynamicBuffer<SpawnerPrefab> prefabs, 
@@ -433,6 +436,7 @@ public struct SpawnerDefinition
                         colliders,
                         physicsGraphicalInterpolationBuffers,
                         characterInterpolations, 
+                        targetLevels, 
                         messageParameters, 
                         ref random,
                         ref entityManager,
@@ -491,6 +495,7 @@ public struct SpawnerDefinition
         in ComponentLookup<PhysicsCollider> colliders,
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
+        in ComponentLookup<EffectTargetLevel> targetLevels, 
         in BufferLookup<MessageParameter> messageParameters, 
         ref Random random,
         ref EntityCommandBuffer.ParallelWriter entityManager, 
@@ -626,15 +631,36 @@ public struct SpawnerDefinition
                 }
             }
 
-            if (attribute.level != 0 && attribute.levelMax > 0 || 
-                attribute.exp != 0 && attribute.expMax > 0 || 
-                attribute.gold != 0 && attribute.goldMax > 0)
+            if (targetLevels.TryGetComponent(prefab, out var effectTargetLevel))
             {
-                EffectTargetLevel effectTargetLevel;
-                effectTargetLevel.value = __Round(math.min(attribute.level + attribute.levelBuff * times, attribute.levelMax), ref random);
-                effectTargetLevel.exp = __Round(math.min(attribute.exp + attribute.expBuff * times, attribute.expMax), ref random);
-                effectTargetLevel.gold = __Round(math.min(attribute.gold + attribute.goldBuff * times, attribute.goldMax), ref random);
-                entityManager.SetComponent(2, entity, effectTargetLevel);
+                bool isChanged = false;
+                if (attribute.level != 0 && attribute.levelMax > 0)
+                {
+                    effectTargetLevel.value =
+                        __Round(math.min(attribute.level + attribute.levelBuff * times, attribute.levelMax),
+                            ref random);
+
+                    isChanged = true;
+                }
+
+                if (attribute.exp != 0 && attribute.expMax > 0)
+                {
+                    effectTargetLevel.exp =
+                        __Round(math.min(attribute.exp + attribute.expBuff * times, attribute.expMax), ref random);
+                    
+                    isChanged = true;
+                }
+
+                if (attribute.gold != 0 && attribute.goldMax > 0)
+                {
+                    effectTargetLevel.gold =
+                        __Round(math.min(attribute.gold + attribute.goldBuff * times, attribute.goldMax), ref random);
+                    
+                    isChanged = true;
+                }
+
+                if(isChanged)
+                    entityManager.SetComponent(2, entity, effectTargetLevel);
             }
         }
 

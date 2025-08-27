@@ -930,7 +930,7 @@ public partial struct EffectSystem : ISystem
                                     this.outputMessages.SetBufferEnabled(messageEntity, true);
                                 }
                             }
-                            else if ((damageValue != 0 || outputMessage.name.IsEmpty) &&
+                            else if (!outputMessage.name.IsEmpty &&
                                      prefabLoader.TryGetOrLoadPrefabRoot(
                                          inputMessage.entityPrefabReference,
                                          out instance))
@@ -1060,10 +1060,11 @@ public partial struct EffectSystem : ISystem
         {
             float result = value * scale;
 
+            float min = math.floor(result);
             return (int)math.select(
-                math.floor(result), 
+                min, 
                 math.ceil(result), 
-                math.frac(result) > random.NextFloat());
+                result - min > random.NextFloat());
         }
     }
 
