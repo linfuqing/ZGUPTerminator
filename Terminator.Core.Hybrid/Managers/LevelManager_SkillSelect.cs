@@ -209,7 +209,9 @@ public partial class LevelManager
                     //guidePriority = 0,
                     guideIndex = -1,
                     recommendIndex = -1,
-                    recommendKeyCount = 1, 
+                    recommendCount = 0,
+                    recommendKeyCount = destination.style.child == null ? 0 : 1,
+                    skillKeyCount = 0, 
                     keyCount;
                 SkillAsset asset;
                 string[] keyNames;
@@ -278,7 +280,13 @@ public partial class LevelManager
                         {
                             recommendKeyCount = keyCount;
                             recommendIndex = i;
+
+                            recommendCount = 1;
                         }
+                        else if (keyCount == recommendKeyCount)
+                            ++recommendCount;
+
+                        ++skillKeyCount;
                     }
                     
                     /*else if (keyCount == recommendKeyCount)
@@ -293,7 +301,7 @@ public partial class LevelManager
                         yield return new WaitForSecondsRealtime(destination.delayTime);
                 }
 
-                if (recommendIndex != -1)
+                if (recommendIndex != -1 && recommendCount != skillKeyCount)
                 {
                     var skillName = skills[recommendIndex].name;
                     style = __skillStyles[skillName];
