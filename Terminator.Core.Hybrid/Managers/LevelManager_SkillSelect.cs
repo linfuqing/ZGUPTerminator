@@ -205,7 +205,6 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
-                bool isRoot;
                 int //index = 0,
                     //guidePriority = 0,
                     guideIndex = -1,
@@ -223,8 +222,7 @@ public partial class LevelManager
                     if(!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keyIcons))
                         continue;
 
-                    isRoot = destination.style.child == null || string.IsNullOrEmpty(source.parentName);
-                    if (isRoot)
+                    if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
                     {
                         if (source.selectIndex == -1 && destination.style.child == null)
                             continue;
@@ -267,7 +265,7 @@ public partial class LevelManager
                     style.SetAsset(asset, keyIcons);
 
                     keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames);
-                    if (isRoot)
+                    if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
                     {
                         keyNames = SkillManager.GetChildKeyNames(source.name);
                         if (keyNames != null)
