@@ -205,6 +205,7 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
+                bool isRoot;
                 int //index = 0,
                     //guidePriority = 0,
                     guideIndex = -1,
@@ -221,8 +222,9 @@ public partial class LevelManager
                     var source = skills[i];
                     if(!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keyIcons))
                         continue;
-                    
-                    if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
+
+                    isRoot = destination.style.child == null || string.IsNullOrEmpty(source.parentName);
+                    if (isRoot)
                     {
                         if (source.selectIndex == -1 && destination.style.child == null)
                             continue;
@@ -265,19 +267,22 @@ public partial class LevelManager
                     style.SetAsset(asset, keyIcons);
 
                     keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames);
-
-                    keyNames = SkillManager.GetChildKeyNames(source.name);
-                    if (keyNames != null)
+                    if (isRoot)
                     {
-                        foreach (var keyName in keyNames)
-                            keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName));
-                    }
+                        keyNames = SkillManager.GetChildKeyNames(source.name);
+                        if (keyNames != null)
+                        {
+                            foreach (var keyName in keyNames)
+                                keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName));
+                        }
 
-                    if (keyCount > recommendKeyCount)
-                    {
-                        recommendKeyCount = keyCount;
-                        recommendIndex = i;
+                        if (keyCount > recommendKeyCount)
+                        {
+                            recommendKeyCount = keyCount;
+                            recommendIndex = i;
+                        }
                     }
+                    
                     /*else if (keyCount == recommendKeyCount)
                         recommendIndex = -1;*/
 
