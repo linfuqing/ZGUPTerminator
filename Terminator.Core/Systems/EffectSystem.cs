@@ -312,7 +312,7 @@ public partial struct EffectSystem : ISystem
                 {
                     Entity entity;
                     var entityArray = chunk.GetNativeArray(entityType);
-                    var iterator = new ChunkEntityEnumerator(true, chunkEnabledMask, chunk.Count);
+                    var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
                     while (iterator.NextEntityIndex(out int i))
                     {
                         entity = entityArray[i];
