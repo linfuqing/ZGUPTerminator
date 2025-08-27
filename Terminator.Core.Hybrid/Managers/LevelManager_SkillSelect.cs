@@ -597,10 +597,10 @@ public partial class LevelManager
 
             count = GetSkillActiveKeyCount(name);
             
-            maxCount = Mathf.Max(maxCount, count);
-            
             style.SetAsset(asset, count);
             
+            maxCount = Mathf.Max(maxCount, count + 1);
+
             //style.gameObject.SetActive(true);
         }
 
