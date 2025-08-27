@@ -584,23 +584,23 @@ public partial class LevelManager
         string name;
         LevelSkillKeyStyle style; 
         SkillKeyAsset asset;
-        int numKeys = Mathf.Min(styles == null ? 0 : styles.Count, names == null ? 0 : names.Length);
-        for (int i = 0; i < numKeys; ++i)
+        int numStyles = styles == null ? 0 : styles.Count, numNames = names == null ? 0 : names.Length;
+        for (int i = 0; i < numNames; ++i)
         {
-            style = styles[i] as LevelSkillKeyStyle;
+            name = names[i];
+            count = GetSkillActiveKeyCount(name);
+
+            maxCount = Mathf.Max(maxCount, count + 1);
+
+            style = i < numStyles ? styles[i] as LevelSkillKeyStyle : null;
             if (style == null)
                 continue;
             
-            name = names[i];
             if(!SkillManager.TryGetAsset(name, out asset))
                 continue;
 
-            count = GetSkillActiveKeyCount(name);
-            
             style.SetAsset(asset, count);
             
-            maxCount = Mathf.Max(maxCount, count + 1);
-
             //style.gameObject.SetActive(true);
         }
 

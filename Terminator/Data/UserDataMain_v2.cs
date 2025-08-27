@@ -282,6 +282,83 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
     
+    [Serializable]
+    internal struct Talent
+    {
+        public string name;
+        public string roleName;
+        public int gold;
+        public float skillGroupDamage;
+        public UserAttributeData attribute;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 能力名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 能力角色名
+        {
+            set
+            {
+                roleName = value;
+            }
+        }
+        
+        [CSVField]
+        public int 能力解锁消耗
+        {
+            set
+            {
+                gold = value;
+            }
+        }
+        
+        [CSVField]
+        public float 能力技能组伤害加成
+        {
+            set
+            {
+                skillGroupDamage = value;
+            }
+        }
+        
+        [CSVField]
+        public int 能力属性类型
+        {
+            set
+            {
+                attribute.type = (UserAttributeType)value;
+            }
+        }
+        
+        [CSVField]
+        public float 能力属性值
+        {
+            set
+            {
+                attribute.value = value;
+            }
+        }
+#endif
+    }
+
+    private const string NAME_SPACE_USER_TALENT_FLAG = "UserTalentFlag";
+
+    [Header("Talents")]
+    [SerializeField]
+    internal Talent[] _talents;
+
+#if UNITY_EDITOR
+    [SerializeField, CSV("_talents", guidIndex = -1, nameIndex = 0)] 
+    internal string _talentsPath;
+#endif
+
     public IEnumerator QueryTalents(
         uint userID,
         Action<IUserData.Talents> onComplete)
