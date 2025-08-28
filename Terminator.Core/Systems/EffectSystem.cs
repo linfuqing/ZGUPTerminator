@@ -892,7 +892,7 @@ public partial struct EffectSystem : ISystem
 
                         if (isResult)
                         {
-                            if (math.abs(damage.goldMultiplier) > math.FLT_MIN_NORMAL && targetLevels.HasComponent(simulationEvent.entity))
+                            if (/*math.abs(damage.goldMultiplier) > math.FLT_MIN_NORMAL && */targetLevels.HasComponent(simulationEvent.entity))
                             {
                                 targetLevels.GetRefRW(simulationEvent.entity).ValueRW.goldMultiplier =
                                     damage.goldMultiplier;
