@@ -210,7 +210,7 @@ public partial class LevelManager
                     guideIndex = -1,
                     recommendIndex = -1,
                     recommendCount = 0,
-                    recommendKeyCount = Mathf.Max(maxSkillActiveKeyCount, 1), //destination.style.child == null ? 0 : 1,
+                    recommendKeyCount = Mathf.Max(maxSkillActiveKeyCount, destination.style.child == null ? 0 : 1), //destination.style.child == null ? 0 : 1,
                     skillKeyCount = 0, 
                     keyCount;
                 SkillAsset asset;

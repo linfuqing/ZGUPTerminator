@@ -1209,13 +1209,10 @@ public struct BulletInstance : IBufferElementData
             }
         }
 
-        if (damageScale > math.FLT_MIN_NORMAL)
-        {
-            EffectDamage effectDamage;
-            effectDamage.scale = damageScale;
-            effectDamage.bulletLayerMask = layerMask;
-            entityManager.AddComponent(1, entity, effectDamage);
-        }
+        EffectDamage effectDamage;
+        effectDamage.scale = damageScale;
+        effectDamage.bulletLayerMask = layerMask;
+        entityManager.AddComponent(1, entity, effectDamage);
 
         EffectDamageParent damageParent;
         damageParent.index = index;
