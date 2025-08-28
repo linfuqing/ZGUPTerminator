@@ -280,10 +280,10 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
     public int value;
     public int valueImmunized;
     
-    public void Add(int value, int valueImmunized, int layerMask)
+    public int Add(int value, int valueImmunized, int layerMask)
     {
-        Interlocked.Add(ref this.value, value);
-        Interlocked.Add(ref this.valueImmunized, valueImmunized);
+        int result = Interlocked.Add(ref this.value, value);
+        result += Interlocked.Add(ref this.valueImmunized, valueImmunized);
 
         if (layerMask == -1)
             this.layerMask = -1;
@@ -298,6 +298,8 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
                 origin = this.layerMask;
             } while (Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
         }
+
+        return result;
     }
 }
 
@@ -311,6 +313,7 @@ public struct EffectTargetLevel : IComponentData
     public int value;
     public int exp;
     public int gold;
+    public float goldMultiplier;
 }
 
 public struct EffectTargetImmunityDefinitionData : IComponentData

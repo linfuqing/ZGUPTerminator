@@ -774,9 +774,9 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageValue = ComputeDamage(damage.value, instanceDamage.scale, ref random);
+                            damageValue = __ComputeDamage(damage.value, instanceDamage.scale, ref random);
 
-                            damageValueImmunized = ComputeDamage(damage.valueImmunized, instanceDamage.scale, ref random);
+                            damageValueImmunized = __ComputeDamage(damage.valueImmunized, instanceDamage.scale, ref random);
 
                             totalDamageValue += damageValue + damageValueImmunized;
 
@@ -794,7 +794,7 @@ public partial struct EffectSystem : ISystem
 
                             if (characterBody.IsValid)
                             {
-                                dropDamageValue = ComputeDamage(damage.valueToDrop, instanceDamage.scale, ref random);
+                                dropDamageValue = __ComputeDamage(damage.valueToDrop, instanceDamage.scale, ref random);
 
                                 if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
@@ -894,11 +894,13 @@ public partial struct EffectSystem : ISystem
                         {
                             if (math.abs(damage.goldMultiplier) > math.FLT_MIN_NORMAL && targetLevels.HasComponent(simulationEvent.entity))
                             {
-                                ref var targetLevel = ref targetLevels.GetRefRW(simulationEvent.entity).ValueRW;
-                                int gold = targetLevel.gold;
-                                gold = ComputeDamage(gold, damage.goldMultiplier, ref random) - gold;
-                                
-                                Interlocked.Add(ref targetLevel.gold, gold);
+                                targetLevels.GetRefRW(simulationEvent.entity).ValueRW.goldMultiplier =
+                                    damage.goldMultiplier;
+                                //ref var targetLevel = ref targetLevels.GetRefRW(simulationEvent.entity).ValueRW;
+                                //int gold = targetLevel.gold;
+                                //gold = ComputeDamage(gold, damage.goldMultiplier, ref random) - gold;
+
+                                //Interlocked.Add(ref targetLevel.gold, gold);
                             }
                             
                             if (delayDestroies.HasComponent(simulationEvent.entity))
@@ -1054,17 +1056,6 @@ public partial struct EffectSystem : ISystem
             states[index] = status;
 
             return enabledFlags;
-        }
-
-        public static int ComputeDamage(int value, float scale, ref Random random)
-        {
-            float result = value * scale;
-
-            float min = math.floor(result);
-            return (int)math.select(
-                min, 
-                math.ceil(result), 
-                result - min > random.NextFloat());
         }
     }
 
@@ -1616,7 +1607,10 @@ public partial struct EffectSystem : ISystem
                             ref var levelStatus = ref this.levelStatus.ValueRW;
                             Interlocked.Add(ref levelStatus.value, targetLevel.value);
                             Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                            Interlocked.Add(ref levelStatus.gold, targetLevel.gold);
+                            Interlocked.Add(ref levelStatus.gold,
+                                math.abs(targetLevel.goldMultiplier) > math.FLT_MIN_NORMAL
+                                    ? __ComputeDamage(targetLevel.gold, targetLevel.goldMultiplier, ref random)
+                                    : targetLevel.gold);
 
                             Interlocked.Increment(ref levelStatus.killCount);
                             
@@ -2234,6 +2228,17 @@ public partial struct EffectSystem : ISystem
         apply.prefabLoader = prefabLoader;
         apply.damageInstances = damageInstances;
         state.Dependency = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
+    }
+    
+    private static int __ComputeDamage(int value, float scale, ref Random random)
+    {
+        float result = value * scale;
+
+        float min = math.floor(result);
+        return (int)math.select(
+            min, 
+            math.ceil(result), 
+            result - min > random.NextFloat());
     }
 
     private static void __Destroy(
