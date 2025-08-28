@@ -152,6 +152,21 @@ public partial class LevelManager
 
     private Dictionary<string, SkillActiveKeyData> __skillActiveKeys;
 
+    public int maxSkillActiveKeyCount
+    {
+        get
+        {
+            int result = 0;
+            if (__skillActiveKeys != null)
+            {
+                foreach (var value in __skillActiveKeys.Values)
+                    result = Mathf.Max(result, value.count);
+            }
+
+            return result;
+        }
+    }
+    
     public int GetSkillActiveKeyCount(string keyName)
     {
         return __skillActiveKeys != null && __skillActiveKeys.TryGetValue(keyName, out var skillActiveKey)

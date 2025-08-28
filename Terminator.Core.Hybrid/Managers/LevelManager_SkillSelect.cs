@@ -210,11 +210,11 @@ public partial class LevelManager
                     guideIndex = -1,
                     recommendIndex = -1,
                     recommendCount = 0,
-                    recommendKeyCount = destination.style.child == null ? 0 : 1,
+                    recommendKeyCount = Mathf.Max(maxSkillActiveKeyCount, 1), //destination.style.child == null ? 0 : 1,
                     skillKeyCount = 0, 
                     keyCount;
                 SkillAsset asset;
-                string[] keyNames;
+                string[] keyNames, oldKeyNames;
                 Sprite[] keyIcons;
                 LevelSkillStyle style;
                 LevelSkillData? skill = null;
@@ -266,14 +266,22 @@ public partial class LevelManager
 
                     style.SetAsset(asset, keyIcons);
 
-                    keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames);
+                    if (!SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
+                        oldKeyNames = null;
+                    
+                    keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames, oldKeyNames);
                     if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
                     {
                         keyNames = SkillManager.GetChildKeyNames(source.name);
                         if (keyNames != null)
                         {
                             foreach (var keyName in keyNames)
-                                keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName));
+                            {
+                                if(oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
+                                    continue;
+                                
+                                keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName) + 1);
+                            }
                         }
 
                         if (keyCount > recommendKeyCount)
@@ -431,7 +439,7 @@ public partial class LevelManager
             {
                 style.SetAsset(asset, keyIcons);
                 
-                __SetSkillKeyStyles(style.keyStyles, keyNames);
+                __SetSkillKeyStyles(style.keyStyles, keyNames, null);
 
                 if (style.close == null)
                     Destroy(style.gameObject, selection.destroyTime);
@@ -578,7 +586,10 @@ public partial class LevelManager
         }
     }
 
-    private int __SetSkillKeyStyles(IReadOnlyList<SkillKeyStyle> styles, string[] names)
+    private int __SetSkillKeyStyles(
+        IReadOnlyList<SkillKeyStyle> styles, 
+        string[] names, 
+        string[] oldNames)
     {
         int maxCount = 0, count;
         string name;
@@ -590,7 +601,7 @@ public partial class LevelManager
             name = names[i];
             count = GetSkillActiveKeyCount(name);
 
-            maxCount = Mathf.Max(maxCount, count + 1);
+            maxCount = Mathf.Max(maxCount, count + (oldNames != null && Array.IndexOf(oldNames, name) != -1 ? 0 : 1));
 
             style = i < numStyles ? styles[i] as LevelSkillKeyStyle : null;
             if (style == null)
