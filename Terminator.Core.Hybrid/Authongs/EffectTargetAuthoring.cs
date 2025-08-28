@@ -81,6 +81,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             level.value = authoring._level;
             level.exp = authoring._exp;
             level.gold = authoring._gold;
+            level.goldMultiplier = 0.0f;
             AddComponent(entity, level);
             
             var messages = AddBuffer<EffectTargetMessage>(entity);
