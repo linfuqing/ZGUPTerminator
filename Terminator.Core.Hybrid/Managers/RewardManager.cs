@@ -77,6 +77,7 @@ public class RewardManager : MonoBehaviour
                 __rewardIndices[_database._rewards[i].name] = i;
         }
 
+        bool result = false;
         int rewardIndex;
         RewardStyle rewardStyle;
         Instance instance;
@@ -124,16 +125,21 @@ public class RewardManager : MonoBehaviour
             instance.count += rewardValue.count;
             
             __instances[rewardIndex] = instance;
-            
+
+            result |= rewardValue.count > 0;
+
             /*{
                 instance.count += rewardValue.count;
 
                 foreach (var style in instance.styles)
                     style.onCount?.Invoke(instance.count.ToString());
-                
+
                 __instances[rewardIndex] = instance;
             }*/
         }
+        
+        if(!result)
+            Debug.LogError("啥也没捡到！");
     }
 
     void Awake()
