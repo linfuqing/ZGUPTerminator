@@ -303,7 +303,7 @@ public partial struct EffectSystem : ISystem
                     while (iterator.NextEntityIndex(out int i))
                     {
                         if (!spawn.Execute(i))
-                            __Destroy(false, entityArray[i], children, ref instanceIDs, ref entityManager);
+                            DestroyEntity(false, entityArray[i], children, ref instanceIDs, ref entityManager);
                     }
 
                     chunk.SetComponentEnabledForAll(ref simulationEventType, true);
@@ -316,7 +316,7 @@ public partial struct EffectSystem : ISystem
                     while (iterator.NextEntityIndex(out int i))
                     {
                         entity = entityArray[i];
-                        __Destroy(false, entity, children, ref instanceIDs, ref entityManager);
+                        DestroyEntity(false, entity, children, ref instanceIDs, ref entityManager);
                     }
                 }
             }
@@ -1550,7 +1550,7 @@ public partial struct EffectSystem : ISystem
                         
                         entityManager.RemoveComponent<PhysicsCollider>(0, entity);
                         
-                        __Destroy(true, entityArray[index], children, ref instanceIDs, ref entityManager);
+                        DestroyEntity(true, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {
@@ -1594,7 +1594,7 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                            __Destroy(false, entityArray[index], children, ref instanceIDs, ref entityManager);
+                            DestroyEntity(false, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
                     
                     if (!isFallToDestroy)
@@ -1609,7 +1609,7 @@ public partial struct EffectSystem : ISystem
                             Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
                             Interlocked.Add(ref levelStatus.gold,
                                 math.abs(targetLevel.goldMultiplier) > math.FLT_MIN_NORMAL
-                                    ? __ComputeDamage(targetLevel.gold, targetLevel.goldMultiplier, ref random)
+                                    ? ComputeDamage(targetLevel.gold, targetLevel.goldMultiplier, ref random)
                                     : targetLevel.gold);
 
                             Interlocked.Increment(ref levelStatus.killCount);
@@ -1642,7 +1642,7 @@ public partial struct EffectSystem : ISystem
                                     instanceDamageParent.entity = entity;
                                 }
 
-                                __Drop(
+                                Drop(
                                     math.RigidTransform(localToWorlds[index].Value),
                                     entity, 
                                     instanceDamage,
@@ -2230,7 +2230,7 @@ public partial struct EffectSystem : ISystem
         state.Dependency = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
     }
     
-    private static int __ComputeDamage(int value, float scale, ref Random random)
+    public static int ComputeDamage(int value, float scale, ref Random random)
     {
         float result = value * scale;
 
@@ -2241,7 +2241,7 @@ public partial struct EffectSystem : ISystem
             result - min > random.NextFloat());
     }
 
-    private static void __Destroy(
+    public static void DestroyEntity(
         bool isRoot, 
         in Entity entity, 
         in BufferLookup<Child> children, 
@@ -2253,7 +2253,7 @@ public partial struct EffectSystem : ISystem
         {
             int childSortKey = sortKey - 1;
             foreach (var child in buffer)
-                __Destroy(false, child.Value, children, ref instanceIDs, ref entityManager, childSortKey);
+                DestroyEntity(false, child.Value, children, ref instanceIDs, ref entityManager, childSortKey);
         }
 
         if (!isRoot)
@@ -2269,7 +2269,7 @@ public partial struct EffectSystem : ISystem
         }
     }
 
-    private static void __Drop(
+    public static void Drop(
         in RigidTransform transform,
         in Entity parent,
         in EffectDamage instanceDamage,
