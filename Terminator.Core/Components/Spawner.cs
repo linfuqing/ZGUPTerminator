@@ -601,7 +601,7 @@ public struct SpawnerDefinition
                 entityManager.AddComponent(1, entity, effectDamage);
             }
 
-            if (attribute.hp != 0 && attribute.hpMax > 0)
+            if (attribute.hpMax > 0)
             {
                 EffectTarget effectTarget;
                 effectTarget.times = 0;
@@ -634,7 +634,7 @@ public struct SpawnerDefinition
             if (targetLevels.TryGetComponent(prefab, out var effectTargetLevel))
             {
                 bool isChanged = false;
-                if (attribute.level != 0 && attribute.levelMax > 0)
+                if (attribute.levelMax > 0)
                 {
                     effectTargetLevel.value =
                         __Round(math.min(attribute.level + attribute.levelBuff * times, attribute.levelMax),
@@ -643,7 +643,7 @@ public struct SpawnerDefinition
                     isChanged = true;
                 }
 
-                if (attribute.exp != 0 && attribute.expMax > 0)
+                if (attribute.expMax > 0)
                 {
                     effectTargetLevel.exp =
                         __Round(math.min(attribute.exp + attribute.expBuff * times, attribute.expMax), ref random);
@@ -651,7 +651,7 @@ public struct SpawnerDefinition
                     isChanged = true;
                 }
 
-                if (attribute.gold != 0 && attribute.goldMax > 0)
+                if (attribute.goldMax > 0)
                 {
                     effectTargetLevel.gold =
                         __Round(math.min(attribute.gold + attribute.goldBuff * times, attribute.goldMax), ref random);
