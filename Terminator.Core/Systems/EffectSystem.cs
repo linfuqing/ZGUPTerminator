@@ -774,9 +774,9 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageValue = __ComputeDamage(damage.value, instanceDamage.scale, ref random);
+                            damageValue = ComputeDamage(damage.value, instanceDamage.scale, ref random);
 
-                            damageValueImmunized = __ComputeDamage(damage.valueImmunized, instanceDamage.scale, ref random);
+                            damageValueImmunized = ComputeDamage(damage.valueImmunized, instanceDamage.scale, ref random);
 
                             totalDamageValue += damageValue + damageValueImmunized;
 
@@ -794,7 +794,7 @@ public partial struct EffectSystem : ISystem
 
                             if (characterBody.IsValid)
                             {
-                                dropDamageValue = __ComputeDamage(damage.valueToDrop, instanceDamage.scale, ref random);
+                                dropDamageValue = ComputeDamage(damage.valueToDrop, instanceDamage.scale, ref random);
 
                                 if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
@@ -1022,7 +1022,7 @@ public partial struct EffectSystem : ISystem
                                     }
                                 }
 
-                                __Destroy(false, entity, children, ref instanceIDs, ref entityManager);
+                                DestroyEntity(false, entity, children, ref instanceIDs, ref entityManager);
 
                                 enabledFlags |= EnabledFlags.Destroyed;
                             }
@@ -1642,7 +1642,7 @@ public partial struct EffectSystem : ISystem
                                     instanceDamageParent.entity = entity;
                                 }
 
-                                Drop(
+                                __Drop(
                                     math.RigidTransform(localToWorlds[index].Value),
                                     entity, 
                                     instanceDamage,
@@ -2269,7 +2269,7 @@ public partial struct EffectSystem : ISystem
         }
     }
 
-    public static void Drop(
+    private static void __Drop(
         in RigidTransform transform,
         in Entity parent,
         in EffectDamage instanceDamage,
