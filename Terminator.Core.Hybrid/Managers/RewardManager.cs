@@ -139,7 +139,7 @@ public class RewardManager : MonoBehaviour
         }
         
         if(!result)
-            Debug.LogError("啥也没捡到！");
+            Debug.LogError($"啥也没捡到！{rewards.poolName}");
     }
 
     void Awake()
