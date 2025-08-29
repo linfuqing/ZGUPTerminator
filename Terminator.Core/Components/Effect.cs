@@ -18,7 +18,8 @@ public enum EffectAttributeID
 public enum EffectSpace
 {
     World, 
-    Local
+    Local,
+    Camera
 }
 
 public struct EffectTargetImmunityDefinition

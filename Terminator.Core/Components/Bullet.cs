@@ -1210,7 +1210,7 @@ public struct BulletInstance : IBufferElementData
         }
 
         EffectDamage effectDamage;
-        effectDamage.scale = damageScale;
+        effectDamage.scale = math.abs(damageScale) > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
         effectDamage.bulletLayerMask = layerMask;
         entityManager.AddComponent(1, entity, effectDamage);
 

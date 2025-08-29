@@ -560,7 +560,7 @@ public partial struct EffectSystem : ISystem
         //public float deltaTime;
         public double time;
 
-        public quaternion inverseCameraRotation;
+        public quaternion cameraRotation;
         
         public Random random;
 
@@ -870,6 +870,7 @@ public partial struct EffectSystem : ISystem
                         }
 
                         __Drop(
+                            cameraRotation, 
                             math.RigidTransform(destination.Value),
                             simulationEvent.entity,
                             instanceDamage,
@@ -953,7 +954,7 @@ public partial struct EffectSystem : ISystem
 
                                 entityManager.SetComponent(1, instance,
                                     LocalTransform.FromPositionRotation(destination.Position,
-                                        inverseCameraRotation));
+                                        cameraRotation));
                             }
                         }
                     }
@@ -1037,6 +1038,7 @@ public partial struct EffectSystem : ISystem
 
                     for (int i = 0; i < resultCount; ++i)
                         __Drop(
+                            cameraRotation, 
                             transform,
                             entity,
                             instanceDamage,
@@ -1065,7 +1067,7 @@ public partial struct EffectSystem : ISystem
         //public float deltaTime;
         public double time;
 
-        public quaternion inverseCameraRotation;
+        public quaternion cameraRotation;
 
         [ReadOnly] 
         public BufferLookup<Child> children;
@@ -1148,7 +1150,7 @@ public partial struct EffectSystem : ISystem
             //collect.deltaTime = deltaTime;
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
-            collect.inverseCameraRotation = inverseCameraRotation;
+            collect.cameraRotation = cameraRotation;
             collect.children = children;
             collect.damageParentMap = damageParents;
             collect.physicsColliders = physicsColliders;
@@ -1201,7 +1203,7 @@ public partial struct EffectSystem : ISystem
         
         public double time;
 
-        public quaternion inverseCameraRotation;
+        public quaternion cameraRotation;
 
         public Random random;
         
@@ -1495,7 +1497,7 @@ public partial struct EffectSystem : ISystem
 
                                     entityManager.SetComponent(1, messageReceiver,
                                         LocalTransform.FromPositionRotation(position,
-                                            inverseCameraRotation));
+                                            cameraRotation));
                                 }
                             }
                             else if (index < this.messages.Length)
@@ -1643,6 +1645,7 @@ public partial struct EffectSystem : ISystem
                                 }
 
                                 __Drop(
+                                    cameraRotation,
                                     math.RigidTransform(localToWorlds[index].Value),
                                     entity, 
                                     instanceDamage,
@@ -1679,7 +1682,7 @@ public partial struct EffectSystem : ISystem
         public float deltaTime;
         public double time;
         
-        public quaternion inverseCameraRotation;
+        public quaternion cameraRotation;
         
         public Entity levelStatusEntity;
 
@@ -1763,7 +1766,7 @@ public partial struct EffectSystem : ISystem
             apply.isFallToDestroy = chunk.Has(ref fallToDestroyType);
             apply.deltaTime = deltaTime;
             apply.time = time;
-            apply.inverseCameraRotation = inverseCameraRotation;
+            apply.cameraRotation = cameraRotation;
             apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
             apply.damages = damages;
@@ -2132,14 +2135,14 @@ public partial struct EffectSystem : ISystem
         var damageInstances = __damageInstances.AsParallelWriter();
         var prefabLoader = __prefabLoader.AsParallelWriter();
 
-        quaternion inverseCameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
-            ? math.inverse(mainCameraTransform.value.rot)
+        quaternion cameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
+            ? mainCameraTransform.value.rot
             : quaternion.identity;
         
         CollectEx collect;
         //collect.deltaTime = deltaTime;
         collect.time = time;
-        collect.inverseCameraRotation = inverseCameraRotation;
+        collect.cameraRotation = cameraRotation;
         collect.children = __children;
         collect.damageParents = __damageParents;
         collect.physicsColliders = __physicsColliders;
@@ -2197,7 +2200,7 @@ public partial struct EffectSystem : ISystem
         apply.frameCount = (uint)__frameCount;
         apply.deltaTime = deltaTime;
         apply.time = time;
-        apply.inverseCameraRotation = inverseCameraRotation;
+        apply.cameraRotation = cameraRotation;
         apply.levelStates = __levelStates;
         apply.children = __children;
         apply.damages = __damages;
@@ -2270,6 +2273,7 @@ public partial struct EffectSystem : ISystem
     }
 
     private static void __Drop(
+        in quaternion cameraRotation, 
         in RigidTransform transform,
         in Entity parent,
         in EffectDamage instanceDamage,
@@ -2351,6 +2355,12 @@ public partial struct EffectSystem : ISystem
 
                         damageInstances.Enqueue(damageInstance);
 
+                        break;
+                    case EffectSpace.Camera:
+                        damageInstance.parent = Entity.Null;
+                        damageInstance.transform.rot = cameraRotation;
+                        damageInstance.transform.pos = transform.pos;
+                        damageInstances.Enqueue(damageInstance);
                         break;
                 }
 
