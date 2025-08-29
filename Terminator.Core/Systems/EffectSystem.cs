@@ -2137,7 +2137,7 @@ public partial struct EffectSystem : ISystem
         var prefabLoader = __prefabLoader.AsParallelWriter();
 
         quaternion cameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
-            ? mainCameraTransform.value.rot
+            ? mainCameraTransform.rotation
             : quaternion.identity;
         
         CollectEx collect;

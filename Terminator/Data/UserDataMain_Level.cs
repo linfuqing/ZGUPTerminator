@@ -277,7 +277,7 @@ public partial class UserDataMain
             int level = UserData.level;
             foreach (var sourceTicket in _levelTickets)
             {
-                if(sourceTicket.level < level)
+                if(sourceTicket.level > level)
                     continue;
                 
                 destinationTicket.name = sourceTicket.name;
