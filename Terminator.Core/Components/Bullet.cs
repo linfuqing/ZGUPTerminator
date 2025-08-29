@@ -285,12 +285,15 @@ public struct BulletDefinition
                         physicsColliders.TryGetComponent(prefab, out var physicsCollider) &&
                         physicsCollider.IsValid)
                     {
+                        var rigidTransform = space == BulletTargetSpace.World ? 
+                            math.RigidTransform(math.mul(math.quaternion(transform), targetTransform.rot), targetTransform.pos) : 
+                            status.transform;
                         //var rigidTransform = math.RigidTransform(math.inverse(status.transform.rot), status.transform.pos);
                         if (__Check(
                                 version,
                                 time,
                                 lookAt,
-                                status.transform,
+                                rigidTransform,
                                 physicsCollider.Value,
                                 collisionWorld,
                                 characterBodies,
@@ -306,7 +309,7 @@ public struct BulletDefinition
                                 version,
                                 time,
                                 status.target,
-                                status.transform,
+                                rigidTransform,
                                 physicsCollider.Value,
                                 collisionWorld,
                                 characterBodies,
@@ -317,16 +320,10 @@ public struct BulletDefinition
                         {
                             status.target = Entity.Null;
 
-                            //var filter = physicsCollider.Value.Value.GetCollisionFilter();
-                            //filter.CollidesWith = hitWith;
-
-                            var input = new ColliderDistanceInput(physicsCollider.Value, maxDistance, status.transform);
-                            //input = status.transform.pos;
-                            //input.MaxDistance = maxDistance;
-                            //input.Filter = filter;
+                            var input = new ColliderDistanceInput(physicsCollider.Value, maxDistance, rigidTransform);
 
                             var collector = new Collector(
-                                status.transform,
+                                rigidTransform,
                                 characterBodies,
                                 states,
                                 collisionWorld,
@@ -360,15 +357,8 @@ public struct BulletDefinition
                         }
 
                         float3 distance = status.targetPosition - status.transform.pos;
-                        /*if (space == BulletTargetSpace.Camera)
-                        {
-                            distance = math.project(distance, math.forward(cameraRotation));
-
-                            status.targetPosition = status.transform.pos + distance;
-                        }*/
-
                         status.transform.rot = math.mul(quaternion.LookRotationSafe(distance, up),
-                            /*Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction), */status.transform.rot); //rotation;
+                            /*Math.FromToRotation(math.float3(0.0f, 0.0f, 1.0f), direction), */status.transform.rot);
                         
                         status.cooldown = time + this.cooldown;
                     }
