@@ -1678,7 +1678,6 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
-        public uint frameCount;
         public float deltaTime;
         public double time;
         
@@ -1762,12 +1761,14 @@ public partial struct EffectSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            ulong hash = math.asulong(time);
+
             Apply apply;
             apply.isFallToDestroy = chunk.Has(ref fallToDestroyType);
             apply.deltaTime = deltaTime;
             apply.time = time;
             apply.cameraRotation = cameraRotation;
-            apply.random = Random.CreateFromIndex(frameCount ^ (uint)unfilteredChunkIndex);
+            apply.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             apply.levelStatus = levelStates.HasComponent(levelStatusEntity) ? levelStates.GetRefRW(levelStatusEntity) : default;
             apply.damages = damages;
             apply.damageParentMap = damageParents;
@@ -2197,7 +2198,6 @@ public partial struct EffectSystem : ISystem
         
         ++__frameCount;*/
 
-        apply.frameCount = (uint)__frameCount;
         apply.deltaTime = deltaTime;
         apply.time = time;
         apply.cameraRotation = cameraRotation;

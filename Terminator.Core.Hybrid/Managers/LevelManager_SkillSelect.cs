@@ -266,7 +266,7 @@ public partial class LevelManager
 
                     style.SetAsset(asset, keyIcons);
 
-                    if (!SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
+                    if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
                         oldKeyNames = null;
                     
                     keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames, oldKeyNames);
