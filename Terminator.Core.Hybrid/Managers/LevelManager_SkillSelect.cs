@@ -309,7 +309,7 @@ public partial class LevelManager
                         yield return new WaitForSecondsRealtime(destination.delayTime);
                 }
 
-                if (recommendIndex != -1 && recommendCount != skillKeyCount)
+                if (recommendIndex != -1 && recommendCount == skillKeyCount)
                 {
                     var skillName = skills[recommendIndex].name;
                     style = __skillStyles[skillName];
