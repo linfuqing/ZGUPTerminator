@@ -593,6 +593,15 @@ public partial class UserDataMain
                 __AppendActive(reward.count, ActiveType.Week);
                 
                 return 1;
+            case UserRewardType.Ticket:
+                key = $"{NAME_SPACE_USER_LEVEL_TICKET}{reward.name}";
+                var active = new Active<int>(PlayerPrefs.GetString(key), __Parse);
+                count =
+                    ZG.DateTimeUtility.IsToday(active.seconds) ? active.value : Mathf.Max(active.value, _levelTickets[__GetLevelTicketIndex(reward.name)].capacity);
+                count += reward.count;
+                PlayerPrefs.SetString(key, new Active<int>(count).ToString());
+                
+                return 1;
             default:
                 return 0;
         }
@@ -907,7 +916,7 @@ public partial class UserDataMain
         
         keyPrefix = $"{keyPrefix}{UserData.SEPARATOR}";
 
-        result.spawnerLayerMask = 0;
+        result.spawnerLayerMaskAndTags = default;
         
         int i, j, styleIndex, level, 
             numAttributes = attributes.Count, 
@@ -949,7 +958,7 @@ public partial class UserDataMain
             
             ref var accessory = ref _accessories[accessoryInfo.index];
 
-            result.spawnerLayerMask |= accessory.spawnerLayerMask;
+            result.spawnerLayerMaskAndTags |= accessory.spawnerLayerMaskAndTags;
             
             level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
             if (level > 0)
@@ -1325,7 +1334,7 @@ public partial class UserDataMain
         }
         else
         {
-            result.spawnerLayerMask = 0;
+            result.spawnerLayerMaskAndTags = default;
             
             var skills = new List<IUserData.Skill>();
             var attributes = new List<UserAttributeData>();
@@ -1402,7 +1411,7 @@ public partial class UserDataMain
 
                         ref var accessory = ref _accessories[skillInfo.index];
 
-                        result.spawnerLayerMask |= accessory.spawnerLayerMask.value;
+                        result.spawnerLayerMaskAndTags |= accessory.spawnerLayerMaskAndTags;
 
                         level = 0;
                         int numAccessorySlots = _accessorySlots.Length;

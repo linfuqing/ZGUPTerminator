@@ -253,8 +253,8 @@ public struct SpawnerDefinition
     public struct AreaIndex
     {
         public int value;
-        public int layerMask;
         public int attributeIndex;
+        public LayerMaskAndTags layerMaskAndTags;
     }
 
     public struct LoaderIndex
@@ -276,7 +276,7 @@ public struct SpawnerDefinition
         public int countPerTime;
         public int times;
         public int tryTimesPerArea;
-        public int layerMask;
+        public LayerMaskAndTags layerMaskAndTags;
 
         public BlobArray<LoaderIndex> loaderIndices;
         public BlobArray<AreaIndex> areaIndices;
@@ -289,10 +289,10 @@ public struct SpawnerDefinition
     public BlobArray<Spawner> spawners;
 
     public void Update(
-        int layerMask,
         double time, 
         in float3 playerPosition,
         in Entity entity,
+        in LayerMaskAndTags layerMaskAndTags, 
         in SpawnerTime spawnerTime, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
@@ -319,10 +319,10 @@ public struct SpawnerDefinition
 
             Update(
                 i, 
-                layerMask,
                 time,
                 playerPosition,
                 entity,
+                layerMaskAndTags, 
                 spawnerTime, 
                 collisionWorld,
                 colliders, 
@@ -344,10 +344,10 @@ public struct SpawnerDefinition
     
     public bool Update(
         int index, 
-        int layerMask, 
         double time, 
         in float3 playerPosition, 
         in Entity entity, 
+        in LayerMaskAndTags layerMaskAndTags, 
         in SpawnerTime spawnerTime, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<PhysicsCollider> colliders, 
@@ -365,7 +365,7 @@ public struct SpawnerDefinition
         ref Random random, 
         ref int instanceCount)
     {
-        if ((layerMask & data.layerMask) != data.layerMask)
+        if (!layerMaskAndTags.ContainsTo(data.layerMaskAndTags))
         {
             //status = default;
             
@@ -427,10 +427,10 @@ public struct SpawnerDefinition
                 }
 
                 if (__Apply(
-                        layerMask,
                         currentTime, 
                         playerPosition,
                         prefab,
+                        layerMaskAndTags, 
                         spawnerEntity,
                         collisionWorld,
                         colliders,
@@ -486,10 +486,10 @@ public struct SpawnerDefinition
     }
 
     private bool __Apply(
-        int layerMask, 
         float time, 
         in float3 playerPosition,
         in Entity prefab,
+        in LayerMaskAndTags layerMaskAndTags, 
         in SpawnerEntity spawnerEntity,
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> colliders,
@@ -505,7 +505,7 @@ public struct SpawnerDefinition
         for (i = 0; i < numAreaIndices; ++i)
         {
             ref var temp = ref data.areaIndices[(i + randomOffset) % numAreaIndices];
-            if((layerMask & temp.layerMask) != temp.layerMask)
+            if(!layerMaskAndTags.ContainsTo(temp.layerMaskAndTags))
                 continue;
             
             /*if(temp.startTime > time)
@@ -679,33 +679,33 @@ public struct SpawnerDefinitionData : IComponentData
     public BlobAssetReference<SpawnerDefinition> definition;
 }
 
-public struct SpawnerLayerMaskOverride : IComponentData
+public struct SpawnerLayerMaskAndTagsOverride : IComponentData
 {
-    public int value;
+    public LayerMaskAndTags value;
 }
 
-public struct SpawnerLayerMaskInclude : IComponentData
+public struct SpawnerLayerMaskAndTagsInclude : IComponentData
 {
-    public int value;
+    public LayerMaskAndTags value;
 }
 
-public struct SpawnerLayerMaskExclude : IComponentData
+public struct SpawnerLayerMaskAndTagsExclude : IComponentData
 {
-    public int value;
+    public LayerMaskAndTags value;
 }
 
-public struct SpawnerLayerMask : IComponentData
+public struct SpawnerLayerMaskAndTags : IComponentData
 {
-    public int value;
+    public LayerMaskAndTags value;
 
-    public readonly int Get(
-        in SpawnerLayerMaskOverride overrideValue,
-        in SpawnerLayerMaskInclude includeValue,
-        in SpawnerLayerMaskExclude excludeValue)
+    public readonly LayerMaskAndTags Get(
+        in SpawnerLayerMaskAndTagsOverride overrideValue,
+        in SpawnerLayerMaskAndTagsInclude includeValue,
+        in SpawnerLayerMaskAndTagsExclude excludeValue)
     {
-        int result = overrideValue.value == 0 ? value : overrideValue.value;
-        result |= SpawnerShared.layerMask;
-        result = (result | includeValue.value) & ~excludeValue.value;
+        var result = overrideValue.value.isEmpty ? value : overrideValue.value;
+        result |= SpawnerShared.layerMaskAndTags;
+        result = LayerMaskAndTags.Except((result | includeValue.value), excludeValue.value);
         
         return result;
     }
@@ -769,17 +769,17 @@ public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>, ICompar
 
 public struct SpawnerTrigger : IComponentData
 {
-    public int layerMask;
+    public LayerMaskAndTags layerMaskAndTags;
 }
 
 public static class SpawnerShared
 {
-    private struct LayerMask
+    private struct LayerMaskAndTags
     {
-        private static readonly SharedStatic<int> Value =
-            SharedStatic<int>.GetOrCreate<LayerMask>();
+        private static readonly SharedStatic<global::LayerMaskAndTags> Value =
+            SharedStatic<global::LayerMaskAndTags>.GetOrCreate<LayerMaskAndTags>();
 
-        public static ref int value => ref Value.Data;
+        public static ref global::LayerMaskAndTags value => ref Value.Data;
     }
 
     private struct AttributeScale
@@ -798,7 +798,7 @@ public static class SpawnerShared
         public static ref SpawnerAttribute.Scale value => ref Value.Data;
     }
 
-    public static ref int layerMask => ref LayerMask.value;
+    public static ref global::LayerMaskAndTags layerMaskAndTags => ref LayerMaskAndTags.value;
     
     public static ref SpawnerAttribute.Scale attributeScale => ref AttributeScale.value;
 }

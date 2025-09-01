@@ -101,8 +101,8 @@ public partial class LevelSystemManaged
             var stageResultStates = SystemAPI.GetSingletonBuffer<LevelStageResultStatus>();
             int numDefaultStages = definition.defaultStages.Length;
 
-            SpawnerLayerMaskInclude include = default;
-            SpawnerLayerMaskExclude exclude = default;
+            SpawnerLayerMaskAndTagsInclude include = default;
+            SpawnerLayerMaskAndTagsExclude exclude = default;
             stages.ResizeUninitialized(numDefaultStages);
             stageResultStates.ResizeUninitialized(numDefaultStages);
             for (int i = 0; i < numDefaultStages; ++i)
@@ -112,17 +112,17 @@ public partial class LevelSystemManaged
                 
                 stages.ElementAt(i).value = source.index;
 
-                destination.layerMaskInclude = source.layerMaskInclude;
-                destination.layerMaskExclude = source.layerMaskExclude;
+                destination.layerMaskAndTagsInclude = definition.layerMaskAndTags[source.layerMaskAndTagsIncludeIndex];
+                destination.layerMaskAndTagsExclude = definition.layerMaskAndTags[source.layerMaskAndTagsExcludeIndex];
 
-                include.value |= source.layerMaskInclude;
-                exclude.value |= source.layerMaskExclude;
+                include.value |= destination.layerMaskAndTagsInclude;
+                exclude.value |= destination.layerMaskAndTagsExclude;
             }
             
-            if(SystemAPI.HasSingleton<SpawnerLayerMaskInclude>())
+            if(SystemAPI.HasSingleton<SpawnerLayerMaskAndTagsInclude>())
                 SystemAPI.SetSingleton(include);
             
-            if(SystemAPI.HasSingleton<SpawnerLayerMaskExclude>())
+            if(SystemAPI.HasSingleton<SpawnerLayerMaskAndTagsExclude>())
                 SystemAPI.SetSingleton(exclude);
             
             __stage.Clear(manager, ref definition);

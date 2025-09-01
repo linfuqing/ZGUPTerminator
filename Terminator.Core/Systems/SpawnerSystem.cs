@@ -180,31 +180,27 @@ public partial struct SpawnerSystem : ISystem
     {
         public Entity layerMaskEntity;
 
-        public ComponentLookup<SpawnerLayerMaskOverride> layerMasks;
+        public ComponentLookup<SpawnerLayerMaskAndTagsOverride> layerMaskAndTags;
 
         public void Execute()
         {
-            if (!layerMasks.HasComponent(layerMaskEntity))
+            if (!layerMaskAndTags.HasComponent(layerMaskEntity))
                 return;
             
-            layerMasks.GetRefRW(layerMaskEntity).ValueRW.value = 0;
+            layerMaskAndTags.GetRefRW(layerMaskEntity).ValueRW.value = default;
         }
     }
 
     private struct Trigger
     {
-        public RefRW<SpawnerLayerMaskOverride> layerMask;
+        public RefRW<SpawnerLayerMaskAndTagsOverride> layerMaskAndTags;
 
         [ReadOnly]
         public NativeArray<SpawnerTrigger> triggers;
 
         public void Execute(int index)
         {
-            int origin, layerMask = triggers[index].layerMask;
-            do
-            {
-                origin = this.layerMask.ValueRW.value;
-            } while (System.Threading.Interlocked.CompareExchange(ref this.layerMask.ValueRW.value, origin | layerMask, origin) != origin);
+            layerMaskAndTags.ValueRW.value.InterOr(triggers[index].layerMaskAndTags);
         }
     }
 
@@ -214,18 +210,18 @@ public partial struct SpawnerSystem : ISystem
         public Entity layerMaskEntity;
 
         [NativeDisableParallelForRestriction]
-        public ComponentLookup<SpawnerLayerMaskOverride> layerMasks;
+        public ComponentLookup<SpawnerLayerMaskAndTagsOverride> layerMaskAndTags;
 
         [ReadOnly]
         public ComponentTypeHandle<SpawnerTrigger> triggerType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            if (!layerMasks.HasComponent(layerMaskEntity))
+            if (!layerMaskAndTags.HasComponent(layerMaskEntity))
                 return;
             
             Trigger trigger;
-            trigger.layerMask = layerMasks.GetRefRW(layerMaskEntity);
+            trigger.layerMaskAndTags = layerMaskAndTags.GetRefRW(layerMaskEntity);
             trigger.triggers = chunk.GetNativeArray(ref triggerType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -273,13 +269,13 @@ public partial struct SpawnerSystem : ISystem
         public NativeArray<SpawnerDefinitionData> instances;
 
         [ReadOnly]
-        public NativeArray<SpawnerLayerMask> layerMasks;
+        public NativeArray<SpawnerLayerMaskAndTags> layerMaskAndTags;
         [ReadOnly]
-        public NativeArray<SpawnerLayerMaskOverride> layerMaskOverrides;
+        public NativeArray<SpawnerLayerMaskAndTagsOverride> layerMaskAndTagsOverrides;
         [ReadOnly]
-        public NativeArray<SpawnerLayerMaskInclude> layerMaskIncludes;
+        public NativeArray<SpawnerLayerMaskAndTagsInclude> layerMaskAndTagsIncludes;
         [ReadOnly]
-        public NativeArray<SpawnerLayerMaskExclude> layerMaskExcludes;
+        public NativeArray<SpawnerLayerMaskAndTagsExclude> layerMaskAndTagsExcludes;
         [ReadOnly]
         public BufferAccessor<SpawnerPrefab> prefabs;
 
@@ -295,14 +291,14 @@ public partial struct SpawnerSystem : ISystem
             var states = this.states[index];
             var entityCounts = this.entityCounts[index];
 
-            int layerMask = layerMasks[index].Get(layerMaskOverrides[index], layerMaskIncludes[index], layerMaskExcludes[index]);
+            var layerMaskAndTags = this.layerMaskAndTags[index].Get(layerMaskAndTagsOverrides[index], layerMaskAndTagsIncludes[index], layerMaskAndTagsExcludes[index]);
 
             ref var definition = ref instances[index].definition.Value;
             definition.Update(
-                layerMask,
                 time,
                 playerPosition,
                 entityArray[index],
+                layerMaskAndTags, 
                 spawnerTime, 
                 collisionWorld,
                 colliders, 
@@ -362,13 +358,13 @@ public partial struct SpawnerSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<SpawnerDefinitionData> instanceType;
         [ReadOnly]
-        public ComponentTypeHandle<SpawnerLayerMask> layerMaskType;
+        public ComponentTypeHandle<SpawnerLayerMaskAndTags> layerMaskAndTagsType;
         [ReadOnly]
-        public ComponentTypeHandle<SpawnerLayerMaskOverride> layerMaskOverrideType;
+        public ComponentTypeHandle<SpawnerLayerMaskAndTagsOverride> layerMaskAndTagsOverrideType;
         [ReadOnly]
-        public ComponentTypeHandle<SpawnerLayerMaskInclude> layerMaskIncludeType;
+        public ComponentTypeHandle<SpawnerLayerMaskAndTagsInclude> layerMaskAndTagsIncludeType;
         [ReadOnly]
-        public ComponentTypeHandle<SpawnerLayerMaskExclude> layerMaskExcludeType;
+        public ComponentTypeHandle<SpawnerLayerMaskAndTagsExclude> layerMaskAndTagsExcludeType;
         [ReadOnly]
         public BufferTypeHandle<SpawnerPrefab> prefabType;
 
@@ -402,10 +398,10 @@ public partial struct SpawnerSystem : ISystem
             collect.entities = entities;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
-            collect.layerMasks = chunk.GetNativeArray(ref layerMaskType);
-            collect.layerMaskOverrides = chunk.GetNativeArray(ref layerMaskOverrideType);
-            collect.layerMaskIncludes = chunk.GetNativeArray(ref layerMaskIncludeType);
-            collect.layerMaskExcludes = chunk.GetNativeArray(ref layerMaskExcludeType);
+            collect.layerMaskAndTags = chunk.GetNativeArray(ref layerMaskAndTagsType);
+            collect.layerMaskAndTagsOverrides = chunk.GetNativeArray(ref layerMaskAndTagsOverrideType);
+            collect.layerMaskAndTagsIncludes = chunk.GetNativeArray(ref layerMaskAndTagsIncludeType);
+            collect.layerMaskAndTagsExcludes = chunk.GetNativeArray(ref layerMaskAndTagsExcludeType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.entityCounts = chunk.GetBufferAccessor(ref entityCountType);
@@ -430,15 +426,15 @@ public partial struct SpawnerSystem : ISystem
 
     private ComponentLookup<LocalTransform> __localTransforms;
 
-    private ComponentLookup<SpawnerLayerMaskOverride> __layerMasks;
+    private ComponentLookup<SpawnerLayerMaskAndTagsOverride> __layerMaskAndTags;
 
     private EntityTypeHandle __entityType;
 
     private ComponentTypeHandle<SpawnerDefinitionData> __instanceType;
-    private ComponentTypeHandle<SpawnerLayerMask> __layerMaskType;
-    private ComponentTypeHandle<SpawnerLayerMaskOverride> __layerMaskOverrideType;
-    private ComponentTypeHandle<SpawnerLayerMaskInclude> __layerMaskIncludeType;
-    private ComponentTypeHandle<SpawnerLayerMaskExclude> __layerMaskExcludeType;
+    private ComponentTypeHandle<SpawnerLayerMaskAndTags> __layerMaskAndTagsType;
+    private ComponentTypeHandle<SpawnerLayerMaskAndTagsOverride> __layerMaskAndTagsOverrideType;
+    private ComponentTypeHandle<SpawnerLayerMaskAndTagsInclude> __layerMaskAndTagsIncludeType;
+    private ComponentTypeHandle<SpawnerLayerMaskAndTagsExclude> __layerMaskAndTagsExcludeType;
 
     private ComponentTypeHandle<SpawnerTrigger> __triggerType;
 
@@ -460,13 +456,13 @@ public partial struct SpawnerSystem : ISystem
         __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __colliders = state.GetComponentLookup<PhysicsCollider>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
-        __layerMasks = state.GetComponentLookup<SpawnerLayerMaskOverride>();
+        __layerMaskAndTags = state.GetComponentLookup<SpawnerLayerMaskAndTagsOverride>();
         __entityType = state.GetEntityTypeHandle();
         __instanceType = state.GetComponentTypeHandle<SpawnerDefinitionData>(true);
-        __layerMaskType = state.GetComponentTypeHandle<SpawnerLayerMask>(true);
-        __layerMaskOverrideType = state.GetComponentTypeHandle<SpawnerLayerMaskOverride>(true);
-        __layerMaskIncludeType = state.GetComponentTypeHandle<SpawnerLayerMaskInclude>(true);
-        __layerMaskExcludeType = state.GetComponentTypeHandle<SpawnerLayerMaskExclude>(true);
+        __layerMaskAndTagsType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTags>(true);
+        __layerMaskAndTagsOverrideType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTagsOverride>(true);
+        __layerMaskAndTagsIncludeType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTagsInclude>(true);
+        __layerMaskAndTagsExcludeType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTagsExclude>(true);
         __triggerType = state.GetComponentTypeHandle<SpawnerTrigger>(true);
         __prefabType = state.GetBufferTypeHandle<SpawnerPrefab>(true);
         __statusType = state.GetBufferTypeHandle<SpawnerStatus>();
@@ -486,7 +482,7 @@ public partial struct SpawnerSystem : ISystem
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
         state.RequireForUpdate<PhysicsWorldSingleton>();
         state.RequireForUpdate<SpawnerSingleton>();
-        state.RequireForUpdate<SpawnerLayerMask>();
+        state.RequireForUpdate<SpawnerLayerMaskAndTags>();
         state.RequireForUpdate<SpawnerTime>();
         state.RequireForUpdate<ThirdPersonPlayer>();
 
@@ -503,19 +499,19 @@ public partial struct SpawnerSystem : ISystem
     {
         var jobHandle = state.Dependency;
 
-        var layerMaskEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMask>();
-        __layerMasks.Update(ref state);
+        var layerMaskEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMaskAndTags>();
+        __layerMaskAndTags.Update(ref state);
 
         Reset reset;
         reset.layerMaskEntity = layerMaskEntity;
-        reset.layerMasks = __layerMasks;
+        reset.layerMaskAndTags = __layerMaskAndTags;
         var resetJobHandle = reset.ScheduleByRef(jobHandle);
 
         __triggerType.Update(ref state);
 
         TriggerEx trigger;
         trigger.layerMaskEntity = layerMaskEntity;
-        trigger.layerMasks = __layerMasks;
+        trigger.layerMaskAndTags = __layerMaskAndTags;
         trigger.triggerType = __triggerType;
         var triggerJobHandle = trigger.ScheduleParallelByRef(__groupToTrigger, resetJobHandle);
 
@@ -526,10 +522,10 @@ public partial struct SpawnerSystem : ISystem
         __colliders.Update(ref state);
         __localTransforms.Update(ref state);
         __instanceType.Update(ref state);
-        __layerMaskType.Update(ref state);
-        __layerMaskOverrideType.Update(ref state);
-        __layerMaskIncludeType.Update(ref state);
-        __layerMaskExcludeType.Update(ref state);
+        __layerMaskAndTagsType.Update(ref state);
+        __layerMaskAndTagsOverrideType.Update(ref state);
+        __layerMaskAndTagsIncludeType.Update(ref state);
+        __layerMaskAndTagsExcludeType.Update(ref state);
         __entityType.Update(ref state);
         __prefabType.Update(ref state);
         __statusType.Update(ref state);
@@ -552,10 +548,10 @@ public partial struct SpawnerSystem : ISystem
         collect.messageParameters = __messageParameters;
         collect.entityType = __entityType;
         collect.instanceType = __instanceType;
-        collect.layerMaskType = __layerMaskType;
-        collect.layerMaskOverrideType = __layerMaskOverrideType;
-        collect.layerMaskIncludeType = __layerMaskIncludeType;
-        collect.layerMaskExcludeType = __layerMaskExcludeType;
+        collect.layerMaskAndTagsType = __layerMaskAndTagsType;
+        collect.layerMaskAndTagsOverrideType = __layerMaskAndTagsOverrideType;
+        collect.layerMaskAndTagsIncludeType = __layerMaskAndTagsIncludeType;
+        collect.layerMaskAndTagsExcludeType = __layerMaskAndTagsExcludeType;
         collect.prefabType = __prefabType;
         collect.statusType = __statusType;
         collect.entityCountType = __entityCountType;

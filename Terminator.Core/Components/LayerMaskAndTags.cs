@@ -22,11 +22,42 @@ public struct LayerMaskAndTags
 
         if (!tags.IsEmpty)
         {
-            bool isContains;
+            bool isContains = false;
             foreach (var destination in tags)
             {
-                isContains = false;
                 foreach (var source in layerMaskAndTags.tags)
+                {
+                    if (source == destination)
+                    {
+                        isContains = true;
+                        
+                        break;
+                    }
+                }
+
+                if (isContains)
+                    break;
+            }
+
+            if (!isContains)
+                return false;
+        }
+
+        return true;
+    }
+
+    public bool ContainsTo(in LayerMaskAndTags layerMaskAndTags)
+    {
+        if ((layerMaskAndTags.layerMask & layerMask) != layerMaskAndTags.layerMask)
+            return false;
+
+        if (!layerMaskAndTags.tags.IsEmpty)
+        {
+            bool isContains;
+            foreach (var destination in layerMaskAndTags.tags)
+            {
+                isContains = false;
+                foreach (var source in tags)
                 {
                     if (source == destination)
                     {
@@ -44,6 +75,48 @@ public struct LayerMaskAndTags
         return true;
     }
 
+    public void InterOr(in LayerMaskAndTags layerMaskAndTags)
+    {
+        int origin, layerMask = layerMaskAndTags.layerMask;
+        do
+        {
+            origin = this.layerMask;
+        } while (System.Threading.Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
+
+        //TODO
+        foreach (var tag in layerMaskAndTags.tags)
+            tags.Add(tag);
+    }
+    
+    public static LayerMaskAndTags Except(in LayerMaskAndTags x, in LayerMaskAndTags y)
+    {
+        LayerMaskAndTags result;
+        result.layerMask = x.layerMask & ~y.layerMask;
+        result.tags = default;
+        
+        bool isContains;
+        foreach (var tagX in x.tags)
+        {
+            isContains = false;
+            foreach (var tagY in y.tags)
+            {
+                if (tagY == tagX)
+                {
+                    isContains = true;
+                    
+                    break;
+                }
+            }
+            
+            if(isContains)
+                continue;
+            
+            result.tags.Add(tagX);
+        }
+
+        return result;
+    }
+
     public static LayerMaskAndTags operator |(in LayerMaskAndTags x, in LayerMaskAndTags y)
     {
         LayerMaskAndTags result;
@@ -58,6 +131,28 @@ public struct LayerMaskAndTags
 
         return result;
     }
+    
+    public static LayerMaskAndTags operator &(in LayerMaskAndTags x, in LayerMaskAndTags y)
+    {
+        LayerMaskAndTags result;
+        result.layerMask = x.layerMask & y.layerMask;
+        result.tags = default;
+
+        foreach (var tagX in x.tags)
+        {
+            foreach (var tagY in y.tags)
+            {
+                if (tagY == tagX)
+                {
+                    result.tags.Add(tagY);
+                    
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
 }
 
 
@@ -69,9 +164,42 @@ public struct LayerMaskAndTagsAuthoring : IEquatable<LayerMaskAndTagsAuthoring>
 
     public string[] tags;
 
+    public LayerMaskAndTagsAuthoring(LayerMask layerMask, string[] tags)
+    {
+        this.layerMask = layerMask;
+        this.tags = tags;
+    }
+
     public bool Equals(LayerMaskAndTagsAuthoring other)
     {
         return layerMask == other.layerMask && Array.Equals(tags, other.tags);
+    }
+
+    public override int GetHashCode()
+    {
+        return layerMask;
+    }
+
+    public static LayerMaskAndTagsAuthoring operator |(in LayerMaskAndTagsAuthoring x, in LayerMaskAndTagsAuthoring y)
+    {
+        LayerMaskAndTagsAuthoring result;
+        result.layerMask = x.layerMask | y.layerMask;
+        var tags = new System.Collections.Generic.List<string>();
+
+        if (x.tags != null)
+        {
+            foreach (var tag in x.tags)
+                tags.Add(tag);
+        }
+
+        if (y.tags != null)
+        {
+            foreach (var tag in y.tags)
+                tags.Add(tag);
+        }
+
+        result.tags = tags.ToArray();
+        return result;
     }
 
     public static implicit operator LayerMaskAndTags(LayerMaskAndTagsAuthoring data)

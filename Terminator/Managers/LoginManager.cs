@@ -761,7 +761,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         LevelPlayerShared.skillRage = 0;
 
-        SpawnerShared.layerMask = property.value.spawnerLayerMask;
+        SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
 
         LevelShared.spawnerAttributeScales.Clear();
 
@@ -792,7 +792,7 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelPlayerShared.skillRage = property.cache.rage;
 
-        SpawnerShared.layerMask = property.value.spawnerLayerMask;
+        SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
         
         LevelShared.spawnerAttributeScales.Clear();
 

@@ -276,6 +276,15 @@ public class SpawnerAuthoring : MonoBehaviour
             public string attributeName;
             
             public LayerMask layerMask;
+            public string[] tags;
+
+            public LayerMaskAndTagsAuthoring layerMaskAndTags
+            {
+                get
+                {
+                    return new LayerMaskAndTagsAuthoring(layerMask, tags);
+                }
+            }
         }
 
         [Serializable]
@@ -317,6 +326,16 @@ public class SpawnerAuthoring : MonoBehaviour
         [Tooltip("区域标签，不填表示默认区域")]
         public LayerMask layerMask;
 
+        public string[] tags;
+
+        public LayerMaskAndTagsAuthoring layerMaskAndTags
+        {
+            get
+            {
+                return new LayerMaskAndTagsAuthoring(layerMask, tags);
+            }
+        }
+        
         #region CSV
 
         [CSVField]
@@ -358,12 +377,24 @@ public class SpawnerAuthoring : MonoBehaviour
                             area.attributeName = null;
                             
                             area.layerMask.value = int.Parse(parameter.Substring(index + 1));
+
+                            area.tags = null;
                         }
                         else
                         {
                             area.attributeName = parameter.Substring(index + 1, count - index - 1);
                             
-                            area.layerMask.value = int.Parse(parameter.Substring(count + 1));
+                            index =  parameter.IndexOf(":", count + 1);
+                            if (index == -1)
+                            {
+                                area.layerMask.value = int.Parse(parameter.Substring(count + 1));
+                                area.tags = null;
+                            }
+                            else
+                            {
+                                area.layerMask.value = int.Parse(parameter.Substring(count + 1, index - count - 1));
+                                area.tags = parameter.Substring(index + 1).Split(':');
+                            }
                         }
                     }
                 }
@@ -498,6 +529,15 @@ public class SpawnerAuthoring : MonoBehaviour
             }
         }
         
+        [CSVField]
+        public string 标签名
+        {
+            set
+            {
+                tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
+            }
+        }
+        
         #endregion
     }
 
@@ -505,6 +545,9 @@ public class SpawnerAuthoring : MonoBehaviour
     [Tooltip("默认打开的区域标签，触发器生效后该标签被替换")]
     [UnityEngine.Serialization.FormerlySerializedAs("layerMask")]
     internal LayerMask _layerMask;
+
+    [SerializeField] 
+    internal string[] _tags;
 
     //[SerializeField] 
     //[Tooltip("默认打开的关卡标签")]
@@ -652,7 +695,7 @@ public class SpawnerAuthoring : MonoBehaviour
                                     $"Attribute {area.attributeName} of spawner {source.name} can not been found!");
                         }
 
-                        areaIndex.layerMask = area.layerMask.value;
+                        areaIndex.layerMaskAndTags = area.layerMaskAndTags;
                     }
 
                     numPrefabLoaderIndices = source.prefabs == null ? 0 : source.prefabs.Length;
@@ -684,7 +727,7 @@ public class SpawnerAuthoring : MonoBehaviour
                     if (numPrefabLoaderIndices < 1)
                         Debug.LogError($"Spawner {source.name} can not been found!");
 
-                    destination.layerMask = source.layerMask.value;
+                    destination.layerMaskAndTags = source.layerMaskAndTags;
                 }
 
                 instance.definition = builder.CreateBlobAssetReference<SpawnerDefinition>(Allocator.Persistent);
@@ -697,17 +740,17 @@ public class SpawnerAuthoring : MonoBehaviour
             AddComponent<SpawnerStatus>(entity);
             AddComponent<SpawnerEntityCount>(entity);
 
-            SpawnerLayerMask layerMask;
-            layerMask.value = authoring._layerMask.value;
-            AddComponent(entity, layerMask);
+            SpawnerLayerMaskAndTags layerMaskAndTags;
+            layerMaskAndTags.value = new LayerMaskAndTagsAuthoring(authoring._layerMask, authoring._tags);
+            AddComponent(entity, layerMaskAndTags);
             
-            AddComponent<SpawnerLayerMaskOverride>(entity);
+            AddComponent<SpawnerLayerMaskAndTagsOverride>(entity);
 
             //SpawnerLayerMaskInclude layerMaskInclude;
             //layerMaskInclude.value = authoring._layerMaskInclude.value;
-            AddComponent<SpawnerLayerMaskInclude>(entity);
+            AddComponent<SpawnerLayerMaskAndTagsInclude>(entity);
             
-            AddComponent<SpawnerLayerMaskExclude>(entity);
+            AddComponent<SpawnerLayerMaskAndTagsExclude>(entity);
         }
     }
 

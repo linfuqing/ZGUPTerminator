@@ -283,7 +283,7 @@ public partial class UserDataMain
                 destinationTicket.name = sourceTicket.name;
                 active = new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_LEVEL_TICKET}{sourceTicket.name}"), __Parse);
                 destinationTicket.count =
-                    DateTimeUtility.IsToday(active.seconds) ? active.value : sourceTicket.capacity;
+                    DateTimeUtility.IsToday(active.seconds) ? active.value : Mathf.Max(active.value, sourceTicket.capacity);
 
                 if (tickets == null)
                     tickets = new List<IUserData.LevelTicket>();

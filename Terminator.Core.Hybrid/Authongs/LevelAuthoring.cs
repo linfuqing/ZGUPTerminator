@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
@@ -8,6 +9,7 @@ using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
 #if UNITY_EDITOR
+using log4net.Core;
 using UnityEditor;
 using UnityEditorInternal;
 using ZG;
@@ -87,6 +89,20 @@ public class LevelAuthoring : MonoBehaviour
     {
         public string name;
         public LayerMask layerMask;
+        public string[] tags;
+
+        public LayerMaskAndTagsAuthoring layerMaskAndTags
+        {
+            get => new LayerMaskAndTagsAuthoring(layerMask, tags);
+        }
+    }
+
+    [Serializable]
+    public struct NextStage
+    {
+        public string name;
+
+        public float chance;
     }
     
     [Serializable]
@@ -104,21 +120,82 @@ public class LevelAuthoring : MonoBehaviour
     }
 
     [Serializable]
+    public struct StageOption
+    {
+        public LevelStageOption.Type type;
+
+        public int value;
+
+        public string[] tags;
+
+        public StageOption(string value)
+        {
+            int index = value.IndexOf(':');
+            type = (LevelStageOption.Type)int.Parse(value.Remove(index));
+
+            int count = value.IndexOf(':', index + 1);
+            if (count == -1)
+            {
+                this.value = (int)long.Parse(value.Substring(index + 1));
+
+                this.tags = null;
+            }
+            else
+            {
+                this.value = (int)long.Parse(value.Substring(index + 1, count - index - 1));
+
+                this.tags = value.Substring(count + 1).Split(':');
+            }
+        }
+
+        public LevelStageOption ToAsset(ref Dictionary<LayerMaskAndTagsAuthoring, int> layerMaskAndTags)
+        {
+            LevelStageOption result;
+            result.type = type;
+            
+            switch (type)
+            {
+                case LevelStageOption.Type.SpawnerLayerMask:
+                case LevelStageOption.Type.SpawnerLayerMaskInclude:
+                case LevelStageOption.Type.SpawnerLayerMaskExclude:
+                case LevelStageOption.Type.SpawnerEntityRemaining:
+                    if (layerMaskAndTags == null)
+                        layerMaskAndTags = new Dictionary<LayerMaskAndTagsAuthoring, int>();
+
+                    var authoring = new LayerMaskAndTagsAuthoring(value, tags);
+                    if (!layerMaskAndTags.TryGetValue(authoring, out int index))
+                    {
+                        index = layerMaskAndTags.Count;
+                        layerMaskAndTags[authoring] = index;
+                    }
+
+                    result.value = index;
+                    break;
+                default:
+                    result.value = value;
+                    break;
+            }
+
+            return result;
+        }
+    }
+
+    [Serializable]
     public struct Stage
     {
         public string name;
         
         [Tooltip("完成该阶段执行的结果")]
-        public LevelStageOption[] results;
+        public StageOption[] results;
 
         [Tooltip("阶段所有条件满足后，激活刷怪标签并跳到下一阶段（如有）")]
-        public LevelStageOption[] conditions;
+        public StageOption[] conditions;
 
         [Tooltip("阶段所有条件满足后，阶段状态的继承关系（如有）")]
         public StageConditionInheritance[] conditionInheritances;
         
         [Tooltip("下一阶段，不填则没有")]
-        public string[] nextStageNames;
+        public NextStage[] nextStages;
 
         #region CSV
 
@@ -138,12 +215,31 @@ public class LevelAuthoring : MonoBehaviour
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    nextStageNames = null;
+                    nextStages = null;
                     
                     return;
                 }
-                
-                nextStageNames = value.Split('/');
+
+                string parameter;
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length, index;
+                nextStages = new NextStage[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    index = parameter.IndexOf('*');
+                    ref var nextStage = ref nextStages[i];
+                    if (index == -1)
+                    {
+                        nextStage.name = parameter;
+                        nextStage.chance = 1.0f;
+                    }
+                    else
+                    {
+                        nextStage.name = parameter.Remove(index);
+                        nextStage.chance = float.Parse(parameter.Substring(index + 1));
+                    }
+                }
             }
         }
 
@@ -160,18 +256,11 @@ public class LevelAuthoring : MonoBehaviour
                 }
 
                 var parameters = value.Split('/');
-                int numParameters = parameters.Length, index;
+                int numParameters = parameters.Length, index, count;
 
-                results = new LevelStageOption[numParameters];
+                results = new StageOption[numParameters];
                 for (int i = 0; i < numParameters; ++i)
-                {
-                    ref var result = ref results[i];
-                    ref var parameter = ref parameters[i];
-
-                    index = parameter.IndexOf(':');
-                    result.type = (LevelStageOption.Type)int.Parse(parameter.Remove(index));
-                    result.value = (int)long.Parse(parameter.Substring(index + 1));
-                }
+                    results[i] = new StageOption(parameters[i]);
             }
         }
         
@@ -190,16 +279,9 @@ public class LevelAuthoring : MonoBehaviour
                 var parameters = value.Split('/');
                 int numParameters = parameters.Length, index;
 
-                conditions = new LevelStageOption[numParameters];
+                conditions = new StageOption[numParameters];
                 for (int i = 0; i < numParameters; ++i)
-                {
-                    ref var condition = ref conditions[i];
-                    ref var parameter = ref parameters[i];
-
-                    index = parameter.IndexOf(':');
-                    condition.type = (LevelStageOption.Type)int.Parse(parameter.Remove(index));
-                    condition.value = (int)long.Parse(parameter.Substring(index + 1));
-                }
+                    conditions[i] = new StageOption(parameters[i]);
             }
         }
         
@@ -264,6 +346,12 @@ public class LevelAuthoring : MonoBehaviour
 
                 root.mainStageIndex = authoring._mainStageIndex;
 
+                var layerMaskAndTagsIndices =
+                    new Dictionary<LayerMaskAndTagsAuthoring, int>();
+                layerMaskAndTagsIndices[default] = 0;
+                
+                LayerMaskAndTagsAuthoring layerMaskAndTags;
+                int layerMaskAndTagsIndex;
                 var defaultStage = builder.Allocate(ref root.defaultStages, numDefaultStages);
                 for (i = 0; i < numDefaultStages; ++i)
                 {
@@ -285,13 +373,20 @@ public class LevelAuthoring : MonoBehaviour
                         Debug.LogError(
                             $"The default stage {source.name} can not been found!");
 
-                    destination.layerMaskInclude = source.layerMask.value;
-                    destination.layerMaskExclude = 0;
+                    layerMaskAndTags = source.layerMaskAndTags;
+                    if (!layerMaskAndTagsIndices.TryGetValue(layerMaskAndTags, out layerMaskAndTagsIndex))
+                    {
+                        layerMaskAndTagsIndex = layerMaskAndTagsIndices.Count;
+                        layerMaskAndTagsIndices[layerMaskAndTags] = layerMaskAndTagsIndex;
+                    }
+
+                    destination.layerMaskAndTagsIncludeIndex = layerMaskAndTagsIndex;
+                    destination.layerMaskAndTagsExcludeIndex = 0;
                 }
 
-                int numNextStageNames, numOptions, numConditionInheritances, k;
-                BlobBuilderArray<int> nextStageIndices;
+                int numNextStages, numOptions, numConditionInheritances, k;
                 BlobBuilderArray<LevelStageOption> options;
+                BlobBuilderArray<LevelDefinition.NextStage> nextStages;
                 BlobBuilderArray<LevelDefinition.StageConditionInheritance> conditionInheritances;
                 var stages = builder.Allocate(ref root.stages, numStages);
                 for (i = 0; i < numStages; ++i)
@@ -304,12 +399,12 @@ public class LevelAuthoring : MonoBehaviour
                     numOptions = source.results == null ? 0 : source.results.Length;
                     options = builder.Allocate(ref destination.results, numOptions);
                     for (j = 0; j < numOptions; ++j)
-                        options[j] = source.results[j];
+                        options[j] = source.results[j].ToAsset(ref layerMaskAndTagsIndices);
 
                     numOptions = source.conditions == null ? 0 : source.conditions.Length;
                     options = builder.Allocate(ref destination.conditions, numOptions);
                     for (j = 0; j < numOptions; ++j)
-                        options[j] = source.conditions[j];
+                        options[j] = source.conditions[j].ToAsset(ref layerMaskAndTagsIndices);
                     
                     numConditionInheritances = source.conditionInheritances == null ? 0 : source.conditionInheritances.Length;
                     conditionInheritances = builder.Allocate(ref destination.conditionInheritances, numConditionInheritances);
@@ -327,25 +422,28 @@ public class LevelAuthoring : MonoBehaviour
                         destinationConditionInheritance.scale = sourceConditionInheritance.scale;
                     }
 
-                    numNextStageNames = source.nextStageNames == null ? 0 : source.nextStageNames.Length;
-                    nextStageIndices = builder.Allocate(ref destination.nextStageIndies, numNextStageNames);
-                    for (j = 0; j < numNextStageNames; ++j)
+                    numNextStages = source.nextStages == null ? 0 : source.nextStages.Length;
+                    nextStages = builder.Allocate(ref destination.nextStages, numNextStages);
+                    for (j = 0; j < numNextStages; ++j)
                     {
-                        nextStageIndices[j] = -1;
-                        ref var nextStageName = ref source.nextStageNames[j];
+                        ref var sourceNextStage = ref source.nextStages[j];
+                        ref var destinationNextStage = ref nextStages[j];
+                        destinationNextStage.index = -1;
                         for (k = 0; k < numStages; ++k)
                         {
-                            if (nextStageName == authoring._stages[k].name)
+                            if (sourceNextStage.name == authoring._stages[k].name)
                             {
-                                nextStageIndices[j] = k;
+                                destinationNextStage.index = k;
 
                                 break;
                             }
                         }
 
-                        if (nextStageIndices[j] == -1)
+                        if (destinationNextStage.index == -1)
                             Debug.LogError(
-                                $"The next stage name {nextStageName} of stage {source.name} can not been found!");
+                                $"The next stage name {sourceNextStage.name} of stage {source.name} can not been found!");
+                        
+                        destinationNextStage.chance = sourceNextStage.chance;
                     }
                 }
 
@@ -402,7 +500,7 @@ public class LevelAuthoring : MonoBehaviour
                     Debug.LogError(
                         $"The default stage {source.name} can not been found!");
 
-                stageResultStates.ElementAt(i).layerMaskInclude = source.layerMask.value;
+                stageResultStates.ElementAt(i).layerMaskAndTagsInclude = source.layerMaskAndTags;
             }
             
             AddComponent<LevelStageConditionStatus>(entity);

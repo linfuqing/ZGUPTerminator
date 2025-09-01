@@ -16,11 +16,11 @@ public partial struct LevelSystem : ISystem
         public double time;
 
         [ReadOnly]
-        public RefRO<SpawnerLayerMaskOverride> spawnerLayerMaskOverride;
+        public RefRO<SpawnerLayerMaskAndTagsOverride> spawnerLayerMaskAndTagsOverride;
         
-        public RefRW<SpawnerLayerMaskInclude> spawnerLayerMaskInclude;
+        public RefRW<SpawnerLayerMaskAndTagsInclude> spawnerLayerMaskAndTagsInclude;
 
-        public RefRW<SpawnerLayerMaskExclude> spawnerLayerMaskExclude;
+        public RefRW<SpawnerLayerMaskAndTagsExclude> spawnerLayerMaskAndTagsExclude;
         
         public RefRW<SpawnerTime> spawnerTime;
 
@@ -72,13 +72,13 @@ public partial struct LevelSystem : ISystem
                 numConditionInheritances,
                 stageConditionOffset,
                 stageConditionOffsetTemp, 
-                numNextStageIndices,
+                numNextStages,
                 numResults,
                 i, j, k, l, m;
-            float spawnerTime = (float)(time - this.spawnerTime.ValueRO.value);
+            float chance, randomValue, spawnerTime = (float)(time - this.spawnerTime.ValueRO.value);
             float3 playerPosition = this.playerTransform.ValueRO.Position;
-            SpawnerLayerMaskInclude spawnerLayerMaskInclude;
-            SpawnerLayerMaskExclude spawnerLayerMaskExclude;
+            SpawnerLayerMaskAndTagsInclude spawnerLayerMaskAndTagsInclude;
+            SpawnerLayerMaskAndTagsExclude spawnerLayerMaskAndTagsExclude;
             ref var definition = ref instances[index].definition.Value;
             var status = states[index];
             var prefabs = index < this.prefabs.Length ? this.prefabs[index].AsNativeArray() : default;
@@ -88,14 +88,17 @@ public partial struct LevelSystem : ISystem
                 if (stage.value < 0 || stage.value >= definition.stages.Length)
                     continue;
 
+                chance = 0;
+                randomValue = random.NextFloat();
+                
                 stageConditionOffset = conditionOffset;
 
                 ref var stageDefinition = ref definition.stages[stage.value];
-                numNextStageIndices = stageDefinition.nextStageIndies.Length;
-                for (j = 0; j < numNextStageIndices; ++j)
+                numNextStages = stageDefinition.nextStages.Length;
+                for (j = 0; j < numNextStages; ++j)
                 {
-                    ref var nextStageIndex = ref stageDefinition.nextStageIndies[j];
-                    ref var nextStageDefinition = ref definition.stages[nextStageIndex];
+                    ref var nextStage = ref stageDefinition.nextStages[j];
+                    ref var nextStageDefinition = ref definition.stages[nextStage.index];
                     
                     numConditions = nextStageDefinition.conditions.Length;
                     if (numConditions > 0)
@@ -111,13 +114,14 @@ public partial struct LevelSystem : ISystem
                                     spawnerTime, 
                                     playerPosition,
                                     status,
-                                    spawnerLayerMaskOverride.ValueRO,
+                                    spawnerLayerMaskAndTagsOverride.ValueRO,
                                     spawnerSingleton,
                                     spawners, 
                                     prefabs,
                                     spawnerPrefabs,
                                     spawnerStates, 
                                     spawnerDefinitions, 
+                                    ref definition.layerMaskAndTags, 
                                     ref definition.areas,
                                     ref stageConditionStates.ElementAt(conditionOffset + k)))
                                 break;
@@ -131,11 +135,16 @@ public partial struct LevelSystem : ISystem
                         /*for (k = 0; k < numConditions; ++k)
                             stageConditionStates.ElementAt(conditionOffset - k - 1) = default;*/
                     }
-                    
-                    for (k = j + 1; k < numNextStageIndices; ++k)
+
+                    chance += nextStage.chance;
+
+                    if(chance < randomValue)
+                        continue;
+
+                    for (k = j + 1; k < numNextStages; ++k)
                     {
-                        ref var nextStageIndexTemp = ref stageDefinition.nextStageIndies[k];
-                        numConditions = definition.stages[nextStageIndexTemp].conditions.Length;
+                        ref var nextStageTemp = ref stageDefinition.nextStages[k];
+                        numConditions = definition.stages[nextStageTemp.index].conditions.Length;
                         if (numConditions > 0)
                         {
                             conditionOffset += numConditions;
@@ -152,10 +161,10 @@ public partial struct LevelSystem : ISystem
 
                     numConditions = stageConditionStates.Length;
                     
-                    numResults = nextStageDefinition.nextStageIndies.Length;
+                    numResults = nextStageDefinition.nextStages.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextAndNextStageDefinition = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
+                        ref var nextAndNextStageDefinition = ref definition.stages[nextStageDefinition.nextStages[k].index];
                         conditionCount += nextAndNextStageDefinition.conditions.Length;
                         
                         numConditionInheritances = nextAndNextStageDefinition.conditionInheritances.Length;
@@ -164,9 +173,9 @@ public partial struct LevelSystem : ISystem
                             ref var conditionInheritance = ref nextAndNextStageDefinition.conditionInheritances[l];
 
                             stageConditionOffsetTemp = stageConditionOffset;
-                            for (m = 0; m < numNextStageIndices; ++m)
+                            for (m = 0; m < numNextStages; ++m)
                             {
-                                ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStageIndies[m]];
+                                ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStages[m].index];
                                 if (conditionInheritance.stageName == stageDefinitionTemp.name)
                                     stageConditionStates.Add(
                                         stageConditionStates[conditionInheritance.previousConditionIndex + stageConditionOffsetTemp]);
@@ -205,19 +214,19 @@ public partial struct LevelSystem : ISystem
 
                     conditionCount = numConditions;
 
-                    numResults = nextStageDefinition.nextStageIndies.Length;
+                    numResults = nextStageDefinition.nextStages.Length;
                     for (k = 0; k < numResults; ++k)
                     {
-                        ref var nextAndNextStageDefinition = ref definition.stages[nextStageDefinition.nextStageIndies[k]];
+                        ref var nextAndNextStageDefinition = ref definition.stages[nextStageDefinition.nextStages[k].index];
                         
                         numConditionInheritances = nextAndNextStageDefinition.conditionInheritances.Length;
                         for (l = 0; l < numConditionInheritances; ++l)
                         {
                             ref var conditionInheritance = ref nextAndNextStageDefinition.conditionInheritances[l];
 
-                            for (m = 0; m < numNextStageIndices; ++m)
+                            for (m = 0; m < numNextStages; ++m)
                             {
-                                ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStageIndies[m]];
+                                ref var stageDefinitionTemp = ref definition.stages[stageDefinition.nextStages[m].index];
                                 if (conditionInheritance.stageName != stageDefinitionTemp.name)
                                     continue;
 
@@ -236,7 +245,7 @@ public partial struct LevelSystem : ISystem
                     
                     stageConditionStates.Resize(conditionCount, NativeArrayOptions.UninitializedMemory);
                     
-                    stage.value = nextStageIndex;
+                    stage.value = nextStage.index;
 
                     if (numResults < 1 && i == definition.mainStageIndex)
                         isEndOfStage = true;
@@ -244,15 +253,15 @@ public partial struct LevelSystem : ISystem
                     break;
                 }
                 
-                if(j == numNextStageIndices)
+                if(j == numNextStages)
                     continue;
 
                 numResults = stageDefinition.results.Length;
                 if (numResults > 0)
                 {
                     //ref var stageResultStatus = ref stageResultStates.ElementAt(i);
-                    spawnerLayerMaskInclude.value = 0;//stageResultStatus.layerMaskInclude;
-                    spawnerLayerMaskExclude.value = 0;//stageResultStatus.layerMaskExclude;
+                    spawnerLayerMaskAndTagsInclude.value = default;//stageResultStatus.layerMaskInclude;
+                    spawnerLayerMaskAndTagsExclude.value = default;//stageResultStatus.layerMaskExclude;
 
                     for (j = 0; j < numResults; ++j)
                     {
@@ -260,13 +269,14 @@ public partial struct LevelSystem : ISystem
                             time, 
                             ref spawnerStates, 
                             ref entityManager,
+                            ref definition.layerMaskAndTags,
                             ref definition.areas,
                             ref playerPosition,
                             ref random,
                             ref status,
                             ref this.spawnerTime.ValueRW, 
-                            ref spawnerLayerMaskInclude,
-                            ref spawnerLayerMaskExclude,
+                            ref spawnerLayerMaskAndTagsInclude,
+                            ref spawnerLayerMaskAndTagsExclude,
                             spawnerSingleton,
                             spawners, 
                             prefabs,
@@ -276,8 +286,8 @@ public partial struct LevelSystem : ISystem
                     
                     ref var stageResultStatus = ref stageResultStates.ElementAt(i);
 
-                    stageResultStatus.layerMaskInclude = spawnerLayerMaskInclude.value;
-                    stageResultStatus.layerMaskExclude = spawnerLayerMaskExclude.value;
+                    stageResultStatus.layerMaskAndTagsInclude = spawnerLayerMaskAndTagsInclude.value;
+                    stageResultStatus.layerMaskAndTagsExclude = spawnerLayerMaskAndTagsExclude.value;
 
                     isResultChanged = true;
                 }
@@ -287,18 +297,18 @@ public partial struct LevelSystem : ISystem
             {
                 //this.spawnerTime.ValueRW.value = time - spawnerTime;
                 
-                spawnerLayerMaskInclude.value = 0;
-                spawnerLayerMaskExclude.value = 0;
+                spawnerLayerMaskAndTagsInclude.value = default;
+                spawnerLayerMaskAndTagsExclude.value = default;
                 for (i = 0; i < numStages; ++i)
                 {
                     ref var stageResultStatus = ref stageResultStates.ElementAt(i);
                     
-                    spawnerLayerMaskInclude.value |= stageResultStatus.layerMaskInclude;
-                    spawnerLayerMaskExclude.value |= stageResultStatus.layerMaskExclude;
+                    spawnerLayerMaskAndTagsInclude.value |= stageResultStatus.layerMaskAndTagsInclude;
+                    spawnerLayerMaskAndTagsExclude.value |= stageResultStatus.layerMaskAndTagsExclude;
                 }
                 
-                this.spawnerLayerMaskInclude.ValueRW = spawnerLayerMaskInclude;
-                this.spawnerLayerMaskExclude.ValueRW = spawnerLayerMaskExclude;
+                this.spawnerLayerMaskAndTagsInclude.ValueRW = spawnerLayerMaskAndTagsInclude;
+                this.spawnerLayerMaskAndTagsExclude.ValueRW = spawnerLayerMaskAndTagsExclude;
 
                 playerTransform.ValueRW.Position = playerPosition;
             }
@@ -315,7 +325,7 @@ public partial struct LevelSystem : ISystem
         public float deltaTime;
         public double time;
         
-        public Entity spawnerLayerMaskEntity;
+        public Entity spawnerLayerMaskAndTagsEntity;
         
         public Entity playerEntity;
         
@@ -328,16 +338,16 @@ public partial struct LevelSystem : ISystem
         public ComponentLookup<EffectTarget> effectTargets;
 
         [NativeDisableParallelForRestriction]
-        public ComponentLookup<SpawnerLayerMaskInclude> spawnerLayerMaskIncludes;
+        public ComponentLookup<SpawnerLayerMaskAndTagsInclude> spawnerLayerMaskAndTagsIncludes;
 
         [NativeDisableParallelForRestriction]
-        public ComponentLookup<SpawnerLayerMaskExclude> spawnerLayerMaskExcludes;
+        public ComponentLookup<SpawnerLayerMaskAndTagsExclude> spawnerLayerMaskAndTagsExcludes;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<SpawnerTime> spawnerTimes;
 
         [ReadOnly]
-        public ComponentLookup<SpawnerLayerMaskOverride> spawnerLayerMaskOverrides;
+        public ComponentLookup<SpawnerLayerMaskAndTagsOverride> spawnerLayerMaskAndTagsOverrides;
 
         [ReadOnly]
         public ComponentLookup<SpawnerDefinitionData> spawnerDefinitions;
@@ -370,10 +380,10 @@ public partial struct LevelSystem : ISystem
         {
             if (!localTransforms.HasComponent(playerEntity) || 
                 !effectTargets.HasComponent(playerEntity) || 
-                !spawnerLayerMaskIncludes.HasComponent(spawnerLayerMaskEntity) ||
-                !spawnerLayerMaskExcludes.HasComponent(spawnerLayerMaskEntity) || 
-                !spawnerLayerMaskOverrides.HasComponent(spawnerLayerMaskEntity) ||
-                !spawnerTimes.HasComponent(spawnerLayerMaskEntity))
+                !spawnerLayerMaskAndTagsIncludes.HasComponent(spawnerLayerMaskAndTagsEntity) ||
+                !spawnerLayerMaskAndTagsExcludes.HasComponent(spawnerLayerMaskAndTagsEntity) || 
+                !spawnerLayerMaskAndTagsOverrides.HasComponent(spawnerLayerMaskAndTagsEntity) ||
+                !spawnerTimes.HasComponent(spawnerLayerMaskAndTagsEntity))
                 return;
 
             if (effectTargets[playerEntity].hp < 1)
@@ -384,10 +394,10 @@ public partial struct LevelSystem : ISystem
             Update update;
             update.deltaTime = deltaTime;
             update.time = time;
-            update.spawnerLayerMaskOverride = spawnerLayerMaskOverrides.GetRefRO(spawnerLayerMaskEntity);
-            update.spawnerLayerMaskInclude = spawnerLayerMaskIncludes.GetRefRW(spawnerLayerMaskEntity);
-            update.spawnerLayerMaskExclude = spawnerLayerMaskExcludes.GetRefRW(spawnerLayerMaskEntity);
-            update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskEntity);
+            update.spawnerLayerMaskAndTagsOverride = spawnerLayerMaskAndTagsOverrides.GetRefRO(spawnerLayerMaskAndTagsEntity);
+            update.spawnerLayerMaskAndTagsInclude = spawnerLayerMaskAndTagsIncludes.GetRefRW(spawnerLayerMaskAndTagsEntity);
+            update.spawnerLayerMaskAndTagsExclude = spawnerLayerMaskAndTagsExcludes.GetRefRW(spawnerLayerMaskAndTagsEntity);
+            update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
@@ -423,9 +433,9 @@ public partial struct LevelSystem : ISystem
 
     private ComponentLookup<SpawnerDefinitionData> __spawnerDefinitions;
 
-    private ComponentLookup<SpawnerLayerMaskOverride> __spawnerLayerMaskOverrides;
-    private ComponentLookup<SpawnerLayerMaskInclude> __spawnerLayerMaskIncludes;
-    private ComponentLookup<SpawnerLayerMaskExclude> __spawnerLayerMaskExcludes;
+    private ComponentLookup<SpawnerLayerMaskAndTagsOverride> __spawnerLayerMaskAndTagsOverrides;
+    private ComponentLookup<SpawnerLayerMaskAndTagsInclude> __spawnerLayerMaskAndTagsIncludes;
+    private ComponentLookup<SpawnerLayerMaskAndTagsExclude> __spawnerLayerMaskAndTagsExcludes;
 
     private ComponentLookup<SpawnerTime> __spawnerTimes;
 
@@ -454,9 +464,9 @@ public partial struct LevelSystem : ISystem
         __localTransforms = state.GetComponentLookup<LocalTransform>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __spawnerDefinitions = state.GetComponentLookup<SpawnerDefinitionData>(true);
-        __spawnerLayerMaskOverrides = state.GetComponentLookup<SpawnerLayerMaskOverride>(true);
-        __spawnerLayerMaskIncludes = state.GetComponentLookup<SpawnerLayerMaskInclude>();
-        __spawnerLayerMaskExcludes = state.GetComponentLookup<SpawnerLayerMaskExclude>();
+        __spawnerLayerMaskAndTagsOverrides = state.GetComponentLookup<SpawnerLayerMaskAndTagsOverride>(true);
+        __spawnerLayerMaskAndTagsIncludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsInclude>();
+        __spawnerLayerMaskAndTagsExcludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsExclude>();
         __spawnerTimes = state.GetComponentLookup<SpawnerTime>();
         __spawnerStates = state.GetBufferLookup<SpawnerStatus>();
         __spawnerPrefabs = state.GetBufferLookup<SpawnerPrefab>(true);
@@ -473,7 +483,7 @@ public partial struct LevelSystem : ISystem
                 .WithAllRW<LevelStage>()
                 .Build(ref state);
         
-        state.RequireForUpdate<SpawnerLayerMask>();
+        state.RequireForUpdate<SpawnerLayerMaskAndTags>();
         state.RequireForUpdate<SpawnerSingleton>();
         state.RequireForUpdate<ThirdPersonPlayer>();
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
@@ -493,9 +503,9 @@ public partial struct LevelSystem : ISystem
         __localTransforms.Update(ref state);
         __effectTargets.Update(ref state);
         __spawnerDefinitions.Update(ref state);
-        __spawnerLayerMaskOverrides.Update(ref state);
-        __spawnerLayerMaskIncludes.Update(ref state);
-        __spawnerLayerMaskExcludes.Update(ref state);
+        __spawnerLayerMaskAndTagsOverrides.Update(ref state);
+        __spawnerLayerMaskAndTagsIncludes.Update(ref state);
+        __spawnerLayerMaskAndTagsExcludes.Update(ref state);
         __spawnerTimes.Update(ref state);
         __spawnerPrefabs.Update(ref state);
         __prefabType.Update(ref state);
@@ -517,10 +527,10 @@ public partial struct LevelSystem : ISystem
         update.spawners = __spawners.AsReadOnly(ref state, ref jobHandle);
         update.effectTargets = __effectTargets;
         update.localTransforms = __localTransforms;
-        update.spawnerLayerMaskEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMask>();
-        update.spawnerLayerMaskOverrides = __spawnerLayerMaskOverrides;
-        update.spawnerLayerMaskIncludes = __spawnerLayerMaskIncludes;
-        update.spawnerLayerMaskExcludes = __spawnerLayerMaskExcludes;
+        update.spawnerLayerMaskAndTagsEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMaskAndTags>();
+        update.spawnerLayerMaskAndTagsOverrides = __spawnerLayerMaskAndTagsOverrides;
+        update.spawnerLayerMaskAndTagsIncludes = __spawnerLayerMaskAndTagsIncludes;
+        update.spawnerLayerMaskAndTagsExcludes = __spawnerLayerMaskAndTagsExcludes;
         update.spawnerTimes = __spawnerTimes;
         update.spawnerPrefabs = __spawnerPrefabs;
         update.spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();

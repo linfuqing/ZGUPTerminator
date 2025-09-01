@@ -47,7 +47,8 @@ public struct LevelSpawners
             Entities = entities;
         }
 
-        public bool IsDone(int layerMask, 
+        public bool IsDone(
+            in LayerMaskAndTags layerMaskAndTags, 
             in ComponentLookup<SpawnerDefinitionData> definitions, 
             in BufferLookup<SpawnerStatus> states)
         {
@@ -66,7 +67,7 @@ public struct LevelSpawners
                 for (i = 0; i < numSpawners; ++i)
                 {
                     ref var spawner = ref definition.spawners[i];
-                    if((spawner.layerMask & layerMask) == 0)
+                    if(!spawner.layerMaskAndTags.BelongsTo(layerMaskAndTags))
                         continue;
 
                     if (!statusBuffer.IsCreated && !states.TryGetBuffer(entity, out statusBuffer))
@@ -85,7 +86,7 @@ public struct LevelSpawners
         }
 
         public void Clear(
-            int layerMask, 
+            in LayerMaskAndTags layerMaskAndTags, 
             in ComponentLookup<SpawnerDefinitionData> definitions, 
             ref BufferLookup<SpawnerStatus> states)
         {
@@ -103,7 +104,7 @@ public struct LevelSpawners
                 for (i = 0; i < numSpawners; ++i)
                 {
                     ref var spawner = ref definition.spawners[i];
-                    if((spawner.layerMask & layerMask) == 0)
+                    if(!spawner.layerMaskAndTags.BelongsTo(layerMaskAndTags))
                         continue;
 
                     if (!statusBuffer.IsCreated && !states.TryGetBuffer(entity, out statusBuffer))
@@ -228,13 +229,14 @@ public struct LevelStageOption
         float spawnerTime,
         in float3 playerPosition, 
         in LevelStatus status, 
-        in SpawnerLayerMaskOverride spawnerLayerMaskOverride, 
+        in SpawnerLayerMaskAndTagsOverride spawnerLayerMaskAndTagsOverride, 
         in SpawnerSingleton spawnerSingleton, 
         in LevelSpawners.ReadOnly spawners,
         in NativeArray<LevelPrefab> prefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
         in BufferLookup<SpawnerStatus> spawnerStates, 
         in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions, 
+        ref BlobArray<LayerMaskAndTags> layerMaskAndTags,
         ref BlobArray<LevelDefinition.Area> areas, 
         ref LevelStageConditionStatus condition)
     {
@@ -253,11 +255,11 @@ public struct LevelStageOption
             case Type.SpawnerTime:
                 return value <= spawnerTime;
             case Type.SpawnerLayerMask:
-                return spawners.IsDone(value, spawnerDefinitions, spawnerStates);
+                return spawners.IsDone(layerMaskAndTags[value], spawnerDefinitions, spawnerStates);
             case Type.SpawnerLayerMaskInclude:
-                return (value & spawnerLayerMaskOverride.value) == value;
+                return spawnerLayerMaskAndTagsOverride.value.ContainsTo(layerMaskAndTags[value]);
             case Type.SpawnerLayerMaskExclude:
-                return (value & spawnerLayerMaskOverride.value) == 0;
+                return !layerMaskAndTags[value].BelongsTo(spawnerLayerMaskAndTagsOverride.value);
             case Type.SpawnerEntityRemaining:
                 if (condition.version != spawnerSingleton.version)
                 {
@@ -266,6 +268,7 @@ public struct LevelStageOption
                     var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
                     SpawnerEntity spawnerEntity;
                     SpawnerDefinitionData spawnerDefinition;
+                    var spawnerLayerMaskAndTags = layerMaskAndTags[value];
                     int i;
                     for (i = 0; i < numKeys; ++i)
                     {
@@ -277,7 +280,7 @@ public struct LevelStageOption
                         if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
 
-                        if ((definition.spawners[spawnerEntity.spawnerIndex].layerMask & value) == 0)
+                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.BelongsTo(spawnerLayerMaskAndTags))
                             continue;
 
                         condition.value = (int)Status.Start;
@@ -361,13 +364,14 @@ public struct LevelStageOption
         double time, 
         ref BufferLookup<SpawnerStatus> spawnerStates, 
         ref EntityCommandBuffer.ParallelWriter entityManager, 
+        ref BlobArray<LayerMaskAndTags> layerMaskAndTags,
         ref BlobArray<LevelDefinition.Area> areas, 
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
         ref SpawnerTime spawnerTime,
-        ref SpawnerLayerMaskInclude spawnerLayerMaskInclude, 
-        ref SpawnerLayerMaskExclude spawnerLayerMaskExclude, 
+        ref SpawnerLayerMaskAndTagsInclude spawnerLayerMaskAndTagsInclude, 
+        ref SpawnerLayerMaskAndTagsExclude spawnerLayerMaskAndTagsExclude, 
         in SpawnerSingleton spawnerSingleton, 
         in LevelSpawners.ReadOnly spawners,
         in NativeArray<LevelPrefab> prefabs, 
@@ -392,7 +396,7 @@ public struct LevelStageOption
                 //status.killCount = 0;
                 //status.killBossCount = 0;
                 //status.stage = value;
-                System.Threading.Interlocked.Increment(ref status.stage);
+                System.Threading.Interlocked.Add(ref status.stage, value);
                 break;
             case Type.SpawnerTime:
                 //++spawnerTime.version;
@@ -400,18 +404,19 @@ public struct LevelStageOption
                 spawnerTime.value = time + value * 1000.0f;
                 break;
             case Type.SpawnerLayerMask:
-                spawners.Clear(value, spawnerDefinitions, ref spawnerStates);
+                spawners.Clear(layerMaskAndTags[value], spawnerDefinitions, ref spawnerStates);
                 break;
             case Type.SpawnerLayerMaskInclude:
-                spawnerLayerMaskInclude.value = value;
+                spawnerLayerMaskAndTagsInclude.value = layerMaskAndTags[value];
                 break;
             case Type.SpawnerLayerMaskExclude:
-                spawnerLayerMaskExclude.value = value;
+                spawnerLayerMaskAndTagsExclude.value = layerMaskAndTags[value];
                 break;
             case Type.SpawnerEntityRemaining:
                 {
                     var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
 
+                    var spawnerLayerMaskAndTags = layerMaskAndTags[value];
                     SpawnerEntity spawnerEntity;
                     SpawnerDefinitionData spawnerDefinition;
                     for (int i = 0; i < numKeys; ++i)
@@ -424,7 +429,7 @@ public struct LevelStageOption
                         if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
 
-                        if ((definition.spawners[spawnerEntity.spawnerIndex].layerMask & value) == 0)
+                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.BelongsTo(spawnerLayerMaskAndTags))
                             continue;
 
                         //if (spawnerStates.TryGetBuffer(spawnerEntity.spawner, out spawnerStatusBuffer))
@@ -491,8 +496,15 @@ public struct LevelDefinition
     public struct DefaultStage
     {
         public int index;
-        public int layerMaskInclude;
-        public int layerMaskExclude;
+        public int layerMaskAndTagsIncludeIndex;
+        public int layerMaskAndTagsExcludeIndex;
+    }
+
+    public struct NextStage
+    {
+        public int index;
+
+        public float chance;
     }
     
     public struct StageConditionInheritance
@@ -515,7 +527,7 @@ public struct LevelDefinition
         public BlobArray<LevelStageOption> conditions;
         
         public BlobArray<StageConditionInheritance> conditionInheritances;
-        public BlobArray<int> nextStageIndies;
+        public BlobArray<NextStage> nextStages;
     }
 
     public struct Area
@@ -534,6 +546,7 @@ public struct LevelDefinition
     }
 
     public int mainStageIndex;
+    public BlobArray<LayerMaskAndTags> layerMaskAndTags;
     public BlobArray<DefaultStage> defaultStages;
     public BlobArray<Stage> stages;
     public BlobArray<Area> areas;
@@ -579,8 +592,8 @@ public struct LevelStageConditionStatus : IBufferElementData
 
 public struct LevelStageResultStatus : IBufferElementData
 {
-    public int layerMaskInclude;
-    public int layerMaskExclude;
+    public LayerMaskAndTags layerMaskAndTagsInclude;
+    public LayerMaskAndTags layerMaskAndTagsExclude;
 }
 
 public struct LevelObject : IComponentData

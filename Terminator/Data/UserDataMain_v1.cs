@@ -806,7 +806,7 @@ public partial class UserDataMain
         [Tooltip("技能，可填空")]
         public string skillName;
 
-        public LayerMask spawnerLayerMask;
+        public LayerMaskAndTagsAuthoring spawnerLayerMaskAndTags;
         
         [Tooltip("主技能伤害")]
         public float roleSkillGroupDamage;
@@ -852,7 +852,7 @@ public partial class UserDataMain
         {
             set
             {
-                spawnerLayerMask = value;
+                spawnerLayerMaskAndTags.layerMask = value;
             }
         }
 

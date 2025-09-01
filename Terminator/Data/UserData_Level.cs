@@ -63,7 +63,7 @@ public partial interface IUserData
     public struct Property
     {
         public string name;
-        public int spawnerLayerMask;
+        public LayerMaskAndTagsAuthoring spawnerLayerMaskAndTags;
         public Skill[] skills;
         public UserAttributeData[] attributes;
     }

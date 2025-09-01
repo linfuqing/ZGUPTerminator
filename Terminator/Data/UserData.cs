@@ -15,7 +15,8 @@ public enum UserRewardType
     Energy, 
     EnergyMax, 
     ActiveDay, 
-    ActiveWeek
+    ActiveWeek, 
+    Ticket
 }
 
 public enum UserSkillType
