@@ -64,19 +64,20 @@ public struct LayerMaskAndTags
 [Serializable]
 public struct LayerMaskAndTagsAuthoring : IEquatable<LayerMaskAndTagsAuthoring>
 {
-    public LayerMask value;
+    [UnityEngine.Serialization.FormerlySerializedAs("value")]
+    public LayerMask layerMask;
 
     public string[] tags;
 
     public bool Equals(LayerMaskAndTagsAuthoring other)
     {
-        return value == other.value && Array.Equals(tags, other.tags);
+        return layerMask == other.layerMask && Array.Equals(tags, other.tags);
     }
 
     public static implicit operator LayerMaskAndTags(LayerMaskAndTagsAuthoring data)
     {
         LayerMaskAndTags result;
-        result.layerMask = data.value;
+        result.layerMask = data.layerMask;
         result.tags = default;
         if (data.tags != null)
         {
