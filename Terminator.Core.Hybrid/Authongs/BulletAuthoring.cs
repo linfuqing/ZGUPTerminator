@@ -593,7 +593,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
-                layerMaskAndTags.value = value;
+                layerMaskAndTags.layerMask = value;
             }
         }
 
