@@ -458,6 +458,10 @@ public class LevelAuthoring : MonoBehaviour
                     destination.aabb.Extents = math.float3(source.width * 0.5f, source.height * 0.5f, source.length * 0.5f);
                 }
 
+                var layerMaskAndTagsArray = builder.Allocate(ref root.layerMaskAndTags, layerMaskAndTagsIndices.Count);
+                foreach (var pair in layerMaskAndTagsIndices)
+                    layerMaskAndTagsArray[pair.Value] = pair.Key;
+
                 instance.definition = builder.CreateBlobAssetReference<LevelDefinition>(Allocator.Persistent);
             }
 
