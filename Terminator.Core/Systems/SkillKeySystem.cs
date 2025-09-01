@@ -16,24 +16,24 @@ public partial struct SkillKeySystem : ISystem
         [ReadOnly] 
         public ComponentTypeHandle<SkillKeyDefinitionData> instanceType;
 
-        public ComponentTypeHandle<BulletLayerMask> bulletLayerMaskType;
+        public ComponentTypeHandle<BulletLayerMaskAndTags> bulletLayerMaskAndTagsType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             var skillActiveIndices = chunk.GetBufferAccessor(ref skillActiveIndexType);
             var instances = chunk.GetNativeArray(ref instanceType);
-            var bulletLayerMasks = chunk.GetNativeArray(ref bulletLayerMaskType);
-            BulletLayerMask bulletLayerMask;
+            var bulletLayerMaskAndTagsArray = chunk.GetNativeArray(ref bulletLayerMaskAndTagsType);
+            BulletLayerMaskAndTags bulletLayerMaskAndTags;
             UnsafeHashMap<int, int> counts = default;
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
-                bulletLayerMask = bulletLayerMasks[i];
+                bulletLayerMaskAndTags = bulletLayerMaskAndTagsArray[i];
                 
-                bulletLayerMask.tags = instances[i].definition.Value
+                bulletLayerMaskAndTags.value.tags = instances[i].definition.Value
                     .GetBulletTags(skillActiveIndices[i].AsNativeArray(), ref counts);
 
-                bulletLayerMasks[i] = bulletLayerMask;
+                bulletLayerMaskAndTagsArray[i] = bulletLayerMaskAndTags;
             }
 
             if (counts.IsCreated)
@@ -45,7 +45,7 @@ public partial struct SkillKeySystem : ISystem
 
     private ComponentTypeHandle<SkillKeyDefinitionData> __instanceType;
 
-    private ComponentTypeHandle<BulletLayerMask> __bulletLayerMaskType;
+    private ComponentTypeHandle<BulletLayerMaskAndTags> __bulletLayerMaskAndTagsType;
 
     private EntityQuery __group;
 
@@ -54,12 +54,12 @@ public partial struct SkillKeySystem : ISystem
     {
         __skillActiveIndexType = state.GetBufferTypeHandle<SkillActiveIndex>(true);
         __instanceType = state.GetComponentTypeHandle<SkillKeyDefinitionData>(true);
-        __bulletLayerMaskType = state.GetComponentTypeHandle<BulletLayerMask>();
+        __bulletLayerMaskAndTagsType = state.GetComponentTypeHandle<BulletLayerMaskAndTags>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
                 .WithAll<SkillActiveIndex, SkillKeyDefinitionData>()
-                .WithAllRW<BulletLayerMask>()
+                .WithAllRW<BulletLayerMaskAndTags>()
                 .Build(ref state);
         
         __group.AddChangedVersionFilter(ComponentType.ReadOnly<SkillActiveIndex>());
@@ -70,12 +70,12 @@ public partial struct SkillKeySystem : ISystem
     {
         __skillActiveIndexType.Update(ref state);
         __instanceType.Update(ref state);
-        __bulletLayerMaskType.Update(ref state);
+        __bulletLayerMaskAndTagsType.Update(ref state);
         
         Rebuild rebuild;
         rebuild.skillActiveIndexType = __skillActiveIndexType;
         rebuild.instanceType = __instanceType;
-        rebuild.bulletLayerMaskType = __bulletLayerMaskType;
+        rebuild.bulletLayerMaskAndTagsType = __bulletLayerMaskAndTagsType;
 
         state.Dependency = rebuild.ScheduleParallelByRef(__group, state.Dependency);
     }

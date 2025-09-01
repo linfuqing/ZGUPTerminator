@@ -15,33 +15,6 @@ using ZG;
 public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 {
     [Serializable]
-    public struct LayerMaskData : IEquatable<LayerMaskData>
-    {
-        public LayerMask value;
-
-        public string[] tags;
-
-        public bool Equals(LayerMaskData other)
-        {
-            return value == other.value && Array.Equals(tags, other.tags);
-        }
-
-        public static implicit operator BulletLayerMask(LayerMaskData data)
-        {
-            BulletLayerMask result;
-            result.value = data.value;
-            result.tags = default;
-            if (data.tags != null)
-            {
-                foreach (var tag in data.tags)
-                    result.tags.Add(tag);
-            }
-
-            return result;
-        }
-    }
-
-    [Serializable]
     public struct MessageData
     {
         public string name;
@@ -397,8 +370,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public BulletDirection direction;
         public BulletFollowTarget followTarget;
         
-        [Tooltip("子弹标签，用技能开关")]
-        public LayerMaskData layerMask;
+        [Tooltip("子弹标签，用技能开关"), UnityEngine.Serialization.FormerlySerializedAs("layerMask")]
+        public LayerMaskAndTagsAuthoring layerMaskAndTags;
 
         public string[] targetNames;
         public string[] messageNames;
@@ -420,7 +393,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
-                layerMask.tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
+                layerMaskAndTags.tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
         }
 
@@ -620,7 +593,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
-                layerMask.value = value;
+                layerMaskAndTags.value = value;
             }
         }
 
@@ -923,7 +896,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.targetLocation = source.targetLocation;
                     destination.direction = source.direction;
                     destination.followTarget = source.followTarget;
-                    destination.layerMask = source.layerMask;
+                    destination.layerMaskAndTags = source.layerMaskAndTags;
                 }
                 
                 var standTimes = builder.Allocate(ref root.standTimes, standTimeIndices.Count);
@@ -941,7 +914,10 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             damageScale.value = authoring._damageScale;
             AddComponent(entity, damageScale);*/
 
-            AddComponent(entity, (BulletLayerMask)authoring._layerMask);
+            BulletLayerMaskAndTags bulletLayerMaskAndTags;
+            bulletLayerMaskAndTags.value = authoring._layerMaskAndTags;
+
+            AddComponent(entity, bulletLayerMaskAndTags);
             
             //AddComponent<BulletTag>(entity);
             
@@ -989,8 +965,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     [SerializeField] 
     internal float _maxAirSpeed = 0.1f;
     
-    [SerializeField]
-    internal LayerMaskData _layerMask;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_layerMask")]
+    internal LayerMaskAndTagsAuthoring _layerMaskAndTags;
 
     //[SerializeField] 
     //internal float _damageScale = 1.0f;

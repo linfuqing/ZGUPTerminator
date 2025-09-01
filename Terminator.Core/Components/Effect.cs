@@ -53,7 +53,7 @@ public struct EffectDefinition
         public int buffIndex;
         public float chance;
         public float damageScale;
-        public BulletLayerMask bulletLayerMask;
+        public LayerMaskAndTags layerMaskAndTags;
     }
     
     public struct Damage
@@ -76,7 +76,7 @@ public struct EffectDefinition
 
         public float delayDestroyTime;
         
-        public BulletLayerMask bulletLayerMask;
+        public LayerMaskAndTags layerMaskAndTags;
         
         public BlobArray<int> messageIndices;
         
@@ -150,7 +150,7 @@ public struct EffectDamage : IComponentData
 {
     public float scale;
 
-    public BulletLayerMask bulletLayerMask;
+    public LayerMaskAndTags layerMaskAndTags;
 }
 
 public struct EffectDamageStatistic : IBufferElementData

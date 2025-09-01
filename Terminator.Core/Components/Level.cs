@@ -249,7 +249,7 @@ public struct LevelStageOption
             case Type.Exp:
                 return value <= status.exp;
             case Type.Stage:
-                return value == status.stage;
+                return value <= status.stage;
             case Type.SpawnerTime:
                 return value <= spawnerTime;
             case Type.SpawnerLayerMask:
@@ -391,7 +391,8 @@ public struct LevelStageOption
             case Type.Stage:
                 //status.killCount = 0;
                 //status.killBossCount = 0;
-                status.stage = value;
+                //status.stage = value;
+                System.Threading.Interlocked.Increment(ref status.stage);
                 break;
             case Type.SpawnerTime:
                 //++spawnerTime.version;

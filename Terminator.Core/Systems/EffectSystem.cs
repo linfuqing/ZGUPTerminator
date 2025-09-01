@@ -71,7 +71,7 @@ public partial struct EffectSystem : ISystem
         public RigidTransform transform;
         public Entity entity;
         public Entity parent;
-        public BulletLayerMask bulletLayerMask;
+        public LayerMaskAndTags layerMaskAndTags;
         public EntityPrefabReference entityPrefabReference;
 
         /*public float GetScale()
@@ -115,7 +115,7 @@ public partial struct EffectSystem : ISystem
             }
 
             EffectDamage damage;
-            damage.bulletLayerMask = bulletLayerMask;
+            damage.layerMaskAndTags = layerMaskAndTags;
             damage.scale = scale;
             entityManager.AddComponent(entity, damage);
 
@@ -153,7 +153,7 @@ public partial struct EffectSystem : ISystem
                     buffValue.damageScale += buffScalePerCount;
 
                     EffectDamage damage;
-                    damage.bulletLayerMask = bulletLayerMask;
+                    damage.layerMaskAndTags = layerMaskAndTags;
                     damage.scale = buffValue.damageScale;
                     entityManager.SetComponent(buffValue.entity, damage);
 
@@ -755,7 +755,7 @@ public partial struct EffectSystem : ISystem
                             ref var damageTemp = ref definition.damages[damageIndex];
                             //layerMask = definition.damages[damageIndex].layerMask;
                             if ((damageTemp.layerMask == 0 || (damageTemp.layerMask & belongsTo) != 0) &&
-                                damageTemp.bulletLayerMask.BelongsTo(instanceDamage.bulletLayerMask))
+                                damageTemp.layerMaskAndTags.BelongsTo(instanceDamage.layerMaskAndTags))
                                 break;
                         }
 
@@ -2296,14 +2296,14 @@ public partial struct EffectSystem : ISystem
         DamageInstance damageInstance;
         damageInstance.index = instanceDamageParent.index;
         damageInstance.entity = instanceDamageParent.entity;
-        damageInstance.bulletLayerMask = instanceDamage.bulletLayerMask;
+        damageInstance.layerMaskAndTags = instanceDamage.layerMaskAndTags;
 
         bool isContains = false;
         float chance = random.NextFloat(), totalChance = 0.0f;
         for (int i = 0; i < numPrefabs; ++i)
         {
             ref var prefab = ref prefabsDefinition[i];
-            if(!prefab.bulletLayerMask.BelongsTo(instanceDamage.bulletLayerMask))
+            if(!prefab.layerMaskAndTags.BelongsTo(instanceDamage.layerMaskAndTags))
                 continue;
             
             totalChance += prefab.chance;

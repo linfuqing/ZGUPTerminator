@@ -286,7 +286,7 @@ public struct BulletDefinition
                         physicsCollider.IsValid)
                     {
                         var rigidTransform = space == BulletTargetSpace.World ? 
-                            math.RigidTransform(math.mul(math.quaternion(transform), targetTransform.rot), targetTransform.pos) : 
+                            math.RigidTransform(math.mul(math.quaternion(transform), targetTransform.rot), status.transform.pos) : 
                             status.transform;
                         //var rigidTransform = math.RigidTransform(math.inverse(status.transform.rot), status.transform.pos);
                         if (__Check(
@@ -463,7 +463,7 @@ public struct BulletDefinition
         public BulletDirection direction;
         public BulletFollowTarget followTarget;
         
-        public BulletLayerMask layerMask;
+        public LayerMaskAndTags layerMaskAndTags;
 
         public BlobArray<int> targetIndices;
         public BlobArray<int> standTimeIndices;
@@ -536,7 +536,7 @@ public struct BulletDefinition
         in float4x4 transform,
         in Entity parent,
         in Entity lookAt, 
-        in BulletLayerMask layerMask, 
+        in LayerMaskAndTags layerMaskAndTags, 
         in LevelStatus levelStatus,
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsCollider> physicsColliders,
@@ -556,7 +556,7 @@ public struct BulletDefinition
 
         ref var data = ref bullets[index];
 
-        bool result = (data.location == 0 || (data.location & location) != 0) && data.layerMask.BelongsTo(layerMask);
+        bool result = (data.location == 0 || (data.location & location) != 0) && data.layerMaskAndTags.BelongsTo(layerMaskAndTags);
         
         int targetStatusIndex = -1;
         if (result)
@@ -775,7 +775,7 @@ public struct BulletDefinition
 
         BulletInstance instance;
         instance.index = index;
-        instance.layerMask = layerMask;
+        instance.layerMaskAndTags = layerMaskAndTags;
         instance.damageScale = damageScale * (data.damageIndex == -1 ? 1.0f : damages[data.damageIndex].GetScale(levelStatus));
         instance.time = cooldown + data.delayTime;
         instance.targetPosition = targetStatus.targetPosition;
@@ -833,7 +833,7 @@ public struct BulletDefinition
         in float4x4 transform,
         in Entity entity,
         in Entity lookAt, 
-        in BulletLayerMask layerMask, 
+        in LayerMaskAndTags layerMaskAndTags, 
         in LevelStatus levelStatus,
         in CollisionWorld collisionWorld,
         in ComponentLookup<Parent> parents,
@@ -896,7 +896,7 @@ public struct BulletDefinition
                 transform,
                 entity, 
                 lookAt, 
-                layerMask, 
+                layerMaskAndTags, 
                 levelStatus, 
                 collisionWorld,
                 physicsColliders,
@@ -976,62 +976,9 @@ public struct BulletDefinitionData : IComponentData
     public BlobAssetReference<BulletDefinition> definition;
 }
 
-public struct BulletLayerMask : IComponentData
+public struct BulletLayerMaskAndTags : IComponentData
 {
-    public int value;
-    public FixedList512Bytes<FixedString32Bytes> tags;
-
-    public static readonly BulletLayerMask AllLayers = new ()
-    {
-        value = -1,
-        tags = default
-    };
-    
-    public bool isEmpty => value == 0 && tags.IsEmpty;
-    
-    public bool BelongsTo(in BulletLayerMask layerMask)
-    {
-        if (value != 0 && (value & layerMask.value) == 0)
-            return false;
-
-        if (!tags.IsEmpty)
-        {
-            bool isContains;
-            foreach (var destination in tags)
-            {
-                isContains = false;
-                foreach (var source in layerMask.tags)
-                {
-                    if (source == destination)
-                    {
-                        isContains = true;
-                        
-                        break;
-                    }
-                }
-
-                if (!isContains)
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-    public static BulletLayerMask operator |(in BulletLayerMask x, in BulletLayerMask y)
-    {
-        BulletLayerMask result;
-        result.value = x.value | y.value;
-        result.tags = default;
-        
-        foreach (var tag in x.tags)
-            result.tags.Add(tag);
-        
-        foreach (var tag in y.tags)
-            result.tags.Add(tag);
-
-        return result;
-    }
+    public LayerMaskAndTags value;
 }
 
 public struct BulletInstance : IBufferElementData
@@ -1044,7 +991,7 @@ public struct BulletInstance : IBufferElementData
     public RigidTransform transform;
     public Entity target;
     public Entity parent;
-    public BulletLayerMask layerMask;
+    public LayerMaskAndTags layerMaskAndTags;
     public EntityPrefabReference entityPrefabReference;
 
     public bool Apply(
@@ -1201,7 +1148,7 @@ public struct BulletInstance : IBufferElementData
 
         EffectDamage effectDamage;
         effectDamage.scale = math.abs(damageScale) > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
-        effectDamage.bulletLayerMask = layerMask;
+        effectDamage.layerMaskAndTags = layerMaskAndTags;
         entityManager.AddComponent(1, entity, effectDamage);
 
         EffectDamageParent damageParent;

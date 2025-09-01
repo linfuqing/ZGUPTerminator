@@ -33,8 +33,8 @@ public partial struct LevelPlayerSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<LevelSkillNameDefinitionData> levelSkillNameDefinitions;
 
-        [ReadOnly] 
-        public ComponentLookup<BulletLayerMask> bulletLayerMasks;
+        //[ReadOnly] 
+        //public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
 
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<Instance> instances;
@@ -197,7 +197,7 @@ public partial struct LevelPlayerSystem : ISystem
             
             EffectDamage effectDamage;
             //if (!bulletLayerMasks.TryGetComponent(player, out effectDamage.bulletLayerMask))
-                effectDamage.bulletLayerMask = default;//BulletLayerMask.AllLayers;
+                effectDamage.layerMaskAndTags = default;//BulletLayerMask.AllLayers;
             
             effectDamage.scale = 1.0f + this.effectDamageScale;
 
@@ -212,7 +212,7 @@ public partial struct LevelPlayerSystem : ISystem
     
     private ComponentLookup<LevelSkillNameDefinitionData> __levelSkillNameDefinitions;
 
-    private ComponentLookup<BulletLayerMask> __bulletLayerMasks;
+    //private ComponentLookup<BulletLayerMaskAndTags> __bulletLayerMaskAndTags;
 
     private ComponentLookup<Instance> __instances;
 
@@ -240,7 +240,7 @@ public partial struct LevelPlayerSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __levelSkillNameDefinitions = state.GetComponentLookup<LevelSkillNameDefinitionData>(true);
-        __bulletLayerMasks = state.GetComponentLookup<BulletLayerMask>(true);
+        //__bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __instances = state.GetComponentLookup<Instance>();
         __skillRages = state.GetComponentLookup<SkillRage>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
@@ -281,7 +281,7 @@ public partial struct LevelPlayerSystem : ISystem
         }
         
         __levelSkillNameDefinitions.Update(ref state);
-        __bulletLayerMasks.Update(ref state);
+        //__bulletLayerMaskAndTags.Update(ref state);
         __instances.Update(ref state);
         __skillRages.Update(ref state);
         __levelSkillGroups.Update(ref state);
@@ -305,7 +305,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.entityArray = entityArray;
         apply.players = players;
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
-        apply.bulletLayerMasks = __bulletLayerMasks;
+        //apply.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         apply.instances = __instances;
         apply.skillRages = __skillRages;
         apply.levelSkillGroups = __levelSkillGroups;

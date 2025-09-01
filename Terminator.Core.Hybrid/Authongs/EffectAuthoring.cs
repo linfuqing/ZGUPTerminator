@@ -62,7 +62,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
         public float damageScale;
 
-        public BulletAuthoring.LayerMaskData bulletLayerMask;
+        [UnityEngine.Serialization.FormerlySerializedAs("bulletLayerMask")]
+        public LayerMaskAndTagsAuthoring layerMaskAndTags;
 
         public GameObject gameObject;
 
@@ -95,7 +96,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
             prefab.chance = chance;
             prefab.damageScale = damageScale;
-            prefab.bulletLayerMask = bulletLayerMask;
+            prefab.layerMaskAndTags = layerMaskAndTags;
         }
     }
     
@@ -124,7 +125,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         public LayerMask messageLayerMask;
 
         [Tooltip("子弹标签来判断这次伤害是否有效")]
-        public BulletAuthoring.LayerMaskData bulletLayerMask;
+        [UnityEngine.Serialization.FormerlySerializedAs("bulletLayerMask")]
+        public LayerMaskAndTagsAuthoring layerMaskAndTags;
 
         [Tooltip("掉落伤害")]
         public int value;
@@ -158,7 +160,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
             return layerMask == other.layerMask &&
                    entityLayerMask == other.entityLayerMask &&
                    messageLayerMask == other.messageLayerMask &&
-                   bulletLayerMask.Equals(other.bulletLayerMask) &&
+                   layerMaskAndTags.Equals(other.layerMaskAndTags) &&
                    value == other.value &&
                    valueImmunized == other.valueImmunized &&
                    valueToDrop == other.valueToDrop &&
@@ -304,7 +306,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.layerMask = source.layerMask;
                     destination.entityLayerMask = source.entityLayerMask.value;
                     destination.messageLayerMask = source.messageLayerMask.value;
-                    destination.bulletLayerMask = source.bulletLayerMask;
+                    destination.layerMaskAndTags = source.layerMaskAndTags;
                     destination.value = source.value;
                     destination.valueImmunized = source.valueImmunized;
                     destination.valueToDrop = source.valueToDrop;

@@ -167,7 +167,7 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<EffectDamage> effectDamages;
 
         [ReadOnly]
-        public ComponentLookup<BulletLayerMask> bulletLayerMasks;
+        public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
 
         [ReadOnly] 
         public NativeArray<Entity> entityArray;
@@ -254,7 +254,7 @@ public partial struct BulletSystem : ISystem
             }
 
             float damageScale;
-            BulletLayerMask layerMask;
+            LayerMaskAndTags layerMaskAndTags;
             if (isFire)
             {
                 if (EffectDamageParent.TryGetComponent(
@@ -266,30 +266,30 @@ public partial struct BulletSystem : ISystem
                 {
                     damageScale = effectDamage.scale;
 
-                    layerMask = effectDamage.bulletLayerMask;
+                    layerMaskAndTags = effectDamage.layerMaskAndTags;
                 }
                 else
                 {
                     damageScale = 1.0f;
                     
-                    layerMask = default;
+                    layerMaskAndTags = default;
                 }
 
                 if (EffectDamageParent.TryGetComponent(
                         entity,
                         effectDamageParents,
-                        bulletLayerMasks,
-                        out var bulletLayerMask,
+                        this.bulletLayerMaskAndTags,
+                        out var bulletLayerMaskAndTags,
                         out _))
-                    layerMask |= bulletLayerMask;
-                else if(layerMask.isEmpty)
-                    layerMask = BulletLayerMask.AllLayers;
+                    layerMaskAndTags |= bulletLayerMaskAndTags.value;
+                else if(layerMaskAndTags.isEmpty)
+                    layerMaskAndTags = LayerMaskAndTags.AllLayers;
             }
             else
             {
                 damageScale = 0.0f;
                 
-                layerMask = default;
+                layerMaskAndTags = default;
             }
 
             var localToWorld = GetLocalToWorld(entity);
@@ -306,7 +306,7 @@ public partial struct BulletSystem : ISystem
                 localToWorld, 
                 entity,
                 index < lookAtTargets.Length ? lookAtTargets[index].entity : Entity.Null, 
-                layerMask,
+                layerMaskAndTags,
                 levelStatus, 
                 collisionWorld, 
                 parents, 
@@ -408,7 +408,7 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
-        public ComponentLookup<BulletLayerMask> bulletLayerMasks;
+        public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
 
         [ReadOnly] 
         public ComponentLookup<LevelStatus> levelStates;
@@ -471,7 +471,7 @@ public partial struct BulletSystem : ISystem
             collect.animationCurveDeltas = animationCurveDeltas;
             collect.effectDamages = effectDamages;
             collect.effectDamageParents = effectDamageParents;
-            collect.bulletLayerMasks = bulletLayerMasks;
+            collect.bulletLayerMaskAndTags = bulletLayerMaskAndTags;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
             collect.definitions = chunk.GetNativeArray(ref definitionType);
@@ -517,7 +517,7 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<EffectDamageParent> __effectDamageParents;
 
-    private ComponentLookup<BulletLayerMask> __bulletLayerMasks;
+    private ComponentLookup<BulletLayerMaskAndTags> __bulletLayerMaskAndTags;
 
     private ComponentLookup<LevelStatus> __levelStates;
 
@@ -565,7 +565,7 @@ public partial struct BulletSystem : ISystem
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
-        __bulletLayerMasks = state.GetComponentLookup<BulletLayerMask>(true);
+        __bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
@@ -620,7 +620,7 @@ public partial struct BulletSystem : ISystem
         __animationCurveDeltas.Update(ref state);
         __effectDamages.Update(ref state);
         __effectDamageParents.Update(ref state);
-        __bulletLayerMasks.Update(ref state);
+        __bulletLayerMaskAndTags.Update(ref state);
         __levelStates.Update(ref state);
         __entityType.Update(ref state);
         __lookAtType.Update(ref state);
@@ -653,7 +653,7 @@ public partial struct BulletSystem : ISystem
         collect.animationCurveDeltas = __animationCurveDeltas;
         collect.effectDamages = __effectDamages;
         collect.effectDamageParents = __effectDamageParents;
-        collect.bulletLayerMasks = __bulletLayerMasks;
+        collect.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         collect.levelStates = __levelStates;
         collect.entityType = __entityType;
         collect.lookAtTargetType = __lookAtType;

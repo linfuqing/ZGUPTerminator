@@ -597,7 +597,7 @@ public struct SpawnerDefinition
             {
                 EffectDamage effectDamage;
                 effectDamage.scale = math.min(attribute.damageScale + attribute.damageScaleBuff * times, attribute.damageScaleMax);
-                effectDamage.bulletLayerMask = BulletLayerMask.AllLayers;
+                effectDamage.layerMaskAndTags = LayerMaskAndTags.AllLayers;
                 entityManager.AddComponent(1, entity, effectDamage);
             }
 
