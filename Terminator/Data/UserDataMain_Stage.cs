@@ -249,16 +249,21 @@ public partial class UserDataMain
             yield break;
         }*/
 
-        int levelIndex = __ToIndex(levelID), userLevel = UserData.level;
-        if (userLevel < levelIndex)
+        int levelIndex = __ToIndex(levelID);
+        var level = _levels[levelIndex];
+        int levelTicketIndex = __GetLevelTicketIndex(level.name);
+        if (-1 == levelTicketIndex)
         {
-            onComplete(default);
-            
-            yield break;
+            int userLevel = UserData.level;
+            if (userLevel < levelIndex)
+            {
+                onComplete(default);
+
+                yield break;
+            }
         }
 
         IUserData.StageCache stageCache;
-        var level = _levels[levelIndex];
         int numStages = __GetStageCount(level);
         if (numStages > stage)
         {

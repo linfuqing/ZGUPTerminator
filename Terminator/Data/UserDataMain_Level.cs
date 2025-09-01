@@ -88,6 +88,20 @@ public partial class UserDataMain
         {
             set => capacity = value;
         }
+
+        public int count
+        {
+            get
+            {
+                var active = new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_LEVEL_TICKET}{name}"), __Parse);
+                return DateTimeUtility.IsToday(active.seconds) ? active.value : Mathf.Max(active.value, capacity);
+            }
+
+            set
+            {
+                PlayerPrefs.SetString($"{NAME_SPACE_USER_LEVEL_TICKET}{name}", new Active<int>(value).ToString());
+            }
+        }
     }
 
     [SerializeField] 
@@ -138,11 +152,24 @@ public partial class UserDataMain
         }
         
         var level = _levels[levelIndex];
-        if (!__ApplyEnergy(level.energy))
+        int levelTicketIndex = __GetLevelTicketIndex(level.name);
+        if (-1 == levelTicketIndex)
         {
-            onComplete(default);
+            if (!__ApplyEnergy(level.energy))
+            {
+                onComplete(default);
 
-            yield break;
+                yield break;
+            }
+        }
+        else
+        {
+            var levelTicket = _levelTickets[levelTicketIndex];
+            int count = levelTicket.count;
+            if (count < 1)
+                yield break;
+
+            levelTicket.count = count - 1;
         }
 
         __SubmitStageFlag();
@@ -273,7 +300,6 @@ public partial class UserDataMain
         {
             UserLevel userLevel;
             IUserData.LevelTicket destinationTicket;
-            Active<int> active;
             int level = UserData.level;
             foreach (var sourceTicket in _levelTickets)
             {
@@ -281,9 +307,7 @@ public partial class UserDataMain
                     continue;
                 
                 destinationTicket.name = sourceTicket.name;
-                active = new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_LEVEL_TICKET}{sourceTicket.name}"), __Parse);
-                destinationTicket.count =
-                    DateTimeUtility.IsToday(active.seconds) ? active.value : Mathf.Max(active.value, sourceTicket.capacity);
+                destinationTicket.count = sourceTicket.count;
 
                 if (tickets == null)
                     tickets = new List<IUserData.LevelTicket>();
@@ -337,7 +361,7 @@ public partial class UserDataMain
         
         return __levelTicketNameToIndices.TryGetValue(name, out int index) ? index : -1;
     }
-    
+
     private UserLevel __ToUserLevel(int levelIndex, ref int stageIndex, ref bool isUnlock)
     {
         ref var level = ref _levels[levelIndex];

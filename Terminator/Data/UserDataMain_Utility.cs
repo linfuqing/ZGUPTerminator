@@ -594,12 +594,9 @@ public partial class UserDataMain
                 
                 return 1;
             case UserRewardType.Ticket:
-                key = $"{NAME_SPACE_USER_LEVEL_TICKET}{reward.name}";
-                var active = new Active<int>(PlayerPrefs.GetString(key), __Parse);
-                count =
-                    ZG.DateTimeUtility.IsToday(active.seconds) ? active.value : Mathf.Max(active.value, _levelTickets[__GetLevelTicketIndex(reward.name)].capacity);
-                count += reward.count;
-                PlayerPrefs.SetString(key, new Active<int>(count).ToString());
+                var levelTicket = _levelTickets[__GetLevelTicketIndex(reward.name)];
+                
+                levelTicket.count += reward.count;
                 
                 return 1;
             default:
