@@ -16,6 +16,22 @@ public partial class UserDataMain
         public string[] skillNames;
     }
 
+    [Serializable]
+    internal struct RoleRank
+    {
+        public string name;
+        
+        public string roleName;
+
+        [Tooltip("升星需要的数量")]
+        public int count;
+
+        /// <summary>
+        /// 升阶之后获得的属性
+        /// </summary>
+        public UserPropertyData property;
+    }
+
     [Header("Roles")]
     [SerializeField] 
     internal string[] _roleDefaults;
@@ -23,8 +39,12 @@ public partial class UserDataMain
     internal Group[] _roleGroups;
     [SerializeField, Tooltip("角色")] 
     internal Role[] _roles;
+    [SerializeField, Tooltip("角色星级")]
+    internal RoleRank[] _roleRanks;
 
+    private const string NAME_SPACE_USER_ROLE_FLAG = "UserRoleFlag";
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
+    private const string NAME_SPACE_USER_ROLE_RANK = "UserRoleRank";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
     
     public IEnumerator QueryRoles(
@@ -97,7 +117,7 @@ public partial class UserDataMain
         result.items = items.ToArray();
 
         int j;
-        if (isCreated && _itemDefaults != null)
+        if (isCreated && _roleDefaults != null)
         {
             UserRewardData reward;
             reward.type = UserRewardType.Role;
@@ -105,7 +125,7 @@ public partial class UserDataMain
             foreach (var roleDefault in _roleDefaults)
             {
                 reward.name = roleDefault;
-                reward.count = 1;
+                reward.count = 0;
 
                 __ApplyReward(reward);
                 
@@ -115,53 +135,16 @@ public partial class UserDataMain
             }
         }
 
-        int roleCount, numRoles = _roles.Length;
+        int numRoles = _roles.Length;
         string skillGroupName;
-        Role role;
         UserRole userRole;
-        var skillNames = new List<string>();
+        List<uint> userRoleGroupIDs = null;
+        List<string> skillNames = null;
         var userRoles = new List<UserRole>();
-        var userRoleGroupIDs = new List<uint>();
         for (i = 0; i < numRoles; ++i)
         {
-            role = _roles[i];
-            key = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
-            roleCount = PlayerPrefs.GetInt(key);
-            if (roleCount < 1)
-                continue;
-            
-            userRole.id = __ToID(i);
-
-            userRole.attributes = __CollectRoleAttributes(role.name, groupName, null, out userRole.skillGroupDamage)?.ToArray();
-
-            userRoleGroupIDs.Clear();
-            for (j = 0; j < numRoleGroups; ++j)
-            {
-                key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}";
-                if (PlayerPrefs.GetString(key) != role.name)
-                    continue;
-
-                userRoleGroupIDs.Add(__ToID(j));
-            }
-
-            userRole.groupIDs = userRoleGroupIDs.ToArray();
-
-            userRole.name = role.name;
-            
-            skillNames.Clear();
-
-            foreach (var skillName in role.skillNames)
-            {
-                skillGroupName = __GetSkillGroupName(skillName);
-                if (string.IsNullOrEmpty(skillGroupName))
-                    skillNames.Add(skillName);
-                else
-                    skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
-            }
-            
-            userRole.skillNames = skillNames.ToArray();
-
-            userRoles.Add(userRole);
+            if(__ToUserRole(groupName, i, out userRole, ref userRoleGroupIDs, ref skillNames))
+                userRoles.Add(userRole);
         }
         
         result.roles = userRoles.ToArray();
@@ -359,50 +342,21 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
-        UserRole result;
-        
-        var role = _roles[__ToIndex(roleID)];
-        var key = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
-        if (PlayerPrefs.GetInt(key) < 1)
+        List<uint> userRoleGroupIDs = null;
+        List<string> skillNames = null;
+        if (__ToUserRole(
+                PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP), 
+                __ToIndex(roleID), 
+                out var userRole, 
+                ref userRoleGroupIDs, 
+                ref skillNames))
         {
             onComplete(default);
             
             yield break;
         }
             
-        result.name = role.name;
-
-        string skillGroupName;
-        var skillNames = new List<string>();
-        foreach (var skillName in role.skillNames)
-        {
-            skillGroupName = __GetSkillGroupName(skillName);
-            if (string.IsNullOrEmpty(skillGroupName))
-                skillNames.Add(skillName);
-            else
-                skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
-        }
-            
-        result.skillNames = skillNames.ToArray();
-
-        result.id = roleID;
-
-        result.attributes = __CollectRoleAttributes(role.name, null, null, out result.skillGroupDamage)?.ToArray();
-
-        int numRoleGroups = _roleGroups.Length;
-        var userRoleGroupIDs = new List<uint>();
-        for (int i = 0; i < numRoleGroups; ++i)
-        {
-            key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[i].name}";
-            if (PlayerPrefs.GetString(key) != role.name)
-                continue;
-
-            userRoleGroupIDs.Add(__ToID(i));
-        }
-
-        result.groupIDs = userRoleGroupIDs.ToArray();
-        
-        onComplete(result);
+        onComplete(userRole);
     }
     
     public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
@@ -493,6 +447,138 @@ public partial class UserDataMain
         PlayerPrefs.SetInt(key, (int)flag);
 
         onComplete(true);
+    }
+    
+    private Dictionary<string, int> __roleGroupNameToIndices;
+    
+    private int __GetRoleGroupIndex(string name)
+    {
+        if (__roleGroupNameToIndices == null)
+        {
+            int numRoleGroups = _roleGroups.Length;
+            __roleGroupNameToIndices = new Dictionary<string, int>(numRoleGroups);
+            for (int i = 0; i < numRoleGroups; ++i)
+                __roleGroupNameToIndices.Add(_roleGroups[i].name, i);
+        }
+
+        return __roleGroupNameToIndices[name];
+    }
+
+    private Dictionary<string, int> __roleToIndices;
+    
+    private int __GetRoleIndex(string name)
+    {
+        if (__roleToIndices == null)
+        {
+            int numRoles = _roles.Length;
+            __roleToIndices = new Dictionary<string, int>(numRoles);
+            for (int i = 0; i < numRoles; ++i)
+                __roleToIndices.Add(_roles[i].name, i);
+        }
+
+        return __roleToIndices[name];
+    }
+    
+    private List<int>[] __roleRankIndices;
+
+    private List<int> __GetRoleRankIndices(int index)
+    {
+        if (__roleRankIndices == null)
+        {
+            int numRoles = _roles.Length;
+            
+            __roleRankIndices = new List<int>[numRoles];
+
+            List<int> roleRankIndices;
+            int roleIndex, numRoleRanks = _roleRanks.Length;
+            for (int i = 0; i < numRoleRanks; ++i)
+            {
+                roleIndex = __GetRoleIndex(_roleRanks[i].roleName);
+                roleRankIndices = __roleRankIndices[roleIndex];
+                if (roleRankIndices == null)
+                {
+                    roleRankIndices = new List<int>();
+
+                    __roleRankIndices[roleIndex] = roleRankIndices;
+                }
+                
+                roleRankIndices.Add(i);
+            }
+        }
+        
+        return __roleRankIndices[index];
+    }
+
+    private bool __ToUserRole(
+        string groupName, 
+        int roleIndex, 
+        out UserRole userRole, 
+        ref List<uint> userRoleGroupIDs, 
+        ref List<string> skillNames)
+    {
+        var role = _roles[roleIndex];
+        userRole.flag = (UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.name}");
+        userRole.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{role.name}");
+        if (userRole.flag == 0 && userRole.count == 0)
+        {
+            userRole = default;
+            
+            return false;
+        }
+
+        userRole.id = __ToID(roleIndex);
+        userRole.name = role.name;
+        userRole.rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
+
+        var roleRankIndices = __GetRoleRankIndices(roleIndex);
+        if (userRole.rank < (roleRankIndices == null ? 0 : roleRankIndices.Count))
+        {
+            var roleRank = _roleRanks[roleRankIndices[userRole.rank]];
+            userRole.rankDesc.name = roleRank.name;
+            userRole.rankDesc.count = roleRank.count;
+            userRole.rankDesc.property = roleRank.property;
+        }
+        else
+            userRole.rankDesc = default;
+            
+        userRole.attributes = __CollectRoleAttributes(role.name, groupName, null, out userRole.skillGroupDamage)?.ToArray();
+
+        if(userRoleGroupIDs == null) 
+            userRoleGroupIDs = new List<uint>();
+        else
+            userRoleGroupIDs.Clear();
+
+        string key;
+        int numRoleGroups = _roleGroups.Length;
+        for (int i = 0; i < numRoleGroups; ++i)
+        {
+            key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[i].name}";
+            if (PlayerPrefs.GetString(key) != role.name)
+                continue;
+
+            userRoleGroupIDs.Add(__ToID(i));
+        }
+
+        userRole.groupIDs = userRoleGroupIDs.ToArray();
+
+        if (skillNames == null)
+            skillNames = new List<string>();
+        else
+            skillNames.Clear();
+
+        string skillGroupName;
+        foreach (var skillName in role.skillNames)
+        {
+            skillGroupName = __GetSkillGroupName(skillName);
+            if (string.IsNullOrEmpty(skillGroupName))
+                skillNames.Add(skillName);
+            else
+                skillNames.AddRange(__GetSkillGroupSkillNames(skillGroupName));
+        }
+            
+        userRole.skillNames = skillNames.ToArray();
+
+        return true;
     }
 }
 

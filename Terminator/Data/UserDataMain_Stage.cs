@@ -518,6 +518,88 @@ public partial class UserDataMain
         
         return false;
     }
+    
+    private Dictionary<string, int> __stageNameToIndices;
+    
+    private int __GetStageIndex(string name)
+    {
+        if (__stageNameToIndices == null)
+        {
+            __stageNameToIndices = new Dictionary<string, int>();
+
+            int numStages = _stages.Length;
+            for(int i = 0; i < numStages; ++i)
+                __stageNameToIndices.Add(_stages[i].name, i);
+        }
+
+        return __stageNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+
+    private UserStageReward.Flag __GetStageRewardFlag(
+        string stageRewardName,
+        string levelName, 
+        int stage, 
+        int conditionValue, 
+        UserStageReward.Condition condition, 
+        out string key)
+    {
+        key = UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_REWARD_FLAG, levelName, stage);
+        key = $"{key}{UserData.SEPARATOR}{stageRewardName}";
+        
+        var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
+        if (flag == 0)
+        {
+            var stageFlag = UserData.GetStageFlag(levelName, stage);
+            switch (condition)
+            {
+                case UserStageReward.Condition.Normal:
+                    if((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
+                case UserStageReward.Condition.Once:
+                    if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
+                case UserStageReward.Condition.NoDamage:
+                    if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
+                case UserStageReward.Condition.KillCount:
+                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                        UserData.GetStageKillCount(levelName, stage) >= conditionValue)
+                        flag |= UserStageReward.Flag.Unlock;
+                    break;
+            }
+        }
+
+        return flag;
+    }
+
+    private bool __ApplyStageRewards(
+        string levelName, 
+        int stage, 
+        in StageReward stageReward, 
+        List<UserReward> outRewards)
+    {
+        var flag = __GetStageRewardFlag(
+            stageReward.name,
+            levelName,
+            stage,
+            stageReward.conditionValue, 
+            stageReward.condition,
+            out var key);
+        if ((flag & UserStageReward.Flag.Unlock) != UserStageReward.Flag.Unlock ||
+            (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
+            return false;
+                    
+        flag |= UserStageReward.Flag.Collected;
+
+        PlayerPrefs.SetInt(key, (int)flag);
+
+        __ApplyRewards(stageReward.values, outRewards);
+
+        return true;
+    }
 }
 
 public partial class UserData

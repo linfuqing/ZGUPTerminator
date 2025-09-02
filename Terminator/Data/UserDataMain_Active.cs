@@ -607,7 +607,7 @@ public partial class UserDataMain
                 int numRoles = 0;
                 foreach (var role in _roles)
                 {
-                    if(PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{role.name}") > 0)
+                    if(PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.name}") != 0)
                         ++numRoles;
                 }
                 

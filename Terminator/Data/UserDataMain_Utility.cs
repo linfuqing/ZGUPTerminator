@@ -37,22 +37,6 @@ public partial class UserDataMain
         return __questNameToIndices.TryGetValue(name, out int index) ? index : -1;
     }
     
-    private Dictionary<string, int> __stageNameToIndices;
-    
-    private int __GetStageIndex(string name)
-    {
-        if (__stageNameToIndices == null)
-        {
-            __stageNameToIndices = new Dictionary<string, int>();
-
-            int numStages = _stages.Length;
-            for(int i = 0; i < numStages; ++i)
-                __stageNameToIndices.Add(_stages[i].name, i);
-        }
-
-        return __stageNameToIndices.TryGetValue(name, out int index) ? index : -1;
-    }
-
     private Dictionary<string, int> __purchasePoolNameToIndices;
     
     private int __GetPurchasePoolIndex(string name)
@@ -160,308 +144,6 @@ public partial class UserDataMain
         return __cardLevelIndices[index];
     }
 
-    
-    private Dictionary<string, int> __itemNameToIndices;
-
-    private int __GetItemIndex(string name)
-    {
-        if (__itemNameToIndices == null)
-        {
-            int numItems = _items.Length;
-            __itemNameToIndices = new Dictionary<string, int>(numItems);
-            for (int i = 0; i < numItems; ++i)
-                __itemNameToIndices.Add(_items[i].name, i);
-        }
-
-        return __itemNameToIndices[name];
-    }
-
-    private Dictionary<string, int> __roleGroupNameToIndices;
-    
-    private int __GetRoleGroupIndex(string name)
-    {
-        if (__roleGroupNameToIndices == null)
-        {
-            int numRoleGroups = _roleGroups.Length;
-            __roleGroupNameToIndices = new Dictionary<string, int>(numRoleGroups);
-            for (int i = 0; i < numRoleGroups; ++i)
-                __roleGroupNameToIndices.Add(_roleGroups[i].name, i);
-        }
-
-        return __roleGroupNameToIndices[name];
-    }
-
-    
-    private Dictionary<string, int> __roleToIndices;
-    
-    private int __GetRoleIndex(string name)
-    {
-        if (__roleToIndices == null)
-        {
-            int numRoles = _roles.Length;
-            __roleToIndices = new Dictionary<string, int>(numRoles);
-            for (int i = 0; i < numRoles; ++i)
-                __roleToIndices.Add(_roles[i].name, i);
-        }
-
-        return __roleToIndices[name];
-    }
-
-    private Dictionary<string, int> __accessoryNameToIndices;
-
-    private int __GetAccessoryIndex(string name)
-    {
-        if (__accessoryNameToIndices == null)
-        {
-            int numAccessories = _accessories.Length;
-            __accessoryNameToIndices = new Dictionary<string, int>(numAccessories);
-            for (int i = 0; i < numAccessories; ++i)
-                __accessoryNameToIndices.Add(_accessories[i].name, i);
-        }
-
-        return __accessoryNameToIndices[name];
-    }
-    
-    private Dictionary<string, int> __accessoryStyleNameToIndices;
-    
-    private int __GetAccessoryStyleIndex(string name)
-    {
-        if (__accessoryStyleNameToIndices == null)
-        {
-            int numAccessoryStyles = _accessoryStyles.Length;
-            __accessoryStyleNameToIndices = new Dictionary<string, int>(numAccessoryStyles);
-            for (int i = 0; i < numAccessoryStyles; ++i)
-                __accessoryStyleNameToIndices.Add(_accessoryStyles[i].name, i);
-        }
-
-        return __accessoryStyleNameToIndices[name];
-    }
-    
-    private List<int>[] __accessoryStageIndices;
-
-    private List<int> __GetAccessoryStageIndices(int index)
-    {
-        if (__accessoryStageIndices == null)
-        {
-            int numAccessories = _accessories.Length;
-            
-            __accessoryStageIndices = new List<int>[numAccessories];
-
-            List<int> accessoryStageIndices;
-            int accessoryIndex, numAccessoryStages = _accessoryStages.Length;
-            for (int i = 0; i < numAccessoryStages; ++i)
-            {
-                accessoryIndex = __GetAccessoryIndex(_accessoryStages[i].accessoryName);
-                accessoryStageIndices = __accessoryStageIndices[accessoryIndex];
-                if (accessoryStageIndices == null)
-                {
-                    accessoryStageIndices = new List<int>();
-
-                    __accessoryStageIndices[accessoryIndex] = accessoryStageIndices;
-                }
-                
-                accessoryStageIndices.Add(i);
-            }
-        }
-        
-        return __accessoryStageIndices[index];
-    }
-
-    
-    private List<int>[] __accessoryStyleLevelIndices;
-    
-    private List<int> __GetAccessoryStyleLevelIndices(int styleIndex)
-    {
-        if (__accessoryStyleLevelIndices == null)
-        {
-            int numAccessoryStyles = _accessoryStyles.Length;
-            __accessoryStyleLevelIndices = new List<int>[numAccessoryStyles];
-            
-            int numAccessoryLevels = _accessoryLevels.Length, accessoryStyleIndex;
-            List<int> accessoryLevelIndices;
-            for (int i = 0; i < numAccessoryLevels; ++i)
-            {
-                accessoryStyleIndex = __GetAccessoryStyleIndex(_accessoryLevels[i].styleName);
-                
-                accessoryLevelIndices = __accessoryStyleLevelIndices[accessoryStyleIndex];
-                if (accessoryLevelIndices == null)
-                {
-                    accessoryLevelIndices = new List<int>();
-                    
-                    __accessoryStyleLevelIndices[accessoryStyleIndex] = accessoryLevelIndices;
-                }
-                
-                accessoryLevelIndices.Add(i);
-            }
-        }
-
-        return __accessoryStyleLevelIndices[styleIndex];
-    }
-    
-    private struct AccessoryInfo
-    {
-        public int index;
-        public int stage;
-    }
-    
-    private Dictionary<uint, AccessoryInfo> __accessoryIDToInfos;
-
-    private bool __TryGetAccessory(uint id, out AccessoryInfo info)
-    {
-        if (__accessoryIDToInfos == null)
-        {
-            __accessoryIDToInfos = new Dictionary<uint, AccessoryInfo>();
-
-            int i,
-                j,
-                numAccessoryStages,
-                numAccessories = _accessories.Length;
-            AccessoryInfo accessoryInfo;
-            string name, key;
-            string[] ids;
-            List<int> accessoryStageIndices;
-            for (i = 0; i < numAccessories; ++i)
-            {
-                name = _accessories[i].name;
-                
-                accessoryInfo.index = i;
-
-                accessoryStageIndices = __GetAccessoryStageIndices(i);
-                numAccessoryStages = accessoryStageIndices.Count;
-                for (j = 0; j <= numAccessoryStages; ++j)
-                {
-                    accessoryInfo.stage = j;
-                    
-                    key =
-                        $"{NAME_SPACE_USER_ACCESSORY_IDS}{name}{UserData.SEPARATOR}{j}";
-                    key = PlayerPrefs.GetString(key);
-                    ids = string.IsNullOrEmpty(key) ? null : key.Split(UserData.SEPARATOR);
-                    if (ids == null || ids.Length < 1)
-                        continue;
-
-                    foreach (var idString in ids)
-                        __accessoryIDToInfos.Add(uint.Parse(idString), accessoryInfo);
-                }
-            }
-        }
-
-        return __accessoryIDToInfos.TryGetValue(id, out info);
-    }
-
-    private bool __DeleteAccessory(uint id)
-    {
-        if(!__TryGetAccessory(id, out AccessoryInfo info))
-            return false;
-
-        __accessoryIDToInfos.Remove(id);
-
-        string accessoryName = _accessories[info.index].name, 
-            key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{info.stage}", 
-            idsString = PlayerPrefs.GetString(key);
-
-        if (string.IsNullOrEmpty(idsString))
-            return false;
-        
-        var ids = new HashSet<string>(idsString.Split(UserData.SEPARATOR));
-        if (!ids.Remove(id.ToString()))
-            return false;
-
-        int numIDs = ids.Count;
-        if (numIDs > 0)
-        {
-            idsString = string.Join(UserData.SEPARATOR, ids);
-            PlayerPrefs.SetString(key, idsString);
-        }
-        else
-            PlayerPrefs.DeleteKey(key);
-
-        return true;
-    }
-
-    private void __CreateAccessory(uint id, int index, int stage)
-    {
-        string accessoryName = _accessories[index].name, 
-            key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{stage}", 
-            idsString = PlayerPrefs.GetString(key);
-        
-        idsString = string.IsNullOrEmpty(idsString) ? id.ToString() : $"{idsString}{UserData.SEPARATOR}{id}";
-        PlayerPrefs.SetString(key, idsString);
-
-        if (__accessoryIDToInfos != null)
-        {
-            AccessoryInfo accessoryInfo;
-            accessoryInfo.index = index;
-            accessoryInfo.stage = stage;
-            __accessoryIDToInfos.Add(id, accessoryInfo);
-        }
-    }
-
-    private UserStageReward.Flag __GetStageRewardFlag(
-        string stageRewardName,
-        string levelName, 
-        int stage, 
-        int conditionValue, 
-        UserStageReward.Condition condition, 
-        out string key)
-    {
-        key = UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_REWARD_FLAG, levelName, stage);
-        key = $"{key}{UserData.SEPARATOR}{stageRewardName}";
-        
-        var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
-        if (flag == 0)
-        {
-            var stageFlag = UserData.GetStageFlag(levelName, stage);
-            switch (condition)
-            {
-                case UserStageReward.Condition.Normal:
-                    if((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
-                        flag |= UserStageReward.Flag.Unlock;
-                    break;
-                case UserStageReward.Condition.Once:
-                    if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
-                        flag |= UserStageReward.Flag.Unlock;
-                    break;
-                case UserStageReward.Condition.NoDamage:
-                    if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
-                        flag |= UserStageReward.Flag.Unlock;
-                    break;
-                case UserStageReward.Condition.KillCount:
-                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageKillCount(levelName, stage) >= conditionValue)
-                        flag |= UserStageReward.Flag.Unlock;
-                    break;
-            }
-        }
-
-        return flag;
-    }
-
-    private bool __ApplyStageRewards(
-        string levelName, 
-        int stage, 
-        in StageReward stageReward, 
-        List<UserReward> outRewards)
-    {
-        var flag = __GetStageRewardFlag(
-            stageReward.name,
-            levelName,
-            stage,
-            stageReward.conditionValue, 
-            stageReward.condition,
-            out var key);
-        if ((flag & UserStageReward.Flag.Unlock) != UserStageReward.Flag.Unlock ||
-            (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
-            return false;
-                    
-        flag |= UserStageReward.Flag.Collected;
-
-        PlayerPrefs.SetInt(key, (int)flag);
-
-        __ApplyRewards(stageReward.values, outRewards);
-
-        return true;
-    }
-
     private uint __ApplyReward(in UserRewardData reward)
     {
         var flag = UserDataMain.flag;
@@ -555,6 +237,18 @@ public partial class UserDataMain
                 break;
             case UserRewardType.Role:
                 id = __ToID(__GetRoleIndex(reward.name));
+                if (reward.count == 0)
+                {
+                    key = $"{NAME_SPACE_USER_ROLE_FLAG}{reward.name}";
+                    int roleFlag = PlayerPrefs.GetInt(key);
+                    if ((roleFlag & (int)UserRole.Flag.Unlocked) == (int)UserRole.Flag.Unlocked)
+                        return 0;
+                    
+                    PlayerPrefs.SetInt(key, roleFlag | (int)UserRole.Flag.Unlocked);
+
+                    return id;
+                }
+                
                 key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
                 break;
             case UserRewardType.Accessory:
@@ -710,7 +404,7 @@ public partial class UserDataMain
 
     private void __ApplyAttributes(
         List<UserAttributeData> attributes, 
-        List<UserAccessory.Attribute> accessoryStageAttributes)
+        List<UserPropertyData.Attribute> accessoryStageAttributes)
     {
         accessoryStageAttributes.Sort();
 
@@ -725,10 +419,10 @@ public partial class UserDataMain
                 {
                     switch (accessoryStageAttribute.opcode)
                     {
-                        case UserAccessory.Opcode.Add:
+                        case UserPropertyData.Opcode.Add:
                             attribute.value += accessoryStageAttribute.value;
                             break;
-                        case UserAccessory.Opcode.Mul:
+                        case UserPropertyData.Opcode.Mul:
                             attribute.value *= accessoryStageAttribute.value;
                             break;
                     }
@@ -754,7 +448,7 @@ public partial class UserDataMain
     private void __ApplySkills(
         string[] roleSkillNames,
         List<IUserData.Skill> skills, 
-        List<UserAccessory.Skill> accessoryStageSkills)
+        List<UserPropertyData.Skill> accessoryStageSkills)
     {
         accessoryStageSkills.Sort();
 
@@ -820,10 +514,10 @@ public partial class UserDataMain
                 {
                     switch (accessoryStageSkill.opcode)
                     {
-                        case UserAccessory.Opcode.Add:
+                        case UserPropertyData.Opcode.Add:
                             skill.damage += accessoryStageSkill.damage;
                             break;
-                        case UserAccessory.Opcode.Mul:
+                        case UserPropertyData.Opcode.Mul:
                             skill.damage *= accessoryStageSkill.damage;
                             break;
                     }
@@ -921,10 +615,10 @@ public partial class UserDataMain
         uint accessoryID;
         AccessoryInfo accessoryInfo;
         UserAttributeData attribute;
-        UserAccessory.Property property;
+        UserPropertyData property;
         List<int> indices;
-        List<UserAccessory.Attribute> accessoryStageAttributes = null;
-        List<UserAccessory.Skill> accessoryStageSkills = null;
+        List<UserPropertyData.Attribute> accessoryStageAttributes = null;
+        List<UserPropertyData.Skill> accessoryStageSkills = null;
         for (i = 0; i < numAccessorySlots; ++i)
         {
             ref var accessorySlot = ref _accessorySlots[i];
@@ -1006,7 +700,7 @@ public partial class UserDataMain
             if (property.attributes != null && property.attributes.Length > 0)
             {
                 if (accessoryStageAttributes == null)
-                    accessoryStageAttributes = new List<UserAccessory.Attribute>();
+                    accessoryStageAttributes = new List<UserPropertyData.Attribute>();
 
                 accessoryStageAttributes.AddRange(property.attributes);
             }
@@ -1014,7 +708,7 @@ public partial class UserDataMain
             if (property.skills != null && property.skills.Length > 0)
             {
                 if (accessoryStageSkills == null)
-                    accessoryStageSkills = new List<UserAccessory.Skill>();
+                    accessoryStageSkills = new List<UserPropertyData.Skill>();
 
                 accessoryStageSkills.AddRange(property.skills);
             }
@@ -1335,11 +1029,11 @@ public partial class UserDataMain
             
             var skills = new List<IUserData.Skill>();
             var attributes = new List<UserAttributeData>();
-            List<UserAccessory.Attribute> accessoryStageAttributes = null;
-            List<UserAccessory.Skill> accessoryStageSkills = null;
+            List<UserPropertyData.Attribute> accessoryStageAttributes = null;
+            List<UserPropertyData.Skill> accessoryStageSkills = null;
             string[] roleSkillNames = null;
             List<int> indices;
-            UserAccessory.Property property;
+            UserPropertyData property;
             IUserData.Skill skill;
             string instanceName = null;
             int level, styleIndex;
@@ -1485,7 +1179,7 @@ public partial class UserDataMain
                         if (property.attributes != null && property.attributes.Length > 0)
                         {
                             if (accessoryStageAttributes == null)
-                                accessoryStageAttributes = new List<UserAccessory.Attribute>();
+                                accessoryStageAttributes = new List<UserPropertyData.Attribute>();
 
                             accessoryStageAttributes.AddRange(property.attributes);
                         }
@@ -1493,7 +1187,7 @@ public partial class UserDataMain
                         if (property.skills != null && property.skills.Length > 0)
                         {
                             if (accessoryStageSkills == null)
-                                accessoryStageSkills = new List<UserAccessory.Skill>();
+                                accessoryStageSkills = new List<UserPropertyData.Skill>();
 
                             accessoryStageSkills.AddRange(property.skills);
                         }

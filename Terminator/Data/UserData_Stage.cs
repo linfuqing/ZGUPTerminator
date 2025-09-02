@@ -1,8 +1,32 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using ZG;
+
+public struct UserStageReward
+{
+    [Flags]
+    public enum Flag
+    {
+        Unlock = 0x01, 
+        Collected = 0x02
+    }
+
+    public enum Condition
+    {
+        Normal, 
+        Once, 
+        NoDamage, 
+        KillCount
+    }
+    
+    public string name;
+    public uint id;
+    public Flag flag;
+    public Condition condition;
+    public int conditionValue;
+    public UserRewardData[] values;
+}
 
 public struct UserStage
 {
