@@ -167,23 +167,24 @@ public partial interface IUserData
         Action<UserRole> onComplete);
 
     /// <summary>
-    /// 设置套装
-    /// </summary>
-    IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete);
-    
-    /// <summary>
     /// 装备角色
     /// </summary>
     IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete);
 
     /// <summary>
-    /// 角色养成
+    /// 设置套装
     /// </summary>
-    IEnumerator QueryRoleTalents(
-        uint userID,
-        uint roleID, 
-        Action<Memory<UserTalent>> onComplete);
-
+    IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete);
+    
+    /// <summary>
+    /// 角色升星
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="roleID"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator UprankRole(uint userID, uint roleID, Action<UserRole.Rank?> onComplete);
+    
     /// <summary>
     /// 角色养成升级
     /// </summary>
@@ -191,4 +192,12 @@ public partial interface IUserData
         uint userID,
         uint talentID,
         Action<bool> onComplete);
+    
+    /// <summary>
+    /// 角色养成
+    /// </summary>
+    IEnumerator QueryRoleTalents(
+        uint userID,
+        uint roleID, 
+        Action<Memory<UserTalent>> onComplete);
 }

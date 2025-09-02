@@ -10,6 +10,7 @@ using Unity.Entities.Serialization;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
+using Unity.Physics.GraphicsIntegration;
 using Unity.Transforms;
 using ZG;
 using Math = ZG.Mathematics.Math;
@@ -86,18 +87,34 @@ public partial struct EffectSystem : ISystem
         }*/
 
         public Entity Instantiate(
-            double time, 
+            double time,
+            ref ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers,
+            ref ComponentLookup<CharacterInterpolation> characterInterpolations, 
             ref EntityCommandBuffer entityManager,
             ref PrefabLoader.Writer prefabLoader)
         {
-            if (!prefabLoader.TryGetOrLoadPrefabRoot(entityPrefabReference, out Entity entity))
+            if (!prefabLoader.TryGetOrLoadPrefabRoot(entityPrefabReference, out Entity prefabRoot))
                 return Entity.Null;
             
-            entity = entityManager.Instantiate(entity);
+            entity = entityManager.Instantiate(prefabRoot);
 
             entityManager.SetComponent(entity,
                 LocalTransform.FromPositionRotation(transform.pos,
                     transform.rot));
+
+            if (physicsGraphicalInterpolationBuffers.HasComponent(prefabRoot))
+            {
+                PhysicsGraphicalInterpolationBuffer physicsGraphicalInterpolationBuffer;
+                physicsGraphicalInterpolationBuffer.PreviousVelocity = default;
+                physicsGraphicalInterpolationBuffer.PreviousTransform = transform;
+                entityManager.SetComponent(entity, physicsGraphicalInterpolationBuffer);
+            }
+        
+            if (characterInterpolations.TryGetComponent(prefabRoot, out var characterInterpolation))
+            {
+                characterInterpolation.InterpolationFromTransform = transform;
+                entityManager.SetComponent(entity, characterInterpolation);
+            }
 
             if (parent != Entity.Null)
             {
@@ -138,6 +155,8 @@ public partial struct EffectSystem : ISystem
             ref ComponentLookup<EffectStatus> states,
             ref ComponentLookup<EffectDamage> damages,
             ref ComponentLookup<EffectTargetBuff> targetBuffs,
+            ref ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers,
+            ref ComponentLookup<CharacterInterpolation> characterInterpolations, 
             ref UnsafeHashMap<BuffKey, BuffValue> buffs, 
             ref EntityCommandBuffer entityManager,
             ref PrefabLoader.Writer prefabLoader)
@@ -214,7 +233,12 @@ public partial struct EffectSystem : ISystem
                     return true;
             }
 
-            Entity entity = Instantiate(time, ref entityManager, ref prefabLoader);
+            Entity entity = Instantiate(
+                time, 
+                ref physicsGraphicalInterpolationBuffers,
+                ref characterInterpolations, 
+                ref entityManager, 
+                ref prefabLoader);
             if (entity != Entity.Null)
             {
                 if (isBuff)
@@ -335,7 +359,6 @@ public partial struct EffectSystem : ISystem
         }
     }
 
-
     [BurstCompile]
     private struct Instantiate : IJob
     {
@@ -348,6 +371,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectDamage> damages;
         public ComponentLookup<EffectTargetBuff> targetBuffs;
 
+        public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
+        public ComponentLookup<CharacterInterpolation> characterInterpolations;
+        
         public NativeQueue<DamageInstance> damageInstances;
 
         public PrefabLoader.Writer prefabLoader;
@@ -397,6 +423,8 @@ public partial struct EffectSystem : ISystem
                        ref states, 
                        ref damages, 
                        ref targetBuffs,  
+                       ref physicsGraphicalInterpolationBuffers, 
+                       ref characterInterpolations, 
                        ref buffs, 
                        ref entityManager, 
                        ref prefabLoader))
@@ -1842,6 +1870,9 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<KinematicCharacterProperties> __characterProperties;
 
+    private ComponentLookup<CharacterInterpolation> __characterInterpolations;
+    private ComponentLookup<PhysicsGraphicalInterpolationBuffer> __physicsGraphicalInterpolationBuffers;
+
     private ComponentLookup<LevelStatus> __levelStates;
 
     private ComponentLookup<EffectDamage> __damages;
@@ -1946,6 +1977,8 @@ public partial struct EffectSystem : ISystem
     {
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __characterProperties = state.GetComponentLookup<KinematicCharacterProperties>(true);
+        __characterInterpolations =  state.GetComponentLookup<CharacterInterpolation>();
+        __physicsGraphicalInterpolationBuffers =  state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>();
         __levelStates = state.GetComponentLookup<LevelStatus>();
         __damages = state.GetComponentLookup<EffectDamage>();
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
@@ -2059,6 +2092,8 @@ public partial struct EffectSystem : ISystem
         double time = SystemAPI.Time.ElapsedTime;
 
         __children.Update(ref state);
+        __characterInterpolations.Update(ref state);
+        __physicsGraphicalInterpolationBuffers.Update(ref state);
         __statusTargets.Update(ref state);
         __states.Update(ref state);
         __targetBuffs.Update(ref state);
@@ -2069,8 +2104,10 @@ public partial struct EffectSystem : ISystem
         instantiate.children = __children;
         instantiate.statusTargets = __statusTargets;
         instantiate.states = __states;
-        instantiate.targetBuffs = __targetBuffs;
         instantiate.damages = __damages;
+        instantiate.targetBuffs = __targetBuffs;
+        instantiate.characterInterpolations = __characterInterpolations;
+        instantiate.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
         instantiate.damageInstances = __damageInstances;
         instantiate.entityManager = entityCommandBuffer;
         instantiate.prefabLoader = __prefabLoader.AsWriter();

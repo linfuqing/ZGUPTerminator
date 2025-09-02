@@ -383,36 +383,50 @@ public partial class UserDataMain
         onComplete(true);
     }
 
-    public IEnumerator QueryRoleTalents(
-        uint userID,
-        uint roleID,
-        Action<Memory<UserTalent>> onComplete)
+    public IEnumerator UprankRole(uint userID, uint roleID, Action<UserRole.Rank?> onComplete)
     {
         yield return __CreateEnumerator();
 
-        int numTalents = _talents.Length;
-        string roleName = _roles[__ToIndex(roleID)].name;
-        Talent talent;
-        UserTalent userTalent;
-        var userTalents = new List<UserTalent>();
-        for (int i = 0; i < numTalents; ++i)
+        int roleIndex = __ToIndex(roleID);
+        var role = _roles[roleIndex];
+        string rankKey = $"{NAME_SPACE_USER_ROLE_RANK}{role.name}";
+        var roleRankIndices = __GetRoleRankIndices(roleIndex);
+        int numRoleRanks = roleRankIndices == null ? 0 : roleRankIndices.Count, rank = PlayerPrefs.GetInt(rankKey);
+        if (numRoleRanks <= rank)
         {
-            talent = _talents[i];
-            if(talent.roleName != roleName)
-                continue;
-            
-            userTalent.name = talent.name;
-            userTalent.id = __ToID(i);
-            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
-            userTalent.gold = talent.gold;
-            userTalent.skillGroupDamage = talent.skillGroupDamage;
-            userTalent.attribute = talent.attribute;
-            userTalents.Add(userTalent);
+            onComplete(null);
+
+            yield break;
         }
 
-        //flag &= ~Flag.RoleUnlockFirst;
+        var roleRank = _roleRanks[rank];
+        string countKey = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
+        int count = PlayerPrefs.GetInt(countKey);
+        if(count < roleRank.count)
+        {
+            onComplete(null);
 
-        onComplete(userTalents.ToArray());
+            yield break;
+        }
+        
+        PlayerPrefs.SetInt(rankKey, ++rank);
+        
+        count -= roleRank.count;
+        PlayerPrefs.SetInt(countKey, count);
+
+        UserRole.Rank userRoleRank;
+        if (rank < numRoleRanks)
+        {
+            roleRank = _roleRanks[roleRankIndices[rank]];
+
+            userRoleRank.name = roleRank.name;
+            userRoleRank.count = roleRank.count;
+            userRoleRank.property = roleRank.property;
+        }
+        else
+            userRoleRank = default;
+        
+        onComplete(userRoleRank);
     }
 
     public IEnumerator UpgradeRoleTalent(
@@ -448,7 +462,39 @@ public partial class UserDataMain
 
         onComplete(true);
     }
-    
+
+    public IEnumerator QueryRoleTalents(
+        uint userID,
+        uint roleID,
+        Action<Memory<UserTalent>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        int numTalents = _talents.Length;
+        string roleName = _roles[__ToIndex(roleID)].name;
+        Talent talent;
+        UserTalent userTalent;
+        var userTalents = new List<UserTalent>();
+        for (int i = 0; i < numTalents; ++i)
+        {
+            talent = _talents[i];
+            if(talent.roleName != roleName)
+                continue;
+            
+            userTalent.name = talent.name;
+            userTalent.id = __ToID(i);
+            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
+            userTalent.gold = talent.gold;
+            userTalent.skillGroupDamage = talent.skillGroupDamage;
+            userTalent.attribute = talent.attribute;
+            userTalents.Add(userTalent);
+        }
+
+        //flag &= ~Flag.RoleUnlockFirst;
+
+        onComplete(userTalents.ToArray());
+    }
+
     private Dictionary<string, int> __roleGroupNameToIndices;
     
     private int __GetRoleGroupIndex(string name)
@@ -591,16 +637,6 @@ public partial class UserData
         return UserDataMain.instance.QueryRoles(userID, onComplete);
     }
 
-    public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetRoleGroup(userID, groupID, onComplete);
-    }
-    
-    public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
-    {
-        return UserDataMain.instance.SetRole(userID, roleID, groupID, onComplete);
-    }
-
     public IEnumerator QueryRole(
         uint userID,
         uint roleID,
@@ -609,20 +645,35 @@ public partial class UserData
         return UserDataMain.instance.QueryRole(userID, roleID, onComplete);
     }
 
-    public IEnumerator QueryRoleTalents(
-        uint userID,
-        uint roleID,
-        Action<Memory<UserTalent>> onComplete)
+    public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
     {
-        return UserDataMain.instance.QueryRoleTalents(userID, roleID, onComplete);
+        return UserDataMain.instance.SetRole(userID, roleID, groupID, onComplete);
     }
 
+    public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetRoleGroup(userID, groupID, onComplete);
+    }
+
+    public IEnumerator UprankRole(uint userID, uint roleID, Action<UserRole.Rank?> onComplete)
+    {
+        return UserDataMain.instance.UprankRole(userID, roleID, onComplete);
+    }
+    
     public IEnumerator UpgradeRoleTalent(
         uint userID,
         uint talentID,
         Action<bool> onComplete)
     {
         return UserDataMain.instance.UpgradeRoleTalent(userID, talentID, onComplete);
+    }
+    
+    public IEnumerator QueryRoleTalents(
+        uint userID,
+        uint roleID,
+        Action<Memory<UserTalent>> onComplete)
+    {
+        return UserDataMain.instance.QueryRoleTalents(userID, roleID, onComplete);
     }
 
 }
