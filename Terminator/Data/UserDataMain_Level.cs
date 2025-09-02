@@ -71,6 +71,8 @@ public partial class UserDataMain
 
         public int capacity;
         
+        public string[] previousLevelNames;
+        
         [CSVField]
         public string 章节门票名字
         {

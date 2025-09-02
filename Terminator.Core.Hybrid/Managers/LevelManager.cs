@@ -134,32 +134,9 @@ public partial class LevelManager : MonoBehaviour
         {
             print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
             isDirty = true;
-            
-            if (!isRestart && stage > __stage)
-            {
-                int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
-                var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
-                if (numSkillActiveNames > 0)
-                {
-                    numSkillActiveNames = 0;
-                    foreach (var skillActiveName in __skillActiveNames.Values)
-                        skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
-                }
 
-                var levelData = ILevelData.instance;
-                if (levelData != null)
-                    __StartCoroutine(levelData.SubmitStage(
-                        __dataFlag, 
-                        stage,
-                        __killCount, 
-                        __killBossCount, 
-                        gold,
-                        rage, 
-                        exp,
-                        maxExp,
-                        skillActiveNames,
-                        __OnStageChanged));
-            }
+            if (!isRestart && stage > __stage)
+                __Submit(stage, gold, exp, maxExp);
 
             __dataFlag = 0;
 
@@ -349,7 +326,7 @@ public partial class LevelManager : MonoBehaviour
         __startTime = Time.time;
     }
 
-    [UnityEngine.Scripting.Preserve]
+    //[UnityEngine.Scripting.Preserve]
     public void Quit()
     {
         var levelData = ILevelData.instance;
@@ -428,10 +405,42 @@ public partial class LevelManager : MonoBehaviour
         }
     }
 
+    private void __Submit(int stage, int gold, int exp, int maxExp)
+    {
+        int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
+        var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
+        if (numSkillActiveNames > 0)
+        {
+            numSkillActiveNames = 0;
+            foreach (var skillActiveName in __skillActiveNames.Values)
+                skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
+        }
+
+        var levelData = ILevelData.instance;
+        if (levelData != null)
+            __StartCoroutine(levelData.SubmitStage(
+                __dataFlag, 
+                stage,
+                __killCount, 
+                __killBossCount, 
+                gold,
+                rage, 
+                exp,
+                maxExp,
+                skillActiveNames,
+                __OnStageChanged));
+    }
+
     void Start()
     {
         __startTime = Time.time;
         
         instance = this;
+    }
+
+    void OnApplicationFocus(bool focus)
+    {
+        if(!focus)
+            __Submit(__stage, __gold, __exp, __maxExp);
     }
 }

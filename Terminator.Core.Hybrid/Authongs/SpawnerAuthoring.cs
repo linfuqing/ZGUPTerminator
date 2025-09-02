@@ -521,22 +521,34 @@ public class SpawnerAuthoring : MonoBehaviour
         }
 
         [CSVField]
-        public uint 标签
+        public string 标签
         {
             set
             {
-                layerMask = (int)value;
+                int index = value.IndexOf(':');
+                if (index == -1)
+                {
+                    layerMask = (int)uint.Parse(value);
+
+                    tags = null;
+                }
+                else
+                {
+                    layerMask = (int)uint.Parse(value.Remove(index));
+                    
+                    tags = value.Substring(index + 1).Split(':');
+                }
             }
         }
         
-        [CSVField]
+        /*[CSVField]
         public string 标签名
         {
             set
             {
                 tags = string.IsNullOrEmpty(value) ? null : value.Split('/');
             }
-        }
+        }*/
         
         #endregion
     }

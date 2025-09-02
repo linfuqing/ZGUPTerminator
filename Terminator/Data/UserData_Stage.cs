@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 using ZG;
 
 public struct UserStageReward
@@ -296,20 +297,83 @@ public partial class UserData
         PlayerPrefs.DeleteKey(levelStartStageKey);
     }
 
-    private static void __SubmitStageFlag(
+    public IEnumerator SubmitStage(
+        uint userID,
+        IUserData.StageFlag flag,
+        int stage,
+        int killCount, 
+        int killBossCount, 
+        int gold, 
+        int rage, 
+        int exp, 
+        int expMax, 
+        string[] skills,
+        Action<int> onComplete)
+    {
+        yield return null;
+
+        var levelCache = UserData.levelCache;
+        if (levelCache == null)
+        {
+            UnityEngine.Debug.LogError("WTF?");
+
+            onComplete(0);
+            
+            yield break;
+        }
+
+        int result = 0;
+        var temp = levelCache.Value;
+        if (temp.stage < stage)
+        {
+            result = __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+
+            IUserData.StageCache stageCache;
+            stageCache.rage = rage;
+            stageCache.exp = exp;
+            stageCache.expMax = expMax;
+            stageCache.skills = skills;
+            PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage),
+                stageCache.ToString());
+            
+            temp.stage = stage;
+        }
+        else
+            result = (int)GetStageFlag(temp.name, temp.stage);
+
+        __SetStageKillCount(temp.name, temp.stage, killCount);
+
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+        
+        temp.gold = Mathf.Max(temp.gold, gold);
+        temp.killCount = Mathf.Max(temp.killCount, killCount);
+        temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
+        UserData.levelCache = temp;
+        
+        onComplete(result);
+        
+        //return null;
+    }
+
+    private static int __SubmitStageFlag(
         IUserData.StageFlag value, 
         string levelName, 
         int fromStage, 
         int toStage)
     {
         value |= IUserData.StageFlag.Normal;
+
+        int result = (int)value;
         
         string key;
         for (int i = fromStage; i < toStage; ++i)
         {
             key = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
-            PlayerPrefs.SetInt(key, (int)value | PlayerPrefs.GetInt(key));
+            result = (int)value | PlayerPrefs.GetInt(key);
+            PlayerPrefs.SetInt(key, result);
         }
+
+        return result;
     }
     
     private static void __SetStageKillCount(string levelName, int stage, int value)

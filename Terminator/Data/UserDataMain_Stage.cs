@@ -600,6 +600,39 @@ public partial class UserDataMain
 
         return true;
     }
+    
+    private void __SubmitStageFlag()
+    {
+        var flag = UserDataMain.flag;
+        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.PurchasesUnlockFirst;
+        
+        if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
+        {
+            flag &= ~Flag.CardsUnlockFirst;
+
+            isDirty = true;
+        }
+
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
+        {
+            flag |= Flag.TalentsUnlock;
+
+            isDirty = true;
+        }
+
+        /*if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
+        {
+            flag |= Flag.RoleUnlock;
+
+            isDirty = true;
+        }*/
+        
+        if(isDirty)
+            UserDataMain.flag = flag;
+    }
+
 }
 
 public partial class UserData
@@ -619,65 +652,6 @@ public partial class UserData
         Action<IUserData.StageProperty> onComplete)
     {
         return UserDataMain.instance.ApplyStage(userID, levelID, stage, onComplete);
-    }
-    
-    public IEnumerator SubmitStage(
-        uint userID,
-        IUserData.StageFlag flag,
-        int stage,
-        int killCount, 
-        int killBossCount, 
-        int gold, 
-        int rage, 
-        int exp, 
-        int expMax, 
-        string[] skills,
-        Action<int> onComplete)
-    {
-        var levelCache = UserData.levelCache;
-        if (levelCache == null)
-        {
-            UnityEngine.Debug.LogError("WTF?");
-
-            onComplete(0);
-            
-            yield break;
-        }
-
-        var temp = levelCache.Value;
-        if (temp.stage >= stage)
-        {
-            UnityEngine.Debug.LogError("WTF?");
-            
-            onComplete(0);
-            
-            yield break;
-        }
-
-        yield return null;
-
-        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
-        
-        __SetStageKillCount(temp.name, temp.stage, killCount);
-
-        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
-        
-        int result = (int)GetStageFlag(temp.name, temp.stage);
-
-        IUserData.StageCache stageCache;
-        stageCache.rage = rage;
-        stageCache.exp = exp;
-        stageCache.expMax = expMax;
-        stageCache.skills = skills;
-        PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage), stageCache.ToString());
-        
-        temp.stage = stage;
-        temp.gold = gold;
-        UserData.levelCache = temp;
-        
-        onComplete(result);
-        
-        //return null;
     }
     
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
