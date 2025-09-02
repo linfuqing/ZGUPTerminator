@@ -96,7 +96,7 @@ public partial struct EffectSystem : ISystem
             if (!prefabLoader.TryGetOrLoadPrefabRoot(entityPrefabReference, out Entity prefabRoot))
                 return Entity.Null;
             
-            entity = entityManager.Instantiate(prefabRoot);
+            Entity entity = entityManager.Instantiate(prefabRoot);
 
             entityManager.SetComponent(entity,
                 LocalTransform.FromPositionRotation(transform.pos,
