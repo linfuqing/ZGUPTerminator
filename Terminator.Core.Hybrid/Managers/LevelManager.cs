@@ -247,7 +247,7 @@ public partial class LevelManager : MonoBehaviour
             for (int i = 0; i < numEvents; ++i)
             {
                 ref var stage = ref _stages[i];
-                if(stage.sharedNames == null)
+                if(stage.sharedNames == null || stage.sharedNames.Length < 1)
                     __stageIndices.Add(stage.name, i);
                 else
                 {
