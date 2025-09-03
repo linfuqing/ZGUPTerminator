@@ -11,6 +11,7 @@ public partial class LevelManager : MonoBehaviour
     internal struct Stage
     {
         public string name;
+        public string[] sharedNames;
 
         public int max;
 
@@ -243,8 +244,17 @@ public partial class LevelManager : MonoBehaviour
         {
             __stageIndices = new Dictionary<string, int>();
             int numEvents = _stages == null ? 0 : _stages.Length;
-            for(int i = 0; i < numEvents; ++i)
-                __stageIndices.Add(_stages[i].name, i);
+            for (int i = 0; i < numEvents; ++i)
+            {
+                ref var stage = ref _stages[i];
+                if(stage.sharedNames == null)
+                    __stageIndices.Add(stage.name, i);
+                else
+                {
+                    foreach (string sharedName in stage.sharedNames)
+                        __stageIndices.Add(sharedName, i);
+                }
+            }
         }
 
         if (__stageIndices.TryGetValue(name, out int stageIndex))
