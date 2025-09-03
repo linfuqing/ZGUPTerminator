@@ -91,6 +91,12 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onEnergyDisable;
 
     [SerializeField]
+    internal UnityEvent _onLevelEnable;
+
+    [SerializeField]
+    internal StringEvent _onLevelDisable;
+
+    [SerializeField]
     internal StringEvent _onGold;
 
     [SerializeField]
@@ -141,6 +147,7 @@ public sealed class LoginManager : MonoBehaviour
     private int __sceneActiveDepth;
     
     private bool __isStart;
+    private bool __isLevelActive;
     private bool __isEnergyActive = true;
 
     public static uint? userID
@@ -337,7 +344,7 @@ public sealed class LoginManager : MonoBehaviour
 
         numLevels = chapters.levels.Length;
         bool isHot = false;
-        int j;
+        int numStageRewards = 0, j;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
         __levelStyles = new Dictionary<int, LevelStyle>(chapters.levels.Length);
@@ -349,22 +356,37 @@ public sealed class LoginManager : MonoBehaviour
             
             bool isEndOfLevels = i + 1 == numLevels;
 
-            if (!isHot && userLevel.stages != null)
+            if (userLevel.stages != null)
             {
+                if (!isHot)
+                {
+                    foreach (var stage in userLevel.stages)
+                    {
+                        if (stage.rewardFlags == null)
+                            break;
+
+                        foreach (var rewardFlag in stage.rewardFlags)
+                        {
+                            if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked &&
+                                (rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
+                            {
+                                isHot = true;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 foreach (var stage in userLevel.stages)
                 {
                     if (stage.rewardFlags == null)
                         break;
-
+                    
                     foreach (var rewardFlag in stage.rewardFlags)
                     {
-                        if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock &&
-                            (rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
-                        {
-                            isHot = true;
-
-                            break;
-                        }
+                        if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                            ++numStageRewards;
                     }
                 }
             }
@@ -511,7 +533,7 @@ public sealed class LoginManager : MonoBehaviour
                                     for (j = 0; j < numRewardFlags; ++j)
                                     {
                                         rewardFlag = stage.rewardFlags[j];
-                                        if ((rewardFlag & UserStageReward.Flag.Unlock) == UserStageReward.Flag.Unlock)
+                                        if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
                                         {
                                             isUnlocked = true;
                                             
@@ -662,6 +684,22 @@ public sealed class LoginManager : MonoBehaviour
                             for (i = stageStyleStartIndex; i < numStageStyles; ++i)
                                 __stageStyles[i].gameObject.SetActive(true);
                         }
+                    }
+
+                    if (isEndOfLevels && numStageRewards < chapters.stageRewardCount)
+                    {
+                        if (__isLevelActive)
+                        {
+                            __isLevelActive = false;
+                            
+                            _onLevelDisable?.Invoke(chapters.stageRewardCount.ToString());
+                        }
+                    }
+                    else if (!__isLevelActive)
+                    {
+                        __isLevelActive = true;
+                        
+                        _onLevelEnable?.Invoke();
                     }
                 }
             });

@@ -543,20 +543,20 @@ public partial class UserDataMain
             {
                 case UserStageReward.Condition.Normal:
                     if((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
-                        flag |= UserStageReward.Flag.Unlock;
+                        flag |= UserStageReward.Flag.Unlocked;
                     break;
                 case UserStageReward.Condition.Once:
                     if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
-                        flag |= UserStageReward.Flag.Unlock;
+                        flag |= UserStageReward.Flag.Unlocked;
                     break;
                 case UserStageReward.Condition.NoDamage:
                     if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
-                        flag |= UserStageReward.Flag.Unlock;
+                        flag |= UserStageReward.Flag.Unlocked;
                     break;
                 case UserStageReward.Condition.KillCount:
                     if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
                         UserData.GetStageKillCount(levelName, stage) >= conditionValue)
-                        flag |= UserStageReward.Flag.Unlock;
+                        flag |= UserStageReward.Flag.Unlocked;
                     break;
             }
         }
@@ -577,7 +577,7 @@ public partial class UserDataMain
             stageReward.conditionValue, 
             stageReward.condition,
             out var key);
-        if ((flag & UserStageReward.Flag.Unlock) != UserStageReward.Flag.Unlock ||
+        if ((flag & UserStageReward.Flag.Unlocked) != UserStageReward.Flag.Unlocked ||
             (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
             return false;
                     

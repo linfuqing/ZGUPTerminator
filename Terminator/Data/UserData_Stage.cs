@@ -9,7 +9,7 @@ public struct UserStageReward
     [Flags]
     public enum Flag
     {
-        Unlock = 0x01, 
+        Unlocked = 0x01, 
         Collected = 0x02
     }
 
