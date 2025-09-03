@@ -36,15 +36,17 @@ public partial interface IUserData
 
     public struct LevelTicket
     {
-        /// <summary>
-        /// 对应Level的名字
-        /// </summary>
         public string name;
 
         /// <summary>
         /// 门票数量
         /// </summary>
         public int count;
+
+        /// <summary>
+        /// 对应Level的名字
+        /// </summary>
+        public string[] levelNames;
     }
 
     public struct LevelTickets
@@ -98,6 +100,11 @@ public partial interface IUserData
         uint userID,
         Action<Memory<UserReward>> onComplete);
 
+    IEnumerator SweepLevel(
+        uint userID,
+        uint levelID,
+        Action<Memory<UserReward>> onComplete);
+    
     /// <summary>
     /// 查找门票
     /// </summary>
@@ -106,7 +113,7 @@ public partial interface IUserData
     /// <returns></returns>
     IEnumerator QueryLevelTickets(
         uint userID,
-        Action<IUserData.LevelTickets> onComplete);
+        Action<LevelTickets> onComplete);
 }
 
 

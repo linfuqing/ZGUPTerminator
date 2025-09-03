@@ -14,6 +14,8 @@ public partial class UserDataMain
 
         public string[] stageNames;
         
+        public UserRewardData[] sweepRewards;
+
 #if UNITY_EDITOR
         [CSVField]
         public string 章节名字
@@ -40,6 +42,39 @@ public partial class UserDataMain
                 }
                 
                 stageNames = value.Split('/');
+            }
+        }
+        
+        [CSVField]
+        public string 章节扫荡奖励
+        {
+            set
+            {
+                
+                if(string.IsNullOrEmpty(value))
+                {
+                    sweepRewards = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                sweepRewards = new UserRewardData[numParameters];
+
+                string parameter;
+                string[] values;
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    values = parameter.Split(':');
+                    
+                    ref var sweepReward = ref sweepRewards[i];
+                    sweepReward.name = values[0];
+                    sweepReward.type = (UserRewardType)int.Parse(values[1]);
+                    sweepReward.count = int.Parse(values[2]);
+                }
             }
         }
 #endif
@@ -71,14 +106,21 @@ public partial class UserDataMain
 
         public int capacity;
         
-        public string[] previousLevelNames;
-        
+        public string[] levelNames;
+
+#if UNITY_EDITOR
         [CSVField]
         public string 章节门票名字
         {
             set => name = value;
         }
         
+        [CSVField]
+        public string 章节门票对应关卡名
+        {
+            set => levelNames = value == null ? null : value.Split('/');
+        }
+
         [CSVField]
         public int 章节门票解锁需要章节数
         {
@@ -90,6 +132,10 @@ public partial class UserDataMain
         {
             set => capacity = value;
         }
+#endif
+        
+        private static readonly string NAME_SPACE_USER_LEVEL_TICKET = "UserLevelTicket";
+        
 
         public int count
         {
@@ -154,7 +200,7 @@ public partial class UserDataMain
         }
         
         var level = _levels[levelIndex];
-        int levelTicketIndex = __GetLevelTicketIndex(level.name);
+        int levelTicketIndex = __GetLevelTicketIndexByLevel(level.name);
         if (-1 == levelTicketIndex)
         {
             if (!__ApplyEnergy(level.energy))
@@ -169,7 +215,11 @@ public partial class UserDataMain
             var levelTicket = _levelTickets[levelTicketIndex];
             int count = levelTicket.count;
             if (count < 1)
+            {
+                onComplete(default);
+
                 yield break;
+            }
 
             levelTicket.count = count - 1;
         }
@@ -207,6 +257,7 @@ public partial class UserDataMain
         onComplete(result);
     }
 
+    private const string NAME_SPACE_USER_LEVEL_FLAG = "UserLevelFlag";
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
 
     public IEnumerator CollectLevel(
@@ -230,7 +281,7 @@ public partial class UserDataMain
         var rewards = new List<UserReward>();
         int stageCount, 
             levelIndex = __ToIndex(levelCache.id), 
-            ticketIndex = __GetLevelTicketIndex(levelCache.name);
+            ticketIndex = __GetLevelTicketIndexByLevel(levelCache.name);
         var level = _levels[levelIndex];
         if (ticketIndex == -1)
         {
@@ -249,7 +300,12 @@ public partial class UserDataMain
                 UserData.level = ++userLevel;
         }
         else
+        {
             stageCount = __GetStageCount(level);
+            
+            if(stageCount == levelCache.stage)
+                PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
+        }
 
         UserData.EndStage(level.name, levelCache.stage);
 
@@ -286,9 +342,36 @@ public partial class UserDataMain
         
         onComplete(rewards.ToArray());
     }
-    
-    private static readonly string NAME_SPACE_USER_LEVEL_TICKET = "UserLevelTicket";
 
+    public IEnumerator SweepLevel(
+        uint userID, 
+        uint levelID, 
+        Action<Memory<UserReward>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        var level = _levels[__ToIndex(levelID)];
+        
+        int levelTicketIndex = __GetLevelTicketIndexByLevel(level.name);
+        if (levelTicketIndex == -1)
+        {
+            onComplete(null);
+            
+            yield break;
+        }
+        
+        var levelTicket = _levelTickets[levelTicketIndex];
+        int count = levelTicket.count;
+        if (count < 1)
+            yield break;
+
+        levelTicket.count = count - 1;
+        
+        var rewards = __ApplyRewards(level.sweepRewards);
+        
+        onComplete(rewards.ToArray());
+    }
+    
     public IEnumerator QueryLevelTickets(
         uint userID,
         Action<IUserData.LevelTickets> onComplete)
@@ -300,9 +383,10 @@ public partial class UserDataMain
 
         if (_levelTickets != null)
         {
+            int level = UserData.level;
             UserLevel userLevel;
             IUserData.LevelTicket destinationTicket;
-            int level = UserData.level;
+            List<string> levelNames = null;
             foreach (var sourceTicket in _levelTickets)
             {
                 if(sourceTicket.level > level)
@@ -310,18 +394,34 @@ public partial class UserDataMain
                 
                 destinationTicket.name = sourceTicket.name;
                 destinationTicket.count = sourceTicket.count;
+                
+                if(levelNames != null)
+                    levelNames.Clear();
+
+                foreach (var levelName in sourceTicket.levelNames)
+                {
+                    if (levelNames == null)
+                        levelNames = new List<string>();
+                    
+                    levelNames.Add(levelName);
+
+                    userLevel = __ToUserLevel(__GetLevelIndex(levelName));
+
+                    if (levels == null)
+                        levels = new List<UserLevel>();
+
+                    levels.Add(userLevel);
+                    
+                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_FLAG}") == 0)
+                        break;
+                }
+                
+                destinationTicket.levelNames = levelNames == null ? null : levelNames.ToArray();
 
                 if (tickets == null)
                     tickets = new List<IUserData.LevelTicket>();
                 
                 tickets.Add(destinationTicket);
-                
-                userLevel = __ToUserLevel(__GetLevelIndex(sourceTicket.name));
-
-                if (levels == null)
-                    levels = new List<UserLevel>();
-
-                levels.Add(userLevel);
             }
         }
 
@@ -348,20 +448,39 @@ public partial class UserDataMain
         return __levelNameToIndices[name];
     }
 
-    private Dictionary<string, int> __levelTicketNameToIndices;
+    private Dictionary<string, int> __levelTicketIndices;
 
     private int __GetLevelTicketIndex(string name)
     {
-        if (__levelTicketNameToIndices == null)
+        if (__levelTicketIndices == null)
         {
-            __levelTicketNameToIndices = new Dictionary<string, int>();
+            __levelTicketIndices = new Dictionary<string, int>();
 
             int numLevelTickets = _levelTickets == null ? 0 : _levelTickets.Length;
-            for(int i = 0; i < numLevelTickets; ++i)
-                __levelTicketNameToIndices.Add(_levelTickets[i].name, i);
+            for (int i = 0; i < numLevelTickets; ++i)
+                __levelTicketIndices.Add(_levelTickets[i].name, i);
         }
         
-        return __levelTicketNameToIndices.TryGetValue(name, out int index) ? index : -1;
+        return __levelTicketIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+    
+    private Dictionary<string, int> __levelNameToTicketIndices;
+
+    private int __GetLevelTicketIndexByLevel(string name)
+    {
+        if (__levelNameToTicketIndices == null)
+        {
+            __levelNameToTicketIndices = new Dictionary<string, int>();
+
+            int numLevelTickets = _levelTickets == null ? 0 : _levelTickets.Length;
+            for (int i = 0; i < numLevelTickets; ++i)
+            {
+                foreach (var levelName in _levelTickets[i].levelNames)
+                    __levelNameToTicketIndices.Add(levelName, i);
+            }
+        }
+        
+        return __levelNameToTicketIndices.TryGetValue(name, out int index) ? index : -1;
     }
 
     private UserLevel __ToUserLevel(int levelIndex, ref int stageIndex, ref bool isUnlock)
@@ -487,6 +606,14 @@ public partial class UserData
         Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectLevel(userID, onComplete);
+    }
+
+    public IEnumerator SweepLevel(
+        uint userID,
+        uint levelID,
+        Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.SweepLevel(userID,  levelID, onComplete);
     }
 
     public IEnumerator QueryLevelTickets(

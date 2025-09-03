@@ -251,7 +251,7 @@ public partial class UserDataMain
 
         int levelIndex = __ToIndex(levelID);
         var level = _levels[levelIndex];
-        int levelTicketIndex = __GetLevelTicketIndex(level.name);
+        int levelTicketIndex = __GetLevelTicketIndexByLevel(level.name);
         if (-1 == levelTicketIndex)
         {
             int userLevel = UserData.level;
