@@ -51,6 +51,9 @@ public partial class UserDataMain
 
         [Tooltip("抽一次可获得多少金币")]
         public int gold;
+        
+        [Tooltip("卡池类型")]
+        public UserRewardType type;
     }
     
     [Serializable]
@@ -61,9 +64,6 @@ public partial class UserDataMain
         
         [Tooltip("卡池名字")]
         public string poolName;
-        
-        [Tooltip("概率")]
-        public float chance;
         
         [Tooltip("抽多少次后有效")]
         public int minTimes;
@@ -82,6 +82,9 @@ public partial class UserDataMain
         [Tooltip("最大获得数量")]
         public int maxCount;
         
+        [Tooltip("概率")]
+        public float chance;
+
 #if UNITY_EDITOR
         [CSVField]
         public string 抽卡名字
@@ -98,15 +101,6 @@ public partial class UserDataMain
             set
             {
                 poolName = value;
-            }
-        }
-        
-        [CSVField]
-        public float 抽卡概率
-        {
-            set
-            {
-                chance = value;
             }
         }
         
@@ -163,6 +157,16 @@ public partial class UserDataMain
                 maxCount = value;
             }
         }
+        
+        [CSVField]
+        public float 抽卡概率
+        {
+            set
+            {
+                chance = value;
+            }
+        }
+
 #endif
     }
 
@@ -355,7 +359,7 @@ public partial class UserDataMain
         gold += purchasePool.gold * times;
         
         UserRewardData reward;
-        reward.type = UserRewardType.Card;
+        reward.type = purchasePool.type;
         
         UserItem userItem;
         var results = new List<UserItem>();
