@@ -72,10 +72,12 @@ public partial class UserDataMain
         public int maxTimes;
         
         [Tooltip("在第几章开始生效")]
-        public int minLevel;
+        [UnityEngine.Serialization.FormerlySerializedAs("minLevel")]
+        public int minChapter;
 
         [Tooltip("在第几章开始生效")]
-        public int maxLevel;
+        [UnityEngine.Serialization.FormerlySerializedAs("maxLevel")]
+        public int maxChapter;
         
         [Tooltip("最小获得数量")]
         public int minCount;
@@ -127,7 +129,7 @@ public partial class UserDataMain
         {
             set
             {
-                minLevel = value;
+                minChapter = value;
             }
         }
 
@@ -136,7 +138,7 @@ public partial class UserDataMain
         {
             set
             {
-                maxLevel = value;
+                maxChapter = value;
             }
         }
         
@@ -365,7 +367,7 @@ public partial class UserDataMain
         var results = new List<UserItem>();
         string timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}";
         float chance, total;
-        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), level = UserData.level, i;
+        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), chapter = UserData.chapter, i;
         bool isSelected;
         for (i = 0; i < times; ++i)
         {
@@ -381,8 +383,8 @@ public partial class UserDataMain
                    purchasePoolOption.minTimes < purchasePoolOption.maxTimes && purchasePoolOption.maxTimes <= purchasePoolTimes)
                     continue;
                 
-                if(purchasePoolOption.minLevel > level ||
-                   purchasePoolOption.minLevel < purchasePoolOption.maxLevel && purchasePoolOption.maxLevel <= level)
+                if(purchasePoolOption.minChapter > chapter ||
+                   purchasePoolOption.minChapter < purchasePoolOption.maxChapter && purchasePoolOption.maxChapter <= chapter)
                     continue;
 
                 total += purchasePoolOption.chance;

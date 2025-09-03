@@ -39,8 +39,10 @@ public partial class UserDataMain
             public int minCount;
             public int maxCount;
 
-            public int minLevel;
-            public int maxLevel;
+            [UnityEngine.Serialization.FormerlySerializedAs("minLevel")]
+            public int minChapter;
+            [UnityEngine.Serialization.FormerlySerializedAs("maxLevel")]
+            public int maxChapter;
 
             public int maxUnits;
 
@@ -90,7 +92,7 @@ public partial class UserDataMain
             {
                 set
                 {
-                    minLevel = value;
+                    minChapter = value;
                 }
             }
             
@@ -99,7 +101,7 @@ public partial class UserDataMain
             {
                 set
                 {
-                    maxLevel = value;
+                    maxChapter = value;
                 }
             }
             
@@ -188,11 +190,11 @@ public partial class UserDataMain
             
             result.rewards = new IUserData.Tip.Reward[numRewards];
 
-            int level = UserData.level;
+            int chapter = UserData.chapter;
             for (int i = 0; i < numRewards; ++i)
             {
                 ref var source = ref rewards[i];
-                if(source.minLevel > level || source.minLevel < source.maxLevel && source.maxLevel <= level)
+                if(source.minChapter > chapter || source.minChapter < source.maxChapter && source.maxChapter <= chapter)
                     continue;
                 
                 ref var destination = ref result.rewards[i];

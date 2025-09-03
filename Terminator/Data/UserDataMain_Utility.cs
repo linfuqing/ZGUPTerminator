@@ -153,7 +153,7 @@ public partial class UserDataMain
         switch (reward.type)
         {
             case UserRewardType.PurchasePoolKey:
-                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.level > 0)
+                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)
                     UserDataMain.flag |= Flag.PurchasesUnlock;
                 
                 id = __ToID(__GetPurchasePoolIndex(reward.name));
@@ -256,7 +256,7 @@ public partial class UserDataMain
                 if(reward.count > 1)
                     __AppendQuest(UserQuest.Type.Accessories + reward.count - 1, 1);
                 
-                if ((flag & Flag.RolesUnlock) == 0 && UserData.level > 0)//(flag & Flag.RolesCreated) == 0)
+                if ((flag & Flag.RolesUnlock) == 0 && UserData.chapter > 0)//(flag & Flag.RolesCreated) == 0)
                     UserDataMain.flag |= Flag.RolesUnlock;
                 
                 uint accessoryID = (uint)Random.Range(int.MinValue, int.MaxValue);

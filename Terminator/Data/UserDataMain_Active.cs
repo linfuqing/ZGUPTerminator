@@ -541,8 +541,8 @@ public partial class UserDataMain
     {
         switch (questType)
         {
-            case UserQuest.Type.AchievementLevels:
-                return UserData.level;
+            case UserQuest.Type.AchievementChapters:
+                return UserData.chapter;
             case UserQuest.Type.AchievementCard:
                 int maxCardLevel = 0;
                 foreach (var card in _cards)

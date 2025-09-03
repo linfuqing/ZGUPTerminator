@@ -251,18 +251,7 @@ public partial class UserDataMain
 
         int levelIndex = __ToIndex(levelID);
         var level = _levels[levelIndex];
-        int levelTicketIndex = __GetLevelTicketIndexByLevel(level.name);
-        if (-1 == levelTicketIndex)
-        {
-            int userLevel = UserData.level;
-            if (userLevel < levelIndex)
-            {
-                onComplete(default);
-
-                yield break;
-            }
-        }
-
+        
         IUserData.StageCache stageCache;
         int numStages = __GetStageCount(level);
         if (numStages > stage)
@@ -321,13 +310,13 @@ public partial class UserDataMain
             stageRewardIndex = __ToIndex(stageRewardID), 
             numStages, 
             numStageRewards, 
-            numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
+            numChapters = Mathf.Min(_levelChapters.Length, UserData.chapter + 1);
         Level level;
         Stage stage;
         List<UserReward> rewards = null;
-        for (i = 0; i < numLevels; ++i)
+        for (i = 0; i < numChapters; ++i)
         {
-            level = _levels[i];
+            level = _levels[__GetLevelIndex(_levelChapters[i].name)];
             numStages = __GetStageCount(level);
             for (j = 0; j < numStages; ++j)
             {
@@ -369,14 +358,14 @@ public partial class UserDataMain
             k,
             numStages,
             numStageRewards,
-            numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
+            numChapters = Mathf.Min(_levelChapters.Length, UserData.chapter + 1);
         Level level;
         Stage stage;
         StageReward stageReward;
         List<UserReward> rewards = null;
-        for (i = 0; i < numLevels; ++i)
+        for (i = 0; i < numChapters; ++i)
         {
-            level = _levels[i];
+            level = _levels[__GetLevelIndex(_levelChapters[i].name)];
             numStages = __GetStageCount(level);
             for (j = 0; j < numStages; ++j)
             {
@@ -480,10 +469,10 @@ public partial class UserDataMain
             targetStageIndex = __ToIndex(stageID), 
             numTargetStages,
             numStages, 
-            numLevels = Mathf.Min(_levels.Length, UserData.level + 1);
-        for (i = 0; i < numLevels; ++i)
+            numChapters = Mathf.Min(_levelChapters.Length, UserData.chapter + 1);
+        for (i = 0; i < numChapters; ++i)
         {
-            ref var level = ref _levels[i];
+            ref var level = ref _levels[__GetLevelIndex(_levelChapters[i].name)];
             numStages = level.
 #if USER_DATA_VERSION_1
                 stages

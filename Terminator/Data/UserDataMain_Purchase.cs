@@ -44,7 +44,7 @@ public partial class UserDataMain
         switch (type)
         {
             case PurchaseType.Level:
-                result.exp = UserData.level;
+                result.exp = UserData.chapter;
                 break;
             case PurchaseType.GoldBank:
                 result.exp = goldBank;
@@ -92,7 +92,7 @@ public partial class UserDataMain
                     switch (type)
                     {
                         case PurchaseType.Level:
-                            if (UserData.level < purchaseItem.exp)
+                            if (UserData.chapter < purchaseItem.exp)
                                 break;
                             
                             rewards = __ApplyRewards(purchaseItem.rewards);
@@ -165,7 +165,7 @@ public partial class UserDataMain
                 result.exp = 0;
                 break;
             case PurchaseType.Fund:
-                result.exp = UserData.level;
+                result.exp = UserData.chapter;
                 
                 if (level == -1 && output.ticks == 0)
                 {
@@ -263,7 +263,7 @@ public partial class UserDataMain
             case PurchaseType.Fund:
                 isWriteTimes = true;
                 
-                exp = UserData.level;
+                exp = UserData.chapter;
                 break;
             case PurchaseType.Pass:
                 isWriteTimes = true;
@@ -326,7 +326,7 @@ public partial class UserDataMain
         switch (type)
         {
             case PurchaseType.Fund:
-                exp = UserData.level;
+                exp = UserData.chapter;
                 break;
             case PurchaseType.Pass:
                 exp = am;

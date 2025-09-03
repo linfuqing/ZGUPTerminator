@@ -177,7 +177,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 #if UNITY_EDITOR
             if(_isDebugLevel)
 #endif
-            UserData.level = int.MaxValue - 1;
+            UserData.chapter = int.MaxValue - 1;
         }
 
         if (IPurchaseData.instance == null)

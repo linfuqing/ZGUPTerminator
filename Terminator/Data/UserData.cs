@@ -155,7 +155,7 @@ public partial class UserData : MonoBehaviour, IUserData
     {
         yield return null;
 
-        onComplete(level > 0 ? IUserData.Status.Normal : IUserData.Status.Guide, id);
+        onComplete(chapter > 0 ? IUserData.Status.Normal : IUserData.Status.Guide, id);
     }
     
     public IEnumerator Activate(

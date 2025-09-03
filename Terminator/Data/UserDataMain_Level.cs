@@ -18,19 +18,19 @@ public partial class UserDataMain
 
 #if UNITY_EDITOR
         [CSVField]
-        public string 章节名字
+        public string 关卡名字
         {
             set => name = value;
         }
         
         [CSVField]
-        public int 章节体力
+        public int 关卡体力
         {
             set => energy = value;
         }
         
         [CSVField]
-        public string 章节小关
+        public string 关卡小关
         {
             set
             {
@@ -46,7 +46,7 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public string 章节扫荡奖励
+        public string 关卡扫荡奖励
         {
             set
             {
@@ -89,12 +89,34 @@ public partial class UserDataMain
     internal string _levelsPath;
 #endif
 
+    [Serializable]
+    internal struct LevelChapter
+    {
+        public string name;
+
+        public int stageRewardCount;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 章节名字
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 章节解锁需要星星数
+        {
+            set => stageRewardCount = value;
+        }
+#endif
+    }
+
     [SerializeField] 
-    internal string[] _levelNames;
+    internal LevelChapter[] _levelChapters;
 
 #if UNITY_EDITOR
-    [SerializeField, CSV("_levelNames", guidIndex = -1, nameIndex = 0)] 
-    internal string _levelNamesPath;
+    [SerializeField, CSV("_levelChapters", guidIndex = -1, nameIndex = 0)] 
+    internal string _levelChaptersPath;
 #endif
 
     [Serializable]
@@ -102,7 +124,8 @@ public partial class UserDataMain
     {
         public string name;
         
-        public int level;
+        [UnityEngine.Serialization.FormerlySerializedAs("level")]
+        public int chapter;
 
         public int capacity;
         
@@ -110,25 +133,25 @@ public partial class UserDataMain
 
 #if UNITY_EDITOR
         [CSVField]
-        public string 章节门票名字
+        public string 关卡门票名字
         {
             set => name = value;
         }
         
         [CSVField]
-        public string 章节门票对应关卡名
+        public string 关卡门票对应关卡名
         {
             set => levelNames = value == null ? null : value.Split('/');
         }
 
         [CSVField]
-        public int 章节门票解锁需要章节数
+        public int 关卡门票解锁需要章节数
         {
-            set => level = value;
+            set => chapter = value;
         }
         
         [CSVField]
-        public int 章节门票每日次数
+        public int 关卡门票每日次数
         {
             set => capacity = value;
         }
@@ -160,27 +183,6 @@ public partial class UserDataMain
     internal string _levelTicketsPath;
 #endif
 
-    public IEnumerator QueryLevels(
-        uint userID,
-        Action<IUserData.Levels> onComplete)
-    {
-        yield return __CreateEnumerator();
-
-        bool isUnlock = true;
-        int stageIndex = 0, 
-            levelIndex = UserData.level, 
-            numLevels = Mathf.Clamp(levelIndex + 1, 1, _levels.Length);
-        var userLevels = new UserLevel[numLevels];
-        for (int i = 0; i < numLevels; ++i)
-            userLevels[i] = __ToUserLevel(i, ref stageIndex, ref isUnlock);
-
-        IUserData.Levels result;
-        result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.Levels.Flag.UnlockFirst;
-        result.levels = userLevels;
-        
-        onComplete(result);
-    }
-
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID, 
@@ -190,19 +192,17 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         int levelIndex = __ToIndex(levelID);
-        
-        int userLevel = UserData.level;
-        if (userLevel < levelIndex)
-        {
-            onComplete(default);
-            
-            yield break;
-        }
-        
         var level = _levels[levelIndex];
         int levelTicketIndex = __GetLevelTicketIndexByLevel(level.name);
         if (-1 == levelTicketIndex)
         {
+            if (UserData.chapter < __GetLevelChapterIndex(level.name))
+            {
+                onComplete(default);
+            
+                yield break;
+            }
+
             if (!__ApplyEnergy(level.energy))
             {
                 onComplete(default);
@@ -213,6 +213,13 @@ public partial class UserDataMain
         else
         {
             var levelTicket = _levelTickets[levelTicketIndex];
+            if (UserData.chapter < levelTicket.chapter)
+            {
+                onComplete(default);
+            
+                yield break;
+            }
+            
             int count = levelTicket.count;
             if (count < 1)
             {
@@ -285,19 +292,14 @@ public partial class UserDataMain
         var level = _levels[levelIndex];
         if (ticketIndex == -1)
         {
-            int userLevel = UserData.level;
-
-            if (userLevel < levelIndex)
-            {
-                onComplete(null);
-
-                yield break;
-            }
-
             stageCount = __GetStageCount(level);
             
-            if (stageCount == levelCache.stage && userLevel == levelIndex)
-                UserData.level = ++userLevel;
+            if (stageCount == levelCache.stage)
+            {
+                int chapter = UserData.chapter;
+                if(chapter == __GetLevelChapterIndex(level.name))
+                    UserData.chapter = ++chapter;
+            }
         }
         else
         {
@@ -372,6 +374,36 @@ public partial class UserDataMain
         onComplete(rewards.ToArray());
     }
     
+    public IEnumerator QueryLevelChapters(
+        uint userID,
+        Action<IUserData.LevelChapters> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        bool isUnlock = true;
+        int stageRewardCount = 0, 
+            stage = 0, 
+            chapter = UserData.chapter, 
+            numChapters = Mathf.Clamp(chapter + 1, 1, _levelChapters.Length);
+        LevelChapter levelChapter;
+        var userLevels = new UserLevel[numChapters];
+        for (int i = 0; i < numChapters; ++i)
+        {
+            levelChapter = _levelChapters[i];
+
+            stageRewardCount = levelChapter.stageRewardCount;
+            
+            userLevels[i] = __ToUserLevel(__GetLevelIndex(levelChapter.name));
+        }
+
+        IUserData.LevelChapters result;
+        result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.LevelChapters.Flag.UnlockFirst;
+        result.stageRewardCount = stageRewardCount;
+        result.levels = userLevels;
+        
+        onComplete(result);
+    }
+
     public IEnumerator QueryLevelTickets(
         uint userID,
         Action<IUserData.LevelTickets> onComplete)
@@ -383,13 +415,13 @@ public partial class UserDataMain
 
         if (_levelTickets != null)
         {
-            int level = UserData.level;
+            int chapter = UserData.chapter;
             UserLevel userLevel;
             IUserData.LevelTicket destinationTicket;
             List<string> levelNames = null;
             foreach (var sourceTicket in _levelTickets)
             {
-                if(sourceTicket.level > level)
+                if(sourceTicket.chapter > chapter)
                     continue;
                 
                 destinationTicket.name = sourceTicket.name;
@@ -446,6 +478,22 @@ public partial class UserDataMain
         }
 
         return __levelNameToIndices[name];
+    }
+
+    private Dictionary<string, int> __levelChapterToIndices;
+
+    private int __GetLevelChapterIndex(string name)
+    {
+        if (__levelChapterToIndices == null)
+        {
+            __levelChapterToIndices = new Dictionary<string, int>();
+
+            int numLevelChapters = _levelChapters.Length;
+            for (int i = 0; i < numLevelChapters; ++i)
+                __levelChapterToIndices.Add(_levelChapters[i].name, i);
+        }
+
+        return __levelChapterToIndices[name];
     }
 
     private Dictionary<string, int> __levelTicketIndices;
@@ -540,14 +588,14 @@ public partial class UserDataMain
     private UserLevel __ToUserLevel(int levelIndex)
     {
         bool isUnlock = true;
-        int stageIndex = 0, numStages, i, j;
+        int stage = 0, numStages, i, j;
         for (i = 0; i < levelIndex; ++i)
         {
             ref var level = ref _levels[i];
 
             numStages = __GetStageCount(level);
 
-            stageIndex += numStages;
+            stage += numStages;
 
             if (isUnlock)
             {
@@ -562,20 +610,13 @@ public partial class UserDataMain
             }
         }
         
-        return __ToUserLevel(levelIndex, ref stageIndex, ref isUnlock);
+        return __ToUserLevel(levelIndex, ref stage, ref isUnlock);
     }
 }
 
 
 public partial class UserData
 {
-    public IEnumerator QueryLevels(
-        uint userID,
-        Action<IUserData.Levels> onComplete)
-    {
-        return UserDataMain.instance.QueryLevels(userID, onComplete);
-    }
-
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID,
@@ -614,6 +655,13 @@ public partial class UserData
         Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.SweepLevel(userID,  levelID, onComplete);
+    }
+
+    public IEnumerator QueryLevelChapters(
+        uint userID,
+        Action<IUserData.LevelChapters> onComplete)
+    {
+        return UserDataMain.instance.QueryLevelChapters(userID, onComplete);
     }
 
     public IEnumerator QueryLevelTickets(

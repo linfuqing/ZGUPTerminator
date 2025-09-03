@@ -21,7 +21,7 @@ public partial interface IUserData
         NoDamage = 0x04 | Normal
     }
 
-    public struct Levels
+    public struct LevelChapters
     {
         [Flags]
         public enum Flag
@@ -30,6 +30,8 @@ public partial interface IUserData
         }
 
         public Flag flag;
+        
+        public int stageRewardCount;
         
         public UserLevel[] levels;
     }
@@ -77,10 +79,6 @@ public partial interface IUserData
         public SpawnerAttribute.Scale[] spawnerAttributes;
     }
 
-    IEnumerator QueryLevels(
-        uint userID, 
-        Action<Levels> onComplete);
-    
     IEnumerator ApplyLevel(
         uint userID,
         uint levelID, 
@@ -105,6 +103,10 @@ public partial interface IUserData
         uint levelID,
         Action<Memory<UserReward>> onComplete);
     
+    IEnumerator QueryLevelChapters(
+        uint userID, 
+        Action<LevelChapters> onComplete);
+
     /// <summary>
     /// 查找门票
     /// </summary>
@@ -145,14 +147,14 @@ public partial class UserData
         }
     }
 
-    private const string NAME_SPACE_USER_LEVEL = "UserLevel";
+    private const string NAME_SPACE_USER_CHAPTER = "UserChapter";
     //private const string NAME_SPACE_USER_STAGE_FLAG = "UserStageFlag";
 
-    public static int level
+    public static int chapter
     {
-        get => PlayerPrefs.GetInt(NAME_SPACE_USER_LEVEL);
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_CHAPTER);
         
-        set => PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL, value);
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_CHAPTER, value);
     }
     
     private const string NAME_SPACE_USER_LEVEL_CACHE = "UserLevelCache";

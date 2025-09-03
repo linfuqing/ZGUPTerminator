@@ -54,7 +54,7 @@ public sealed class LoginManager : MonoBehaviour
     /// </summary>
     public static event Action onLevelActivatedFirst;
 
-    public static event Action<IUserData.Levels> onLevelLoaded;
+    public static event Action<IUserData.LevelChapters> onChapterLoaded;
 
     public static event Action<Stage> onStageChanged;
     
@@ -319,9 +319,9 @@ public sealed class LoginManager : MonoBehaviour
         ApplyStart(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
     }
     
-    private void __ApplyLevels(IUserData.Levels levels)
+    private void __ApplyLevelChapters(IUserData.LevelChapters chapters)
     {
-        if ((levels.flag & IUserData.Levels.Flag.UnlockFirst) != 0)
+        if ((chapters.flag & IUserData.LevelChapters.Flag.UnlockFirst) != 0)
             __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
         
         if (__levelStyles != null)
@@ -335,15 +335,15 @@ public sealed class LoginManager : MonoBehaviour
         for (i = 0; i < numLevels; ++i)
             levelIndices[_levels[i].name] = i;
 
-        numLevels = levels.levels.Length;
+        numLevels = chapters.levels.Length;
         bool isHot = false;
         int j;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
-        __levelStyles = new Dictionary<int, LevelStyle>(levels.levels.Length);
+        __levelStyles = new Dictionary<int, LevelStyle>(chapters.levels.Length);
         for(i = 0; i < numLevels; ++i)
         {
-            userLevel = levels.levels[i];
+            userLevel = chapters.levels[i];
             if(!levelIndices.TryGetValue(userLevel.name, out int index))
                 continue;
             
@@ -713,7 +713,7 @@ public sealed class LoginManager : MonoBehaviour
         else if(_onHotDisable != null)
             _onHotDisable.Invoke();
         
-        onLevelLoaded?.Invoke(levels);
+        onChapterLoaded?.Invoke(chapters);
     }
 
     private void __ApplyLevel(Memory<UserReward> rewards)
@@ -1009,7 +1009,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         var userData = IUserData.instance;
         yield return userData.CollectLevel(userID.Value, __ApplyLevel);
-        yield return userData.QueryLevels(userID.Value, __ApplyLevels);
+        yield return userData.QueryLevelChapters(userID.Value, __ApplyLevelChapters);
     }
 
     private IEnumerator __Start(

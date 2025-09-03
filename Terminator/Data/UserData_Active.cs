@@ -169,7 +169,7 @@ public struct UserQuest
         /// <summary>
         /// 达到主线章节
         /// </summary>
-        AchievementLevels, 
+        AchievementChapters, 
         
         /// <summary>
         /// 技能卡升级最高次数
