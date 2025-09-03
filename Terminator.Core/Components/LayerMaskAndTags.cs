@@ -17,33 +17,25 @@ public struct LayerMaskAndTags
     
     public bool BelongsTo(in LayerMaskAndTags layerMaskAndTags)
     {
-        if (layerMask != 0 && (layerMask & layerMaskAndTags.layerMask) == 0)
-            return false;
+        if (isEmpty)
+            return true;
+        
+        if (layerMask != 0 && (layerMask & layerMaskAndTags.layerMask) != 0)
+            return true;
 
         if (!tags.IsEmpty)
         {
-            bool isContains = false;
             foreach (var destination in tags)
             {
                 foreach (var source in layerMaskAndTags.tags)
                 {
                     if (source == destination)
-                    {
-                        isContains = true;
-                        
-                        break;
-                    }
+                        return true;
                 }
-
-                if (isContains)
-                    break;
             }
-
-            if (!isContains)
-                return false;
         }
 
-        return true;
+        return false;
     }
 
     public bool ContainsTo(in LayerMaskAndTags layerMaskAndTags)

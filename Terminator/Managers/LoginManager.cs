@@ -97,6 +97,9 @@ public sealed class LoginManager : MonoBehaviour
     internal StringEvent _onLevelDisable;
 
     [SerializeField]
+    internal StringEvent _onStageReward;
+
+    [SerializeField]
     internal StringEvent _onGold;
 
     [SerializeField]
@@ -750,6 +753,9 @@ public sealed class LoginManager : MonoBehaviour
         }
         else if(_onHotDisable != null)
             _onHotDisable.Invoke();
+        
+        if(_onStageReward != null)
+            _onStageReward?.Invoke(numStageRewards.ToString());
         
         onChapterLoaded?.Invoke(chapters);
     }
