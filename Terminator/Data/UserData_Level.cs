@@ -46,6 +46,11 @@ public partial interface IUserData
         public int count;
 
         /// <summary>
+        /// 下一次解锁新关卡需要的章节数
+        /// </summary>
+        public int chapter;
+        
+        /// <summary>
         /// 对应Level的名字
         /// </summary>
         public string[] levelNames;
