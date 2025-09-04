@@ -193,7 +193,7 @@ public partial class UserDataMain
             var stage = __GetStage(level, levelStage.stageIndex);
 
             result.energy = stage.energy;
-            result.levelEnergy = level.energy;
+            //result.levelEnergy = level.energy;
             result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, levelStage.stageIndex);
 
             /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;

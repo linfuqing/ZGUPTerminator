@@ -133,7 +133,7 @@ public partial interface IUserData
     public struct Stage
     {
         public int energy;
-        public int levelEnergy;
+        //public int levelEnergy;
         public StageCache cache;
         public UserStageReward[] rewards;
     }

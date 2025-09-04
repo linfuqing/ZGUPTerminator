@@ -7,7 +7,7 @@ public struct UserLevel
 {
     public string name;
     public uint id;
-    public int energy;
+    //public int energy;
     public UserStage[] stages;
 }
 

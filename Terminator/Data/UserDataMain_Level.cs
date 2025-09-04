@@ -10,7 +10,7 @@ public partial class UserDataMain
     internal struct Level
     {
         public string name;
-        public int energy;
+        //public int energy;
 
         public string[] stageNames;
         
@@ -23,11 +23,11 @@ public partial class UserDataMain
             set => name = value;
         }
         
-        [CSVField]
+        /*[CSVField]
         public int 关卡体力
         {
             set => energy = value;
-        }
+        }*/
         
         [CSVField]
         public string 关卡小关
@@ -222,6 +222,13 @@ public partial class UserDataMain
 
         int levelIndex = __ToIndex(levelID);
         var level = _levels[levelIndex];
+        int stage;
+        for (stage = closestStage; stage > 0; --stage)
+        {
+            if ((__GetStage(level, stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
+                break;
+        }
+
         if (__GetLevelTicketIndex(level.name, out int levelIndexOfTicket, out int levelTicketIndex))
         {
             var levelTicket = _levelTickets[levelTicketIndex];
@@ -251,7 +258,7 @@ public partial class UserDataMain
                 yield break;
             }
 
-            if (!__ApplyEnergy(level.energy))
+            if (!__ApplyEnergy(__GetStage(level, stage).energy))
             {
                 onComplete(default);
 
@@ -263,20 +270,15 @@ public partial class UserDataMain
 
         __AppendQuest(UserQuest.Type.Stage, 1);
 
+        UserData.StartStage(level.name, stage);
+
         IUserData.LevelProperty result;
-
-        for (result.stage = closestStage; result.stage > 0; --result.stage)
-        {
-            if ((__GetStage(level, result.stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
-                break;
-        }
-
-        UserData.StartStage(level.name, result.stage);
-
+        result.stage = stage;
+        
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = levelID;
-        levelCache.stage = result.stage;
+        levelCache.stage = stage;
         levelCache.gold = 0;
         levelCache.killCount = 0;
         levelCache.killBossCount = 0;
@@ -629,7 +631,7 @@ public partial class UserDataMain
         UserLevel userLevel;
         userLevel.name = level.name;
         userLevel.id = __ToID(levelIndex);
-        userLevel.energy = level.energy;
+        //userLevel.energy = level.energy;
             
         int i, j, numStageRewards, numStages = __GetStageCount(level);
         StageReward stageReward;

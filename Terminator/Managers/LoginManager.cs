@@ -398,9 +398,6 @@ public sealed class LoginManager : MonoBehaviour
             
             var selectedLevel = userLevel;
             
-            if(style.onEnergy != null)
-                style.onEnergy.Invoke(selectedLevel.energy.ToString());
-
             var level = _levels[index];
             
             if(style.onTitle != null)
@@ -445,7 +442,7 @@ public sealed class LoginManager : MonoBehaviour
                 {
                     __levelName = selectedLevel.name;
                     
-                    selectedEnergy = selectedLevel.energy;
+                    //selectedEnergy = selectedLevel.energy;
 
                     /*if (style.button != null)
                         style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
@@ -596,6 +593,9 @@ public sealed class LoginManager : MonoBehaviour
                                                 }
                                                 
                                                 selectedEnergy = stage.energy;
+                                                
+                                                if(style.onEnergy != null)
+                                                    style.onEnergy.Invoke(stage.energy.ToString());
                                             }
                                         });
                                     }
