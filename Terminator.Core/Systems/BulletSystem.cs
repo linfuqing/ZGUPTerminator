@@ -255,42 +255,33 @@ public partial struct BulletSystem : ISystem
 
             float damageScale;
             LayerMaskAndTags layerMaskAndTags;
-            if (isFire)
+            if (EffectDamageParent.TryGetComponent(
+                    entity,
+                    effectDamageParents,
+                    effectDamages,
+                    out var effectDamage,
+                    out _))
             {
-                if (EffectDamageParent.TryGetComponent(
-                        entity,
-                        effectDamageParents,
-                        effectDamages,
-                        out var effectDamage,
-                        out _))
-                {
-                    damageScale = effectDamage.scale;
+                damageScale = effectDamage.scale;
 
-                    layerMaskAndTags = effectDamage.layerMaskAndTags;
-                }
-                else
-                {
-                    damageScale = 1.0f;
-                    
-                    layerMaskAndTags = default;
-                }
-
-                if (EffectDamageParent.TryGetComponent(
-                        entity,
-                        effectDamageParents,
-                        this.bulletLayerMaskAndTags,
-                        out var bulletLayerMaskAndTags,
-                        out _))
-                    layerMaskAndTags |= bulletLayerMaskAndTags.value;
-                else if(layerMaskAndTags.isEmpty)
-                    layerMaskAndTags = LayerMaskAndTags.AllLayers;
+                layerMaskAndTags = effectDamage.layerMaskAndTags;
             }
             else
             {
-                damageScale = 0.0f;
+                damageScale = 1.0f;
                 
                 layerMaskAndTags = default;
             }
+
+            if (EffectDamageParent.TryGetComponent(
+                    entity,
+                    effectDamageParents,
+                    this.bulletLayerMaskAndTags,
+                    out var bulletLayerMaskAndTags,
+                    out _))
+                layerMaskAndTags |= bulletLayerMaskAndTags.value;
+            else if(layerMaskAndTags.isEmpty)
+                layerMaskAndTags = LayerMaskAndTags.AllLayers;
 
             var localToWorld = GetLocalToWorld(entity);
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
@@ -298,6 +289,7 @@ public partial struct BulletSystem : ISystem
             var states = this.states[index];
             var version = versions[index];
             definition.Update(
+                isFire, 
                 location, 
                 damageScale, 
                 time,

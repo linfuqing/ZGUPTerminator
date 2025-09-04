@@ -526,6 +526,7 @@ public struct BulletDefinition
     public BlobArray<Bullet> bullets;
 
     public bool Update(
+        bool isFire, 
         BulletLocation location, 
         int index,
         int version,
@@ -700,7 +701,7 @@ public struct BulletDefinition
             entityCount = 1;
         }
 
-        if (!result)
+        if (!result || !isFire)
         {
             //status.times = 0;
             
@@ -825,6 +826,7 @@ public struct BulletDefinition
     }
 
     public void Update(
+        bool isFire, 
         BulletLocation location, 
         float damageScale, 
         double time,
@@ -886,6 +888,7 @@ public struct BulletDefinition
         {
             activeIndex = activeIndices[i];
             Update(
+                isFire, 
                 location, 
                 activeIndex.value, 
                 version.value,

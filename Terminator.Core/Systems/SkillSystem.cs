@@ -14,8 +14,8 @@ public partial struct SkillSystem : ISystem
 
         [ReadOnly] 
         public NativeArray<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
-        [ReadOnly] 
-        public NativeArray<BulletDefinitionData> bulletDefinitions;
+        //[ReadOnly] 
+        //public NativeArray<BulletDefinitionData> bulletDefinitions;
         [ReadOnly]
         public NativeArray<SkillDefinitionData> instances;
         [ReadOnly]
@@ -62,7 +62,7 @@ public partial struct SkillSystem : ISystem
                 ref states, 
                 ref outputMessages, 
                 ref outputMessageParameters, 
-                ref bulletDefinitions[index].definition.Value, 
+                //ref bulletDefinitions[index].definition.Value, 
                 ref rage.value);
 
             /*if (index < bulletLayerMasks.Length)
@@ -98,8 +98,8 @@ public partial struct SkillSystem : ISystem
 
         [ReadOnly]
         public ComponentTypeHandle<BulletLayerMaskAndTags> bulletLayerMaskAndTagsType;
-        [ReadOnly]
-        public ComponentTypeHandle<BulletDefinitionData> bulletDefinitionType;
+        //[ReadOnly]
+        //public ComponentTypeHandle<BulletDefinitionData> bulletDefinitionType;
         [ReadOnly]
         public ComponentTypeHandle<SkillDefinitionData> instanceType;
         [ReadOnly]
@@ -131,7 +131,7 @@ public partial struct SkillSystem : ISystem
             collect.time = time;
             //collect.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)(hash >> 32) ^ (int)hash));
             collect.bulletLayerMaskAndTags = chunk.GetNativeArray(ref bulletLayerMaskAndTagsType);
-            collect.bulletDefinitions = chunk.GetNativeArray(ref bulletDefinitionType);
+            //collect.bulletDefinitions = chunk.GetNativeArray(ref bulletDefinitionType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.cooldownScales = chunk.GetNativeArray(ref cooldownScaleType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
@@ -155,7 +155,7 @@ public partial struct SkillSystem : ISystem
     
     private ComponentTypeHandle<BulletLayerMaskAndTags> __bulletLayerMaskAndTagsType;
 
-    private ComponentTypeHandle<BulletDefinitionData> __bulletDefinitionType;
+    //private ComponentTypeHandle<BulletDefinitionData> __bulletDefinitionType;
 
     private ComponentTypeHandle<SkillDefinitionData> __instanceType;
 
@@ -185,7 +185,7 @@ public partial struct SkillSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __bulletLayerMaskAndTagsType = state.GetComponentTypeHandle<BulletLayerMaskAndTags>(true);
-        __bulletDefinitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
+        //__bulletDefinitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
         __instanceType = state.GetComponentTypeHandle<SkillDefinitionData>(true);
         __cooldownScaleType = state.GetComponentTypeHandle<SkillCooldownScale>(true);
         __inputMessageType = state.GetBufferTypeHandle<SkillMessage>(true);
@@ -216,7 +216,7 @@ public partial struct SkillSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __bulletLayerMaskAndTagsType.Update(ref state);
-        __bulletDefinitionType.Update(ref state);
+        //__bulletDefinitionType.Update(ref state);
         __instanceType.Update(ref state);
         __cooldownScaleType.Update(ref state);
         __inputMessageType.Update(ref state);
@@ -232,7 +232,7 @@ public partial struct SkillSystem : ISystem
         CollectEx collect;
         collect.time = SystemAPI.GetSingleton<FixedFrame>().elapsedTime;//SystemAPI.Time.ElapsedTime;
         collect.bulletLayerMaskAndTagsType = __bulletLayerMaskAndTagsType;
-        collect.bulletDefinitionType = __bulletDefinitionType;
+        //collect.bulletDefinitionType = __bulletDefinitionType;
         collect.instanceType = __instanceType;
         collect.cooldownScaleType = __cooldownScaleType;
         collect.inputMessageType = __inputMessageType;

@@ -57,7 +57,7 @@ public struct SkillDefinition
         ref DynamicBuffer<SkillStatus> states, 
         ref DynamicBuffer<Message> outputMessages, 
         ref DynamicBuffer<MessageParameter> outputMessageParameters, 
-        ref BulletDefinition bulletDefinition, 
+        //ref BulletDefinition bulletDefinition, 
         ref float rage)
     {
         bulletActiveIndices.Clear();
