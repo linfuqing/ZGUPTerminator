@@ -184,16 +184,17 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
-        if (__TryGetStage(stageID, out int targetStage, out int levelIndex, out int rewardIndex))
+        var levelStage = __GetLevelStageInfo(stageID);
+        //if (__TryGetStage(stageID, out int targetStage, out int levelIndex, out int rewardIndex))
         {
             IUserData.Stage result;
-            var level = _levels[levelIndex];
+            var level = _levels[levelStage.levelIndex];
 
-            var stage = __GetStage(level, targetStage);
+            var stage = __GetStage(level, levelStage.stageIndex);
 
             result.energy = stage.energy;
             result.levelEnergy = level.energy;
-            result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, targetStage);
+            result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, levelStage.stageIndex);
 
             /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
             result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
@@ -211,11 +212,11 @@ public partial class UserDataMain
             {
                 stageReward = stage.indirectRewards[i];
                 userStageReward.name = stageReward.name;
-                userStageReward.id = __ToID(rewardIndex + i);
+                userStageReward.id = levelStage.rewardID;
                 userStageReward.flag = __GetStageRewardFlag(
                     stageReward.name, 
                     level.name, 
-                    targetStage,
+                    levelStage.stageIndex,
                     stageReward.conditionValue, 
                     stageReward.condition, 
                     out _);
@@ -399,40 +400,6 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        /*bool isSelected;
-        float chance, total;
-        var results = new List<UserRewardData>();
-        foreach (var rewardPool in _rewardPools)
-        {
-            if (rewardPool.name == poolName)
-            {
-                isSelected = false;
-                chance = UnityEngine.Random.value;
-                total = 0.0f;
-                foreach (var option in rewardPool.options)
-                {
-                    total += option.chance;
-                    if (total > 1.0f)
-                    {
-                        total -= 1.0f;
-                        
-                        chance = UnityEngine.Random.value;
-
-                        isSelected = false;
-                    }
-                    
-                    if(isSelected || total < chance)
-                        continue;
-
-                    isSelected = true;
-
-                    results.Add(option.value);
-                }
-                
-                break;
-            }
-        }*/
-        
         UserData.ApplyReward(poolName, _rewardPools);
 
         var rewards = new List<UserReward>();
@@ -458,54 +425,6 @@ public partial class UserDataMain
 #else
         return _stages[__GetStageIndex(level.stageNames[stage])];
 #endif
-    }
-    
-    private bool __TryGetStage(uint stageID, out int stage, out int levelIndex, out int rewardIndex)
-    {
-        stage = -1;
-        rewardIndex = 0;
-        int i, j, 
-            stageIndex = 0, 
-            targetStageIndex = __ToIndex(stageID), 
-            numTargetStages,
-            numStages, 
-            numChapters = Mathf.Min(_levelChapters.Length, UserData.chapter + 1);
-        for (i = 0; i < numChapters; ++i)
-        {
-            ref var level = ref _levels[__GetLevelIndex(_levelChapters[i].name)];
-            numStages = level.
-#if USER_DATA_VERSION_1
-                stages
-#else
-                stageNames
-#endif
-                .Length;
-            numTargetStages = Mathf.Min(stageIndex + numStages, targetStageIndex) - stageIndex;
-            for (j = 0; j < numTargetStages; ++j)
-                rewardIndex += 
-#if USER_DATA_VERSION_1
-                    level.stages[j]
-#else
-                    _stages[__GetStageIndex(level.stageNames[j])]
-#endif
-                        .indirectRewards.Length;
-
-            if (numTargetStages < numStages)
-            {
-                levelIndex = i;
-                
-                stage = numTargetStages;
-
-                return true;
-            }
-
-            stageIndex += numStages;
-        }
-
-        levelIndex = -1;
-        rewardIndex = -1;
-        
-        return false;
     }
     
     private Dictionary<string, int> __stageNameToIndices;

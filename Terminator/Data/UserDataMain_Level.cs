@@ -398,7 +398,6 @@ public partial class UserDataMain
 
         bool isUnlock = true;
         int stageRewardCount = 0, 
-            stage = 0, 
             chapter = UserData.chapter, 
             numChapters = Mathf.Clamp(chapter + 1, 1, _levelChapters.Length);
         LevelChapter levelChapter;
@@ -409,7 +408,7 @@ public partial class UserDataMain
 
             stageRewardCount = levelChapter.stageRewardCount;
             
-            userLevels[i] = __ToUserLevel(__GetLevelIndex(levelChapter.name));
+            userLevels[i] = __ToUserLevel(__GetLevelIndex(levelChapter.name), ref isUnlock);
         }
 
         IUserData.LevelChapters result;
@@ -552,7 +551,7 @@ public partial class UserDataMain
             }
         }
 
-        if (__levelNameToTicketIndices.TryGetValue(name, out (int ticketIndex, int levelIndex) ticketIndex))
+        if (__levelNameToTicketIndices.TryGetValue(levelName, out (int ticketIndex, int levelIndex) ticketIndex))
         {
             levelTicketIndex =  ticketIndex.ticketIndex;
             levelIndexOfTicket =  ticketIndex.levelIndex;
@@ -566,7 +565,64 @@ public partial class UserDataMain
         return false;
     }
 
-    private UserLevel __ToUserLevel(int levelIndex, ref int stageIndex, ref bool isUnlock)
+    private Dictionary<(int, int), uint> __levelStageIDs;
+
+    private struct LevelStageInfo
+    {
+        public int stageIndex;
+        public int levelIndex;
+        public uint rewardID;
+    }
+    
+    private Dictionary<uint, LevelStageInfo> __levelStageInfos;
+
+    private void __BuildLevelStages()
+    {
+        __levelStageIDs = new Dictionary<(int, int), uint>();
+        __levelStageInfos = new Dictionary<uint, LevelStageInfo>();
+            
+        int rewardIndex = 0, stageIndex = 0, numLevels = _levels.Length, numStages, i, j;
+        uint id;
+        LevelStageInfo stageInfo;
+        for (i = 0; i < numLevels; ++i)
+        {
+            ref var level = ref _levels[i];
+            numStages = __GetStageCount(level);
+
+            stageInfo.levelIndex = i;
+
+            for (j = 0; j < numStages; ++j)
+            {
+                id = __ToID(stageIndex++);
+                __levelStageIDs[(i, j)] = id;
+
+                stageInfo.stageIndex = j;
+                stageInfo.rewardID = __ToID(rewardIndex);
+
+                __levelStageInfos[id] = stageInfo;
+
+                rewardIndex += __GetStage(level, j).indirectRewards.Length;
+            }
+        }
+    }
+
+    private uint __GetLevelStageID(int levelIndex, int stage)
+    {
+        if (__levelStageIDs == null)
+            __BuildLevelStages();
+
+        return __levelStageIDs[(levelIndex, stage)];
+    }
+
+    private LevelStageInfo __GetLevelStageInfo(uint stageID)
+    {
+        if (__levelStageInfos == null)
+            __BuildLevelStages();
+        
+        return __levelStageInfos[stageID];
+    }
+
+    private UserLevel __ToUserLevel(int levelIndex, ref bool isUnlock)
     {
         ref var level = ref _levels[levelIndex];
         
@@ -584,7 +640,7 @@ public partial class UserDataMain
         {
             stage = __GetStage(level, i);
             userStage.name = stage.name;
-            userStage.id = __ToID(stageIndex++);
+            userStage.id = __GetLevelStageID(levelIndex, i);
             userStage.energy = stage.energy;
                 
             if (isUnlock)
@@ -623,29 +679,7 @@ public partial class UserDataMain
     private UserLevel __ToUserLevel(int levelIndex)
     {
         bool isUnlock = true;
-        int stage = 0, numStages, i, j;
-        for (i = 0; i < levelIndex; ++i)
-        {
-            ref var level = ref _levels[i];
-
-            numStages = __GetStageCount(level);
-
-            stage += numStages;
-
-            if (isUnlock)
-            {
-                for (j = 0; j < numStages; ++j)
-                {
-                    isUnlock = isUnlock && (UserData.GetStageFlag(level.name, j) & IUserData.StageFlag.Normal) ==
-                        IUserData.StageFlag.Normal;
-
-                    if (!isUnlock)
-                        break;
-                }
-            }
-        }
-        
-        return __ToUserLevel(levelIndex, ref stage, ref isUnlock);
+        return __ToUserLevel(levelIndex, ref isUnlock);
     }
 }
 
