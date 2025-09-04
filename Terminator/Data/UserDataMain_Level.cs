@@ -316,8 +316,7 @@ public partial class UserDataMain
         var rewards = new List<UserReward>();
         var level = _levels[__ToIndex(levelCache.id)];
         int stageCount = __GetStageCount(level);
-        stageCount = Mathf.Min(stageCount, levelCache.stage);
-        if (stageCount == levelCache.stage)
+        if (stageCount <= levelCache.stage)
         {
             if (__GetLevelTicketIndex(level.name, out _, out _))
                 PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
@@ -338,6 +337,7 @@ public partial class UserDataMain
 
         string key;
         Stage stage;
+        stageCount = Mathf.Min(stageCount, levelCache.stage);
         for(int i = 0; i < stageCount; ++i)
         {
             stage = __GetStage(level, i);
