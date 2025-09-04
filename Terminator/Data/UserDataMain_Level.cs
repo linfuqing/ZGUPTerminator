@@ -222,12 +222,7 @@ public partial class UserDataMain
 
         int levelIndex = __ToIndex(levelID);
         var level = _levels[levelIndex];
-        int stage;
-        for (stage = closestStage; stage > 0; --stage)
-        {
-            if ((__GetStage(level, stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
-                break;
-        }
+        int stage = __GetDontCacheStage(level, closestStage);
 
         if (__GetLevelTicketIndex(level.name, out int levelIndexOfTicket, out int levelTicketIndex))
         {

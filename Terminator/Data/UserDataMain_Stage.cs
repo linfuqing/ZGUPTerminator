@@ -193,7 +193,7 @@ public partial class UserDataMain
             var stage = __GetStage(level, levelStage.stageIndex);
 
             result.energy = stage.energy;
-            result.levelEnergy = __GetStage(level, 0).energy;
+            result.levelEnergy = __GetStage(level, __GetDontCacheStage(level, levelStage.stageIndex)).energy;
             result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, levelStage.stageIndex);
 
             /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
@@ -541,6 +541,17 @@ public partial class UserDataMain
             UserDataMain.flag = flag;
     }
 
+    private int __GetDontCacheStage(Level level, int closestStage)
+    {
+        int stage;
+        for (stage = closestStage; stage > 0; --stage)
+        {
+            if ((__GetStage(level, stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
+                break;
+        }
+
+        return stage;
+    }
 }
 
 public partial class UserData
