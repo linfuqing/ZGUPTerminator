@@ -461,7 +461,7 @@ public partial class UserDataMain
 
                     levels.Add(userLevel);
                     
-                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_FLAG}") == 0)
+                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}") == 0)
                         break;
                 }
                 
