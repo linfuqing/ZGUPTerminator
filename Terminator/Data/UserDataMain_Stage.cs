@@ -254,24 +254,30 @@ public partial class UserDataMain
         var level = _levels[levelIndex];
         
         IUserData.StageCache stageCache;
-        int numStages = __GetStageCount(level);
+        int numStages = __GetStageCount(level), energy;
         if (numStages > stage)
         {
             var temp = __GetStage(level, stage);
-            if (!__ApplyEnergy(temp.energy))
-            {
-                onComplete(default);
-
-                yield break;
-            }
+            energy = temp.energy;
 
             stageCache = (temp.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache
                 ? IUserData.StageCache.Empty
                 : UserData.GetStageCache(level.name, stage);
         }
         else
+        {
+            energy = 0;
+            
             stageCache = IUserData.StageCache.Empty;
+        }
 
+        if (0 == stage && !__ApplyLevel(level.name, energy))
+        {
+            onComplete(default);
+            
+            yield break;
+        }
+        
         __SubmitStageFlag();
 
         __AppendQuest(UserQuest.Type.Stage, 1);

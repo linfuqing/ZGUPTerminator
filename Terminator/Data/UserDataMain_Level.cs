@@ -222,43 +222,12 @@ public partial class UserDataMain
 
         int levelIndex = __ToIndex(levelID);
         var level = _levels[levelIndex];
-        int stage = __GetDontCacheStage(level, closestStage);
-
-        if (__GetLevelTicketIndex(level.name, out int levelIndexOfTicket, out int levelTicketIndex))
+        int stage = __GetDontCacheStage(level, closestStage), stageCount = __GetStageCount(level);
+        if (!__ApplyLevel(level.name, stage < stageCount ? __GetStage(level, stage).energy : 0))
         {
-            var levelTicket = _levelTickets[levelTicketIndex];
-            if (UserData.chapter < levelTicket.levels[levelIndexOfTicket].chapter)
-            {
-                onComplete(default);
-            
-                yield break;
-            }
-            
-            int count = levelTicket.count;
-            if (count < 1)
-            {
-                onComplete(default);
+            onComplete(default);
 
-                yield break;
-            }
-
-            levelTicket.count = count - 1;
-        }
-        else
-        {
-            if (UserData.chapter < __GetLevelChapterIndex(level.name))
-            {
-                onComplete(default);
-            
-                yield break;
-            }
-
-            if (!__ApplyEnergy(__GetStage(level, stage).energy))
-            {
-                onComplete(default);
-
-                yield break;
-            }
+            yield break;
         }
         
         __SubmitStageFlag();
@@ -677,6 +646,26 @@ public partial class UserDataMain
     {
         bool isUnlock = true;
         return __ToUserLevel(levelIndex, ref isUnlock);
+    }
+
+    private bool __ApplyLevel(string levelName, int energy)
+    {
+        if (__GetLevelTicketIndex(levelName, out int levelIndexOfTicket, out int levelTicketIndex))
+        {
+            var levelTicket = _levelTickets[levelTicketIndex];
+            if (UserData.chapter < levelTicket.levels[levelIndexOfTicket].chapter)
+                return false;
+            
+            int count = levelTicket.count;
+            if (count < 1 || energy > 0 && !__ApplyEnergy(energy))
+                return false;
+            
+            levelTicket.count = count - 1;
+        }
+        else if (UserData.chapter < __GetLevelChapterIndex(levelName) || energy > 0 && !__ApplyEnergy(energy))
+                return false;
+        
+        return true;
     }
 }
 

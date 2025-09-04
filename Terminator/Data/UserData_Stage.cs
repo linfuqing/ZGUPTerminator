@@ -96,6 +96,8 @@ public partial interface IUserData
         public string[] skills;
 
         public static readonly StageCache Empty = new StageCache(string.Empty);
+        
+        public bool isEmpty => exp == expMax && (skills == null || skills.Length < 1);
 
         public StageCache(string value)
         {
