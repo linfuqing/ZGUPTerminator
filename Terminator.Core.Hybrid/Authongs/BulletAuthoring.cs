@@ -1,16 +1,54 @@
 using System;
 using System.Collections.Generic;
-using Unity.CharacterController;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Mathematics;
 using UnityEngine;
+using Collider = UnityEngine.Collider;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
+using Unity.Physics;
 using UnityEditor;
 using ZG;
+
+[TemporaryBakingType]
+public struct BulletColliderEntity : IBufferElementData
+{
+    public Entity value;
+}
+
+[UpdateAfter(typeof(Unity.Physics.Authoring.EndColliderBakingSystem))]
+[WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
+partial struct BulletColliderBakingSystem : ISystem
+{
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
+
+        var physicsColliders = state.GetComponentLookup<PhysicsCollider>();
+        foreach (var(colliderEntities, colliders, entity) in SystemAPI.Query<DynamicBuffer<BulletColliderEntity>, DynamicBuffer<BulletCollider>>()
+                     .WithAll<Prefab>()
+                     .WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities)
+                     .WithEntityAccess())
+        {
+            BulletCollider collider;
+            foreach (var colliderEntity in colliderEntities)
+            {
+                collider.value = physicsColliders[colliderEntity.value].Value;
+                colliders.Add(collider);
+                ecb.DestroyEntity(colliderEntity.value);
+            }
+            
+            ecb.RemoveComponent<BulletColliderEntity>(entity);
+        }
+
+        ecb.Playback(state.EntityManager);
+    }
+}
 
 public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 {
@@ -697,36 +735,42 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                 ref var root = ref builder.ConstructRoot<BulletDefinition>();
                 root.minAirSpeed = authoring._minAirSpeed;
                 root.maxAirSpeed = authoring._maxAirSpeed;
-                
-                var numTargets = authoring._targets.Length;
+
+                int numColliderPrefabs = 0, numTargets = authoring._targets.Length;
                 BulletPrefab prefab;
-                //RequestEntityPrefabLoaded requestEntityPrefabLoaded;
+                BulletColliderEntity colliderEntity;
+                var colliderEntities = AddBuffer<BulletColliderEntity>(entity);
                 var targets = builder.Allocate(ref root.targets, numTargets);
                 for (i = 0; i < numTargets; ++i)
                 {
                     ref var destination = ref targets[i];
                     ref var source = ref authoring._targets[i];
-                    if (source.prefab == null)
-                        destination.prefabLoaderIndex = -1;
-                    else if (!prefabIndices.TryGetValue(source.prefab, out destination.prefabLoaderIndex))
+                    if (source.prefab == null || GetComponentInChildren<Collider>(source.prefab) == null)
                     {
-                        /*prefab.loader = CreateAdditionalEntity(TransformUsageFlags.ManualOverride, false,
-                            source.prefab.name);
-
-                        requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(source.prefab);
-
-                        AddComponent(prefab.loader, requestEntityPrefabLoaded);*/
-
-                        destination.prefabLoaderIndex = prefabs.Length;
+                        destination.colliderIndex = -1;
                         
-                        prefabIndices[source.prefab] = destination.prefabLoaderIndex;
-
-                        prefab.entityPrefabReference = new EntityPrefabReference(source.prefab);
-                        prefabs.Add(prefab);
+                        if(source.maxDistance > source.minDistance)
+                            Debug.LogError($"The bullet target {source.name} need a collider!");
                     }
+                    else
+                    {
+                        colliderEntity.value = GetEntity(source.prefab, TransformUsageFlags.None);
 
-                    if(destination.prefabLoaderIndex == -1 && source.maxDistance > source.minDistance)
-                        Debug.LogError($"The bullet target {source.name} need a prefab!");
+                        for (j = 0; j < numColliderPrefabs; ++j)
+                        {
+                            if (colliderEntities[j].value == colliderEntity.value)
+                                break;
+                        }
+
+                        if (j < numColliderPrefabs)
+                            destination.colliderIndex = j;
+                        else
+                        {
+                            destination.colliderIndex = numColliderPrefabs++;
+
+                            colliderEntities.Add(colliderEntity);
+                        }
+                    }
 
                     destination.aabb.Center = source.bounds.center;
                     destination.aabb.Extents = source.bounds.extents;
@@ -744,6 +788,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.coordinate = source.coordinate;
                     //destination.direction = source.direction;
                 }
+                
+                AddComponent<BulletCollider>(entity);
                 
                 var numDamages = authoring._damages == null ? 0 : authoring._damages.Length;
                 var damages = builder.Allocate(ref root.damages, numDamages);
@@ -910,16 +956,10 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             
             AddComponent(entity, instance);
 
-            /*BulletDamageScale damageScale;
-            damageScale.value = authoring._damageScale;
-            AddComponent(entity, damageScale);*/
-
             BulletLayerMaskAndTags bulletLayerMaskAndTags;
             bulletLayerMaskAndTags.value = authoring._layerMaskAndTags;
 
             AddComponent(entity, bulletLayerMaskAndTags);
-            
-            //AddComponent<BulletTag>(entity);
             
             AddComponent<BulletStatus>(entity);
             AddComponent<BulletTargetStatus>(entity);

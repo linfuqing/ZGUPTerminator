@@ -142,9 +142,6 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<LocalTransform> localTransforms;
 
-        [ReadOnly] 
-        public ComponentLookup<PhysicsCollider> physicsColliders;
-
         [ReadOnly]
         public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
 
@@ -178,12 +175,15 @@ public partial struct BulletSystem : ISystem
         [ReadOnly]
         public NativeArray<BulletDefinitionData> definitions;
 
+        [ReadOnly] 
+        public BufferAccessor<BulletActiveIndex> activeIndices;
+
+        [ReadOnly] 
+        public BufferAccessor<BulletCollider> colliders;
+
         [ReadOnly]
         public BufferAccessor<BulletPrefab> prefabs;
 
-        [ReadOnly] 
-        public BufferAccessor<BulletActiveIndex> activeIndices;
-        
         [ReadOnly] 
         public BufferAccessor<BulletMessage> inputMessages;
 
@@ -302,18 +302,17 @@ public partial struct BulletSystem : ISystem
                 levelStatus, 
                 collisionWorld, 
                 parents, 
-                physicsColliders,
                 characterBodies, 
                 animationCurveDeltas, 
-                prefabs[index],
-                activeIndices[index],
-                inputMessages[index],
+                colliders[index].AsNativeArray(), 
+                prefabs[index].AsNativeArray(),
+                activeIndices[index].AsNativeArray(),
+                inputMessages[index].AsNativeArray(),
                 ref outputMessages,
                 ref characterStandTimes, 
                 ref targetStates,
                 ref states,
                 ref instances,
-                ref prefabLoader, 
                 ref version, 
                 ref random);
             
@@ -375,9 +374,6 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<LocalTransform> localTransforms;
 
-        [ReadOnly] 
-        public ComponentLookup<PhysicsCollider> physicsColliders;
-
         [ReadOnly]
         public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
 
@@ -414,11 +410,14 @@ public partial struct BulletSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<BulletDefinitionData> definitionType;
 
-        [ReadOnly]
-        public BufferTypeHandle<BulletPrefab> prefabType;
-
         [ReadOnly] 
         public BufferTypeHandle<BulletActiveIndex> activeIndexType;
+
+        [ReadOnly] 
+        public BufferTypeHandle<BulletCollider> colliderType;
+
+        [ReadOnly]
+        public BufferTypeHandle<BulletPrefab> prefabType;
 
         [ReadOnly]
         public BufferTypeHandle<BulletMessage> inputMessageType;
@@ -455,7 +454,6 @@ public partial struct BulletSystem : ISystem
             collect.collisionWorld = collisionWorld;
             collect.parents = parents;
             collect.localTransforms = localTransforms;
-            collect.physicsColliders = physicsColliders;
             collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
             collect.characterInterpolations = characterInterpolations;
             collect.characterBodies = characterBodies;
@@ -467,8 +465,9 @@ public partial struct BulletSystem : ISystem
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
             collect.definitions = chunk.GetNativeArray(ref definitionType);
-            collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
+            collect.colliders = chunk.GetBufferAccessor(ref colliderType);
+            collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
@@ -492,8 +491,6 @@ public partial struct BulletSystem : ISystem
     private ComponentLookup<Parent> __parents;
 
     private ComponentLookup<LocalTransform> __localTransforms;
-    
-    private ComponentLookup<PhysicsCollider> __physicsColliders;
     
     private ComponentLookup<PhysicsGraphicalInterpolationBuffer> __physicsGraphicalInterpolationBuffers;
 
@@ -519,17 +516,19 @@ public partial struct BulletSystem : ISystem
 
     private ComponentTypeHandle<BulletDefinitionData> __definitionType;
 
-    private BufferTypeHandle<BulletPrefab> __prefabType;
-
     private BufferTypeHandle<BulletActiveIndex> __activeIndexType;
     
+    private BufferTypeHandle<BulletCollider> __colliderType;
+
+    private BufferTypeHandle<BulletPrefab> __prefabType;
+
+    private BufferTypeHandle<BulletMessage> __inputMessageType;
+
     private BufferTypeHandle<BulletInstance> __instanceType;
 
     private BufferTypeHandle<BulletStatus> __statusType;
 
     private BufferTypeHandle<BulletTargetStatus> __targetStatusType;
-
-    private BufferTypeHandle<BulletMessage> __inputMessageType;
 
     private BufferTypeHandle<Message> __outputMessageType;
 
@@ -549,7 +548,6 @@ public partial struct BulletSystem : ISystem
     {
         __parents = state.GetComponentLookup<Parent>(true);
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
-        __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
@@ -562,12 +560,13 @@ public partial struct BulletSystem : ISystem
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
         __definitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
-        __prefabType = state.GetBufferTypeHandle<BulletPrefab>(true);
         __activeIndexType = state.GetBufferTypeHandle<BulletActiveIndex>(true);
+        __colliderType = state.GetBufferTypeHandle<BulletCollider>(true);
+        __prefabType = state.GetBufferTypeHandle<BulletPrefab>(true);
+        __inputMessageType = state.GetBufferTypeHandle<BulletMessage>(true);
         __instanceType = state.GetBufferTypeHandle<BulletInstance>();
         __statusType = state.GetBufferTypeHandle<BulletStatus>();
         __targetStatusType = state.GetBufferTypeHandle<BulletTargetStatus>();
-        __inputMessageType = state.GetBufferTypeHandle<BulletMessage>(true);
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __versionType = state.GetComponentTypeHandle<BulletVersion>();
@@ -604,7 +603,6 @@ public partial struct BulletSystem : ISystem
     {
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
-        __physicsColliders.Update(ref state);
         __physicsGraphicalInterpolationBuffers.Update(ref state);
         __characterInterpolations.Update(ref state);
         __characterBodies.Update(ref state);
@@ -617,8 +615,9 @@ public partial struct BulletSystem : ISystem
         __entityType.Update(ref state);
         __lookAtType.Update(ref state);
         __definitionType.Update(ref state);
-        __prefabType.Update(ref state);
         __activeIndexType.Update(ref state);
+        __colliderType.Update(ref state);
+        __prefabType.Update(ref state);
         __instanceType.Update(ref state);
         __statusType.Update(ref state);
         __targetStatusType.Update(ref state);
@@ -637,7 +636,6 @@ public partial struct BulletSystem : ISystem
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         collect.parents = __parents;
         collect.localTransforms = __localTransforms;
-        collect.physicsColliders = __physicsColliders;
         collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
         collect.characterInterpolations = __characterInterpolations;
         collect.characterBodies = __characterBodies;
@@ -650,8 +648,9 @@ public partial struct BulletSystem : ISystem
         collect.entityType = __entityType;
         collect.lookAtTargetType = __lookAtType;
         collect.definitionType = __definitionType;
-        collect.prefabType = __prefabType;
         collect.activeIndexType = __activeIndexType;
+        collect.colliderType = __colliderType;
+        collect.prefabType = __prefabType;
         collect.instanceType = __instanceType;
         collect.statusType = __statusType;
         collect.targetStatusType = __targetStatusType;

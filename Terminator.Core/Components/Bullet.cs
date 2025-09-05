@@ -177,7 +177,7 @@ public struct BulletDefinition
 
         public float cooldown;
 
-        public int prefabLoaderIndex;
+        public int colliderIndex;
 
         public uint hitWith;
         public uint groundBelongsTo;
@@ -205,11 +205,9 @@ public struct BulletDefinition
             in float4x4 transform,
             in Entity lookAt,
             in CollisionWorld collisionWorld,
-            in ComponentLookup<PhysicsCollider> physicsColliders,
             in ComponentLookup<KinematicCharacterBody> characterBodies,
-            in DynamicBuffer<BulletPrefab> prefabs,
+            in NativeArray<BulletCollider> colliders,
             in NativeArray<BulletTargetStatus> states,
-            ref PrefabLoader.ParallelWriter prefabLoader,
             ref BulletTargetStatus status,
             ref Random random)
         {
@@ -281,20 +279,19 @@ public struct BulletDefinition
 
                 if (!hasTarget)
                 {
-                    if (prefabLoader.TryGetOrLoadPrefabRoot(prefabs[prefabLoaderIndex].entityPrefabReference, out var prefab) &&
-                        physicsColliders.TryGetComponent(prefab, out var physicsCollider) &&
-                        physicsCollider.IsValid)
+                    if (colliderIndex >= 0 &&
+                        colliderIndex < colliders.Length)
                     {
                         var rigidTransform = space == BulletTargetSpace.World ? 
                             math.RigidTransform(math.mul(math.quaternion(transform), targetTransform.rot), status.transform.pos) : 
                             status.transform;
-                        //var rigidTransform = math.RigidTransform(math.inverse(status.transform.rot), status.transform.pos);
+                        var collider = colliders[colliderIndex].value;
                         if (__Check(
                                 version,
                                 time,
                                 lookAt,
                                 rigidTransform,
-                                physicsCollider.Value,
+                                collider,
                                 collisionWorld,
                                 characterBodies,
                                 states,
@@ -310,7 +307,7 @@ public struct BulletDefinition
                                 time,
                                 status.target,
                                 rigidTransform,
-                                physicsCollider.Value,
+                                collider,
                                 collisionWorld,
                                 characterBodies,
                                 states,
@@ -320,7 +317,7 @@ public struct BulletDefinition
                         {
                             status.target = Entity.Null;
 
-                            var input = new ColliderDistanceInput(physicsCollider.Value, maxDistance, rigidTransform);
+                            var input = new ColliderDistanceInput(collider, maxDistance, rigidTransform);
 
                             var collector = new Collector(
                                 rigidTransform,
@@ -540,15 +537,14 @@ public struct BulletDefinition
         in LayerMaskAndTags layerMaskAndTags, 
         in LevelStatus levelStatus,
         in CollisionWorld collisionWorld,
-        in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
-        in DynamicBuffer<BulletPrefab> prefabs,
-        in DynamicBuffer<BulletMessage> inputMessages,
+        in NativeArray<BulletCollider> colliders,
+        in NativeArray<BulletPrefab> prefabs,
+        in NativeArray<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref DynamicBuffer<BulletInstance> instances,
-        ref PrefabLoader.ParallelWriter prefabLoader,
         ref BulletStatus status, 
         ref Random random)
     {
@@ -583,11 +579,9 @@ public struct BulletDefinition
                         transform,
                         lookAt,
                         collisionWorld,
-                        physicsColliders,
                         characterBodies,
-                        prefabs,
+                        colliders,
                         targetStates.AsNativeArray(),
-                        ref prefabLoader,
                         ref temp,
                         ref random))
                 {
@@ -690,10 +684,13 @@ public struct BulletDefinition
                 }
                 
             } while (status.cooldown <= time);
+
+            if (!isFire)
+                return false;
         }
         else
         {
-            if (!result || status.count > 0)
+            if (!result || !isFire || status.count > 0)
                 return false;
 
             status.count = 1;
@@ -701,7 +698,7 @@ public struct BulletDefinition
             entityCount = 1;
         }
 
-        if (!result || !isFire)
+        if (!result)
         {
             //status.times = 0;
             
@@ -839,18 +836,17 @@ public struct BulletDefinition
         in LevelStatus levelStatus,
         in CollisionWorld collisionWorld,
         in ComponentLookup<Parent> parents,
-        in ComponentLookup<PhysicsCollider> physicsColliders,
         in ComponentLookup<KinematicCharacterBody> characterBodies, 
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
-        in DynamicBuffer<BulletPrefab> prefabs,
-        in DynamicBuffer<BulletActiveIndex> activeIndices, 
-        in DynamicBuffer<BulletMessage> inputMessages,
+        in NativeArray<BulletCollider> colliders,
+        in NativeArray<BulletPrefab> prefabs,
+        in NativeArray<BulletActiveIndex> activeIndices, 
+        in NativeArray<BulletMessage> inputMessages,
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
         ref DynamicBuffer<BulletStatus> states,
         ref DynamicBuffer<BulletInstance> instances,
-        ref PrefabLoader.ParallelWriter prefabLoader,
         ref BulletVersion version, 
         ref Random random)
     {
@@ -902,15 +898,14 @@ public struct BulletDefinition
                 layerMaskAndTags, 
                 levelStatus, 
                 collisionWorld,
-                physicsColliders,
                 characterBodies, 
+                colliders, 
                 prefabs, 
                 inputMessages,
                 ref outputMessages,
                 ref characterStandTimes, 
                 ref targetStates,
                 ref instances, 
-                ref prefabLoader, 
                 ref states.ElementAt(activeIndex.value), 
                 ref random);
         }
@@ -1178,6 +1173,11 @@ public struct BulletTargetStatus : IBufferElementData
     public Entity target;
     public float3 targetPosition;
     public RigidTransform transform;
+}
+
+public struct BulletCollider : IBufferElementData
+{
+    public BlobAssetReference<Collider> value;
 }
 
 public struct BulletPrefab : IBufferElementData
