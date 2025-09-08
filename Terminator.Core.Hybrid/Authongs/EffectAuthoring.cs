@@ -62,6 +62,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
         public float damageScale;
 
+        public LayerMask damageLayerMask;
+
         [UnityEngine.Serialization.FormerlySerializedAs("bulletLayerMask")]
         public LayerMaskAndTagsAuthoring layerMaskAndTags;
 
@@ -96,6 +98,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
             prefab.chance = chance;
             prefab.damageScale = damageScale;
+            prefab.damageLayerMask = damageLayerMask;
             prefab.layerMaskAndTags = layerMaskAndTags;
         }
     }
@@ -265,12 +268,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     ref var source = ref authoring._effects[i];
                     ref var destination = ref effects[i];
 
-                    //destination.damage = source.damage;
-                    //destination.dropToDamage = source.dropToDamage;
                     destination.count = source.count;
-                    //destination.spring = source.spring;
-                    //destination.explosion = source.explosion;
-                    //destination.suction = source.suction;
                     destination.time = source.time;
                     destination.startTime = source.startTime;
                     destination.endTime = source.endTime;

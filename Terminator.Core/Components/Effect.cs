@@ -51,8 +51,9 @@ public struct EffectDefinition
         public EffectSpace space;
         public int index;
         public int buffIndex;
-        public float chance;
+        public int damageLayerMask;
         public float damageScale;
+        public float chance;
         public LayerMaskAndTags layerMaskAndTags;
     }
     
@@ -252,10 +253,11 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 
 public struct EffectTargetHP : IComponentData, IEnableableComponent
 {
-    public int layerMask;
     public int value;
+    public int layerMask;
+    public int messageLayerMask;
     
-    public void Add(int value, int layerMask)
+    public void Add(int value, int layerMask, int messageLayerMask)
     {
         Interlocked.Add(ref this.value, value);
 
@@ -272,16 +274,31 @@ public struct EffectTargetHP : IComponentData, IEnableableComponent
                 origin = this.layerMask;
             } while (Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
         }
+        
+        if (messageLayerMask == -1)
+            this.messageLayerMask = -1;
+        else
+        {
+            if (messageLayerMask == 0)
+                messageLayerMask = 1;
+
+            int origin;
+            do
+            {
+                origin = this.messageLayerMask;
+            } while (Interlocked.CompareExchange(ref this.messageLayerMask, origin | messageLayerMask, origin) != origin);
+        }
     }
 }
 
 public struct EffectTargetDamage : IComponentData, IEnableableComponent
 {
-    public int layerMask;
     public int value;
     public int valueImmunized;
+    public int layerMask;
+    public int messageLayerMask;
     
-    public int Add(int value, int valueImmunized, int layerMask)
+    public int Add(int value, int valueImmunized, int layerMask, int messageLayerMask)
     {
         int result = Interlocked.Add(ref this.value, value);
         result += Interlocked.Add(ref this.valueImmunized, valueImmunized);
@@ -299,7 +316,21 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
                 origin = this.layerMask;
             } while (Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
         }
+        
+        if (messageLayerMask == -1)
+            this.messageLayerMask = -1;
+        else
+        {
+            if (messageLayerMask == 0)
+                messageLayerMask = 1;
 
+            int origin;
+            do
+            {
+                origin = this.messageLayerMask;
+            } while (Interlocked.CompareExchange(ref this.messageLayerMask, origin | messageLayerMask, origin) != origin);
+        }
+        
         return result;
     }
 }

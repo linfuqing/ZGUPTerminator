@@ -15,6 +15,7 @@ public class DropToDamageAuthoring : MonoBehaviour
             instance.value = authoring._value;
             instance.valueImmunized = authoring._valueImmunized;
             instance.layerMask = authoring._layerMask.value;
+            instance.messageLayerMask = authoring._messageLayerMask.value;
             AddComponent(entity, instance);
             
             SetComponentEnabled<DropToDamage>(entity, false);
@@ -33,6 +34,9 @@ public class DropToDamageAuthoring : MonoBehaviour
     
     [SerializeField]
     internal LayerMask _layerMask;
+
+    [SerializeField]
+    internal LayerMask _messageLayerMask;
 
     //[SerializeField] 
     //internal float _range;

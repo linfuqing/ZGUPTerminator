@@ -716,6 +716,7 @@ public partial struct EffectSystem : ISystem
                     instanceDamageParent.entity = entity;
                 }
 
+                int damageLayerMask = 0;
                 LocalToWorld source = localToWorlds[entity];
                 var statusTargets = this.statusTargets[index];
                 if (result)
@@ -748,7 +749,6 @@ public partial struct EffectSystem : ISystem
                         damageValue,
                         damageValueImmunized, 
                         dropDamageValue, 
-                        //layerMask,
                         belongsTo,
                         numMessageIndices,
                         numDamageIndices,
@@ -814,7 +814,7 @@ public partial struct EffectSystem : ISystem
 
                             if (isResult)
                             {
-                                targetDamage.Add(damageValue,  damageValueImmunized, damage.messageLayerMask);
+                                targetDamage.Add(damageValue,  damageValueImmunized, belongsTo, damage.messageLayerMask);
                                 targetDamages.SetComponentEnabled(simulationEvent.entity, true);
 
                                 damageValue += damageValueImmunized;
@@ -832,7 +832,7 @@ public partial struct EffectSystem : ISystem
 
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
-                                    dropToDamage.Add(dropDamageValue, 0, damage.messageLayerMask);
+                                    dropToDamage.Add(dropDamageValue, 0, belongsTo, damage.messageLayerMask);
 
                                     dropToDamage.isGrounded = characterBody.ValueRO.IsGrounded;
 
@@ -897,7 +897,10 @@ public partial struct EffectSystem : ISystem
                             }
                         }
 
+                        damageLayerMask |= belongsTo;
+
                         __Drop(
+                            belongsTo, 
                             cameraRotation, 
                             math.RigidTransform(destination.Value),
                             simulationEvent.entity,
@@ -1066,6 +1069,7 @@ public partial struct EffectSystem : ISystem
 
                     for (int i = 0; i < resultCount; ++i)
                         __Drop(
+                            damageLayerMask, 
                             cameraRotation, 
                             transform,
                             entity,
@@ -1324,12 +1328,13 @@ public partial struct EffectSystem : ISystem
             {
                 var targetInstance = targetInstances[index];
 
-                int damage, damageLayerMask;
+                int damage, damageLayerMask, messageLayerMask;
                 if (isFallToDestroy)
                 {
                     damage = 0;
 
                     damageLayerMask = 0;
+                    messageLayerMask = 0;
                 }
                 else
                 {
@@ -1345,6 +1350,7 @@ public partial struct EffectSystem : ISystem
                         damage = 0;
 
                         damageLayerMask = targetHP.layerMask;
+                        messageLayerMask = targetHP.messageLayerMask;
 
                         if (targetHP.value > 0)
                             target.hp += targetHP.value;
@@ -1364,6 +1370,7 @@ public partial struct EffectSystem : ISystem
                     else
                     {
                         damageLayerMask = targetDamage.layerMask;
+                        messageLayerMask = targetDamage.messageLayerMask;
 
                         if (damage > 0 && index < targetImmunityStates.Length)
                         {
@@ -1460,7 +1467,7 @@ public partial struct EffectSystem : ISystem
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
                     (targetHP.value != 0 && targetHP.layerMask != 0 ||
-                     damage != 0 && damageLayerMask != 0))
+                     damage != 0 && messageLayerMask != 0))
                 {
                     bool isSelected = false;
                     float chance = random.NextFloat(), totalChance = 0.0f;
@@ -1474,7 +1481,7 @@ public partial struct EffectSystem : ISystem
                     foreach (var targetMessage in targetMessages)
                     {
                         if (targetMessage.layerMask == 0 ||
-                            (targetMessage.layerMask & (targetHP.layerMask | damageLayerMask)) != 0)
+                            (targetMessage.layerMask & (targetHP.layerMask | messageLayerMask)) != 0)
                         {
                             totalChance += targetMessage.chance;
                             if (totalChance > 1.0f)
@@ -1536,7 +1543,7 @@ public partial struct EffectSystem : ISystem
                                 {
                                     messageParameter.messageKey = message.key;
 
-                                    if ((targetMessage.layerMask & damageLayerMask) != 0)
+                                    if ((targetMessage.layerMask & messageLayerMask) != 0)
                                     {
                                         messageParameter.value = -damage;
                                         messageParameter.id = (int)EffectAttributeID.Damage;
@@ -1614,6 +1621,7 @@ public partial struct EffectSystem : ISystem
 
                             targetHP.value = targetInstance.hpMax;
                             targetHP.layerMask = damageLayerMask;
+                            targetHP.messageLayerMask = messageLayerMask;
 
                             if (!targetInstance.recoveryMessageName.IsEmpty && messages.IsCreated)
                             {
@@ -1673,6 +1681,7 @@ public partial struct EffectSystem : ISystem
                                 }
 
                                 __Drop(
+                                    damageLayerMask, 
                                     cameraRotation,
                                     math.RigidTransform(localToWorlds[index].Value),
                                     entity, 
@@ -2310,6 +2319,7 @@ public partial struct EffectSystem : ISystem
     }
 
     private static void __Drop(
+        int damageLayerMask, 
         in quaternion cameraRotation, 
         in RigidTransform transform,
         in Entity parent,
@@ -2340,6 +2350,9 @@ public partial struct EffectSystem : ISystem
         for (int i = 0; i < numPrefabs; ++i)
         {
             ref var prefab = ref prefabsDefinition[i];
+            if(prefab.damageLayerMask != 0 && (prefab.damageLayerMask & damageLayerMask) == 0)
+                continue;
+            
             if(!prefab.layerMaskAndTags.BelongsTo(instanceDamage.layerMaskAndTags))
                 continue;
             
