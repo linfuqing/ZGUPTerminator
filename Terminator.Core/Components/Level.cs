@@ -243,13 +243,13 @@ public struct LevelStageOption
         switch (type)
         {
             case Type.Value:
-                return value <= status.value;
+                return value == 0 ? status.max <= status.value : value <= status.value;
             case Type.Max:
                 return value <= status.max;
             case Type.ExpMax:
                 return value <= status.expMax;
             case Type.Exp:
-                return value <= status.exp;
+                return value == 0 ? status.expMax <= status.exp : value <= status.exp;
             case Type.Stage:
                 return value <= status.stage;
             case Type.SpawnerTime:
@@ -387,10 +387,10 @@ public struct LevelStageOption
                 status.max = value;
                 break;
             case Type.ExpMax:
-                status.expMax = value;
+                System.Threading.Interlocked.Add(ref status.expMax, value);
                 break;
             case Type.Exp:
-                status.exp = value;
+                System.Threading.Interlocked.Add(ref status.exp, value);
                 break;
             case Type.Stage:
                 //status.killCount = 0;
