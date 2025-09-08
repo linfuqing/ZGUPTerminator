@@ -24,21 +24,29 @@ public struct BulletColliderEntity : IBufferElementData
 [WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
 partial struct BulletColliderBakingSystem : ISystem
 {
+    private ComponentLookup<PhysicsCollider> __physicsCollider;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __physicsCollider = state.GetComponentLookup<PhysicsCollider>(true);
+    }
+
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         using var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        var physicsColliders = state.GetComponentLookup<PhysicsCollider>();
+        __physicsCollider.Update(ref state);
+        
         foreach (var(colliderEntities, colliders, entity) in SystemAPI.Query<DynamicBuffer<BulletColliderEntity>, DynamicBuffer<BulletCollider>>()
-                     .WithAll<Prefab>()
                      .WithOptions(EntityQueryOptions.IncludePrefab | EntityQueryOptions.IncludeDisabledEntities)
                      .WithEntityAccess())
         {
             BulletCollider collider;
             foreach (var colliderEntity in colliderEntities)
             {
-                collider.value = physicsColliders[colliderEntity.value].Value;
+                collider.value = __physicsCollider[colliderEntity.value].Value;
                 colliders.Add(collider);
                 ecb.DestroyEntity(colliderEntity.value);
             }
