@@ -324,8 +324,12 @@ public partial class UserData
             yield break;
         }
 
-        int result = 0;
         var temp = levelCache.Value;
+        __SetStageKillCount(temp.name, temp.stage, killCount);
+
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+
+        int result = 0;
         if (temp.stage < stage)
         {
             result = __SubmitStageFlag(flag, temp.name, temp.stage, stage);
@@ -343,10 +347,6 @@ public partial class UserData
         else
             result = (int)GetStageFlag(temp.name, temp.stage);
 
-        __SetStageKillCount(temp.name, temp.stage, killCount);
-
-        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
-        
         temp.gold = Mathf.Max(temp.gold, gold);
         temp.killCount = Mathf.Max(temp.killCount, killCount);
         temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);

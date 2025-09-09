@@ -215,11 +215,11 @@ public partial class UserData
         
         yield return null;
         
-        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
-        
         __SetStageKillCount(temp.name, temp.stage, killCount);
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
 
+        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+        
         temp.stage = stage;
         temp.gold = gold;
         temp.killCount = killCount;
