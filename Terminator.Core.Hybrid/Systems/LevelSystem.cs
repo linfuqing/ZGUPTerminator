@@ -128,14 +128,16 @@ public partial class LevelSystemManaged : SystemBase
         
         base.OnDestroy();
     }
-
-    private static ProfilerMarker __restart = new ProfilerMarker("Restart");
-    private static ProfilerMarker __set = new ProfilerMarker("Set");
-    private static ProfilerMarker __updateStage = new ProfilerMarker("UpdateStage");
-    private static ProfilerMarker __skills = new ProfilerMarker("Skills");
-    private static ProfilerMarker __updateSkillActive = new ProfilerMarker("UpdateSkillActive");
-    private static ProfilerMarker __updateSkillSelection = new ProfilerMarker("UpdateSkillSelection");
-
+    
+#if ENABLE_PROFILER
+    private static readonly ProfilerMarker RestartProfilerMarker = new ProfilerMarker("Restart");
+    private static readonly ProfilerMarker SetProfilerMarker = new ProfilerMarker("Set");
+    private static readonly ProfilerMarker UpdateStageProfilerMarker = new ProfilerMarker("UpdateStage");
+    private static readonly ProfilerMarker SkillsProfilerMarker = new ProfilerMarker("Skills");
+    private static readonly ProfilerMarker UpdateSkillActiveProfilerMarker = new ProfilerMarker("UpdateSkillActive");
+    private static readonly ProfilerMarker UpdateSkillSelectionProfilerMarker = new ProfilerMarker("UpdateSkillSelection");
+#endif
+    
     protected override void OnUpdate()
     {
         CompleteDependency();
@@ -152,7 +154,9 @@ public partial class LevelSystemManaged : SystemBase
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
         {
-            using (__restart.Auto())
+#if ENABLE_PROFILER
+            using (RestartProfilerMarker.Auto())
+#endif
             {
                 //manager.Pause();
                 __DestroyEntities(__group);
@@ -189,7 +193,9 @@ public partial class LevelSystemManaged : SystemBase
             return;
         }*/
 
-        using(__set.Auto())
+#if ENABLE_PROFILER
+        using(SetProfilerMarker.Auto())
+#endif
             manager.Set(
                 status.value, 
                 status.max, 
@@ -200,10 +206,14 @@ public partial class LevelSystemManaged : SystemBase
                 status.gold, 
                 status.stage);
         
-        using(__updateStage.Auto())
+#if ENABLE_PROFILER
+        using(UpdateStageProfilerMarker.Auto())
+#endif
             __UpdateStage(manager);
 
-        using (__skills.Auto())
+#if ENABLE_PROFILER
+        using (SkillsProfilerMarker.Auto())
+#endif
         {
             __GetSkill(player,
                 out var skillDefinition,
@@ -212,11 +222,15 @@ public partial class LevelSystemManaged : SystemBase
                 out var skillStates /*,
                 out var skillDescs*/);
             
-            using (__updateSkillActive.Auto())
+#if ENABLE_PROFILER
+            using (UpdateSkillActiveProfilerMarker.Auto())
+#endif
                 __UpdateSkillActive(skillDefinition, skillNameDefinition, activeIndices, skillStates, /*skillDescs, */
                     manager);
 
-            using (__updateSkillSelection.Auto())
+#if ENABLE_PROFILER
+            using (UpdateSkillSelectionProfilerMarker.Auto())
+#endif
                 __UpdateSkillSelection(
                     ref activeIndices,
                     skillStates,

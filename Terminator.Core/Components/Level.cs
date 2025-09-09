@@ -7,6 +7,7 @@ using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using Unity.Scenes;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
@@ -164,6 +165,8 @@ public struct LevelSpawners
             
             __entityType.Update(ref state);
             
+            __entities.Clear();
+
             Resize resize;
             resize.entityType = __entityType;
             resize.entities = __entities;
@@ -224,6 +227,18 @@ public struct LevelStageOption
     
     public int value;
     
+#if ENABLE_PROFILER
+    public static readonly ProfilerMarker JudgeProfilerMarker = new ProfilerMarker("Judge");
+    public static readonly ProfilerMarker JudgeSpawnerLayerMaskProfilerMarker = new ProfilerMarker("JudgeSpawnerLayerMask");
+    public static readonly ProfilerMarker JudgeSpawnerEntityRemainingProfilerMarker = new ProfilerMarker("JudgeSpawnerEntityRemaining");
+    public static readonly ProfilerMarker JudgeSpawnerPrefabRemainingProfilerMarker = new ProfilerMarker("JudgeSpawnerPrefabRemaining");
+    
+    public static readonly ProfilerMarker ApplyProfilerMarker = new ProfilerMarker("Apply");
+    public static readonly ProfilerMarker ApplySpawnerLayerMaskProfilerMarker = new ProfilerMarker("ApplySpawnerLayerMaskProfilerMarker");
+    public static readonly ProfilerMarker ApplySpawnerEntityRemainingProfilerMarker = new ProfilerMarker("ApplySpawnerEntityRemaining");
+    public static readonly ProfilerMarker ApplySpawnerPrefabRemainingProfilerMarker = new ProfilerMarker("ApplySpawnerPrefabRemaining");
+#endif
+    
     public bool Judge(
         float deltaTime, 
         float spawnerTime,
@@ -240,124 +255,145 @@ public struct LevelStageOption
         ref BlobArray<LevelDefinition.Area> areas, 
         ref LevelStageConditionStatus condition)
     {
-        switch (type)
+#if ENABLE_PROFILER
+        using (JudgeProfilerMarker.Auto())
+#endif
         {
-            case Type.Value:
-                return value == 0 ? status.max <= status.value : value <= status.value;
-            case Type.Max:
-                return value <= status.max;
-            case Type.ExpMax:
-                return value <= status.expMax;
-            case Type.Exp:
-                return value == 0 ? status.expMax <= status.exp : value <= status.exp;
-            case Type.Stage:
-                return value <= status.stage;
-            case Type.SpawnerTime:
-                return value <= spawnerTime;
-            case Type.SpawnerLayerMask:
-                return spawners.IsDone(layerMaskAndTags[value], spawnerDefinitions, spawnerStates);
-            case Type.SpawnerLayerMaskInclude:
-                return spawnerLayerMaskAndTagsOverride.value.IsSupersetOf(layerMaskAndTags[value]);
-            case Type.SpawnerLayerMaskExclude:
-                return !layerMaskAndTags[value].Overlaps(spawnerLayerMaskAndTagsOverride.value);
-            case Type.SpawnerEntityRemaining:
-                if (condition.version != spawnerSingleton.version)
-                {
-                    condition.version = spawnerSingleton.version;
-                    //condition.value = 0;
-                    var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
-                    SpawnerEntity spawnerEntity;
-                    SpawnerDefinitionData spawnerDefinition;
-                    var spawnerLayerMaskAndTags = layerMaskAndTags[value];
-                    int i;
-                    for (i = 0; i < numKeys; ++i)
+            switch (type)
+            {
+                case Type.Value:
+                    return value == 0 ? status.max <= status.value : value <= status.value;
+                case Type.Max:
+                    return value <= status.max;
+                case Type.ExpMax:
+                    return value <= status.expMax;
+                case Type.Exp:
+                    return value == 0 ? status.expMax <= status.exp : value <= status.exp;
+                case Type.Stage:
+                    return value <= status.stage;
+                case Type.SpawnerTime:
+                    return value <= spawnerTime;
+                case Type.SpawnerLayerMask:
+#if ENABLE_PROFILER
+                    using (JudgeSpawnerLayerMaskProfilerMarker.Auto())
+#endif
+                    return spawners.IsDone(layerMaskAndTags[value], spawnerDefinitions, spawnerStates);
+                case Type.SpawnerLayerMaskInclude:
+                    return spawnerLayerMaskAndTagsOverride.value.IsSupersetOf(layerMaskAndTags[value]);
+                case Type.SpawnerLayerMaskExclude:
+                    return !layerMaskAndTags[value].Overlaps(spawnerLayerMaskAndTagsOverride.value);
+                case Type.SpawnerEntityRemaining:
+                    if (condition.version != spawnerSingleton.version)
                     {
-                        spawnerEntity = spawnerEntities[i];
-                        if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
-                            continue;
+#if ENABLE_PROFILER
+                        using (JudgeSpawnerEntityRemainingProfilerMarker.Auto())
+#endif
+                        {
+                            condition.version = spawnerSingleton.version;
+                            //condition.value = 0;
+                            var (spawnerEntities, numKeys) =
+                                spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
+                            SpawnerEntity spawnerEntity;
+                            SpawnerDefinitionData spawnerDefinition;
+                            var spawnerLayerMaskAndTags = layerMaskAndTags[value];
+                            int i;
+                            for (i = 0; i < numKeys; ++i)
+                            {
+                                spawnerEntity = spawnerEntities[i];
+                                if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                                    continue;
 
-                        ref var definition = ref spawnerDefinition.definition.Value;
-                        if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
-                            continue;
+                                ref var definition = ref spawnerDefinition.definition.Value;
+                                if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
+                                    continue;
 
-                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.Overlaps(spawnerLayerMaskAndTags))
-                            continue;
+                                if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags
+                                        .Overlaps(spawnerLayerMaskAndTags))
+                                    continue;
 
-                        condition.value = (int)Status.Start;
+                                condition.value = (int)Status.Start;
 
-                        break;
+                                break;
+                            }
+
+                            spawnerEntities.Dispose();
+
+                            if ((Status)condition.value == Status.Start && i == numKeys)
+                                condition.value = (int)Status.Finish;
+                        }
                     }
 
-                    spawnerEntities.Dispose();
-
-                    if ((Status)condition.value == Status.Start && i == numKeys)
-                        condition.value = (int)Status.Finish;
-                }
-
-                return (Status)condition.value == Status.Finish;
-            case Type.PrefabRemaining:
-                if (condition.version != spawnerSingleton.version)
-                {
-                    condition.version = spawnerSingleton.version;
-                    //condition.value = 0;
-                    var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
-
-                    SpawnerEntity spawnerEntity;
-                    SpawnerDefinitionData spawnerDefinition;
-                    DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
-                    var prefab = prefabs[value];
-                    int i;
-                    for (i = 0; i < numKeys; ++i)
+                    return (Status)condition.value == Status.Finish;
+                case Type.PrefabRemaining:
+                    if (condition.version != spawnerSingleton.version)
                     {
-                        spawnerEntity = spawnerEntities[i];
-                        if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
-                            continue;
+#if ENABLE_PROFILER
+                        using (JudgeSpawnerPrefabRemainingProfilerMarker.Auto())
+#endif
+                        {
+                            condition.version = spawnerSingleton.version;
+                            //condition.value = 0;
+                            var (spawnerEntities, numKeys) =
+                                spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
 
-                        ref var definition = ref spawnerDefinition.definition.Value;
-                        if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
-                            continue;
+                            SpawnerEntity spawnerEntity;
+                            SpawnerDefinitionData spawnerDefinition;
+                            DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
+                            var prefab = prefabs[value];
+                            int i;
+                            for (i = 0; i < numKeys; ++i)
+                            {
+                                spawnerEntity = spawnerEntities[i];
+                                if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                                    continue;
 
-                        ref var spawner = ref definition.spawners[spawnerEntity.spawnerIndex];
-                        if (spawner.loaderIndices.Length <= spawnerEntity.loaderIndex)
-                            continue;
+                                ref var definition = ref spawnerDefinition.definition.Value;
+                                if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
+                                    continue;
 
-                        ref var loaderIndex = ref spawner.loaderIndices[spawnerEntity.loaderIndex];
+                                ref var spawner = ref definition.spawners[spawnerEntity.spawnerIndex];
+                                if (spawner.loaderIndices.Length <= spawnerEntity.loaderIndex)
+                                    continue;
 
-                        spawnerPrefabBuffer = spawnerPrefabs[spawnerEntity.spawner];
-                        if (spawnerPrefabBuffer.Length <= loaderIndex.value)
-                            continue;
+                                ref var loaderIndex = ref spawner.loaderIndices[spawnerEntity.loaderIndex];
 
-                        if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
-                            continue;
+                                spawnerPrefabBuffer = spawnerPrefabs[spawnerEntity.spawner];
+                                if (spawnerPrefabBuffer.Length <= loaderIndex.value)
+                                    continue;
 
-                        condition.value = (int)Status.Start;
+                                if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
+                                    continue;
 
-                        break;
+                                condition.value = (int)Status.Start;
+
+                                break;
+                            }
+
+                            spawnerEntities.Dispose();
+
+                            if ((Status)condition.value == Status.Start && i == numKeys)
+                                condition.value = (int)Status.Finish;
+                        }
                     }
-                    
-                    spawnerEntities.Dispose();
 
-                    if ((Status)condition.value == Status.Start && i == numKeys)
-                        condition.value = (int)Status.Finish;
-                }
+                    return (Status)condition.value == Status.Finish;
+                case Type.PlayerArea:
+                    return areas[value].Contains(playerPosition);
+                case Type.Millisecond:
+                    if (value > 0)
+                    {
+                        condition.value += (int)(deltaTime * 1000);
 
-                return (Status)condition.value == Status.Finish;
-            case Type.PlayerArea:
-                return areas[value].Contains(playerPosition);
-            case Type.Millisecond:
-                if (value > 0)
-                {
-                    condition.value += (int)(deltaTime * 1000);
+                        return condition.value >= value;
+                    }
 
-                    return condition.value >= value;
-                }
+                    //继承后倒计时
+                    condition.value -= (int)(deltaTime * 1000);
+                    return condition.value <= value;
+            }
 
-                //继承后倒计时
-                condition.value -= (int)(deltaTime * 1000);
-                return condition.value <= value;
+            return false;
         }
-
-        return false;
     }
     
     public void Apply(
@@ -378,115 +414,131 @@ public struct LevelStageOption
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
         in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions)
     {
-        switch (type)
+#if ENABLE_PROFILER
+        using (ApplyProfilerMarker.Auto())
+#endif
         {
-            case Type.Value:
-                status.value = value;
-                break;
-            case Type.Max:
-                status.max = value;
-                break;
-            case Type.ExpMax:
-                System.Threading.Interlocked.Add(ref status.expMax, value);
-                break;
-            case Type.Exp:
-                System.Threading.Interlocked.Add(ref status.exp, value);
-                break;
-            case Type.Stage:
-                //status.killCount = 0;
-                //status.killBossCount = 0;
-                //status.stage = value;
-                System.Threading.Interlocked.Add(ref status.stage, value);
-                break;
-            case Type.SpawnerTime:
-                //++spawnerTime.version;
+            switch (type)
+            {
+                case Type.Value:
+                    status.value = value;
+                    break;
+                case Type.Max:
+                    status.max = value;
+                    break;
+                case Type.ExpMax:
+                    System.Threading.Interlocked.Add(ref status.expMax, value);
+                    break;
+                case Type.Exp:
+                    System.Threading.Interlocked.Add(ref status.exp, value);
+                    break;
+                case Type.Stage:
+                    //status.killCount = 0;
+                    //status.killBossCount = 0;
+                    //status.stage = value;
+                    System.Threading.Interlocked.Add(ref status.stage, value);
+                    break;
+                case Type.SpawnerTime:
+                    //++spawnerTime.version;
 
-                spawnerTime.value = time + value * 1000.0f;
-                break;
-            case Type.SpawnerLayerMask:
-                spawners.Clear(layerMaskAndTags[value], spawnerDefinitions, ref spawnerStates);
-                break;
-            case Type.SpawnerLayerMaskInclude:
-                spawnerLayerMaskAndTagsInclude.value = layerMaskAndTags[value];
-                break;
-            case Type.SpawnerLayerMaskExclude:
-                spawnerLayerMaskAndTagsExclude.value = layerMaskAndTags[value];
-                break;
-            case Type.SpawnerEntityRemaining:
-                {
-                    var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
-
-                    var spawnerLayerMaskAndTags = layerMaskAndTags[value];
-                    SpawnerEntity spawnerEntity;
-                    SpawnerDefinitionData spawnerDefinition;
-                    for (int i = 0; i < numKeys; ++i)
+                    spawnerTime.value = time + value * 1000.0f;
+                    break;
+                case Type.SpawnerLayerMask:
+#if ENABLE_PROFILER
+                    using (ApplySpawnerLayerMaskProfilerMarker.Auto())
+#endif
+                    spawners.Clear(layerMaskAndTags[value], spawnerDefinitions, ref spawnerStates);
+                    break;
+                case Type.SpawnerLayerMaskInclude:
+                    spawnerLayerMaskAndTagsInclude.value = layerMaskAndTags[value];
+                    break;
+                case Type.SpawnerLayerMaskExclude:
+                    spawnerLayerMaskAndTagsExclude.value = layerMaskAndTags[value];
+                    break;
+                case Type.SpawnerEntityRemaining:
+#if ENABLE_PROFILER
+                    using (ApplySpawnerEntityRemainingProfilerMarker.Auto())
+#endif
                     {
-                        spawnerEntity = spawnerEntities[i];
-                        if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
-                            continue;
+                        var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
 
-                        ref var definition = ref spawnerDefinition.definition.Value;
-                        if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
-                            continue;
+                        var spawnerLayerMaskAndTags = layerMaskAndTags[value];
+                        SpawnerEntity spawnerEntity;
+                        SpawnerDefinitionData spawnerDefinition;
+                        for (int i = 0; i < numKeys; ++i)
+                        {
+                            spawnerEntity = spawnerEntities[i];
+                            if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                                continue;
 
-                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.Overlaps(spawnerLayerMaskAndTags))
-                            continue;
+                            ref var definition = ref spawnerDefinition.definition.Value;
+                            if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
+                                continue;
 
-                        //if (spawnerStates.TryGetBuffer(spawnerEntity.spawner, out spawnerStatusBuffer))
-                        //    spawnerStatusBuffer.ElementAt(spawnerEntity.spawnerIndex) = default;
+                            if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags
+                                    .Overlaps(spawnerLayerMaskAndTags))
+                                continue;
 
-                        foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
-                            entityManager.DestroyEntity(0, entity);
+                            //if (spawnerStates.TryGetBuffer(spawnerEntity.spawner, out spawnerStatusBuffer))
+                            //    spawnerStatusBuffer.ElementAt(spawnerEntity.spawnerIndex) = default;
+
+                            foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
+                                entityManager.DestroyEntity(0, entity);
+                        }
+
+                        spawnerEntities.Dispose();
+                    }
+                    break;
+                case Type.PrefabRemaining:
+#if ENABLE_PROFILER
+                    using (ApplySpawnerPrefabRemainingProfilerMarker.Auto())
+#endif
+                    {
+                        var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
+
+                        SpawnerEntity spawnerEntity;
+                        SpawnerDefinitionData spawnerDefinition;
+                        DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
+                        var prefab = prefabs[value];
+                        for (int i = 0; i < numKeys; ++i)
+                        {
+                            spawnerEntity = spawnerEntities[i];
+                            if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
+                                continue;
+
+                            ref var definition = ref spawnerDefinition.definition.Value;
+                            if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
+                                continue;
+
+                            ref var spawner = ref definition.spawners[spawnerEntity.spawnerIndex];
+                            if (spawner.loaderIndices.Length <= spawnerEntity.loaderIndex)
+                                continue;
+
+                            ref var loaderIndex = ref spawner.loaderIndices[spawnerEntity.loaderIndex];
+
+                            spawnerPrefabBuffer = spawnerPrefabs[spawnerEntity.spawner];
+                            if (spawnerPrefabBuffer.Length <= loaderIndex.value)
+                                continue;
+
+                            if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
+                                continue;
+
+                            foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
+                                entityManager.DestroyEntity(0, entity);
+                        }
+
+                        spawnerEntities.Dispose();
                     }
 
-                    spawnerEntities.Dispose();
-                }
-                break;
-            case Type.PrefabRemaining:
-                {
-                    var (spawnerEntities, numKeys) = spawnerSingleton.entities.GetUniqueKeyArray(Allocator.Temp);
-
-                    SpawnerEntity spawnerEntity;
-                    SpawnerDefinitionData spawnerDefinition;
-                    DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
-                    var prefab = prefabs[value];
-                    for(int i = 0; i < numKeys; ++i)
-                    {
-                        spawnerEntity = spawnerEntities[i];
-                        if (!spawnerDefinitions.TryGetComponent(spawnerEntity.spawner, out spawnerDefinition))
-                            continue;
-
-                        ref var definition = ref spawnerDefinition.definition.Value;
-                        if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
-                            continue;
-
-                        ref var spawner = ref definition.spawners[spawnerEntity.spawnerIndex];
-                        if (spawner.loaderIndices.Length <= spawnerEntity.loaderIndex)
-                            continue;
-
-                        ref var loaderIndex = ref spawner.loaderIndices[spawnerEntity.loaderIndex];
-
-                        spawnerPrefabBuffer = spawnerPrefabs[spawnerEntity.spawner];
-                        if (spawnerPrefabBuffer.Length <= loaderIndex.value)
-                            continue;
-
-                        if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
-                            continue;
-
-                        foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
-                            entityManager.DestroyEntity(0, entity);
-                    }
-
-                    spawnerEntities.Dispose();
-                }
-                break;
-            case Type.PlayerArea:
-                playerPosition = areas[value].GetPosition(ref random);
-                //ZG.Mathematics.Math.InterlockedAdd(ref playerPosition, areas[value].GetPosition(ref random));
-                break;
-            case Type.Millisecond:
-                //status.time += value * 1000.0f;
-                break;
+                    break;
+                case Type.PlayerArea:
+                    playerPosition = areas[value].GetPosition(ref random);
+                    //ZG.Mathematics.Math.InterlockedAdd(ref playerPosition, areas[value].GetPosition(ref random));
+                    break;
+                case Type.Millisecond:
+                    //status.time += value * 1000.0f;
+                    break;
+            }
         }
     }
 }
