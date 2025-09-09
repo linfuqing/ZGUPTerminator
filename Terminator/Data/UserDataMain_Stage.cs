@@ -118,6 +118,13 @@ public partial class UserDataMain
         {
             set
             {
+                if (string.IsNullOrEmpty(value))
+                {
+                    indirectRewards = null;
+                    
+                    return;
+                }
+                
                 var parameters = value.Split('/');
                 
                 int numParameters = parameters.Length;

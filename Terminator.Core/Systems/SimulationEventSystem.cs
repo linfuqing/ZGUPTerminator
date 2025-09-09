@@ -36,6 +36,7 @@ public partial struct SimulationEventSystem : ISystem
         private struct Collector<T> : ICollector<T> where T : struct, IQueryResult
         {
             //private int __dynamicBodyCount;
+            private Entity __selfEntity;
             private DynamicBuffer<SimulationEvent> __instances;
             
             public bool EarlyOutOnFirstHit => false;
@@ -59,9 +60,9 @@ public partial struct SimulationEventSystem : ISystem
                 private set;
             }
 
-            public Collector(/*int dynamicBodyCount, */float maxFraction, ref DynamicBuffer<SimulationEvent> instances)
+            public Collector(float maxFraction, in Entity selfEntity, ref DynamicBuffer<SimulationEvent> instances)
             {
-                //__dynamicBodyCount = dynamicBodyCount;
+                __selfEntity = selfEntity;
                 __instances = instances;
 
                 NumHits = 0;
@@ -71,12 +72,12 @@ public partial struct SimulationEventSystem : ISystem
 
             public bool AddHit(T hit)
             {
+                if (hit.Entity == __selfEntity)
+                    return false;
+                
                 if (closestHit.Entity == Entity.Null || closestHit.Fraction > hit.Fraction)
                     closestHit = hit;
                 
-                /*if (hit.RigidBodyIndex < __dynamicBodyCount)
-                    return false;*/
-
                 SimulationEvent instance;
                 instance.entity = hit.Entity;
                 instance.colliderKey = hit.ColliderKey;
@@ -124,8 +125,10 @@ public partial struct SimulationEventSystem : ISystem
             if (isCollision)
             {
                 var collision = collisions[index];
-                var collector = new Collector<ColliderCastHit>(//collisionWorld.NumDynamicBodies,
-                    1.0f, ref instances);
+                var collector = new Collector<ColliderCastHit>(
+                    1.0f, 
+                    body.Entity, 
+                    ref instances);
                 result = collisionWorld.CastCollider(
                     new ColliderCastInput(body.Collider, collision.position, transform.pos, transform.rot),
                     ref collector);
@@ -138,8 +141,10 @@ public partial struct SimulationEventSystem : ISystem
             }
             else
             {
-                var collector = new Collector<DistanceHit>(//collisionWorld.NumDynamicBodies,
-                    collisionWorld.CollisionTolerance, ref instances);
+                var collector = new Collector<DistanceHit>(
+                    collisionWorld.CollisionTolerance, 
+                    body.Entity, 
+                    ref instances);
                 result = collisionWorld.CalculateDistance(
                     new ColliderDistanceInput(body.Collider, collisionWorld.CollisionTolerance, transform),
                     ref collector);
