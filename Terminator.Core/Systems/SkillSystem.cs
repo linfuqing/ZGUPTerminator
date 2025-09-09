@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 using ZG;
 
 [BurstCompile, 
@@ -131,7 +132,6 @@ public partial struct SkillSystem : ISystem
             collect.time = time;
             //collect.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)(hash >> 32) ^ (int)hash));
             collect.bulletLayerMaskAndTags = chunk.GetNativeArray(ref bulletLayerMaskAndTagsType);
-            //collect.bulletDefinitions = chunk.GetNativeArray(ref bulletDefinitionType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.cooldownScales = chunk.GetNativeArray(ref cooldownScaleType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
@@ -142,7 +142,6 @@ public partial struct SkillSystem : ISystem
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.outputMessageParameters = chunk.GetBufferAccessor(ref outputMessageParameterType);
             collect.rages = chunk.GetNativeArray(ref rageType);
-            //collect.skillLayerMasks = chunk.GetNativeArray(ref skillLayerMaskType);
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -154,8 +153,6 @@ public partial struct SkillSystem : ISystem
     }
     
     private ComponentTypeHandle<BulletLayerMaskAndTags> __bulletLayerMaskAndTagsType;
-
-    //private ComponentTypeHandle<BulletDefinitionData> __bulletDefinitionType;
 
     private ComponentTypeHandle<SkillDefinitionData> __instanceType;
 
@@ -177,15 +174,12 @@ public partial struct SkillSystem : ISystem
 
     private ComponentTypeHandle<SkillRage> __rageType;
 
-    //private ComponentTypeHandle<SkillLayerMask> __skillLayerMaskType;
-
     private EntityQuery __group;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __bulletLayerMaskAndTagsType = state.GetComponentTypeHandle<BulletLayerMaskAndTags>(true);
-        //__bulletDefinitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
         __instanceType = state.GetComponentTypeHandle<SkillDefinitionData>(true);
         __cooldownScaleType = state.GetComponentTypeHandle<SkillCooldownScale>(true);
         __inputMessageType = state.GetBufferTypeHandle<SkillMessage>(true);
@@ -196,7 +190,6 @@ public partial struct SkillSystem : ISystem
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __outputMessageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __rageType = state.GetComponentTypeHandle<SkillRage>();
-        //__skillLayerMaskType = state.GetComponentTypeHandle<SkillLayerMask>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -204,7 +197,7 @@ public partial struct SkillSystem : ISystem
                 .WithAllRW<BulletActiveIndex, SkillStatus>()
                 .Build(ref state);
         
-        state.RequireForUpdate<FixedFrame>();
+        //state.RequireForUpdate<FixedFrame>();
     }
 
     [BurstCompile]
@@ -216,7 +209,6 @@ public partial struct SkillSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __bulletLayerMaskAndTagsType.Update(ref state);
-        //__bulletDefinitionType.Update(ref state);
         __instanceType.Update(ref state);
         __cooldownScaleType.Update(ref state);
         __inputMessageType.Update(ref state);
@@ -227,12 +219,11 @@ public partial struct SkillSystem : ISystem
         __outputMessageType.Update(ref state);
         __outputMessageParameterType.Update(ref state);
         __rageType.Update(ref state);
-        //__skillLayerMaskType.Update(ref state);
         
         CollectEx collect;
-        collect.time = SystemAPI.GetSingleton<FixedFrame>().elapsedTime;//SystemAPI.Time.ElapsedTime;
+        //why FixedFrame?
+        collect.time = SystemAPI.Time.ElapsedTime;//SystemAPI.GetSingleton<FixedFrame>().elapsedTime;//SystemAPI.Time.ElapsedTime;
         collect.bulletLayerMaskAndTagsType = __bulletLayerMaskAndTagsType;
-        //collect.bulletDefinitionType = __bulletDefinitionType;
         collect.instanceType = __instanceType;
         collect.cooldownScaleType = __cooldownScaleType;
         collect.inputMessageType = __inputMessageType;
@@ -243,7 +234,6 @@ public partial struct SkillSystem : ISystem
         collect.outputMessageType = __outputMessageType;
         collect.outputMessageParameterType = __outputMessageParameterType;
         collect.rageType = __rageType;
-        //collect.skillLayerMaskType = __skillLayerMaskType;
         
         state.Dependency = collect.ScheduleParallelByRef(__group, state.Dependency);
     }
