@@ -15,7 +15,7 @@ public struct LayerMaskAndTags
     
     public bool isEmpty => layerMask == 0 && tags.IsEmpty;
     
-    public bool BelongsTo(in LayerMaskAndTags layerMaskAndTags)
+    public bool Overlaps(in LayerMaskAndTags layerMaskAndTags)
     {
         if (isEmpty)
             return true;
@@ -38,7 +38,27 @@ public struct LayerMaskAndTags
         return false;
     }
 
-    public bool ContainsTo(in LayerMaskAndTags layerMaskAndTags)
+    public bool BelongsTo(in LayerMaskAndTags layerMaskAndTags)
+    {
+        if (layerMask != 0 && (layerMask & layerMaskAndTags.layerMask) == 0)
+            return false;
+
+        if (tags.IsEmpty)
+            return true;
+        
+        foreach (var destination in tags)
+        {
+            foreach (var source in layerMaskAndTags.tags)
+            {
+                if (source == destination)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool IsSupersetOf(in LayerMaskAndTags layerMaskAndTags)
     {
         if ((layerMaskAndTags.layerMask & layerMask) != layerMaskAndTags.layerMask)
             return false;

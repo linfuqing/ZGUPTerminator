@@ -67,7 +67,7 @@ public struct LevelSpawners
                 for (i = 0; i < numSpawners; ++i)
                 {
                     ref var spawner = ref definition.spawners[i];
-                    if(!spawner.layerMaskAndTags.BelongsTo(layerMaskAndTags))
+                    if(!spawner.layerMaskAndTags.Overlaps(layerMaskAndTags))
                         continue;
 
                     if (!statusBuffer.IsCreated && !states.TryGetBuffer(entity, out statusBuffer))
@@ -104,7 +104,7 @@ public struct LevelSpawners
                 for (i = 0; i < numSpawners; ++i)
                 {
                     ref var spawner = ref definition.spawners[i];
-                    if(!spawner.layerMaskAndTags.BelongsTo(layerMaskAndTags))
+                    if(!spawner.layerMaskAndTags.Overlaps(layerMaskAndTags))
                         continue;
 
                     if (!statusBuffer.IsCreated && !states.TryGetBuffer(entity, out statusBuffer))
@@ -257,9 +257,9 @@ public struct LevelStageOption
             case Type.SpawnerLayerMask:
                 return spawners.IsDone(layerMaskAndTags[value], spawnerDefinitions, spawnerStates);
             case Type.SpawnerLayerMaskInclude:
-                return spawnerLayerMaskAndTagsOverride.value.ContainsTo(layerMaskAndTags[value]);
+                return spawnerLayerMaskAndTagsOverride.value.IsSupersetOf(layerMaskAndTags[value]);
             case Type.SpawnerLayerMaskExclude:
-                return !layerMaskAndTags[value].BelongsTo(spawnerLayerMaskAndTagsOverride.value);
+                return !layerMaskAndTags[value].Overlaps(spawnerLayerMaskAndTagsOverride.value);
             case Type.SpawnerEntityRemaining:
                 if (condition.version != spawnerSingleton.version)
                 {
@@ -280,7 +280,7 @@ public struct LevelStageOption
                         if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
 
-                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.BelongsTo(spawnerLayerMaskAndTags))
+                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.Overlaps(spawnerLayerMaskAndTags))
                             continue;
 
                         condition.value = (int)Status.Start;
@@ -429,7 +429,7 @@ public struct LevelStageOption
                         if (definition.spawners.Length <= spawnerEntity.spawnerIndex)
                             continue;
 
-                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.BelongsTo(spawnerLayerMaskAndTags))
+                        if (!definition.spawners[spawnerEntity.spawnerIndex].layerMaskAndTags.Overlaps(spawnerLayerMaskAndTags))
                             continue;
 
                         //if (spawnerStates.TryGetBuffer(spawnerEntity.spawner, out spawnerStatusBuffer))

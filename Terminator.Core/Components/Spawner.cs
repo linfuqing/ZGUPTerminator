@@ -365,7 +365,7 @@ public struct SpawnerDefinition
         ref Random random, 
         ref int instanceCount)
     {
-        if (!layerMaskAndTags.ContainsTo(data.layerMaskAndTags))
+        if (!layerMaskAndTags.IsSupersetOf(data.layerMaskAndTags))
         {
             //status = default;
             
@@ -505,7 +505,7 @@ public struct SpawnerDefinition
         for (i = 0; i < numAreaIndices; ++i)
         {
             ref var temp = ref data.areaIndices[(i + randomOffset) % numAreaIndices];
-            if(!layerMaskAndTags.ContainsTo(temp.layerMaskAndTags))
+            if(!layerMaskAndTags.IsSupersetOf(temp.layerMaskAndTags))
                 continue;
             
             /*if(temp.startTime > time)
