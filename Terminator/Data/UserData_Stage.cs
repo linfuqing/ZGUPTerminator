@@ -335,7 +335,7 @@ public partial class UserData
             temp.stage = stage;
         }
         else
-            result = (int)GetStageFlag(temp.name, temp.stage);
+            result = (int)GetStageFlag(temp.name, temp.stage - 1);
 
         temp.gold = Mathf.Max(temp.gold, gold);
         temp.killCount = Mathf.Max(temp.killCount, killCount);

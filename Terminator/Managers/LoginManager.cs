@@ -733,7 +733,7 @@ public sealed class LoginManager : MonoBehaviour
         if (scrollRect != null)
         {
             int targetIndex = selectedLevelStyleIndex;
-            if (__sceneActiveDepth > 0 && targetIndex == __levelStyles.Count - 1)
+            if (__sceneActiveDepth > 0 && targetIndex > 0 && targetIndex == __levelStyles.Count - 1)
                 --targetIndex;
             
             if(targetIndex - scrollRect.index.x < 2)
