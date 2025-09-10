@@ -282,19 +282,7 @@ public partial class UserData
 
     public static void EndStage(string levelName, int stage)
     {
-        string levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
-        int startStage = PlayerPrefs.GetInt(levelStartStageKey, -1);
-        if (startStage == -1)
-            return;
-        
-        string stageFlagKey;
-        for (int i = startStage; i < stage; ++i)
-        {
-            stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
-
-            PlayerPrefs.SetInt(stageFlagKey,
-                PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
-        }
+        __SubmitStageFlag(levelName, stage, out string levelStartStageKey);
         
         PlayerPrefs.DeleteKey(levelStartStageKey);
     }
@@ -329,6 +317,8 @@ public partial class UserData
 
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
 
+        __SubmitStageFlag(temp.name, stage, out _);
+
         int result = 0;
         if (temp.stage < stage)
         {
@@ -355,6 +345,24 @@ public partial class UserData
         onComplete(result);
         
         //return null;
+    }
+
+    
+    private static void __SubmitStageFlag(string levelName, int stage, out string levelStartStageKey)
+    {
+        levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
+        int startStage = PlayerPrefs.GetInt(levelStartStageKey, -1);
+        if (startStage == -1)
+            return;
+        
+        string stageFlagKey;
+        for (int i = startStage; i < stage; ++i)
+        {
+            stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
+
+            PlayerPrefs.SetInt(stageFlagKey,
+                PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
+        }
     }
 
     private static int __SubmitStageFlag(

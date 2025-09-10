@@ -698,7 +698,7 @@ public partial struct EffectSystem : ISystem
                     result = (effect.count > 0 ? math.min(resultCount, effect.count - status.count) : resultCount) >
                              (int)math.ceil((time - status.time - math.min(effect.time - math.FLT_MIN_NORMAL, deltaTime)) / effect.time);*/
                 }
-
+                
                 var prefabs = index < this.prefabs.Length ? this.prefabs[index] : default;
                 Entity entity = entityArray[index];
 
@@ -719,13 +719,16 @@ public partial struct EffectSystem : ISystem
                     instanceDamageParent.entity = entity;
                 }
 
-                rages.TryGetComponent(instanceDamageParent.entity, out var rage);
+                if (result)
+                    result = !dropToDamages.HasComponent(entity) || !dropToDamages.IsComponentEnabled(entity);
 
                 int damageLayerMask = 0;
                 LocalToWorld source = localToWorlds[entity];
                 var statusTargets = this.statusTargets[index];
                 if (result)
                 {
+                    rages.TryGetComponent(instanceDamageParent.entity, out var rage);
+
                     Entity messageEntity = this.outputMessages.HasBuffer(entity)
                         ? entity
                         : (instanceDamageParent.entity != entity &&

@@ -13,8 +13,9 @@ public class PhysicsGravityFactorAuthoring : MonoBehaviour
 
             PhysicsGravityFactor physicsGravityFactor;
             physicsGravityFactor.Value = Mathf.Abs(authoring._value) > Mathf.Epsilon ? authoring._value : 1.0f;
-            
-            if(GetComponent<Rigidbody>() == null)
+
+            var rigidbody = GetComponent<Rigidbody>();
+            if(rigidbody == null || !rigidbody.isKinematic && rigidbody.useGravity)
                 AddComponent(entity, physicsGravityFactor);
             else
                 SetComponent(entity, physicsGravityFactor);
