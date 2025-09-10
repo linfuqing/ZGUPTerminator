@@ -524,11 +524,6 @@ public sealed class LoginManager : MonoBehaviour
                                 }
                                 else
                                 {
-                                    if (sceneIndices == null)
-                                        sceneIndices = new HashSet<int>();
-                                
-                                    sceneIndices.Add(sceneIndex);
-
                                     isUnlocked = false;
                                     
                                     isHot = false;
@@ -550,8 +545,15 @@ public sealed class LoginManager : MonoBehaviour
                                                 isHot = true;
                                         }
                                     }
-                                    
-                                    if(!isUnlocked)
+
+                                    if (isUnlocked)
+                                    {
+                                        if (sceneIndices == null)
+                                            sceneIndices = new HashSet<int>();
+                                
+                                        sceneIndices.Add(sceneIndex);
+                                    }
+                                    else
                                         __CreateRewards(stageStyle.rewardStyle, stage.rewards);
 
                                     if (stageStyle.onHot != null)
