@@ -357,7 +357,7 @@ public sealed class LoginManager : MonoBehaviour
             if(!levelIndices.TryGetValue(userLevel.name, out int index))
                 continue;
 
-            if (userLevel.id == __selectedUserLevelID)
+            if (__selectedUserLevelID == 0 || __selectedUserLevelID == userLevel.id)
                 selectedLevelStyleIndex = __levelStyles == null ? 0 : __levelStyles.Count;
             
             bool isEndOfLevels = i + 1 == numLevels;
@@ -398,6 +398,7 @@ public sealed class LoginManager : MonoBehaviour
             }
 
             var style = Instantiate(_style, parent);
+            style.name = userLevel.name;
             
             var selectedLevel = userLevel;
             
@@ -476,7 +477,7 @@ public sealed class LoginManager : MonoBehaviour
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
-                            HashSet<int> sceneIndices = null;
+                            Dictionary<int, int> sceneRewardCounts = null;
                             for (i = 0; i < numStages; ++i)
                             {
                                 var stage = selectedLevel.stages[i];
@@ -523,10 +524,10 @@ public sealed class LoginManager : MonoBehaviour
                                 }
                                 else
                                 {
-                                    if (sceneIndices == null)
-                                        sceneIndices = new HashSet<int>();
+                                    if (sceneRewardCounts == null)
+                                        sceneRewardCounts = new Dictionary<int, int>();
                                 
-                                    sceneIndices.Add(sceneIndex);
+                                    sceneRewardCounts.Add(sceneIndex, stage.rewardFlags.Length);
 
                                     isUnlocked = false;
                                     
@@ -606,8 +607,9 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    if ((__sceneActiveDepth <= 0 || 
-                                        GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
+                                    if (__sceneActiveDepth <= 0 || 
+                                         sceneRewardCounts.ContainsKey(sceneIndex) && 
+                                        //GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
                                         (__selectedStageIndex == -1 || __selectedStageIndex == i))
                                     {
                                         selectedStageIndex = stageStyleIndex;
@@ -636,8 +638,9 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
-                                            if (__sceneActiveDepth != 0 ||
-                                                GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
+                                            if (__sceneActiveDepth != 0 || 
+                                                sceneRewardCounts != null && sceneRewardCounts.ContainsKey(currentSceneIndex))
+                                                //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
@@ -670,7 +673,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 if(toggle == null)
                                                     continue;
                                                 
-                                                toggle.interactable = i != currentSceneIndex && sceneIndices.Contains(i);
+                                                toggle.interactable = i != currentSceneIndex && sceneRewardCounts != null && sceneRewardCounts.ContainsKey(i);
                                             }
                                         }
                                     };
@@ -731,6 +734,14 @@ public sealed class LoginManager : MonoBehaviour
         {
             int targetIndex = selectedLevelStyleIndex;
             if (__sceneActiveDepth > 0 && targetIndex == __levelStyles.Count - 1)
+                --targetIndex;
+            
+            if(targetIndex - scrollRect.index.x < 2)
+                scrollRect.MoveTo(targetIndex);
+            else
+                scrollRect.SetTo(targetIndex);
+            
+            /*if (__sceneActiveDepth > 0 && targetIndex == __levelStyles.Count - 1)
             {
                 for (j = targetIndex; j >= 0; --j)
                 {
@@ -751,7 +762,7 @@ public sealed class LoginManager : MonoBehaviour
                     scrollRect.MoveTo(targetIndex);
                 else
                     scrollRect.SetTo(targetIndex);
-            }
+            }*/
         }
 
         if (isHot)
@@ -1046,8 +1057,8 @@ public sealed class LoginManager : MonoBehaviour
     {
         yield return new WaitForSeconds(time);
         
-        GameMain.IncrementLevelTimes(levelName);
-        GameMain.IncrementSceneTimes(sceneName);
+        //GameMain.IncrementLevelTimes(levelName);
+        //GameMain.IncrementSceneTimes(sceneName);
         
         var assetManager = GameAssetManager.instance;
         if (assetManager == null)

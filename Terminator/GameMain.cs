@@ -375,8 +375,8 @@ public class GameMain : GameUser
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
 
-    public const string NAME_SPACE_SCENE = "GameMainScene";
-    public const string NAME_SPACE_LEVEL = "GameMainLevel";
+    //public const string NAME_SPACE_SCENE = "GameMainScene";
+    //public const string NAME_SPACE_LEVEL = "GameMainLevel";
     
     public const string NAME_SPACE_PLAYER_PREF_VERSION = "PlayerPrefVersion";
 
@@ -394,7 +394,7 @@ public class GameMain : GameUser
 
     public override IGameUserData userData => IUserData.instance;
     
-    public static int GetSceneTimes(string sceneName)
+    /*public static int GetSceneTimes(string sceneName)
     {
         return PlayerPrefs.GetInt(__GetSceneNameSpace(sceneName));
     }
@@ -422,7 +422,7 @@ public class GameMain : GameUser
     private static string __GetSceneNameSpace(string sceneName)
     {
         return NAME_SPACE_SCENE + sceneName;
-    }
+    }*/
 
     IEnumerator Start()
     {
@@ -577,7 +577,7 @@ public class GameMain : GameUser
                         {
                             defaultSceneName = GameConstantManager.Get(DefaultLevelSceneName);
 
-                            IncrementSceneTimes(defaultSceneName);
+                            //IncrementSceneTimes(defaultSceneName);
 
                             activation = new GameSceneActivation();
 
