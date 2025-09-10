@@ -287,6 +287,8 @@ public partial class UserDataMain
                 PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
             else
             {
+                selectedStage = stageCount - 1;
+                
                 int chapter = UserData.chapter;
                 if (chapter == __GetLevelChapterIndex(level.name))
                 {
@@ -670,16 +672,16 @@ public partial class UserDataMain
             var levelTicket = _levelTickets[levelTicketIndex];
             if (UserData.chapter < levelTicket.levels[levelIndexOfTicket].chapter)
                 return false;
-            
+
             int count = levelTicket.count;
             if (count < 1 || energy > 0 && !__ApplyEnergy(energy))
                 return false;
-            
+
             levelTicket.count = count - 1;
         }
         else if (UserData.chapter < __GetLevelChapterIndex(levelName) || energy > 0 && !__ApplyEnergy(energy))
-                return false;
-        
+            return false;
+
         return true;
     }
 }

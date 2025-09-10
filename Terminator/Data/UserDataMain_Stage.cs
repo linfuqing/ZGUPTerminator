@@ -260,11 +260,16 @@ public partial class UserDataMain
         if (numStages > stage)
         {
             var temp = __GetStage(level, stage);
-            energy = temp.energy;
+            if((temp.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
+            {
+                onComplete(default);
+            
+                yield break;
+            }
 
-            stageCache = (temp.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache
-                ? IUserData.StageCache.Empty
-                : UserData.GetStageCache(level.name, stage);
+            energy = temp.energy;
+            
+            stageCache = UserData.GetStageCache(level.name, stage);
         }
         else
         {
@@ -273,13 +278,13 @@ public partial class UserDataMain
             stageCache = IUserData.StageCache.Empty;
         }
 
-        if (0 == stage && !__ApplyLevel(level.name, energy))
+        if (!(0 == stage ? __ApplyLevel(level.name, energy) : __ApplyEnergy(energy)))
         {
             onComplete(default);
             
             yield break;
         }
-        
+
         __SubmitStageFlag();
 
         __AppendQuest(UserQuest.Type.Stage, 1);
