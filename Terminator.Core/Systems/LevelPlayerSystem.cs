@@ -12,7 +12,7 @@ public partial struct LevelPlayerSystem : ISystem
     [BurstCompile]
     private struct Apply : IJobParallelFor
     {
-        public int skillRage;
+        public int effectRage;
         
         public float effectDamageScale;
         public float effectTargetDamageScale;
@@ -40,9 +40,6 @@ public partial struct LevelPlayerSystem : ISystem
         public ComponentLookup<Instance> instances;
 
         [NativeDisableParallelForRestriction]
-        public ComponentLookup<SkillRage> skillRages;
-
-        [NativeDisableParallelForRestriction]
         public BufferLookup<LevelSkillGroup> levelSkillGroups;
 
         [NativeDisableParallelForRestriction]
@@ -64,6 +61,9 @@ public partial struct LevelPlayerSystem : ISystem
         public ComponentLookup<EffectDamage> effectDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<EffectRage> effectRages;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersonPlayer> thirdPersonPlayers;
         
         public void Execute(int index)
@@ -74,13 +74,6 @@ public partial struct LevelPlayerSystem : ISystem
                 instance.name = instanceName;
                 
                 instances[player] = instance;
-            }
-
-            if (skillRages.HasComponent(player))
-            {
-                SkillRage skillRage;
-                skillRage.value = this.skillRage;
-                skillRages[player] = skillRage;
             }
 
             if ((activeSkills.Length > 0 || skillGroups.Length > 0) && 
@@ -203,6 +196,13 @@ public partial struct LevelPlayerSystem : ISystem
 
             effectDamages[player] = effectDamage;
 
+            if (effectRages.HasComponent(player))
+            {
+                EffectRage effectRage;
+                effectRage.value = this.effectRage;
+                effectRages[player] = effectRage;
+            }
+
             ThirdPersonPlayer thirdPersonPlayer;
             thirdPersonPlayer.ControlledCamera = Entity.Null;
             thirdPersonPlayer.ControlledCharacter = player;
@@ -215,8 +215,6 @@ public partial struct LevelPlayerSystem : ISystem
     //private ComponentLookup<BulletLayerMaskAndTags> __bulletLayerMaskAndTags;
 
     private ComponentLookup<Instance> __instances;
-
-    private ComponentLookup<SkillRage> __skillRages;
 
     private BufferLookup<LevelSkillGroup> __levelSkillGroups;
 
@@ -232,6 +230,8 @@ public partial struct LevelPlayerSystem : ISystem
 
     private ComponentLookup<EffectDamage> __effectDamages;
 
+    private ComponentLookup<EffectRage> __effectRages;
+
     private ComponentLookup<ThirdPersonPlayer> __thirdPersonPlayers;
     
     private EntityQuery __group;
@@ -242,7 +242,6 @@ public partial struct LevelPlayerSystem : ISystem
         __levelSkillNameDefinitions = state.GetComponentLookup<LevelSkillNameDefinitionData>(true);
         //__bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __instances = state.GetComponentLookup<Instance>();
-        __skillRages = state.GetComponentLookup<SkillRage>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
@@ -250,6 +249,7 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         __effectDamages = state.GetComponentLookup<EffectDamage>();
+        __effectRages = state.GetComponentLookup<EffectRage>();
         __thirdPersonPlayers = state.GetComponentLookup<ThirdPersonPlayer>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -283,7 +283,6 @@ public partial struct LevelPlayerSystem : ISystem
         __levelSkillNameDefinitions.Update(ref state);
         //__bulletLayerMaskAndTags.Update(ref state);
         __instances.Update(ref state);
-        __skillRages.Update(ref state);
         __levelSkillGroups.Update(ref state);
         __skillActiveIndices.Update(ref state);
         __messageParameters.Update(ref state);
@@ -291,10 +290,11 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
         __effectDamages.Update(ref state);
+        __effectRages.Update(ref state);
         __thirdPersonPlayers.Update(ref state);
             
         Apply apply;
-        apply.skillRage = LevelPlayerShared.skillRage;
+        apply.effectRage = LevelPlayerShared.effectRage;
         apply.effectDamageScale = LevelPlayerShared.effectDamageScale;
         apply.effectTargetDamageScale = LevelPlayerShared.effectTargetDamageScale;
         apply.effectTargetHPScale = LevelPlayerShared.effectTargetHPScale;
@@ -307,7 +307,6 @@ public partial struct LevelPlayerSystem : ISystem
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
         //apply.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         apply.instances = __instances;
-        apply.skillRages = __skillRages;
         apply.levelSkillGroups = __levelSkillGroups;
         apply.skillActiveIndices = __skillActiveIndices;
         apply.messageParameters = __messageParameters;
@@ -315,6 +314,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.effectTargets = __effectTargets;
         apply.effectTargetDamageScales = __effectTargetDamageScales;
         apply.effectDamages = __effectDamages;
+        apply.effectRages = __effectRages;
         apply.thirdPersonPlayers = __thirdPersonPlayers;
         state.Dependency = apply.ScheduleByRef(entityArray.Length, 1, state.Dependency);
     }

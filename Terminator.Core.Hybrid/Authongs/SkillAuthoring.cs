@@ -354,7 +354,7 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
             AddComponent(entity, cooldownScale);
 
             //AddComponent<SkillLayerMask>(entity);
-            AddComponent<SkillRage>(entity);
+            AddComponent<EffectRage>(entity);
 
             var activeIndices = AddBuffer<SkillActiveIndex>(entity);
             int numActives = authoring._actives.Length;

@@ -324,11 +324,6 @@ public struct SkillCooldownScale : IComponentData
     public float value;
 }
 
-public struct SkillRage : IComponentData
-{
-    public float value;
-}
-
 /*public struct SkillLayerMask : IComponentData
 {
     public int value;

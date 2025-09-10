@@ -595,17 +595,20 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public BufferLookup<Child> children;
 
-        [ReadOnly]
-        public ComponentLookup<EffectDamageParent> damageParentMap;
-
-        [ReadOnly] 
-        public ComponentLookup<EffectDamage> damages;
-
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
 
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterProperties> characterProperties;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectRage> rages;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectDamage> damages;
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParentMap;
 
         [ReadOnly]
         public NativeArray<Entity> entityArray;
@@ -716,6 +719,8 @@ public partial struct EffectSystem : ISystem
                     instanceDamageParent.entity = entity;
                 }
 
+                rages.TryGetComponent(instanceDamageParent.entity, out var rage);
+
                 int damageLayerMask = 0;
                 LocalToWorld source = localToWorlds[entity];
                 var statusTargets = this.statusTargets[index];
@@ -743,6 +748,7 @@ public partial struct EffectSystem : ISystem
                     float3 forceResult, force;
                     float delayDestroyTime,
                         mass,
+                        damageScale, 
                         lengthSQ;
                     int totalCount = 0, 
                         totalDamageValue = 0, 
@@ -802,9 +808,13 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageValue = ComputeDamage(damage.value, instanceDamage.scale, ref random);
+                            damageScale = rage.value * damage.rageMultiplier;
+                            damageScale = damageScale > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
+                            damageScale *= instanceDamage.scale;
+                            
+                            damageValue = ComputeDamage(damage.value, damageScale, ref random);
 
-                            damageValueImmunized = ComputeDamage(damage.valueImmunized, instanceDamage.scale, ref random);
+                            damageValueImmunized = ComputeDamage(damage.valueImmunized, damageScale, ref random);
 
                             totalDamageValue += damageValue + damageValueImmunized;
 
@@ -822,7 +832,7 @@ public partial struct EffectSystem : ISystem
 
                             if (characterBody.IsValid)
                             {
-                                dropDamageValue = ComputeDamage(damage.valueToDrop, instanceDamage.scale, ref random);
+                                dropDamageValue = ComputeDamage(damage.valueToDrop, damageScale, ref random);
 
                                 if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
@@ -1104,9 +1114,6 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public BufferLookup<Child> children;
 
-        [ReadOnly]
-        public ComponentLookup<EffectDamageParent> damageParents;
-
         [ReadOnly] 
         public ComponentLookup<PhysicsCollider> physicsColliders;
 
@@ -1115,6 +1122,12 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly] 
         public ComponentLookup<EffectDamage> damages;
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParents;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectRage> rages;
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
@@ -1184,10 +1197,11 @@ public partial struct EffectSystem : ISystem
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.cameraRotation = cameraRotation;
             collect.children = children;
-            collect.damageParentMap = damageParents;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
+            collect.rages = rages;
             collect.damages = damages;
+            collect.damageParentMap = damageParents;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.damageParents = chunk.GetNativeArray(ref damageParentType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
@@ -1884,6 +1898,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<LevelStatus> __levelStates;
 
+    private ComponentLookup<EffectRage> __rages;
+
     private ComponentLookup<EffectDamage> __damages;
 
     private ComponentLookup<EffectDamageParent> __damageParents;
@@ -1991,6 +2007,7 @@ public partial struct EffectSystem : ISystem
         __levelStates = state.GetComponentLookup<LevelStatus>();
         __damages = state.GetComponentLookup<EffectDamage>();
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
+        __rages = state.GetComponentLookup<EffectRage>(true);
         __entityType = state.GetEntityTypeHandle();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
@@ -2163,9 +2180,10 @@ public partial struct EffectSystem : ISystem
         //var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
         jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
         
-        __damageParents.Update(ref state);
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
+        __rages.Update(ref state);
+        __damageParents.Update(ref state);
         __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
         __prefabType.Update(ref state);
@@ -2191,10 +2209,11 @@ public partial struct EffectSystem : ISystem
         collect.time = time;
         collect.cameraRotation = cameraRotation;
         collect.children = __children;
-        collect.damageParents = __damageParents;
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
+        collect.rages = __rages;
         collect.damages = __damages;
+        collect.damageParents = __damageParents;
         collect.entityType = __entityType;
         collect.damageParentType = __damageParentType;
         collect.instanceType = __instanceType;

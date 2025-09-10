@@ -36,7 +36,7 @@ public partial struct SkillSystem : ISystem
         
         public BufferAccessor<MessageParameter> outputMessageParameters;
 
-        public NativeArray<SkillRage> rages;
+        public NativeArray<EffectRage> rages;
 
         //public NativeArray<SkillLayerMask> skillLayerMasks;
         
@@ -120,7 +120,7 @@ public partial struct SkillSystem : ISystem
         
         public BufferTypeHandle<MessageParameter> outputMessageParameterType;
 
-        public ComponentTypeHandle<SkillRage> rageType;
+        public ComponentTypeHandle<EffectRage> rageType;
 
         //public ComponentTypeHandle<SkillLayerMask> skillLayerMaskType;
 
@@ -172,7 +172,7 @@ public partial struct SkillSystem : ISystem
 
     private BufferTypeHandle<MessageParameter> __outputMessageParameterType;
 
-    private ComponentTypeHandle<SkillRage> __rageType;
+    private ComponentTypeHandle<EffectRage> __rageType;
 
     private EntityQuery __group;
 
@@ -189,7 +189,7 @@ public partial struct SkillSystem : ISystem
         __statusType = state.GetBufferTypeHandle<SkillStatus>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __outputMessageParameterType = state.GetBufferTypeHandle<MessageParameter>();
-        __rageType = state.GetComponentTypeHandle<SkillRage>();
+        __rageType = state.GetComponentTypeHandle<EffectRage>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder

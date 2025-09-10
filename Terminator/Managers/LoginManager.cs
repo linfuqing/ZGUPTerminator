@@ -803,7 +803,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.LevelProperty property)
     {
-        LevelPlayerShared.skillRage = 0;
+        LevelPlayerShared.effectRage = 0;
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
 
@@ -834,7 +834,7 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
 
-        LevelPlayerShared.skillRage = property.cache.rage;
+        LevelPlayerShared.effectRage = property.cache.rage;
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
         

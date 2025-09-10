@@ -34,7 +34,7 @@ public static class LevelPlayerShared
         }
     }
 
-    private class SkillRage : Value<SkillRage, int>
+    private class EffectRage : Value<EffectRage, int>
     {
         
     }
@@ -75,11 +75,11 @@ public static class LevelPlayerShared
         public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
     }
 
-    public static int skillRage
+    public static int effectRage
     {
-        get => SkillRage.value;
+        get => EffectRage.value;
         
-        set => SkillRage.value = value;
+        set => EffectRage.value = value;
     }
 
     public static float effectDamageScale

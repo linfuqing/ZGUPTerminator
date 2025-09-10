@@ -69,6 +69,8 @@ public struct EffectDefinition
 
         public int valueImmunized;
         
+        public float rageMultiplier;
+
         public float goldMultiplier;
 
         public float spring;
@@ -107,6 +109,11 @@ public struct EffectDefinition
 public struct EffectDefinitionData : IComponentData
 {
     public BlobAssetReference<EffectDefinition> definition;
+}
+
+public struct EffectRage : IComponentData
+{
+    public float value;
 }
 
 public struct EffectDamageParent : IComponentData

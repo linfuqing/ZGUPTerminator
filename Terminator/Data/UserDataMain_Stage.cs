@@ -186,60 +186,55 @@ public partial class UserDataMain
 
     public IEnumerator QueryStage(
         uint userID,
-        uint stageID, 
+        uint stageID,
         Action<IUserData.Stage> onComplete)
     {
         yield return __CreateEnumerator();
-        
+
         var levelStage = __GetLevelStageInfo(stageID);
-        //if (__TryGetStage(stageID, out int targetStage, out int levelIndex, out int rewardIndex))
+        IUserData.Stage result;
+        var level = _levels[levelStage.levelIndex];
+
+        var stage = __GetStage(level, levelStage.stageIndex);
+
+        result.energy = stage.energy;
+        result.levelEnergy = __GetStage(level, __GetDontCacheStage(level, levelStage.stageIndex)).energy;
+        result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache
+            ? IUserData.StageCache.Empty
+            : UserData.GetStageCache(level.name, levelStage.stageIndex);
+
+        /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
+        result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
+
+        for (i = 0; i < numSkillNames; ++i)
+            result.skillGroupNames[i] = __GetSkillGroupName(result.cache.skills[i]);*/
+
+        int numStageRewards = stage.indirectRewards.Length;
+        result.rewards = new UserStageReward[numStageRewards];
+
+        int i;
+        StageReward stageReward;
+        UserStageReward userStageReward;
+        for (i = 0; i < numStageRewards; ++i)
         {
-            IUserData.Stage result;
-            var level = _levels[levelStage.levelIndex];
+            stageReward = stage.indirectRewards[i];
+            userStageReward.name = stageReward.name;
+            userStageReward.id = levelStage.rewardID;
+            userStageReward.flag = __GetStageRewardFlag(
+                stageReward.name,
+                level.name,
+                levelStage.stageIndex,
+                stageReward.conditionValue,
+                stageReward.condition,
+                out _);
+            userStageReward.condition = stageReward.condition;
+            userStageReward.conditionValue = stageReward.conditionValue;
+            userStageReward.values = stageReward.values;
 
-            var stage = __GetStage(level, levelStage.stageIndex);
-
-            result.energy = stage.energy;
-            result.levelEnergy = __GetStage(level, __GetDontCacheStage(level, levelStage.stageIndex)).energy;
-            result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? IUserData.StageCache.Empty : UserData.GetStageCache(level.name, levelStage.stageIndex);
-
-            /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
-            result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
-
-            for (i = 0; i < numSkillNames; ++i)
-                result.skillGroupNames[i] = __GetSkillGroupName(result.cache.skills[i]);*/
-            
-            int numStageRewards = stage.indirectRewards.Length;
-            result.rewards = new UserStageReward[numStageRewards];
-            
-            int i;
-            StageReward stageReward;
-            UserStageReward userStageReward;
-            for (i = 0; i < numStageRewards; ++i)
-            {
-                stageReward = stage.indirectRewards[i];
-                userStageReward.name = stageReward.name;
-                userStageReward.id = levelStage.rewardID;
-                userStageReward.flag = __GetStageRewardFlag(
-                    stageReward.name, 
-                    level.name, 
-                    levelStage.stageIndex,
-                    stageReward.conditionValue, 
-                    stageReward.condition, 
-                    out _);
-                userStageReward.condition = stageReward.condition;
-                userStageReward.conditionValue = stageReward.conditionValue;
-                userStageReward.values = stageReward.values;
-
-                result.rewards[i] = userStageReward;
-            }
-            
-            onComplete(result);
-
-            yield break;
+            result.rewards[i] = userStageReward;
         }
 
-        onComplete(default);
+        onComplete(result);
     }
 
     public IEnumerator ApplyStage(

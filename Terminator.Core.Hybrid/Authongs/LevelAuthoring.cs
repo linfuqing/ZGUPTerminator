@@ -256,8 +256,7 @@ public class LevelAuthoring : MonoBehaviour
                 }
 
                 var parameters = value.Split('/');
-                int numParameters = parameters.Length, index, count;
-
+                int numParameters = parameters.Length;
                 results = new StageOption[numParameters];
                 for (int i = 0; i < numParameters; ++i)
                     results[i] = new StageOption(parameters[i]);
@@ -277,7 +276,7 @@ public class LevelAuthoring : MonoBehaviour
                 }
 
                 var parameters = value.Split('/');
-                int numParameters = parameters.Length, index;
+                int numParameters = parameters.Length;
 
                 conditions = new StageOption[numParameters];
                 for (int i = 0; i < numParameters; ++i)
