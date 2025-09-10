@@ -477,7 +477,7 @@ public sealed class LoginManager : MonoBehaviour
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
-                            Dictionary<int, int> sceneRewardCounts = null;
+                            HashSet<int> sceneIndices = null;
                             for (i = 0; i < numStages; ++i)
                             {
                                 var stage = selectedLevel.stages[i];
@@ -524,10 +524,10 @@ public sealed class LoginManager : MonoBehaviour
                                 }
                                 else
                                 {
-                                    if (sceneRewardCounts == null)
-                                        sceneRewardCounts = new Dictionary<int, int>();
+                                    if (sceneIndices == null)
+                                        sceneIndices = new HashSet<int>();
                                 
-                                    sceneRewardCounts.Add(sceneIndex, stage.rewardFlags.Length);
+                                    sceneIndices.Add(sceneIndex);
 
                                     isUnlocked = false;
                                     
@@ -608,7 +608,7 @@ public sealed class LoginManager : MonoBehaviour
                                     }
 
                                     if (__sceneActiveDepth <= 0 || 
-                                         sceneRewardCounts.ContainsKey(sceneIndex) && 
+                                        sceneIndices.Contains(sceneIndex) && 
                                         //GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
                                         (__selectedStageIndex == -1 || __selectedStageIndex == i))
                                     {
@@ -639,7 +639,7 @@ public sealed class LoginManager : MonoBehaviour
                                         if (x)
                                         {
                                             if (__sceneActiveDepth != 0 || 
-                                                sceneRewardCounts != null && sceneRewardCounts.ContainsKey(currentSceneIndex))
+                                                sceneIndices != null && sceneIndices.Contains(currentSceneIndex))
                                                 //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
@@ -673,7 +673,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 if(toggle == null)
                                                     continue;
                                                 
-                                                toggle.interactable = i != currentSceneIndex && sceneRewardCounts != null && sceneRewardCounts.ContainsKey(i);
+                                                toggle.interactable = i != currentSceneIndex && sceneIndices != null && sceneIndices.Contains(i);
                                             }
                                         }
                                     };
