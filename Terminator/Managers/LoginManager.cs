@@ -773,7 +773,7 @@ public sealed class LoginManager : MonoBehaviour
         __selectedUserLevelID = levelStage.levelID;
         __selectedStageIndex = levelStage.levelID == 0 ? -1 : levelStage.stage;
         
-        int numRewards = levelStage.rewards.Length;
+        int numRewards = levelStage.rewards == null ? 0 : levelStage.rewards.Length;
         UserRewardData[] results;
         if (numRewards > 0)
         {
