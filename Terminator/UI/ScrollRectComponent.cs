@@ -41,6 +41,12 @@ namespace ZG
             }
         }*/
 
+        public float2 GetNormalizedPosition(in int2 index, in int2 count, float offsetScale)
+        {
+            float2 cellLength = GetCellLength(count), offset = GetOffset(cellLength, offsetScale);
+            return (index * cellLength + offset) / length;
+        }
+
         public float2 GetCellLength(in int2 count)
         {
             return new float2(count.x > 0 ? contentLength.x / count.x : contentLength.x, count.y > 0 ? contentLength.y / count.y : contentLength.y);
@@ -95,16 +101,16 @@ namespace ZG
             return result;
         }
 
-        public float2 GetIndex(float offsetScale, in float2 position, in float2 length, in int2 count)
+        public float2 GetIndex(float offsetScale, in float2 normalizedPosition, in float2 length, in int2 count)
         {
             float2 cellLength = GetCellLength(count);
 
-            return GetIndex(count, position, length, cellLength, GetOffset(cellLength, offsetScale));
+            return GetIndex(count, normalizedPosition, length, cellLength, GetOffset(cellLength, offsetScale));
         }
 
-        public float2 GetIndex(float offsetScale, in float2 position, in int2 count)
+        public float2 GetIndex(float offsetScale, in float2 normalizedPosition, in int2 count)
         {
-            return GetIndex(offsetScale, position, length, count);
+            return GetIndex(offsetScale, normalizedPosition, length, count);
         }
     }
 
@@ -419,6 +425,12 @@ namespace ZG
             info.index = index;
             __info = info;
             //this.AddComponentData(info);
+        }
+
+        public void SetTo(in int2 index)
+        {
+            __EnableNode(float2.zero, __data.GetNormalizedPosition(index, count, offsetScale));
+            __info.isVail = 0;
         }
 
         protected void OnEnable()

@@ -21,6 +21,14 @@ public partial interface IUserData
         NoDamage = 0x04 | Normal
     }
 
+    public struct LevelStage
+    {
+        public uint levelID;
+        public int stage;
+
+        public UserReward[] rewards;
+    }
+
     public struct LevelChapters
     {
         [Flags]
@@ -32,7 +40,7 @@ public partial interface IUserData
         public Flag flag;
         
         public int stageRewardCount;
-        
+
         public UserLevel[] levels;
     }
 
@@ -101,7 +109,7 @@ public partial interface IUserData
 
     IEnumerator CollectLevel(
         uint userID,
-        Action<Memory<UserReward>> onComplete);
+        Action<LevelStage> onComplete);
 
     IEnumerator SweepLevel(
         uint userID,

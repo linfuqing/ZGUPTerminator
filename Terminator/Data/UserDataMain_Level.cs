@@ -263,14 +263,14 @@ public partial class UserDataMain
 
     public IEnumerator CollectLevel(
         uint userID,
-        Action<Memory<UserReward>> onComplete)
+        Action<IUserData.LevelStage> onComplete)
     {
         yield return __CreateEnumerator();
 
         var temp = UserData.levelCache;
         if (temp == null)
         {
-            onComplete(null);
+            onComplete(default);
             
             yield break;
         }
@@ -278,10 +278,9 @@ public partial class UserDataMain
         UserData.levelCache = null;
 
         var levelCache = temp.Value;
-        
-        var rewards = new List<UserReward>();
         var level = _levels[__ToIndex(levelCache.id)];
-        int stageCount = __GetStageCount(level);
+        uint selectedLevelID = levelCache.id;
+        int selectedStage = levelCache.stage, stageCount = __GetStageCount(level);
         if (stageCount <= levelCache.stage)
         {
             if (__GetLevelTicketIndex(level.name, out _, out _))
@@ -290,7 +289,16 @@ public partial class UserDataMain
             {
                 int chapter = UserData.chapter;
                 if (chapter == __GetLevelChapterIndex(level.name))
+                {
                     UserData.chapter = ++chapter;
+
+                    if (chapter < _levelChapters.Length)
+                    {
+                        selectedLevelID = __ToID(__GetLevelIndex(_levelChapters[chapter].name));
+
+                        selectedStage = 0;
+                    }
+                }
             }
         }
 
@@ -300,6 +308,8 @@ public partial class UserDataMain
         
         __AppendQuest(UserQuest.Type.KillCount, levelCache.killCount);
         __AppendQuest(UserQuest.Type.KillBoss, levelCache.killBossCount);
+
+        var rewards = new List<UserReward>();
 
         string key;
         Stage stage;
@@ -324,9 +334,14 @@ public partial class UserDataMain
         reward.count = levelCache.gold;
         rewards.Add(reward);
 
+        IUserData.LevelStage result;
+        result.levelID = selectedLevelID;
+        result.stage = selectedStage;
+        result.rewards = rewards.ToArray();
+
         //__CollectLevelLegacy(isNextLevel, levelIndex, levelCache.stage);
         
-        onComplete(rewards.ToArray());
+        onComplete(result);
     }
 
     public IEnumerator SweepLevel(
@@ -699,7 +714,7 @@ public partial class UserData
 
     public IEnumerator CollectLevel(
         uint userID,
-        Action<Memory<UserReward>> onComplete)
+        Action<IUserData.LevelStage> onComplete)
     {
         return UserDataMain.instance.CollectLevel(userID, onComplete);
     }

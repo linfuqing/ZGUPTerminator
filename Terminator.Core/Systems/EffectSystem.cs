@@ -811,8 +811,8 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageScale = rage.value * damage.rageMultiplier;
-                            damageScale = damageScale > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
+                            damageScale = 1.0f + rage.value * damage.rageMultiplier;
+                            //damageScale = damageScale > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
                             damageScale *= instanceDamage.scale;
                             
                             damageValue = ComputeDamage(damage.value, damageScale, ref random);
