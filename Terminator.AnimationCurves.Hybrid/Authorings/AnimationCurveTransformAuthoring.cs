@@ -496,7 +496,7 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        using (var ecb = new EntityCommandBuffer(Allocator.Temp))
+        using (var ecb = new EntityCommandBuffer(Allocator.TempJob))
         {
             foreach (var instances in 
                      SystemAPI.Query<DynamicBuffer<AnimationCurveTransformBakingData>>()
