@@ -482,16 +482,16 @@ public struct AnimationCurveTransformBakingData : IBufferElementData
     public AnimationCurveTransform transform;
 }
 
-[BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem), UpdateInGroup(typeof(PostBakingSystemGroup))]
+[BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]//, UpdateInGroup(typeof(PostBakingSystemGroup))]
 public partial struct AnimationCurveTransformBakingSystem : ISystem
 {
-    private BufferLookup<Child> __children;
+    /*private BufferLookup<Child> __children;
     
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __children = state.GetBufferLookup<Child>(true);
-    }
+    }*/
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
@@ -506,7 +506,7 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
                     ecb.AddComponent(instance.entity, instance.transform);
             }
 
-            __children.Update(ref state);
+            /*__children.Update(ref state);
             
             var parallelWriter = ecb.AsParallelWriter();
             foreach (var (active, entities) in 
@@ -514,7 +514,7 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
                          .WithOptions(EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.IncludePrefab))
             {
                 active.ValueRO.Evaluate(0, 0.0f, 0.0f, entities, __children, ref parallelWriter);
-            }
+            }*/
             
             ecb.Playback(state.EntityManager);
         }
