@@ -508,13 +508,13 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
 
             __children.Update(ref state);
             
-            var parallelWriter = ecb.AsParallelWriter();
+            /*var parallelWriter = ecb.AsParallelWriter();
             foreach (var (active, entities) in 
                      SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
                          .WithOptions(EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.IncludePrefab))
             {
                 active.ValueRO.Evaluate(0, 0.0f, 0.0f, entities, __children, ref parallelWriter);
-            }
+            }*/
             
             ecb.Playback(state.EntityManager);
         }
