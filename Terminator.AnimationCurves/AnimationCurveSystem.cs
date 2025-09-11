@@ -417,7 +417,7 @@ public partial struct AnimationCurveSystem : ISystem
             __group = builder
                 .WithAll<AnimationCurveTransform>()
                 .WithAllRW<LocalTransform>()
-                .WithOptions(EntityQueryOptions.FilterWriteGroup)
+                .WithOptions(EntityQueryOptions.FilterWriteGroup | EntityQueryOptions.IncludeDisabledEntities)
                 .Build(ref state);
     }
 
