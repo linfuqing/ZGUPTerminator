@@ -686,7 +686,7 @@ public partial class UserDataMain
     
     private static int __ToDay(int day)
     {
-        return ((day - 1) & 0x7) + 1;
+        return ((day - 1) % 7) + 1;
     }
 }
 

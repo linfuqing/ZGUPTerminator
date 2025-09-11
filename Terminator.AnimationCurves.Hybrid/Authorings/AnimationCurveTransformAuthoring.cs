@@ -1,16 +1,12 @@
 using System;
-using Unity.Mathematics;
-using Unity.Animation;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.Transforms;
 using UnityEngine;
 using AnimationCurve = Unity.Animation.AnimationCurve;
 using Hash128 = Unity.Entities.Hash128;
 using LegacyCurve = UnityEngine.AnimationCurve;
-using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 using System.Collections.Generic;
@@ -115,13 +111,16 @@ public struct AnimationCurveTransformData
         IBaker baker, 
         List<AnimationCurveBoolDefinition.KeyFrame> keyFrames, 
         int entityIndex, 
+        out bool isDisabled, 
         out Hash128 hash)
     {
         AnimationCurveBoolDefinition.KeyFrame keyFrame;
         keyFrame.index = entityIndex;
 
-        if (active.keyFrames != null)
+        if (active.keyFrames != null && active.keyFrames.Length > 0)
         {
+            isDisabled = !active.keyFrames[0].value;
+
             foreach (var activeKeyFrame in active.keyFrames)
             {
                 keyFrame.value = activeKeyFrame.value;
@@ -130,6 +129,8 @@ public struct AnimationCurveTransformData
                 keyFrames.Add(keyFrame);
             }
         }
+        else
+            isDisabled = false;
 
         AnimationCurveTransform result;
         result.scale = this.scale == null ? default : this.scale.ToDotsAnimationCurve();
@@ -440,7 +441,10 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
         {
             AnimationCurveTransformBakingData instance;
             instance.entity = entity;
-            instance.transform = transform.ToAsset(this, keyFrames, entities.Length, out _);
+            instance.transform = transform.ToAsset(this, keyFrames, entities.Length, out bool isDisabled, out _);
+            
+            if(isDisabled)
+                AddComponent<Disabled>(entity);
 
             LocalTransform localTransform = LocalTransform.Identity;
             instance.transform.Evaluate(0, ref localTransform);
@@ -478,7 +482,7 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
     }
 }
 
-[BakingType]
+[TemporaryBakingType]
 public struct AnimationCurveTransformBakingData : IBufferElementData
 {
     public Entity entity;
