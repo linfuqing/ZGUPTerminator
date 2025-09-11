@@ -111,7 +111,6 @@ public struct AnimationCurveTransformData
         IBaker baker, 
         List<AnimationCurveBoolDefinition.KeyFrame> keyFrames, 
         int entityIndex, 
-        out bool isDisabled, 
         out Hash128 hash)
     {
         AnimationCurveBoolDefinition.KeyFrame keyFrame;
@@ -119,8 +118,6 @@ public struct AnimationCurveTransformData
 
         if (active.keyFrames != null && active.keyFrames.Length > 0)
         {
-            isDisabled = !active.keyFrames[0].value;
-
             foreach (var activeKeyFrame in active.keyFrames)
             {
                 keyFrame.value = activeKeyFrame.value;
@@ -129,8 +126,6 @@ public struct AnimationCurveTransformData
                 keyFrames.Add(keyFrame);
             }
         }
-        else
-            isDisabled = false;
 
         AnimationCurveTransform result;
         result.scale = this.scale == null ? default : this.scale.ToDotsAnimationCurve();
@@ -441,11 +436,8 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
         {
             AnimationCurveTransformBakingData instance;
             instance.entity = entity;
-            instance.transform = transform.ToAsset(this, keyFrames, entities.Length, out bool isDisabled, out _);
+            instance.transform = transform.ToAsset(this, keyFrames, entities.Length, out _);
             
-            if(isDisabled)
-                AddComponent<Disabled>(entity);
-
             LocalTransform localTransform = LocalTransform.Identity;
             instance.transform.Evaluate(0, ref localTransform);
             
@@ -490,9 +482,17 @@ public struct AnimationCurveTransformBakingData : IBufferElementData
     public AnimationCurveTransform transform;
 }
 
-[BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]
+[BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem), UpdateAfter(typeof(TransformBakingSystemGroup))]
 public partial struct AnimationCurveTransformBakingSystem : ISystem
 {
+    private BufferLookup<Child> __children;
+    
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __children = state.GetBufferLookup<Child>(true);
+    }
+
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
@@ -504,6 +504,16 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
             {
                 foreach (var instance in instances)
                     ecb.AddComponent(instance.entity, instance.transform);
+            }
+
+            __children.Update(ref state);
+            
+            var parallelWriter = ecb.AsParallelWriter();
+            foreach (var (active, entities) in 
+                     SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
+                         .WithOptions(EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.IncludePrefab))
+            {
+                active.ValueRO.Evaluate(0, 0.0f, 0.0f, entities, __children, ref parallelWriter);
             }
             
             ecb.Playback(state.EntityManager);
