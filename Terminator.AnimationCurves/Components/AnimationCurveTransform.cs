@@ -2,6 +2,7 @@ using System;
 using Unity.Mathematics;
 using Unity.Animation;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Entities.Content;
 using Unity.Transforms;
@@ -219,6 +220,26 @@ public struct AnimationCurveRoot : IComponentData
 public struct AnimationCurveActive : IComponentData
 {
     public BlobAssetReference<AnimationCurveBoolDefinition> definition;
+
+    public void Init(
+        in DynamicBuffer<AnimationCurveEntity> entities, 
+        in BufferLookup<Child> children, 
+        ref EntityCommandBuffer.ParallelWriter entityManager)
+    {
+        using (var entityIndices = new UnsafeHashSet<int>(1, Allocator.Temp))
+        {
+            ref var definition = ref this.definition.Value;
+            int numKeyFrames = definition.keyFrames.Length;
+            for (int i = 0; i < numKeyFrames; ++i)
+            {
+                ref var keyFrame = ref definition.keyFrames[i];
+                if (!entityIndices.Add(keyFrame.index))
+                    continue;
+
+                __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
+            }
+        }
+    }
 
     public void Evaluate(
         float length, 
