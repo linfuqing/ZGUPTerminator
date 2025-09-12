@@ -610,7 +610,7 @@ public sealed class LoginManager : MonoBehaviour
                                     }
 
                                     if (__sceneActiveDepth <= 0 || 
-                                        sceneIndices.Contains(sceneIndex) && 
+                                        sceneIndices != null && sceneIndices.Contains(sceneIndex) && 
                                         //GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
                                         (__selectedStageIndex == -1 || __selectedStageIndex == i))
                                     {
