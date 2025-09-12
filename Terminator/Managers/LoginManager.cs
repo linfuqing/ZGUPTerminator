@@ -346,8 +346,8 @@ public sealed class LoginManager : MonoBehaviour
             levelIndices[_levels[i].name] = i;
 
         numLevels = levelChapters.levels.Length;
-        bool isHot = false, hasStageRewards;
-        int selectedLevelStyleIndex = -1, numStageRewards = 0, numStages, j;
+        bool isHot = false, isSelected;
+        int selectedLevelStyleIndex = -1, numStageRewards = 0, numStages, index, j;
         uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -355,11 +355,9 @@ public sealed class LoginManager : MonoBehaviour
         for(i = 0; i < numLevels; ++i)
         {
             userLevel = levelChapters.levels[i];
-            if(!levelIndices.TryGetValue(userLevel.name, out int index))
-                continue;
 
             bool isEndOfLevels = i + 1 == numLevels;
-            hasStageRewards = false;
+            isSelected = false;
             if (userLevel.stages != null)
             {
                 if (!isHot)
@@ -397,20 +395,29 @@ public sealed class LoginManager : MonoBehaviour
                         {
                             ++numStageRewards;
 
-                            hasStageRewards = true;
+                            isSelected = true;
                         }
                     }
                 }
             }
 
-            if (hasStageRewards || __sceneActiveDepth == 0)
-                selectedLevelStyleIndex = __levelStyles == null ? 0 : __levelStyles.Count;
+            if (__selectedUserLevelID == 0)
+                isSelected |= __sceneActiveDepth == 0;
+            else if (__sceneActiveDepth == 0)
+                isSelected = __selectedUserLevelID == userLevel.id;
+            else if (isSelected && selectedLevelStyleIndex != -1 &&
+                     levelChapters.levels[selectedLevelStyleIndex].id == __selectedUserLevelID)
+                isSelected = false;
+            
+            if (isSelected)
+                selectedLevelStyleIndex = i;
             
             var style = Instantiate(_style, parent);
             style.name = userLevel.name;
             
             var selectedLevel = userLevel;
-            
+
+            index = levelIndices[userLevel.name];
             var level = _levels[index];
             
             if(style.onTitle != null)
