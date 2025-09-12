@@ -465,7 +465,7 @@ public sealed class LoginManager : MonoBehaviour
                             if (__stageStyles == null)
                                 __stageStyles = new List<StageStyle>();
 
-                            bool isHot, isUnlocked;
+                            bool isHot, isUnlocked, temp;
                             int i,
                                 j,
                                 numRanks,
@@ -477,7 +477,7 @@ public sealed class LoginManager : MonoBehaviour
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
-                            HashSet<int> sceneIndices = null;
+                            Dictionary<int, bool> sceneUnlocked = null;
                             for (i = 0; i < numStages; ++i)
                             {
                                 var stage = selectedLevel.stages[i];
@@ -546,15 +546,15 @@ public sealed class LoginManager : MonoBehaviour
                                         }
                                     }
 
-                                    if (isUnlocked)
-                                    {
-                                        if (sceneIndices == null)
-                                            sceneIndices = new HashSet<int>();
-                                
-                                        sceneIndices.Add(sceneIndex);
-                                    }
-                                    else
+                                    if (!isUnlocked)
                                         __CreateRewards(stageStyle.rewardStyle, stage.rewards);
+
+                                    if (sceneUnlocked == null)
+                                        sceneUnlocked = new Dictionary<int, bool>();
+
+                                    sceneUnlocked[sceneIndex] = sceneUnlocked.TryGetValue(sceneIndex, out temp)
+                                        ? temp | isUnlocked
+                                        : isUnlocked;
 
                                     if (stageStyle.onHot != null)
                                         stageStyle.onHot.Invoke(isHot);
@@ -610,7 +610,7 @@ public sealed class LoginManager : MonoBehaviour
                                     }
 
                                     if (__sceneActiveDepth <= 0 || 
-                                        sceneIndices != null && sceneIndices.Contains(sceneIndex) && 
+                                        sceneUnlocked != null && sceneUnlocked.TryGetValue(sceneIndex, out temp) && temp && 
                                         //GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
                                         (__selectedStageIndex == -1 || __selectedStageIndex == i))
                                     {
@@ -641,7 +641,7 @@ public sealed class LoginManager : MonoBehaviour
                                         if (x)
                                         {
                                             if (__sceneActiveDepth != 0 || 
-                                                sceneIndices != null && sceneIndices.Contains(currentSceneIndex))
+                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp)
                                                 //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
@@ -675,7 +675,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 if(toggle == null)
                                                     continue;
                                                 
-                                                toggle.interactable = i != currentSceneIndex && sceneIndices != null && sceneIndices.Contains(i);
+                                                toggle.interactable = i != currentSceneIndex && sceneUnlocked != null && sceneUnlocked.ContainsKey(i);
                                             }
                                         }
                                     };
