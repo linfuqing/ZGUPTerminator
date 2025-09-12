@@ -429,7 +429,13 @@ namespace ZG
 
         public void SetTo(in int2 index)
         {
-            __EnableNode(float2.zero, __data.GetNormalizedPosition(index, count, offsetScale));
+            //For Update Count
+            --version;
+            
+            float2 normalizedPosition = data.GetNormalizedPosition(index, count, offsetScale);
+            scrollRect.velocity = float2.zero;
+            scrollRect.normalizedPosition = normalizedPosition;
+            __EnableNode();
             __info.isVail = 0;
         }
 
@@ -709,13 +715,11 @@ namespace ZG
                 }
 
                 //nodes[index] = node;
-
                 if (flag != 0)
-                {
                     ++result.version;
-                    result.flag = flag;
-                    result.index = node.index;
-                }
+                
+                result.flag = flag;
+                result.index = node.index;
             }
 
             public void Execute(

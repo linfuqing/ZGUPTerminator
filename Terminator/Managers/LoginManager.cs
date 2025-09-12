@@ -150,8 +150,8 @@ public sealed class LoginManager : MonoBehaviour
     private int __sceneActiveDepth;
     
     private bool __isStart;
-    private bool __isLevelActive;
     private bool __isEnergyActive = true;
+    private bool? __isLevelActive;
 
     public static uint? userID
     {
@@ -702,14 +702,14 @@ public sealed class LoginManager : MonoBehaviour
 
                     if (isEndOfLevels && numStageRewards < levelChapters.stageRewardCount)
                     {
-                        if (__isLevelActive)
+                        if (__isLevelActive == null || __isLevelActive.Value)
                         {
                             __isLevelActive = false;
                             
                             _onLevelDisable?.Invoke(levelChapters.stageRewardCount.ToString());
                         }
                     }
-                    else if (!__isLevelActive)
+                    else if (__isLevelActive == null || !__isLevelActive.Value)
                     {
                         __isLevelActive = true;
                         
