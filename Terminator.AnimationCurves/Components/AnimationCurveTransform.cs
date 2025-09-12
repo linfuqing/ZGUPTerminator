@@ -223,8 +223,8 @@ public struct AnimationCurveActive : IComponentData
 
     public void Init(
         in DynamicBuffer<AnimationCurveEntity> entities, 
-        in BufferLookup<Child> children, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
+        in UnsafeParallelMultiHashMap<Entity, Entity> children, 
+        EntityCommandBuffer entityManager)
     {
         using (var entityIndices = new UnsafeHashSet<int>(1, Allocator.Temp))
         {
@@ -296,6 +296,23 @@ public struct AnimationCurveActive : IComponentData
         }
         else
             entityManager.SetEnabled(0, entity, value);
+    }
+    
+    private void __SetActive(
+        bool value, 
+        in Entity entity, 
+        in UnsafeParallelMultiHashMap<Entity, Entity> children, 
+        ref EntityCommandBuffer entityManager)
+    {
+        if (children.TryGetFirstValue(entity, out Entity child, out var iterator))
+        {
+            do
+            {
+                __SetActive(value, child, children, ref entityManager);
+            }while(children.TryGetNextValue(out child, ref iterator));
+        }
+        else
+            entityManager.SetEnabled(entity, value);
     }
 }
 

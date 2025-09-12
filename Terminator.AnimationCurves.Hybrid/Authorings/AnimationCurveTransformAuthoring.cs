@@ -1,6 +1,7 @@
 using System;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
@@ -485,37 +486,40 @@ public struct AnimationCurveTransformBakingData : IBufferElementData
 [BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]//, UpdateInGroup(typeof(PostBakingSystemGroup))]
 public partial struct AnimationCurveTransformBakingSystem : ISystem
 {
-    private BufferLookup<Child> __children;
-    
-    [BurstCompile]
-    public void OnCreate(ref SystemState state)
-    {
-        __children = state.GetBufferLookup<Child>(true);
-    }
-
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         using (var ecb = new EntityCommandBuffer(Allocator.TempJob))
         {
-            foreach (var instances in 
-                     SystemAPI.Query<DynamicBuffer<AnimationCurveTransformBakingData>>()
+            foreach (var (transform, instances) in 
+                     SystemAPI.Query<RefRO<TransformAuthoring>, DynamicBuffer<AnimationCurveTransformBakingData>>()
                          .WithOptions(EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.IncludePrefab))
             {
                 foreach (var instance in instances)
                     ecb.AddComponent(instance.entity, instance.transform);
             }
 
-            __children.Update(ref state);
-            
-            var parallelWriter = ecb.AsParallelWriter();
-            foreach (var (active, entities) in 
-                     SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
-                         .WithOptions(EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.IncludePrefab))
+            using (var children = new UnsafeParallelMultiHashMap<Entity, Entity>(1, Allocator.Temp))
             {
-                active.ValueRO.Init(entities, __children, ref parallelWriter);
+                foreach (var (parent, entity) in
+                         SystemAPI.Query<RefRO<Parent>>()
+                             .WithEntityAccess()
+                             .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
+                                          EntityQueryOptions.IncludePrefab))
+                {
+                    if (parent.ValueRO.Value != Entity.Null)
+                        children.Add(parent.ValueRO.Value, entity);
+                }
+
+                foreach (var (active, entities) in
+                         SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
+                             .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
+                                          EntityQueryOptions.IncludePrefab))
+                {
+                    active.ValueRO.Init(entities, children, ecb);
+                }
             }
-            
+
             ecb.Playback(state.EntityManager);
         }
     }
