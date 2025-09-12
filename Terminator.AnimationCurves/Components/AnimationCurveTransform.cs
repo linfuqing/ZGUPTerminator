@@ -306,8 +306,13 @@ public struct AnimationCurveActive : IComponentData
     {
         if (children.TryGetFirstValue(entity, out Entity child, out var iterator))
         {
+            var childBuffer = entityManager.AddBuffer<Child>(entity);
+            Child childComponent;
             do
             {
+                childComponent.Value = child;
+                childBuffer.Add(childComponent);
+                
                 __SetActive(value, child, children, ref entityManager);
             }while(children.TryGetNextValue(out child, ref iterator));
         }
