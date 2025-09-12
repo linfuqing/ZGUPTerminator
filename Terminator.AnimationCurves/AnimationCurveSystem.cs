@@ -13,7 +13,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         public double time;
 
         [ReadOnly]
-        public BufferLookup<Child> children;
+        public BufferLookup<AnimationCurveChild> children;
 
         [ReadOnly]
         public NativeArray<AnimationCurveRoot> roots;
@@ -53,7 +53,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         public double time;
 
         [ReadOnly]
-        public BufferLookup<Child> children;
+        public BufferLookup<AnimationCurveChild> children;
 
         [ReadOnly]
         public ComponentTypeHandle<AnimationCurveRoot> rootType;
@@ -225,7 +225,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         }
     }
 
-    private BufferLookup<Child> __children;
+    private BufferLookup<AnimationCurveChild> __children;
 
     private ComponentTypeHandle<AnimationCurveTime> __timeType;
 
@@ -247,7 +247,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __children = state.GetBufferLookup<Child>(true);
+        __children = state.GetBufferLookup<AnimationCurveChild>(true);
         __timeType = state.GetComponentTypeHandle<AnimationCurveTime>();
         __deltaType = state.GetComponentTypeHandle<AnimationCurveDelta>();
         __rootType = state.GetComponentTypeHandle<AnimationCurveRoot>(true);

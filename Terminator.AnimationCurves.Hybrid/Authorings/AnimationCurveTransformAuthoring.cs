@@ -448,12 +448,19 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
                 
             instances.Add(instance);
 
+            AnimationCurveChild child;
+            DynamicBuffer<AnimationCurveChild> children = default;
             foreach (var leafGameObject in GetChildren(gameObject, true))
             {
                 if(PrefabAssetType.NotAPrefab != PrefabUtility.GetPrefabAssetType(leafGameObject))
                     RegisterPrefabForBaking(leafGameObject);
+
+                child.entity = GetEntity(leafGameObject, TransformUsageFlags.None);
+
+                if (!children.IsCreated)
+                    children = AddBuffer<AnimationCurveChild>(entity);
                     
-                GetEntity(leafGameObject, TransformUsageFlags.Dynamic);
+                children.Add(child);
             }
         }
     }
@@ -486,38 +493,36 @@ public struct AnimationCurveTransformBakingData : IBufferElementData
 [BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]//, UpdateInGroup(typeof(PostBakingSystemGroup))]
 public partial struct AnimationCurveTransformBakingSystem : ISystem
 {
+    private BufferLookup<AnimationCurveChild> __children;
+    
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __children = state.GetBufferLookup<AnimationCurveChild>(true);
+    }
+
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
         using (var ecb = new EntityCommandBuffer(Allocator.TempJob))
         {
-            foreach (var (transform, instances) in 
-                     SystemAPI.Query<RefRO<TransformAuthoring>, DynamicBuffer<AnimationCurveTransformBakingData>>()
+            foreach (var instances in 
+                     SystemAPI.Query<DynamicBuffer<AnimationCurveTransformBakingData>>()
                          .WithOptions(EntityQueryOptions.IncludeDisabledEntities | EntityQueryOptions.IncludePrefab))
             {
                 foreach (var instance in instances)
                     ecb.AddComponent(instance.entity, instance.transform);
             }
 
-            using (var children = new UnsafeParallelMultiHashMap<Entity, Entity>(1, Allocator.Temp))
+            __children.Update(ref state);
+            
+            var parallelWriter = ecb.AsParallelWriter();
+            foreach (var (active, entities) in
+                     SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
+                         .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
+                                      EntityQueryOptions.IncludePrefab))
             {
-                foreach (var (parent, entity) in
-                         SystemAPI.Query<RefRO<Parent>>()
-                             .WithEntityAccess()
-                             .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
-                                          EntityQueryOptions.IncludePrefab))
-                {
-                    if (parent.ValueRO.Value != Entity.Null)
-                        children.Add(parent.ValueRO.Value, entity);
-                }
-
-                foreach (var (active, entities) in
-                         SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
-                             .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
-                                          EntityQueryOptions.IncludePrefab))
-                {
-                    active.ValueRO.Init(entities, children, ecb);
-                }
+                active.ValueRO.Init(entities, __children, ref parallelWriter);
             }
 
             ecb.Playback(state.EntityManager);

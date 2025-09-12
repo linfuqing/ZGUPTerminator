@@ -223,8 +223,8 @@ public struct AnimationCurveActive : IComponentData
 
     public void Init(
         in DynamicBuffer<AnimationCurveEntity> entities, 
-        in UnsafeParallelMultiHashMap<Entity, Entity> children, 
-        EntityCommandBuffer entityManager)
+        in BufferLookup<AnimationCurveChild> children, 
+        ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         using (var entityIndices = new UnsafeHashSet<int>(1, Allocator.Temp))
         {
@@ -246,7 +246,7 @@ public struct AnimationCurveActive : IComponentData
         float time, 
         float deltaTime, 
         in DynamicBuffer<AnimationCurveEntity> entities, 
-        in BufferLookup<Child> children, 
+        in BufferLookup<AnimationCurveChild> children, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         ref var definition = ref this.definition.Value;
@@ -286,38 +286,16 @@ public struct AnimationCurveActive : IComponentData
     private void __SetActive(
         bool value, 
         in Entity entity, 
-        in BufferLookup<Child> children, 
+        in BufferLookup<AnimationCurveChild> children, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         if (children.TryGetBuffer(entity, out var childrenBuffer))
         {
             foreach (var child in childrenBuffer)
-                __SetActive(value, child.Value, children, ref entityManager);
+                __SetActive(value, child.entity, children, ref entityManager);
         }
         else
             entityManager.SetEnabled(0, entity, value);
-    }
-    
-    private void __SetActive(
-        bool value, 
-        in Entity entity, 
-        in UnsafeParallelMultiHashMap<Entity, Entity> children, 
-        ref EntityCommandBuffer entityManager)
-    {
-        if (children.TryGetFirstValue(entity, out Entity child, out var iterator))
-        {
-            var childBuffer = entityManager.AddBuffer<Child>(entity);
-            Child childComponent;
-            do
-            {
-                childComponent.Value = child;
-                childBuffer.Add(childComponent);
-                
-                __SetActive(value, child, children, ref entityManager);
-            }while(children.TryGetNextValue(out child, ref iterator));
-        }
-        else
-            entityManager.SetEnabled(entity, value);
     }
 }
 
@@ -332,4 +310,10 @@ public struct AnimationCurveEntity : IBufferElementData
 {
     public Entity value;
 }
+
+public struct AnimationCurveChild : IBufferElementData
+{
+    public Entity entity;
+}
+
 
