@@ -16,6 +16,9 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         public BufferLookup<AnimationCurveChild> children;
 
         [ReadOnly]
+        public ComponentLookup<AnimationCurveParent> parents;
+
+        [ReadOnly]
         public NativeArray<AnimationCurveRoot> roots;
 
         [ReadOnly]
@@ -43,6 +46,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
                 deltas[index].Update(this.time) * speeds[index].value,
                 entities[index],
                 children,
+                parents, 
                 ref entityManager);
         }
     }
@@ -54,6 +58,9 @@ public partial struct AnimationCurveUpdateSystem : ISystem
 
         [ReadOnly]
         public BufferLookup<AnimationCurveChild> children;
+
+        [ReadOnly]
+        public ComponentLookup<AnimationCurveParent> parents;
 
         [ReadOnly]
         public ComponentTypeHandle<AnimationCurveRoot> rootType;
@@ -81,6 +88,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
             Active active;
             active.time = time;
             active.children = children;
+            active.parents = parents;
             active.roots = chunk.GetNativeArray(ref rootType);
             active.times = chunk.GetNativeArray(ref timeType);
             active.deltas = chunk.GetNativeArray(ref deltaType);
@@ -226,7 +234,8 @@ public partial struct AnimationCurveUpdateSystem : ISystem
     }
 
     private BufferLookup<AnimationCurveChild> __children;
-
+    private ComponentLookup<AnimationCurveParent> __parents;
+    
     private ComponentTypeHandle<AnimationCurveTime> __timeType;
 
     private ComponentTypeHandle<AnimationCurveDelta> __deltaType;
@@ -248,6 +257,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __children = state.GetBufferLookup<AnimationCurveChild>(true);
+        __parents = state.GetComponentLookup<AnimationCurveParent>(true);
         __timeType = state.GetComponentTypeHandle<AnimationCurveTime>();
         __deltaType = state.GetComponentTypeHandle<AnimationCurveDelta>();
         __rootType = state.GetComponentTypeHandle<AnimationCurveRoot>(true);
@@ -276,6 +286,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
     {
         double time = SystemAPI.Time.ElapsedTime;
         __children.Update(ref state);
+        __parents.Update(ref state);
         __rootType.Update(ref state);
         __timeType.Update(ref state);
         __deltaType.Update(ref state);
@@ -286,6 +297,7 @@ public partial struct AnimationCurveUpdateSystem : ISystem
         ActiveEx active;
         active.time = time;
         active.children = __children;
+        active.parents = __parents;
         active.rootType = __rootType;
         active.timeType = __timeType;
         active.deltaType = __deltaType;

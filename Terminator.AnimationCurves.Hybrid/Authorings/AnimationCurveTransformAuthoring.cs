@@ -460,7 +460,7 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
                 if(PrefabAssetType.NotAPrefab != PrefabUtility.GetPrefabAssetType(leafGameObject))
                     RegisterPrefabForBaking(leafGameObject);
 
-                hierarchy.child = GetEntity(leafGameObject, TransformUsageFlags.None);
+                hierarchy.child = GetEntity(leafGameObject, TransformUsageFlags.Dynamic);
 
                 hierarchies.Add(hierarchy);
             }
@@ -504,11 +504,13 @@ public struct AnimationCurveTransformBakingHierarchy : IBufferElementData
 public partial struct AnimationCurveTransformBakingSystem : ISystem
 {
     private BufferLookup<AnimationCurveChild> __children;
+    private ComponentLookup<AnimationCurveParent> __parents;
     
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __children = state.GetBufferLookup<AnimationCurveChild>();
+        __parents = state.GetComponentLookup<AnimationCurveParent>();
     }
 
     [BurstCompile]
@@ -535,27 +537,34 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
                         children.Add(hierarchy.parent, hierarchy.child);
                 }
 
-                using (var parents = children.GetKeyArray(Allocator.Temp))
+                using (var keyValueArrays = children.GetKeyValueArrays(Allocator.Temp))
                 {
-                    parents.Sort();
-                    int count = parents.Unique();
+                    keyValueArrays.Keys.Sort();
+                    int count = keyValueArrays.Keys.Unique();
 
-                    state.EntityManager.AddComponent<AnimationCurveChild>(parents.GetSubArray(0, count));
+                    var entityManager = state.EntityManager;
+                    entityManager.AddComponent<AnimationCurveChild>(keyValueArrays.Keys.GetSubArray(0, count));
+                    entityManager.AddComponent<AnimationCurveParent>(keyValueArrays.Values);
                     
                     __children.Update(ref state);
+                    __parents.Update(ref state);
 
                     Entity parent;
+                    AnimationCurveParent parentComponent;
                     AnimationCurveChild childComponent;
                     DynamicBuffer<AnimationCurveChild> childBuffer;
                     for (int i = 0; i < count; ++i)
                     {
-                        parent = parents[i];
+                        parent = keyValueArrays.Keys[i];
                         childBuffer = __children[parent];
                         
                         foreach (var child in children.GetValuesForKey(parent))
                         {
                             childComponent.entity = child;
                             childBuffer.Add(childComponent);
+
+                            parentComponent.entity = parent;
+                            __parents[child] = parentComponent;
                         }
                     }
                 }
@@ -567,7 +576,7 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
                          .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
                                       EntityQueryOptions.IncludePrefab))
             {
-                active.ValueRO.Init(entities, __children, ref parallelWriter);
+                active.ValueRO.Init(entities, __children, __parents, ref parallelWriter);
             }
 
             ecb.Playback(state.EntityManager);

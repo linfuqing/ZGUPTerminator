@@ -224,6 +224,7 @@ public struct AnimationCurveActive : IComponentData
     public void Init(
         in DynamicBuffer<AnimationCurveEntity> entities, 
         in BufferLookup<AnimationCurveChild> children, 
+        in ComponentLookup<AnimationCurveParent> parents, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         using (var entityIndices = new UnsafeHashSet<int>(1, Allocator.Temp))
@@ -236,7 +237,7 @@ public struct AnimationCurveActive : IComponentData
                 if (!entityIndices.Add(keyFrame.index))
                     continue;
 
-                __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
+                __SetActive(keyFrame.value, entities[keyFrame.index].value, children, parents, ref entityManager);
             }
         }
     }
@@ -247,6 +248,7 @@ public struct AnimationCurveActive : IComponentData
         float deltaTime, 
         in DynamicBuffer<AnimationCurveEntity> entities, 
         in BufferLookup<AnimationCurveChild> children, 
+        in ComponentLookup<AnimationCurveParent> parents, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         ref var definition = ref this.definition.Value;
@@ -260,7 +262,7 @@ public struct AnimationCurveActive : IComponentData
                 if (keyFrame.time - time > deltaTime)
                     break;
                 
-                __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
+                __SetActive(keyFrame.value, entities[keyFrame.index].value, children, parents, ref entityManager);
             }
 
             if (length > math.FLT_MIN_NORMAL)
@@ -276,7 +278,7 @@ public struct AnimationCurveActive : IComponentData
                         if (keyFrame.time - time > 0.0f)
                             break;
                 
-                        __SetActive(keyFrame.value, entities[keyFrame.index].value, children, ref entityManager);
+                        __SetActive(keyFrame.value, entities[keyFrame.index].value, children, parents, ref entityManager);
                     }
                 }
             }
@@ -287,12 +289,19 @@ public struct AnimationCurveActive : IComponentData
         bool value, 
         in Entity entity, 
         in BufferLookup<AnimationCurveChild> children, 
+        in ComponentLookup<AnimationCurveParent> parents, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
         if (children.TryGetBuffer(entity, out var childrenBuffer))
         {
+            AnimationCurveParent parent;
             foreach (var child in childrenBuffer)
-                __SetActive(value, child.entity, children, ref entityManager);
+            {
+                if (!parents.TryGetComponent(child.entity, out parent) || parent.entity != entity)
+                    continue;
+                
+                __SetActive(value, child.entity, children, parents, ref entityManager);
+            }
         }
         else
             entityManager.SetEnabled(0, entity, value);
@@ -316,4 +325,7 @@ public struct AnimationCurveChild : IBufferElementData
     public Entity entity;
 }
 
-
+public struct AnimationCurveParent : IComponentData
+{
+    public Entity entity;
+}
