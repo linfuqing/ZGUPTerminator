@@ -357,13 +357,14 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
             
             Entity entity = GetEntity(TransformUsageFlags.Dynamic);
             var instances = AddBuffer<AnimationCurveTransformBakingData>(entity);
+            var hierarchies = AddBuffer<AnimationCurveTransformBakingHierarchy>(entity);
             var entities = AddBuffer<AnimationCurveEntity>(entity);
             Transform parentTransform, rootTransform = authoring.transform;
             string path;
             var stringBuilder = new StringBuilder();
             var keyFrames = new List<AnimationCurveBoolDefinition.KeyFrame>();
             if (transforms.TryGetValue(string.Empty, out var transform))
-                __Bake(keyFrames, authoring.gameObject, entity, transform, ref entities, ref instances);
+                __Bake(keyFrames, authoring.gameObject, entity, transform, ref entities, ref instances, ref hierarchies);
             
             foreach (var childGameObject in GetChildren(true))
             {
@@ -378,7 +379,8 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
                     GetEntity(childGameObject, TransformUsageFlags.Dynamic), 
                     transform, 
                     ref entities, 
-                    ref instances);
+                    ref instances, 
+                    ref hierarchies);
                 
                 parentTransform = childGameObject.transform.parent;
                 while (parentTransform != rootTransform)
@@ -410,7 +412,7 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
                 
                 AddComponent(entity, active);
             }
-
+            
             AnimationCurveRoot root;
             root.length = authoring._clip.isLooping ? authoring._clip.length : 0.0f;
             AddComponent(entity, root);
@@ -433,7 +435,8 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
             in Entity entity, 
             in AnimationCurveTransformData transform, 
             ref DynamicBuffer<AnimationCurveEntity> entities,
-            ref DynamicBuffer<AnimationCurveTransformBakingData> instances)
+            ref DynamicBuffer<AnimationCurveTransformBakingData> instances, 
+            ref DynamicBuffer<AnimationCurveTransformBakingHierarchy> hierarchies)
         {
             AnimationCurveTransformBakingData instance;
             instance.entity = entity;
@@ -448,19 +451,18 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
                 
             instances.Add(instance);
 
-            AnimationCurveChild child;
-            DynamicBuffer<AnimationCurveChild> children = default;
+            
+            AnimationCurveTransformBakingHierarchy hierarchy;
+            hierarchy.parent = entity;
+            
             foreach (var leafGameObject in GetChildren(gameObject, true))
             {
                 if(PrefabAssetType.NotAPrefab != PrefabUtility.GetPrefabAssetType(leafGameObject))
                     RegisterPrefabForBaking(leafGameObject);
 
-                child.entity = GetEntity(leafGameObject, TransformUsageFlags.None);
+                hierarchy.child = GetEntity(leafGameObject, TransformUsageFlags.None);
 
-                if (!children.IsCreated)
-                    children = AddBuffer<AnimationCurveChild>(entity);
-                    
-                children.Add(child);
+                hierarchies.Add(hierarchy);
             }
         }
     }
@@ -490,6 +492,14 @@ public struct AnimationCurveTransformBakingData : IBufferElementData
     public AnimationCurveTransform transform;
 }
 
+[TemporaryBakingType]
+public struct AnimationCurveTransformBakingHierarchy : IBufferElementData
+{
+    public Entity parent;
+
+    public Entity child;
+}
+
 [BurstCompile, WorldSystemFilter(WorldSystemFilterFlags.BakingSystem)]//, UpdateInGroup(typeof(PostBakingSystemGroup))]
 public partial struct AnimationCurveTransformBakingSystem : ISystem
 {
@@ -514,8 +524,43 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
                     ecb.AddComponent(instance.entity, instance.transform);
             }
 
-            __children.Update(ref state);
-            
+            using (var children = new UnsafeParallelMultiHashMap<Entity, Entity>(1, Allocator.Temp))
+            {
+                foreach (var hierarchies in
+                         SystemAPI.Query<DynamicBuffer<AnimationCurveTransformBakingHierarchy>>()
+                             .WithOptions(EntityQueryOptions.IncludeDisabledEntities |
+                                          EntityQueryOptions.IncludePrefab))
+                {
+                    foreach (var hierarchy in hierarchies)
+                        children.Add(hierarchy.parent, hierarchy.child);
+                }
+
+                using (var parents = children.GetKeyArray(Allocator.Temp))
+                {
+                    parents.Sort();
+                    int count = parents.Unique();
+
+                    state.EntityManager.AddComponent<AnimationCurveChild>(parents.GetSubArray(0, count));
+                    
+                    __children.Update(ref state);
+
+                    Entity parent;
+                    AnimationCurveChild childComponent;
+                    DynamicBuffer<AnimationCurveChild> childBuffer;
+                    for (int i = 0; i < count; ++i)
+                    {
+                        parent = parents[i];
+                        childBuffer = __children[parent];
+                        
+                        foreach (var child in children.GetValuesForKey(parent))
+                        {
+                            childComponent.entity = child;
+                            childBuffer.Add(childComponent);
+                        }
+                    }
+                }
+            }
+
             var parallelWriter = ecb.AsParallelWriter();
             foreach (var (active, entities) in
                      SystemAPI.Query<RefRO<AnimationCurveActive>, DynamicBuffer<AnimationCurveEntity>>()
