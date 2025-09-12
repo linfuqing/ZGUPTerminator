@@ -346,8 +346,9 @@ public sealed class LoginManager : MonoBehaviour
             levelIndices[_levels[i].name] = i;
 
         numLevels = levelChapters.levels.Length;
-        bool isHot = false;
-        int selectedLevelStyleIndex = -1, numStageRewards = 0, j;
+        bool isHot = false, hasStageRewards;
+        int selectedLevelStyleIndex = -1, numStageRewards = 0, numStages, j;
+        uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
         __levelStyles = new Dictionary<int, LevelStyle>(levelChapters.levels.Length);
@@ -357,11 +358,8 @@ public sealed class LoginManager : MonoBehaviour
             if(!levelIndices.TryGetValue(userLevel.name, out int index))
                 continue;
 
-            if (__selectedUserLevelID == 0 || __selectedUserLevelID == userLevel.id)
-                selectedLevelStyleIndex = __levelStyles == null ? 0 : __levelStyles.Count;
-            
             bool isEndOfLevels = i + 1 == numLevels;
-
+            hasStageRewards = false;
             if (userLevel.stages != null)
             {
                 if (!isHot)
@@ -384,19 +382,30 @@ public sealed class LoginManager : MonoBehaviour
                     }
                 }
 
+                numStages = 0;
                 foreach (var stage in userLevel.stages)
                 {
+                    if(__selectedStageIndex == numStages++ && __selectedUserLevelID == userLevel.id)
+                        selectedStageID = stage.id;
+                    
                     if (stage.rewardFlags == null)
                         break;
                     
                     foreach (var rewardFlag in stage.rewardFlags)
                     {
                         if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                        {
                             ++numStageRewards;
+
+                            hasStageRewards = true;
+                        }
                     }
                 }
             }
 
+            if (hasStageRewards || __sceneActiveDepth == 0)
+                selectedLevelStyleIndex = __levelStyles == null ? 0 : __levelStyles.Count;
+            
             var style = Instantiate(_style, parent);
             style.name = userLevel.name;
             
@@ -452,7 +461,8 @@ public sealed class LoginManager : MonoBehaviour
                         style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
                     
                     //__selectedLevelIndex = index;
-                    __selectedUserLevelID = selectedLevel.id;
+                    if(__selectedUserLevelID == 0)
+                        __selectedUserLevelID = selectedLevel.id;
 
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
@@ -580,15 +590,9 @@ public sealed class LoginManager : MonoBehaviour
                                                         onSelected.Invoke();
                                                 }
 
-                                                /*for(int i = 0; i < numPrefabs; ++i)
-                                                    prefabs[i].SetActive(i == sceneIndex);*/
-
                                                 __sceneName = level.scenes[sceneIndex].name;
-                                                //__selectedUserStageID = stage.id;
 
                                                 __selectedStageIndex = selectedStage;
-
-                                                //LevelShared.stage = selectedStage;
 
                                                 if (onStageChanged != null)
                                                 {
@@ -604,15 +608,14 @@ public sealed class LoginManager : MonoBehaviour
                                                 if (style.onEnergy != null)
                                                     style.onEnergy.Invoke(stage.energy.ToString());
                                             }
-                                            else
-                                                __selectedStageIndex = -1;
                                         });
                                     }
 
                                     if (__sceneActiveDepth <= 0 || 
-                                        sceneUnlocked != null && sceneUnlocked.TryGetValue(sceneIndex, out temp) && temp && 
+                                        selectedStageID == 0 ? sceneUnlocked != null && sceneUnlocked.TryGetValue(sceneIndex, out temp) && temp : 
                                         //GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
-                                        (__selectedStageIndex == -1 || __selectedStageIndex == i))
+                                        //(__selectedStageIndex == -1 || __selectedStageIndex == i))
+                                        selectedStageID == stage.id)
                                     {
                                         selectedStageIndex = stageStyleIndex;
                                         
@@ -716,8 +719,11 @@ public sealed class LoginManager : MonoBehaviour
                         _onLevelEnable?.Invoke();
                     }
                 }
-                else
+                /*else if (__selectedUserLevelID == selectedLevel.id)
+                {
+                    __selectedUserLevelID = 0;
                     __selectedStageIndex = -1;
+                }*/
             });
 
             /*if (style.button != null)
@@ -733,39 +739,7 @@ public sealed class LoginManager : MonoBehaviour
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if (scrollRect != null)
-        {
-            int targetIndex = selectedLevelStyleIndex;
-            if (__sceneActiveDepth != 0 && targetIndex > 0 && targetIndex == __levelStyles.Count - 1)
-                --targetIndex;
-            
-            if(targetIndex - scrollRect.index.x < 2)
-                scrollRect.MoveTo(targetIndex);
-            else
-                scrollRect.SetTo(targetIndex);
-            
-            /*if (__sceneActiveDepth > 0 && targetIndex == __levelStyles.Count - 1)
-            {
-                for (j = targetIndex; j >= 0; --j)
-                {
-                    if (GameMain.GetLevelTimes(_levels[j].name) < 1)
-                        continue;
-
-                    scrollRect.SetTo(j);
-
-                    break;
-                }
-            }
-            else
-                j = -1;
-
-            if (j < 0)
-            {
-                if(targetIndex - scrollRect.index.x < 2)
-                    scrollRect.MoveTo(targetIndex);
-                else
-                    scrollRect.SetTo(targetIndex);
-            }*/
-        }
+            scrollRect.MoveTo(selectedLevelStyleIndex);
 
         if (isHot)
         {

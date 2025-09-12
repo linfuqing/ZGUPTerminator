@@ -203,13 +203,13 @@ namespace ZG
             Move(-1);
         }
 
-        public void SetTo(int index) // => MoveTo(index);
-        {
+        public void SetTo(int index)  => MoveTo(index);
+        /*{
             int2 result = int2.zero;
             result[axis] = index;
 
             SetTo(result);
-        }
+        }*/
 
         public void Move(int offset)
         {

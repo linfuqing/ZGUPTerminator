@@ -336,7 +336,7 @@ public partial class LevelManager : MonoBehaviour
         __startTime = Time.time;
     }
 
-    //[UnityEngine.Scripting.Preserve]
+    [UnityEngine.Scripting.Preserve]
     public void Quit()
     {
         var levelData = ILevelData.instance;

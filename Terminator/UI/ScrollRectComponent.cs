@@ -427,7 +427,8 @@ namespace ZG
             //this.AddComponentData(info);
         }
 
-        public void SetTo(in int2 index)
+        //不行
+        /*public void SetTo(in int2 index)
         {
             //For Update Count
             --version;
@@ -438,7 +439,7 @@ namespace ZG
             __EnableNode();
             __info.isVail = 1;
             __info.index = index;
-        }
+        }*/
 
         protected void OnEnable()
         {
