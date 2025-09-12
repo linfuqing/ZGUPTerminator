@@ -303,8 +303,8 @@ public struct AnimationCurveActive : IComponentData
                 __SetActive(value, child.entity, children, parents, ref entityManager);
             }
         }
-        else
-            entityManager.SetEnabled(0, entity, value);
+        
+        entityManager.SetEnabled(0, entity, value);
     }
 }
 
