@@ -436,7 +436,8 @@ namespace ZG
             scrollRect.velocity = float2.zero;
             scrollRect.normalizedPosition = normalizedPosition;
             __EnableNode();
-            __info.isVail = 0;
+            __info.isVail = 1;
+            __info.index = index;
         }
 
         protected void OnEnable()

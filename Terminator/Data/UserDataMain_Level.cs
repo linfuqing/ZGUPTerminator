@@ -323,7 +323,7 @@ public partial class UserDataMain
             key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stage.name}";
             if(PlayerPrefs.GetInt(key) != 0)
                 continue;
-            
+
             PlayerPrefs.SetInt(key, 1);
             
             __ApplyRewards(stage.directRewards, rewards);

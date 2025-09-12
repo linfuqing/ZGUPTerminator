@@ -735,7 +735,7 @@ public sealed class LoginManager : MonoBehaviour
         if (scrollRect != null)
         {
             int targetIndex = selectedLevelStyleIndex;
-            if (__sceneActiveDepth > 0 && targetIndex > 0 && targetIndex == __levelStyles.Count - 1)
+            if (__sceneActiveDepth != 0 && targetIndex > 0 && targetIndex == __levelStyles.Count - 1)
                 --targetIndex;
             
             if(targetIndex - scrollRect.index.x < 2)
@@ -790,8 +790,6 @@ public sealed class LoginManager : MonoBehaviour
         UserRewardData[] results;
         if (numRewards > 0)
         {
-            __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
-            
             UserRewardData result;
             results = new UserRewardData[numRewards];
             for (int i = 0; i < numRewards; ++i)
@@ -808,6 +806,9 @@ public sealed class LoginManager : MonoBehaviour
                         break;
                     case UserRewardType.EnergyMax:
                         energyMax += reward.count;
+                        break;
+                    default:
+                        __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
                         break;
                 }
 
