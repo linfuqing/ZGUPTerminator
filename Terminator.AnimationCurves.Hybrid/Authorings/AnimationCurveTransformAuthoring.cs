@@ -508,7 +508,7 @@ public partial struct AnimationCurveTransformBakingSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __children = state.GetBufferLookup<AnimationCurveChild>(true);
+        __children = state.GetBufferLookup<AnimationCurveChild>();
     }
 
     [BurstCompile]
