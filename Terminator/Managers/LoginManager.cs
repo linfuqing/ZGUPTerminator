@@ -347,7 +347,7 @@ public sealed class LoginManager : MonoBehaviour
 
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isSelected;
-        int selectedLevelStyleIndex = -1, numStageRewards = 0, numStages, index, j;
+        int selectedLevelIndex = -1, numStageRewards = 0, numStages, index, j;
         uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -405,13 +405,13 @@ public sealed class LoginManager : MonoBehaviour
                 isSelected |= __sceneActiveDepth == 0;
             else if (__sceneActiveDepth == 0)
                 isSelected = __selectedUserLevelID == userLevel.id;
-            else if (isSelected && selectedLevelStyleIndex != -1 &&
-                     levelChapters.levels[selectedLevelStyleIndex].id == __selectedUserLevelID)
+            else if (isSelected && selectedLevelIndex != -1 &&
+                     levelChapters.levels[selectedLevelIndex].id == __selectedUserLevelID)
                 isSelected = false;
             
             if (isSelected)
-                selectedLevelStyleIndex = i;
-            
+                selectedLevelIndex = i;
+
             var style = Instantiate(_style, parent);
             style.name = userLevel.name;
             
@@ -468,8 +468,7 @@ public sealed class LoginManager : MonoBehaviour
                         style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
                     
                     //__selectedLevelIndex = index;
-                    if(__selectedUserLevelID == 0)
-                        __selectedUserLevelID = selectedLevel.id;
+                    __selectedUserLevelID = selectedLevel.id;
 
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
@@ -491,6 +490,7 @@ public sealed class LoginManager : MonoBehaviour
                                 selectedStageIndex = 0, 
                                 selectedSceneIndex = 0, 
                                 previousSceneIndex = -1;
+                            uint currentStageID = 0;
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
@@ -618,12 +618,12 @@ public sealed class LoginManager : MonoBehaviour
                                         });
                                     }
 
-                                    if (__sceneActiveDepth <= 0 || 
-                                        selectedStageID == 0 ? sceneUnlocked != null && sceneUnlocked.TryGetValue(sceneIndex, out temp) && temp : 
-                                        //GameMain.GetSceneTimes(level.scenes[sceneIndex].name) > 0) && 
-                                        //(__selectedStageIndex == -1 || __selectedStageIndex == i))
-                                        selectedStageID == stage.id)
+                                    if ((selectedStageID == 0 || selectedStageID != currentStageID) && 
+                                        (__sceneActiveDepth <= 0 || 
+                                         sceneUnlocked != null && sceneUnlocked.TryGetValue(sceneIndex, out temp) && temp))
                                     {
+                                        currentStageID = stage.id;
+                                        
                                         selectedStageIndex = stageStyleIndex;
                                         
                                         selectedSceneIndex = sceneIndex;
@@ -746,7 +746,7 @@ public sealed class LoginManager : MonoBehaviour
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if (scrollRect != null)
-            scrollRect.MoveTo(selectedLevelStyleIndex);
+            scrollRect.MoveTo(selectedLevelIndex);
 
         if (isHot)
         {
@@ -771,6 +771,7 @@ public sealed class LoginManager : MonoBehaviour
         UserRewardData[] results;
         if (numRewards > 0)
         {
+            bool isReward = false;
             UserRewardData result;
             results = new UserRewardData[numRewards];
             for (int i = 0; i < numRewards; ++i)
@@ -789,7 +790,7 @@ public sealed class LoginManager : MonoBehaviour
                         energyMax += reward.count;
                         break;
                     default:
-                        __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
+                        isReward = true;
                         break;
                 }
 
@@ -799,6 +800,9 @@ public sealed class LoginManager : MonoBehaviour
 
                 results[i] = result;
             }
+            
+            if(isReward)
+                __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
         }
         else
             results = null;
