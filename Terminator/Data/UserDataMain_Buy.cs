@@ -100,6 +100,18 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public int 商品最小章节
+        {
+            set => minChapter = value;
+        }
+
+        [CSVField]
+        public int 商品最大章节
+        {
+            set => maxChapter = value;
+        }
+
+        [CSVField]
         public int 商品概率
         {
             set => chance = value;
