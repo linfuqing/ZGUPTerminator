@@ -140,6 +140,9 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         [Tooltip("掉落伤害")]
         public int valueToDrop;
         
+        [Tooltip("吸血倍率")]
+        public float hpMultiplier;
+
         [Tooltip("怒气转化成伤害缩放的倍率")]
         public float rageMultiplier;
 
@@ -311,6 +314,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.value = source.value;
                     destination.valueImmunized = source.valueImmunized;
                     destination.valueToDrop = source.valueToDrop;
+                    destination.hpMultiplier = source.hpMultiplier;
                     destination.rageMultiplier = source.rageMultiplier;
                     destination.goldMultiplier = source.goldMultiplier;
                     destination.spring = source.spring;

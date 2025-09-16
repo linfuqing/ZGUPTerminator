@@ -76,6 +76,13 @@ public interface IPurchaseData
         {
             return times > 0 && this.times >= times && (deadline == 0 || ticks + deadline * TimeSpan.TicksPerSecond > DateTime.UtcNow.Ticks);
         }
+        
+        public int GetDeadline(long ticks)
+        {
+            int seconds = (int)((ticks - this.ticks) / TimeSpan.TicksPerSecond);
+
+            return seconds < deadline ? deadline - seconds : 0;
+        }
     }
     
     /// <summary>
@@ -166,45 +173,59 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         IPurchaseData.Input input;
         input.type = type;
         input.level = level;
+        
+        var output = Query(input);
 
-        string timesKey = input.ToString(NAME_SPACE_TIMES);
-        int times = PlayerPrefs.GetInt(timesKey);
-        PlayerPrefs.SetInt(timesKey, ++times);
+        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_TIMES), ++output.times);
 
         int seconds;
-        string key;
+        long ticks = DateTime.UtcNow.Ticks;
         switch (type)
         {
+            case PurchaseType.FirstCharge:
+                input.type = PurchaseType.AdvertisingFreeCard;
+                input.level = level;
+                output = Query(input);
+                if (output.times < 1)
+                {
+                    seconds = (int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
+                
+                    PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
+                }
+                
+                seconds = 0;
+                break;
             case PurchaseType.MonthlyCard:
             case PurchaseType.SweepCard:
-                key = input.ToString(NAME_SPACE_DEADLINE);
-                seconds = PlayerPrefs.GetInt(key);
+                seconds = output.GetDeadline(ticks);
                 seconds += (int)(TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond) * 30;
                 
-                PlayerPrefs.SetInt(key, seconds);
+                PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
             case PurchaseType.Pass:
-                key = input.ToString(NAME_SPACE_DEADLINE);
-                seconds = PlayerPrefs.GetInt(key);
-                seconds = (int)DateTimeUtility.GetSeconds(new DateTime(DateTimeUtility.GetTicks((uint)seconds)).ToLocalTime()
-                                                    .AddMonths(1).ToUniversalTime().Ticks);
+                seconds = output.GetDeadline(ticks);
+                seconds = (int)((seconds == 0
+                        ? DateTime.Today
+                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime()).AddMonths(1)
+                    .ToUniversalTime().Ticks - ticks);
                 
-                PlayerPrefs.SetInt(key, seconds);
+                PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
             case PurchaseType.GoldBank:
-                key = input.ToString(NAME_SPACE_DEADLINE);
-                seconds = PlayerPrefs.GetInt(key);
-                seconds = (int)DateTimeUtility.GetSeconds(new DateTime(DateTimeUtility.GetTicks((uint)seconds)).ToLocalTime()
-                                                               .AddDays(1).ToUniversalTime().Ticks);
+                seconds = output.GetDeadline(ticks);
+                seconds = (int)((seconds == 0
+                        ? DateTime.Today
+                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime()).AddDays(1)
+                    .ToUniversalTime().Ticks - ticks);
 
-                PlayerPrefs.SetInt(key, seconds);
+                PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
             default:
                 seconds = 0;
                 break;
         }
 
-        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME), (int)DateTimeUtility.GetSeconds());
+        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_PAY_TIME), (int)DateTimeUtility.GetSeconds(ticks));
 
         return seconds == 0 ? 0 : (int)DateTimeUtility.GetTicks((uint)seconds);
     }

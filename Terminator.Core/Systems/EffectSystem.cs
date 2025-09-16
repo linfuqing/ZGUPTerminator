@@ -639,6 +639,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectTargetDamage> targetDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<EffectTargetHP> targetHPs;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTargetLevel> targetLevels;
 
         [NativeDisableParallelForRestriction]
@@ -729,6 +732,8 @@ public partial struct EffectSystem : ISystem
                 {
                     rages.TryGetComponent(instanceDamageParent.entity, out var rage);
 
+                    var targetHP = targetHPs.GetRefRWOptional(instanceDamageParent.entity);
+
                     Entity messageEntity = this.outputMessages.HasBuffer(entity)
                         ? entity
                         : (instanceDamageParent.entity != entity &&
@@ -758,6 +763,7 @@ public partial struct EffectSystem : ISystem
                         damageValue,
                         damageValueImmunized, 
                         dropDamageValue, 
+                        damageValueSum, 
                         belongsTo,
                         numMessageIndices,
                         numDamageIndices,
@@ -819,7 +825,8 @@ public partial struct EffectSystem : ISystem
 
                             damageValueImmunized = ComputeDamage(damage.valueImmunized, damageScale, ref random);
 
-                            totalDamageValue += damageValue + damageValueImmunized;
+                            damageValueSum = damageValue + damageValueImmunized;
+                            totalDamageValue += damageValueSum;
 
                             isResult = damageValue != 0 || damageValueImmunized != 0;
 
@@ -827,6 +834,14 @@ public partial struct EffectSystem : ISystem
 
                             if (isResult)
                             {
+                                if (math.abs(damage.hpMultiplier) > math.FLT_MIN_NORMAL &&
+                                    targetHP.IsValid)
+                                {
+                                    damageValueSum = ComputeDamage(damageValueSum, damage.hpMultiplier, ref random);
+                                    
+                                    targetHP.ValueRW.Add(damageValueSum, belongsTo, damage.messageLayerMask);
+                                }
+
                                 targetDamage.Add(damageValue,  damageValueImmunized, belongsTo, damage.messageLayerMask);
                                 targetDamages.SetComponentEnabled(simulationEvent.entity, true);
 
@@ -842,7 +857,15 @@ public partial struct EffectSystem : ISystem
                                     isResult = true;
 
                                     totalDamageValue += dropDamageValue;
-
+                                    
+                                    if (math.abs(damage.hpMultiplier) > math.FLT_MIN_NORMAL &&
+                                        targetHP.IsValid)
+                                    {
+                                        damageValueSum = ComputeDamage(dropDamageValue, damage.hpMultiplier, ref random);
+                                    
+                                        targetHP.ValueRW.Add(damageValueSum, belongsTo, damage.messageLayerMask);
+                                    }
+                                    
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
                                     dropToDamage.Add(dropDamageValue, 0, belongsTo, damage.messageLayerMask);
@@ -1003,12 +1026,12 @@ public partial struct EffectSystem : ISystem
                         }
                     }
 
-                    if(totalDamageValue != 0)
+                    if (totalDamageValue != 0)
                         EffectDamageStatistic.Add(
-                            totalCount, 
-                            totalDamageValue, 
-                            instanceDamageParent, 
-                            damageParentMap, 
+                            totalCount,
+                            totalDamageValue,
+                            instanceDamageParent,
+                            damageParentMap,
                             ref damageStatistics);
                 }
 
@@ -1161,6 +1184,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<EffectTargetDamage> targetDamages;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<EffectTargetHP> targetHPs;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTargetLevel> targetLevels;
 
         [NativeDisableParallelForRestriction]
@@ -1215,6 +1241,7 @@ public partial struct EffectSystem : ISystem
             collect.statusTargets = chunk.GetBufferAccessor(ref statusTargetType);
             collect.states = chunk.GetNativeArray(ref statusType);
             collect.targetDamages = targetDamages;
+            collect.targetHPs = targetHPs;
             collect.targetLevels = targetLevels;
             collect.delayDestroies = delayDestroies;
             collect.dropToDamages = dropToDamages;
@@ -1968,6 +1995,7 @@ public partial struct EffectSystem : ISystem
     private ComponentLookup<EffectTargetBuff> __targetBuffs;
     
     private ComponentLookup<EffectTargetDamage> __targetDamages;
+    private ComponentLookup<EffectTargetHP> __targetHPs;
 
     private ComponentLookup<EffectTargetLevel> __targetLevels;
 
@@ -2043,6 +2071,7 @@ public partial struct EffectSystem : ISystem
         __targets = state.GetComponentLookup<EffectTarget>(true);
         __targetBuffs = state.GetComponentLookup<EffectTargetBuff>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
+        __targetHPs = state.GetComponentLookup<EffectTargetHP>();
         __targetLevels = state.GetComponentLookup<EffectTargetLevel>();
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
@@ -2192,6 +2221,7 @@ public partial struct EffectSystem : ISystem
         __prefabType.Update(ref state);
         __inputMessageType.Update(ref state);
         __targetDamages.Update(ref state);
+        __targetHPs.Update(ref state);
         __targetLevels.Update(ref state);
         __delayDestroies.Update(ref state);
         __dropToDamages.Update(ref state);
@@ -2227,6 +2257,7 @@ public partial struct EffectSystem : ISystem
         collect.statusTargetType = __statusTargetType;
         collect.statusType = __statusType;
         collect.targetDamages = __targetDamages;
+        collect.targetHPs = __targetHPs;
         collect.targetLevels = __targetLevels;
         collect.delayDestroies = __delayDestroies;
         collect.dropToDamages = __dropToDamages;
