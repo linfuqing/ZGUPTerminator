@@ -66,15 +66,7 @@ public partial class UserDataMain
                 string parameter;
                 string[] values;
                 for (int i = 0; i < numParameters; ++i)
-                {
-                    parameter = parameters[i];
-                    values = parameter.Split(':');
-                    
-                    ref var sweepReward = ref sweepRewards[i];
-                    sweepReward.name = values[0];
-                    sweepReward.type = (UserRewardType)int.Parse(values[1]);
-                    sweepReward.count = int.Parse(values[2]);
-                }
+                    sweepRewards[i] = UserRewardData.Parse(parameters[i]);
             }
         }
 #endif

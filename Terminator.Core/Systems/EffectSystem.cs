@@ -1499,10 +1499,21 @@ public partial struct EffectSystem : ISystem
                             targetImmunityStates[index] = targetImmunityStatus;
                         }
 
-                        if (target.hp > 0)
-                            target.hp += -damage;
-                        else
-                            damage = 0;
+                        if (damage > 0)
+                        {
+                            if (target.shield > damage)
+                                target.shield -= damage;
+                            else
+                            {
+                                damage -= target.shield;
+                                target.shield = 0;
+                                
+                                if (target.hp > 0)
+                                    target.hp += -damage;
+                                else
+                                    damage = 0;
+                            }
+                        }
                     }
                 }
 
@@ -1596,6 +1607,10 @@ public partial struct EffectSystem : ISystem
 
                                     messageParameter.value = target.hp;
                                     messageParameter.id = (int)EffectAttributeID.HP;
+                                    messageParameters.Add(messageParameter);
+                                    
+                                    messageParameter.value = target.shield;
+                                    messageParameter.id = (int)EffectAttributeID.Shield;
                                     messageParameters.Add(messageParameter);
                                 }
 

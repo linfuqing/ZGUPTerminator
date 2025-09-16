@@ -23,14 +23,14 @@ public struct UserPurchaseToken
     public Flag flag;
 
     /// <summary>
-    /// 基金代表等级数，通行证代表日活经验
+    /// 基金代表星星数，通行证代表日活经验
     /// </summary>
     public int exp;
     
     /// <summary>
     /// 奖励
     /// </summary>
-    public UserRewardData[] rewards;
+    public UserRewardOptionData[] options;
 }
 
 public partial interface IUserData
@@ -84,10 +84,11 @@ public partial interface IUserData
         /// 购买日期
         /// </summary>
         public long ticks;
+
         /// <summary>
-        /// 奖励
+        /// 奖励，会随机取
         /// </summary>
-        public UserRewardData[] rewards;
+        public UserRewardOptionData[] options;
     }
 
     public struct PurchaseTokens

@@ -7,8 +7,8 @@ public class AttributeEventReceiver : MonoBehaviour
     private enum AttributeType
     {
         HP, 
-        Rage//, 
-        //RageCount
+        Rage, 
+        Shield
     }
     
     [SerializeField] 
@@ -19,6 +19,7 @@ public class AttributeEventReceiver : MonoBehaviour
 
     private int __instanceID;
 
+    private int __shieldMax;
     private int __hpMax;
     private int __rageMax;
     private int __rage;
@@ -47,6 +48,21 @@ public class AttributeEventReceiver : MonoBehaviour
             __instanceID = transform.GetInstanceID();
 
         int dirtyFlag = 0;
+        if (parameters.TryGet((int)EffectAttributeID.Shield, out int shield))
+        {
+            if (shield > __shieldMax)
+                __shieldMax = shield;
+            
+            if(__shieldMax != 0)
+                AttributeManager.instance.Set(
+                    _space,
+                    __instanceID,
+                    _styleIndex,
+                    (int)AttributeType.Shield,
+                    shield,
+                    __shieldMax);
+        }
+
         if (parameters.TryGet((int)EffectAttributeID.HPMax, out int hpMax))
         {
             dirtyFlag |= 1 << (int)AttributeType.HP;

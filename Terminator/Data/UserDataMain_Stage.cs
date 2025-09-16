@@ -98,18 +98,8 @@ public partial class UserDataMain
                 int numParameters = parameters.Length;
                 directRewards = new UserRewardData[numParameters];
 
-                string parameter;
-                string[] values;
                 for (int i = 0; i < numParameters; ++i)
-                {
-                    parameter = parameters[i];
-                    values = parameter.Split(':');
-                    
-                    ref var directReward = ref directRewards[i];
-                    directReward.name = values[0];
-                    directReward.type = (UserRewardType)int.Parse(values[1]);
-                    directReward.count = int.Parse(values[2]);
-                }
+                    directRewards[i] = UserRewardData.Parse(parameters[i]);
             }
         }
         

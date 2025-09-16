@@ -12,6 +12,7 @@ public enum EffectAttributeID
     Rage, 
     HPMax, 
     HP,
+    Shield, 
     Damage
 }
 
@@ -240,6 +241,7 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 {
     public int times;
     public int hp;
+    public int shield;
     public float immunizedTime;
     public float invincibleTime;
 

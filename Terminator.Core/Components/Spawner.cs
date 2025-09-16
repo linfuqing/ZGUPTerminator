@@ -606,6 +606,7 @@ public struct SpawnerDefinition
                 EffectTarget effectTarget;
                 effectTarget.times = 0;
                 effectTarget.hp = __Round(math.min(attribute.hp + attribute.hpBuff * times, attribute.hpMax), ref random);
+                effectTarget.shield = 0;
                 effectTarget.immunizedTime = 0.0f;
                 effectTarget.invincibleTime = 0.0f;
                 effectTarget.time = time;
@@ -625,6 +626,9 @@ public struct SpawnerDefinition
                             case EffectAttributeID.HPMax:
                             case EffectAttributeID.HP:
                                 messageParameter.value = effectTarget.hp;
+                                break;
+                            case EffectAttributeID.Shield:
+                                messageParameter.value = effectTarget.shield;
                                 break;
                         }
                     }

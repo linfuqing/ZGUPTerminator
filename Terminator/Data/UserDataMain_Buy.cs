@@ -69,8 +69,62 @@ public partial class UserDataMain
         public UserProduct.Type productType;
         public UserCurrencyType currencyType;
         public int price;
+        public int minChapter;
+        public int maxChapter;
         public float chance;
         public UserRewardData[] rewards;
+        
+        #if UNITY_EDITOR
+        [CSVField]
+        public string 商品名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 商品类型
+        {
+            set => productType = (UserProduct.Type)value;
+        }
+        
+        [CSVField]
+        public int 商品货币类型
+        {
+            set => currencyType = (UserCurrencyType)value;
+        }
+        
+        [CSVField]
+        public int 商品价钱
+        {
+            set => price = value;
+        }
+        
+        [CSVField]
+        public int 商品概率
+        {
+            set => chance = value;
+        }
+        
+        [CSVField]
+        public string 商品奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewards = null;
+                    
+                    return;
+                }
+                
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                rewards = new UserRewardData[numParameters];
+                for(int i = 0; i < numParameters; ++i)
+                    rewards[i] = new UserRewardData(parameters[i]);
+            }
+        }
+        #endif
     }
 
     private struct ProductSeed
@@ -96,6 +150,11 @@ public partial class UserDataMain
     
     [SerializeField]
     internal Product[] _products;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_products")] 
+    internal string _productsPath;
+#endif
 
     public const string NAME_SPACE_USER_PRODUCT_SEED = "UserProductSeed";
 
@@ -116,11 +175,15 @@ public partial class UserDataMain
         Product product;
         var random = new Unity.Mathematics.Random(seed.value);
         float randomValue = random.NextFloat(), chance = 0.0f;
-        int numProducts = _products.Length, bitIndex = 0;
+        int numProducts = _products.Length, bitIndex = 0, chapter = UserData.chapter;
         bool isSelected = false;
         for (int i = 0; i < numProducts; ++i)
         {
             product = _products[i];
+
+            if(product.minChapter > chapter ||
+               product.minChapter < product.maxChapter && product.maxChapter <= chapter)
+                continue;
 
             chance += product.chance;
             if (chance > 1.0f)

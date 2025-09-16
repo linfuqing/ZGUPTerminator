@@ -2,13 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 public partial class UserDataMain
 {
     [Serializable]
     internal struct PurchaseItem
     {
-        //public string name;
+        public string name;
         
         public PurchaseType type;
 
@@ -20,11 +21,68 @@ public partial class UserDataMain
         [Tooltip("存钱罐需要的金币或者钻石&章节礼包需要达到的章节数")]
         public int exp;
 
-        public UserRewardData[] rewards;
+        public UserRewardOptionData[] options;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 内购项目名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 内购项目类型
+        {
+            set => type = (PurchaseType)value;
+        }
+        
+        [CSVField]
+        public int 内购项目档位
+        {
+            set => level = value;
+        }
+        
+        [CSVField]
+        public int 内购项目购买上限每日
+        {
+            set => capacity = value;
+        }
+        
+        [CSVField]
+        public int 内购项目条件
+        {
+            set => exp = value;
+        }
+        
+        [CSVField]
+        public string 内购项目奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    options = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                options = new UserRewardOptionData[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    options[i] = new UserRewardOptionData(parameters[i]);
+            }
+        }
+#endif
     }
 
     [Header("Purchase"), SerializeField] 
     internal PurchaseItem[] _purchaseItems;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_purchaseItems")] 
+    internal string _purchaseItemsPath;
+#endif
     
     public const string NAME_SPACE_USER_PURCHASE_ITEM = "UserPurchaseItem";
     
@@ -60,7 +118,7 @@ public partial class UserDataMain
         result.times = output.times;
         result.deadline = output.deadline;
         result.ticks = output.ticks;
-        result.rewards = null;
+        result.options = null;
         
         foreach (var purchaseItem in _purchaseItems)
         {
@@ -69,7 +127,7 @@ public partial class UserDataMain
             {
                 result.expMax = purchaseItem.exp;
                 result.capacity = purchaseItem.capacity;
-                result.rewards = purchaseItem.rewards;
+                result.options = purchaseItem.options;
 
                 break;
             }
@@ -95,22 +153,21 @@ public partial class UserDataMain
                             if (UserData.chapter < purchaseItem.exp)
                                 break;
                             
-                            rewards = __ApplyRewards(purchaseItem.rewards);
-                            
+                            rewards = __ApplyRewards(purchaseItem.options);
                             break;
                         case PurchaseType.GoldBank:
                             if (goldBank < purchaseItem.exp)
                                 break;
                             
-                            rewards = __ApplyRewards(purchaseItem.rewards);
+                            rewards = __ApplyRewards(purchaseItem.options);
 
                             //goldBank = 0;
                             break;
                         default:
-                            rewards = __ApplyRewards(purchaseItem.rewards);
+                            rewards = __ApplyRewards(purchaseItem.options);
                             break;
                     }
-                    
+
                     break;
                 }
             }
@@ -134,15 +191,66 @@ public partial class UserDataMain
 
         public int level;
 
-        [Tooltip("首充填写天数，补给卡，月卡，游荡卡填0，基金代表章节，通行证代表活跃度")]
+        [Tooltip("首充填写天数，补给卡，月卡，游荡卡填0，基金代表星星数，通行证代表活跃度")]
         public int exp;
 
-        public UserRewardData[] rewards;
+        public UserRewardOptionData[] options;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 内购票据名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 内购票据类型
+        {
+            set => type = (PurchaseType)value;
+        }
+        
+        [CSVField]
+        public int 内购票据档位
+        {
+            set => level = value;
+        }
+        
+        [CSVField]
+        public int 内购票据条件
+        {
+            set => exp = value;
+        }
+        
+        [CSVField]
+        public string 内购票据奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    options = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                options = new UserRewardOptionData[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    options[i] = new UserRewardOptionData(parameters[i]);
+            }
+        }
+#endif
     }
     
     [SerializeField]
     internal PurchaseToken[] _purchaseTokens;
     
+#if UNITY_EDITOR
+    [SerializeField, CSV("_purchaseTokens")] 
+    internal string _purchaseTokensPath;
+#endif
+
     public const string NAME_SPACE_USER_PURCHASE_TOKEN = "UserPurchaseToken";
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS = "UserPurchaseTokenSeconds";
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_TIMES = "UserPurchaseTokenTimes";
@@ -222,7 +330,7 @@ public partial class UserDataMain
                 else
                     value.flag = UserPurchaseToken.Flag.Locked;
 
-                value.rewards = token.rewards;
+                value.options = token.options;
 
                 if (values == null)
                     values = new List<UserPurchaseToken>();
@@ -308,7 +416,7 @@ public partial class UserDataMain
                             if (rewards == null)
                                 rewards = new List<UserReward>();
 
-                            __ApplyRewards(purchaseToken.rewards, rewards);
+                            __ApplyRewards(purchaseToken.options, rewards);
                         }
                     }
                 }
@@ -352,7 +460,7 @@ public partial class UserDataMain
                             if (rewards == null)
                                 rewards = new List<UserReward>();
                             
-                            __ApplyRewards(purchaseItem.rewards, rewards);
+                            __ApplyRewards(purchaseItem.options, rewards);
                             
                             break;
                         }
@@ -374,7 +482,7 @@ public partial class UserDataMain
                         if (rewards == null)
                             rewards = new List<UserReward>();
 
-                        __ApplyRewards(purchaseToken.rewards, rewards);
+                        __ApplyRewards(purchaseToken.options, rewards);
                     }
                 }
             }

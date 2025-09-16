@@ -72,6 +72,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             EffectTarget target;
             target.times = authoring._times;
             target.hp = authoring._hp;
+            target.shield = authoring._shield;
             target.immunizedTime = 0.0f;
             target.invincibleTime = 0.0f;
             target.time = 0.0;
@@ -179,6 +180,9 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [SerializeField]
     internal int _hp = 1;
 
+    [SerializeField]
+    internal int _shield = 0;
+
     [SerializeField] 
     internal int _level = 1;
 
@@ -231,7 +235,15 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         parameter.id = (int)EffectAttributeID.HPMax;
         parameter.value = _hp;
         messageParameters.Add(parameter);
-        
+
+        if (_shield != 0)
+        {
+            parameter.messageKey = message.key;
+            parameter.id = (int)EffectAttributeID.Shield;
+            parameter.value = _shield;
+            messageParameters.Add(parameter);
+        }
+
         return true;
     }
 }

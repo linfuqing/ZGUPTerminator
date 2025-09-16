@@ -50,6 +50,17 @@ public struct UserRewardData
 
     public int count;
 
+    public static UserRewardData Parse(string text)
+    {
+        UserRewardData result;
+        var parameters = text.Split(':');
+
+        result.name = parameters[0];
+        result.type = (UserRewardType)int.Parse(parameters[1]);
+        result.count = int.Parse(parameters[2]);
+        return result;
+    }
+    
     public UserRewardData(string text)
     {
         var parameters = text.Split('*');

@@ -337,6 +337,13 @@ public partial class UserDataMain
         return __ApplyRewards(outRewards);
     }
 
+    private List<UserReward> __ApplyRewards(UserRewardOptionData[] options, List<UserReward> outRewards = null)
+    {
+        UserData.ApplyRewards(options);
+        
+        return __ApplyRewards(outRewards);
+    }
+
     private List<UserAttributeData> __CollectRoleAttributes(
         string roleName, 
         string groupName, 
