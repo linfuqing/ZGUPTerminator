@@ -403,5 +403,4 @@ public partial class UserData
         if (origin < value)
             PlayerPrefs.SetInt(key, value);
     }
-
 }

@@ -370,8 +370,8 @@ public partial class UserDataMain
                 break;
             case PurchaseType.Fund:
                 isWriteTimes = true;
-                
-                exp = UserData.chapter;
+
+                exp = __GetChapterStageRewardCount();//UserData.chapter;
                 break;
             case PurchaseType.Pass:
                 isWriteTimes = true;
@@ -434,7 +434,7 @@ public partial class UserDataMain
         switch (type)
         {
             case PurchaseType.Fund:
-                exp = UserData.chapter;
+                exp = __GetChapterStageRewardCount();//UserData.chapter;
                 break;
             case PurchaseType.Pass:
                 exp = am;

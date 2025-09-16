@@ -597,6 +597,47 @@ public partial class UserDataMain
         return __levelStageInfos[stageID];
     }
 
+    private int __GetChapterStageRewardCount()
+    {
+        Stage stage;
+        int i,
+            j,
+            k,
+            numStageRewards,
+            numStages,
+            numChapters = Mathf.Clamp(UserData.chapter + 1, 1, _levelChapters.Length),
+            result = 0;
+        for (i = 0; i < numChapters; ++i)
+        {
+            ref var level = ref _levels[__GetLevelIndex(_levelChapters[i].name)];
+            numStages = __GetStageCount(level);
+            for (j = 0; j < numStages; ++j)
+            {
+                stage = __GetStage(level, j);
+
+                numStageRewards = stage.indirectRewards.Length;
+                for (k = 0; k < numStageRewards; ++k)
+                {
+                    ref var stageReward = ref stage.indirectRewards[k];
+                    if ((__GetStageRewardFlag(
+                            stageReward.name,
+                            level.name,
+                            i,
+                            stageReward.conditionValue,
+                            stageReward.condition,
+                            out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                        ++result;
+                }
+
+                if ((UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) !=
+                    IUserData.StageFlag.Normal)
+                    break;
+            }
+        }
+
+        return result;
+    }
+    
     private UserLevel __ToUserLevel(int levelIndex, ref bool isUnlock)
     {
         ref var level = ref _levels[levelIndex];
@@ -671,8 +712,14 @@ public partial class UserDataMain
 
             levelTicket.count = count - 1;
         }
-        else if (UserData.chapter < __GetLevelChapterIndex(levelName) || energy > 0 && !__ApplyEnergy(energy))
-            return false;
+        else
+        {
+            var chapterIndex = __GetLevelChapterIndex(levelName);
+            if (chapterIndex > UserData.chapter || 
+                _levelChapters[chapterIndex].stageRewardCount > __GetChapterStageRewardCount() || 
+                energy > 0 && !__ApplyEnergy(energy))
+                return false;
+        }
 
         return true;
     }
