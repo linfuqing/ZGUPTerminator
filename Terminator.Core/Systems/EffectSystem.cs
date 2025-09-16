@@ -601,6 +601,9 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterProperties> characterProperties;
 
+        [ReadOnly]
+        public ComponentLookup<EffectTarget> targets;
+
         [ReadOnly] 
         public ComponentLookup<EffectRage> rages;
 
@@ -730,6 +733,7 @@ public partial struct EffectSystem : ISystem
                 var statusTargets = this.statusTargets[index];
                 if (result)
                 {
+                    targets.TryGetComponent(instanceDamageParent.entity, out var target);
                     rages.TryGetComponent(instanceDamageParent.entity, out var rage);
 
                     var targetHP = targetHPs.GetRefRWOptional(instanceDamageParent.entity);
@@ -817,7 +821,7 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageScale = 1.0f + rage.value * damage.rageMultiplier;
+                            damageScale = 1.0f + rage.value * damage.rageDamageMultiplier + target.shield * damage.shieldDamageMultiplier;
                             //damageScale = damageScale > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
                             damageScale *= instanceDamage.scale;
                             
@@ -1146,14 +1150,17 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterProperties> characterProperties;
 
+        [ReadOnly]
+        public ComponentLookup<EffectTarget> targets;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectRage> rages;
+
         [ReadOnly] 
         public ComponentLookup<EffectDamage> damages;
 
         [ReadOnly]
         public ComponentLookup<EffectDamageParent> damageParents;
-
-        [ReadOnly] 
-        public ComponentLookup<EffectRage> rages;
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
@@ -1228,6 +1235,7 @@ public partial struct EffectSystem : ISystem
             collect.children = children;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
+            collect.targets = targets;
             collect.rages = rages;
             collect.damages = damages;
             collect.damageParentMap = damageParents;
@@ -1393,7 +1401,7 @@ public partial struct EffectSystem : ISystem
 
                         damage = 0;
 
-                        damageLayerMask = targetHP.layerMask;
+                        damageLayerMask = 0;//targetHP.layerMask;
                         messageLayerMask = targetHP.messageLayerMask;
 
                         if (targetHP.value > 0)
@@ -1521,7 +1529,7 @@ public partial struct EffectSystem : ISystem
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
-                    (targetHP.value != 0 && targetHP.layerMask != 0 ||
+                    (targetHP.value != 0 && targetHP.messageLayerMask != 0 ||
                      damage != 0 && messageLayerMask != 0))
                 {
                     bool isSelected = false;
@@ -1536,7 +1544,7 @@ public partial struct EffectSystem : ISystem
                     foreach (var targetMessage in targetMessages)
                     {
                         if (targetMessage.layerMask == 0 ||
-                            (targetMessage.layerMask & (targetHP.layerMask | messageLayerMask)) != 0)
+                            (targetMessage.layerMask & (targetHP.messageLayerMask | messageLayerMask)) != 0)
                         {
                             totalChance += targetMessage.chance;
                             if (totalChance > 1.0f)
@@ -2051,9 +2059,10 @@ public partial struct EffectSystem : ISystem
         __characterInterpolations =  state.GetComponentLookup<CharacterInterpolation>();
         __physicsGraphicalInterpolationBuffers =  state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>();
         __levelStates = state.GetComponentLookup<LevelStatus>();
+        __targets = state.GetComponentLookup<EffectTarget>(true);
+        __rages = state.GetComponentLookup<EffectRage>(true);
         __damages = state.GetComponentLookup<EffectDamage>();
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
-        __rages = state.GetComponentLookup<EffectRage>(true);
         __entityType = state.GetEntityTypeHandle();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
@@ -2083,7 +2092,6 @@ public partial struct EffectSystem : ISystem
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
         __states = state.GetComponentLookup<EffectStatus>();
-        __targets = state.GetComponentLookup<EffectTarget>(true);
         __targetBuffs = state.GetComponentLookup<EffectTargetBuff>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
         __targetHPs = state.GetComponentLookup<EffectTargetHP>();
@@ -2259,6 +2267,7 @@ public partial struct EffectSystem : ISystem
         collect.children = __children;
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
+        collect.targets = __targets;
         collect.rages = __rages;
         collect.damages = __damages;
         collect.damageParents = __damageParents;

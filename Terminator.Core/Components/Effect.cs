@@ -70,9 +70,11 @@ public struct EffectDefinition
 
         public int valueImmunized;
         
-        public float hpMultiplier;
+        public float rageDamageMultiplier;
 
-        public float rageMultiplier;
+        public float shieldDamageMultiplier;
+
+        public float hpMultiplier;
 
         public float goldMultiplier;
 
