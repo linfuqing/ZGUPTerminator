@@ -112,7 +112,7 @@ public partial class UserDataMain
         }
 
         [CSVField]
-        public int 商品概率
+        public float 商品概率
         {
             set => chance = value;
         }
