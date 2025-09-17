@@ -1549,7 +1549,7 @@ public partial struct EffectSystem : ISystem
                             totalChance += targetMessage.chance;
                             if (totalChance > 1.0f)
                             {
-                                totalChance -= 1.0f;
+                                totalChance -= 1.0f + math.FLT_MIN_NORMAL;
                                 
                                 chance = random.NextFloat();
 
@@ -2436,7 +2436,7 @@ public partial struct EffectSystem : ISystem
             totalChance += prefab.chance;
             if (totalChance > 1.0f)
             {
-                totalChance -= 1.0f;
+                totalChance -= 1.0f + math.FLT_MIN_NORMAL;
 
                 chance = random.NextFloat();
 

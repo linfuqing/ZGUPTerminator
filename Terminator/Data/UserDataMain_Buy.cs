@@ -200,8 +200,10 @@ public partial class UserDataMain
             chance += product.chance;
             if (chance > 1.0f)
             {
-                chance -= 1.0f;
-
+                chance -= 1.0f + Mathf.Epsilon;
+                
+                randomValue = random.NextFloat();
+                
                 isSelected = false;
             }
             
@@ -258,7 +260,9 @@ public partial class UserDataMain
                 chance += product.chance;
                 if (chance > 1.0f)
                 {
-                    chance -= 1.0f;
+                    chance -= 1.0f + Mathf.Epsilon;
+
+                    randomValue = random.NextFloat();
 
                     isSelected = false;
                 }

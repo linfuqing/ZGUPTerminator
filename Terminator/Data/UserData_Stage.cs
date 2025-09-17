@@ -234,7 +234,7 @@ public partial class UserData
             total += option.chance;
             if (total > 1.0f)
             {
-                total -= 1.0f;
+                total -= 1.0f + Mathf.Epsilon;
                         
                 chance = UnityEngine.Random.value;
 

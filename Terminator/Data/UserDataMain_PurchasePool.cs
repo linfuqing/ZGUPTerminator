@@ -391,7 +391,7 @@ public partial class UserDataMain
                 total += purchasePoolOption.chance;
                 if (total > 1.0f)
                 {
-                    total -= 1.0f;
+                    total -= 1.0f + Mathf.Epsilon;
                     
                     chance = UnityEngine.Random.value;
 

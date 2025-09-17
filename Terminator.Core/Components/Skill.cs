@@ -280,7 +280,7 @@ public struct SkillDefinition
                     
                     if (chance > 1.0f)
                     {
-                        chance -= 1.0f;
+                        chance -= 1.0f + math.FLT_MIN_NORMAL;
                         
                         value = random.NextFloat();
 

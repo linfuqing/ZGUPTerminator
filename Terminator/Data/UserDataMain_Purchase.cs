@@ -427,6 +427,7 @@ public partial class UserDataMain
         int i, days;
         uint seconds;
         string secondsKey, key;
+        DateTime now;
         foreach (var purchaseToken in _purchaseTokens)
         {
             if (purchaseToken.type == type && 
@@ -450,8 +451,21 @@ public partial class UserDataMain
                             if (isWriteTimes)
                                 PlayerPrefs.SetInt(key, times);
 
+                            if (seconds == 0)
+                            {
+                                days = 1;
+
+                                seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
+                            }
+                            else
+                            {
+                                days = DateTimeUtility.GetTotalDays(seconds, out _, out now);
+                                
+                                seconds = (uint)(now.Ticks / TimeSpan.TicksPerSecond);
+                            }
+
                             if (isWriteSeconds)
-                                PlayerPrefs.SetInt(secondsKey, (int)ZG.DateTimeUtility.GetSeconds());
+                                PlayerPrefs.SetInt(secondsKey, (int)seconds);
                             
                             if(expKey != null)
                                 PlayerPrefs.SetInt(expKey, exp + 1);
@@ -459,7 +473,6 @@ public partial class UserDataMain
                             if (rewards == null)
                                 rewards = new List<UserReward>();
 
-                            days = seconds == 0 ? 1 : DateTimeUtility.GetTotalDays(seconds, out _, out _);
                             for(i = 0; i < days; ++i)
                                 __ApplyRewards(purchaseToken.options, rewards);
                         }
