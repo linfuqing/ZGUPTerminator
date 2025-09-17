@@ -7,6 +7,9 @@ public struct UserPurchasePool
 
     public uint id;
 
+    //剩余每日免费次数
+    public int freeTimes;
+    
     //花费的钻石数量
     public int diamond;
     

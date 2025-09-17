@@ -222,6 +222,7 @@ public partial class UserDataMain
 #endif
 
     private const string NAME_SPACE_USER_PURCHASE_POOL_KEY = "UserPurchasePoolKey";
+    private const string NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES = "UserPurchasePoolTimes";
     
     public IEnumerator QueryPurchases(
         uint userID,
@@ -242,18 +243,32 @@ public partial class UserDataMain
 
         UserPurchasePool userPurchasePool;
         PurchasePool purchasePool;
+        Active<int> freeTimes;
         int numPurchasePools = _purchasePools.Length;
-        result.pools = new UserPurchasePool[numPurchasePools];
+        var userPurchasePools = new List<UserPurchasePool>();
         for (int i = 0; i < numPurchasePools; ++i)
         {
             purchasePool = _purchasePools[i];
+            if((purchasePool.flag & PurchasePool.Flag.Hide) == PurchasePool.Flag.Hide)
+                continue;
+            
             userPurchasePool.name = purchasePool.name;
             userPurchasePool.id = __ToID(i);
+
+            freeTimes = new Active<int>(
+                PlayerPrefs.GetString($"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}"), __Parse);
+
+            if (!DateTimeUtility.IsToday(freeTimes.seconds))
+                freeTimes.value = purchasePool.freeTimes;
+            
+            userPurchasePool.freeTimes = freeTimes.value;
             userPurchasePool.diamond = purchasePool.diamond;
             userPurchasePool.gold = purchasePool.gold;
             
-            result.pools[i] = userPurchasePool;
+            userPurchasePools.Add(userPurchasePool);
         }
+        
+        result.pools = userPurchasePools.ToArray();
         
         var userPurchasePoolKeys = new List<IUserData.Purchases.PoolKey>(numPurchasePools);
         IUserData.Purchases.PoolKey userPurchasePoolKey;
@@ -311,25 +326,39 @@ public partial class UserDataMain
     private bool __PurchasePool(int purchasePoolIndex, int times, List<UserReward> outRewards)
     {
         var purchasePool = _purchasePools[purchasePoolIndex];
-        string poolKey = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{purchasePool.name}";
-        int keyCount = PlayerPrefs.GetInt(poolKey);
-        if (keyCount < times)
+        string freeTimeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}";
+        var freeTimes = new Active<int>(PlayerPrefs.GetString(freeTimeKey), __Parse);
+        if (!DateTimeUtility.IsToday(freeTimes.seconds))
+            freeTimes.value = purchasePool.freeTimes;
+
+        if (freeTimes.value < times)
         {
-            int destination = (times - keyCount) * purchasePool.diamond, source = diamond;
-            if (destination > source)
-                return false;
+            if(freeTimes.value > 0)
+                PlayerPrefs.SetString(freeTimeKey,new Active<int>(0).ToString());
             
-            diamond = source - destination;
-            
-            PlayerPrefs.DeleteKey(poolKey);
+            string poolKey = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{purchasePool.name}";
+            int keyCount = PlayerPrefs.GetInt(poolKey) + freeTimes.value;
+            if (keyCount < times)
+            {
+                int destination = (times - keyCount) * purchasePool.diamond, source = diamond;
+                if (destination > source)
+                    return false;
+
+                diamond = source - destination;
+
+                PlayerPrefs.DeleteKey(poolKey);
+            }
+            else
+            {
+                keyCount -= times;
+
+                PlayerPrefs.SetInt(poolKey, keyCount);
+            }
         }
         else
-        {
-            keyCount -= times;
-            
-            PlayerPrefs.SetInt(poolKey, keyCount);
-        }
-
+            PlayerPrefs.SetString(freeTimeKey,
+                new Active<int>(freeTimes.value - times).ToString());
+        
         gold += purchasePool.gold * times;
         
         UserRewardData reward;
