@@ -48,6 +48,12 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField] 
     internal StringEvent _onGoldCount;
     
+    [SerializeField]
+    internal StringEvent _onExp;
+
+    [SerializeField]
+    internal StringEvent _onStage;
+
     [SerializeField] 
     internal ZG.UI.Progressbar _progressbar;
     [SerializeField] 
@@ -136,6 +142,9 @@ public partial class LevelManager : MonoBehaviour
             print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
             isDirty = true;
 
+            if (_onStage != null)
+                _onStage.Invoke(stage.ToString());
+
             if (!isRestart && stage > __stage)
                 __Submit(stage, gold, exp, maxExp);
 
@@ -178,7 +187,9 @@ public partial class LevelManager : MonoBehaviour
             isDirty = true;
 
             if (_expProgressbar != null)
-                _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp);
+                _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp); 
+            else if(exp != __exp && _onExp != null)
+                _onExp.Invoke(exp.ToString());
 
             __exp = exp;
             __maxExp = maxExp;
