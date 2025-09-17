@@ -37,22 +37,6 @@ public partial class UserDataMain
         return __questNameToIndices.TryGetValue(name, out int index) ? index : -1;
     }
     
-    private Dictionary<string, int> __purchasePoolNameToIndices;
-    
-    private int __GetPurchasePoolIndex(string name)
-    {
-        if (__purchasePoolNameToIndices == null)
-        {
-            __purchasePoolNameToIndices = new Dictionary<string, int>();
-
-            int numPurchasePools = _purchasePools.Length;
-            for(int i = 0; i < numPurchasePools; ++i)
-                __purchasePoolNameToIndices.Add(_purchasePools[i].name, i);
-        }
-
-        return __purchasePoolNameToIndices.TryGetValue(name, out int index) ? index : -1;
-    }
-
     private Dictionary<string, string> __skillToGroupNames;
 
     private string __GetSkillGroupName(string skillName)
@@ -144,7 +128,7 @@ public partial class UserDataMain
         return __cardLevelIndices[index];
     }
 
-    private uint __ApplyReward(in UserRewardData reward)
+    private bool __ApplyReward(in UserRewardData reward, List<UserReward> outRewards = null)
     {
         var flag = UserDataMain.flag;
         int count = 0;
@@ -153,10 +137,14 @@ public partial class UserDataMain
         switch (reward.type)
         {
             case UserRewardType.PurchasePoolKey:
+                int purchasePoolIndex = __GetPurchasePoolIndex(reward.name);
+                if ((_purchasePools[purchasePoolIndex].flag & PurchasePool.Flag.Hide) == PurchasePool.Flag.Hide)
+                    return __PurchasePool(purchasePoolIndex, reward.count, outRewards);
+                
                 if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)
                     UserDataMain.flag |= Flag.PurchasesUnlock;
                 
-                id = __ToID(__GetPurchasePoolIndex(reward.name));
+                id = __ToID(purchasePoolIndex);
                 key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
                 break;
             case UserRewardType.CardsCapacity:
@@ -228,7 +216,9 @@ public partial class UserDataMain
                     PlayerPrefs.SetInt(key, cardCount - 1);
                     PlayerPrefs.SetInt(levelKey, 0);
 
-                    return id;
+                    key = null;
+                    break;
+                    //return id;
                 }
                 
                 if (isDirty)
@@ -242,11 +232,13 @@ public partial class UserDataMain
                     key = $"{NAME_SPACE_USER_ROLE_FLAG}{reward.name}";
                     int roleFlag = PlayerPrefs.GetInt(key);
                     if ((roleFlag & (int)UserRole.Flag.Unlocked) == (int)UserRole.Flag.Unlocked)
-                        return 0;
+                        return false;
                     
                     PlayerPrefs.SetInt(key, roleFlag | (int)UserRole.Flag.Unlocked);
 
-                    return id;
+                    key = null;
+                    break;
+                    //return id;
                 }
                 
                 key = $"{NAME_SPACE_USER_ROLE_COUNT}{reward.name}";
@@ -261,20 +253,23 @@ public partial class UserDataMain
                 
                 uint accessoryID = (uint)Random.Range(int.MinValue, int.MaxValue);
                 __CreateAccessory(accessoryID, __GetAccessoryIndex(reward.name), reward.count);
-                return accessoryID;
+
+                key = null;
+                break;
+                //return accessoryID;
             case UserRewardType.Item:
                 id = __ToID(__GetItemIndex(reward.name));
                 key = $"{NAME_SPACE_USER_ITEM_COUNT}{reward.name}";
                 break; 
             case UserRewardType.Diamond:
                 diamond += reward.count;
-                return 1;
+                return true;
             case UserRewardType.Gold:
                 gold += reward.count;
-                return 1;
+                return true;
             case UserRewardType.Energy:
                 __ApplyEnergy(-reward.count);
-                return 1;
+                return true;
             case UserRewardType.EnergyMax:
                 id = 1;
                 key = NAME_SPACE_USER_ENERGY_MAX;
@@ -282,48 +277,46 @@ public partial class UserDataMain
             case UserRewardType.ActiveDay:
                 __AppendActive(reward.count, ActiveType.Day);
                 
-                return 1;
+                return true;
             case UserRewardType.ActiveWeek:
                 __AppendActive(reward.count, ActiveType.Week);
                 
-                return 1;
+                return true;
             case UserRewardType.Ticket:
                 var levelTicket = _levelTickets[__GetLevelTicketIndex(reward.name)];
                 
                 levelTicket.count += reward.count;
                 
-                return 1;
+                return true;
             default:
-                return 0;
+                return false;
         }
-        
-        count = PlayerPrefs.GetInt(key, count);
-        count += reward.count;
-        PlayerPrefs.SetInt(key, count);
 
-        return id;
+        if (!string.IsNullOrEmpty(key))
+        {
+            count = PlayerPrefs.GetInt(key, count);
+            count += reward.count;
+            PlayerPrefs.SetInt(key, count);
+        }
+
+        if (outRewards != null)
+        {
+            UserReward result;
+            result.name = reward.name;
+            result.type = reward.type;
+            result.count = reward.count;
+            result.id = id;
+            
+            outRewards.Add(result);
+        }
+
+        return true;
     }
 
-    private List<UserReward> __ApplyRewards(
-        //UserRewardData[] rewards, 
-        List<UserReward> outRewards = null)
+    private List<UserReward> __ApplyRewards(List<UserReward> outRewards)
     {
-        if(outRewards == null)
-            outRewards = new List<UserReward>();
-        
-        UserReward outReward;
         foreach (var reward in UserData.Rewards)
-        {
-            outReward.id = __ApplyReward(reward);
-            if(outReward.id == 0)
-                continue;
-
-            outReward.name = reward.name;
-            outReward.count = reward.count;
-            outReward.type = reward.type;
-            
-            outRewards.Add(outReward);
-        }
+            __ApplyReward(reward, outRewards);
         
         UserData.Rewards.Clear();
 
@@ -334,6 +327,9 @@ public partial class UserDataMain
     {
         UserData.Rewards.AddRange(rewards);
 
+        if (outRewards == null)
+            outRewards = new List<UserReward>();
+        
         return __ApplyRewards(outRewards);
     }
 
@@ -341,6 +337,9 @@ public partial class UserDataMain
     {
         UserData.ApplyRewards(options);
         
+        if (outRewards == null)
+            outRewards = new List<UserReward>();
+
         return __ApplyRewards(outRewards);
     }
 

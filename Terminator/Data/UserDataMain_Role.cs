@@ -153,18 +153,23 @@ public partial class UserDataMain
         Accessory accessory;
         AccessorySlot accessorySlot;
         List<int> accessoryStageIndices;
-        if (isCreated && _accessoryDefaults != null)
+        if (isCreated && _accessoryDefaults != null && _accessoryDefaults.Length > 0)
         {
             uint id;
             int accessoryIndex;
             UserRewardData reward;
             reward.type = UserRewardType.Accessory;
+
+            var rewards = new List<UserReward>();
             foreach (var accessoryDefault in _accessoryDefaults)
             {
                 reward.name = accessoryDefault.name;
                 reward.count = accessoryDefault.stage;
 
-                id = __ApplyReward(reward);
+                rewards.Clear();
+                __ApplyReward(reward, rewards);
+
+                id = rewards[0].id;
 
                 accessoryIndex = __GetAccessoryIndex(accessoryDefault.name);
                 accessory = _accessories[accessoryIndex];
