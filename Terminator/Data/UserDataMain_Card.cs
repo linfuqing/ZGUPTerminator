@@ -41,24 +41,6 @@ public partial class UserDataMain
     [SerializeField, CSV("_skills", guidIndex = -1, nameIndex = 0)]
     internal string _skillsPath;
     
-    private const string NAME_SPACE_USER_DIAMOND = "UserDiamond";
-
-    public static int diamond
-    {
-        get => PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
-
-        private set
-        {
-            int result = value - diamond;
-            if (result > 0)
-                __AppendQuest(UserQuest.Type.DiamondsToGet, result);
-            else if(result < 0)
-                __AppendQuest(UserQuest.Type.DiamondsToUse, -result);
-            
-            PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, value);
-        }
-    }
-    
     [Serializable]
     internal struct Card
     {
@@ -494,6 +476,82 @@ public partial class UserDataMain
         onComplete(true);
     }
 
+    
+    private Dictionary<string, int> __cardGroupNameToIndices;
+    
+    private int __GetCardGroupIndex(string name)
+    {
+        if (__cardGroupNameToIndices == null)
+        {
+            int numCardGroups = _cardGroups.Length;
+            __cardGroupNameToIndices = new Dictionary<string, int>(numCardGroups);
+            for (int i = 0; i < numCardGroups; ++i)
+                __cardGroupNameToIndices.Add(_cardGroups[i].name, i);
+        }
+
+        return __cardGroupNameToIndices[name];
+    }
+
+    
+    private Dictionary<string, int> __cardNameToIndices;
+    
+    private int __GetCardIndex(string name)
+    {
+        if (__cardNameToIndices == null)
+        {
+            int numCards = _cards.Length;
+            __cardNameToIndices = new Dictionary<string, int>(numCards);
+            for (int i = 0; i < numCards; ++i)
+                __cardNameToIndices.Add(_cards[i].name, i);
+        }
+
+        return __cardNameToIndices[name];
+    }
+
+    private Dictionary<string, int> __cardStyleNameToIndices;
+    
+    private int __GetCardStyleIndex(string name)
+    {
+        if (__cardStyleNameToIndices == null)
+        {
+            int numCardStyles = _cardStyles.Length;
+            __cardStyleNameToIndices = new Dictionary<string, int>(numCardStyles);
+            for (int i = 0; i < numCardStyles; ++i)
+                __cardStyleNameToIndices.Add(_cardStyles[i].name, i);
+        }
+
+        return __cardStyleNameToIndices[name];
+    }
+    
+    private List<int>[] __cardLevelIndices;
+
+    private List<int> __GetCardLevelIndices(int index)
+    {
+        if (__cardLevelIndices == null)
+        {
+            int numCardStyles = _cardStyles.Length;
+            
+            __cardLevelIndices = new List<int>[numCardStyles];
+
+            List<int> cardLevelIndices;
+            int cardStyleIndex, numCardLevels = _cardLevels.Length;
+            for (int i = 0; i < numCardLevels; ++i)
+            {
+                cardStyleIndex = __GetCardStyleIndex(_cardLevels[i].styleName);
+                cardLevelIndices = __cardLevelIndices[cardStyleIndex];
+                if (cardLevelIndices == null)
+                {
+                    cardLevelIndices = new List<int>();
+
+                    __cardLevelIndices[cardStyleIndex] = cardLevelIndices;
+                }
+                
+                cardLevelIndices.Add(i);
+            }
+        }
+        
+        return __cardLevelIndices[index];
+    }
 }
 
 public partial class UserData

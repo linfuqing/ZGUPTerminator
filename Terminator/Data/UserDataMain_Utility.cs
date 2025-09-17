@@ -5,38 +5,6 @@ using Random = UnityEngine.Random;
 
 public partial class UserDataMain
 {
-    private Dictionary<string, int> __activeNameToIndices;
-
-    private int __GetActiveIndex(string name)
-    {
-        if (__activeNameToIndices == null)
-        {
-            __activeNameToIndices = new Dictionary<string, int>();
-
-            int numActives = _actives.Length;
-            for(int i = 0; i < numActives; ++i)
-                __activeNameToIndices.Add(_actives[i].name, i);
-        }
-
-        return __activeNameToIndices.TryGetValue(name, out int index) ? index : -1;
-    }
-    
-    private Dictionary<string, int> __questNameToIndices;
-
-    private int __GetQuestIndex(string name)
-    {
-        if (__questNameToIndices == null)
-        {
-            __questNameToIndices = new Dictionary<string, int>();
-
-            int numQuests = _quests.Length;
-            for(int i = 0; i < numQuests; ++i)
-                __questNameToIndices.Add(_quests[i].name, i);
-        }
-
-        return __questNameToIndices.TryGetValue(name, out int index) ? index : -1;
-    }
-    
     private Dictionary<string, string> __skillToGroupNames;
 
     private string __GetSkillGroupName(string skillName)
@@ -52,82 +20,6 @@ public partial class UserDataMain
         return __skillToGroupNames.TryGetValue(skillName, out string skillGroupName) ? skillGroupName : null;
     }
 
-    private Dictionary<string, int> __cardGroupNameToIndices;
-    
-    private int __GetCardGroupIndex(string name)
-    {
-        if (__cardGroupNameToIndices == null)
-        {
-            int numCardGroups = _cardGroups.Length;
-            __cardGroupNameToIndices = new Dictionary<string, int>(numCardGroups);
-            for (int i = 0; i < numCardGroups; ++i)
-                __cardGroupNameToIndices.Add(_cardGroups[i].name, i);
-        }
-
-        return __cardGroupNameToIndices[name];
-    }
-
-    
-    private Dictionary<string, int> __cardNameToIndices;
-    
-    private int __GetCardIndex(string name)
-    {
-        if (__cardNameToIndices == null)
-        {
-            int numCards = _cards.Length;
-            __cardNameToIndices = new Dictionary<string, int>(numCards);
-            for (int i = 0; i < numCards; ++i)
-                __cardNameToIndices.Add(_cards[i].name, i);
-        }
-
-        return __cardNameToIndices[name];
-    }
-
-    private Dictionary<string, int> __cardStyleNameToIndices;
-    
-    private int __GetCardStyleIndex(string name)
-    {
-        if (__cardStyleNameToIndices == null)
-        {
-            int numCardStyles = _cardStyles.Length;
-            __cardStyleNameToIndices = new Dictionary<string, int>(numCardStyles);
-            for (int i = 0; i < numCardStyles; ++i)
-                __cardStyleNameToIndices.Add(_cardStyles[i].name, i);
-        }
-
-        return __cardStyleNameToIndices[name];
-    }
-    
-    private List<int>[] __cardLevelIndices;
-
-    private List<int> __GetCardLevelIndices(int index)
-    {
-        if (__cardLevelIndices == null)
-        {
-            int numCardStyles = _cardStyles.Length;
-            
-            __cardLevelIndices = new List<int>[numCardStyles];
-
-            List<int> cardLevelIndices;
-            int cardStyleIndex, numCardLevels = _cardLevels.Length;
-            for (int i = 0; i < numCardLevels; ++i)
-            {
-                cardStyleIndex = __GetCardStyleIndex(_cardLevels[i].styleName);
-                cardLevelIndices = __cardLevelIndices[cardStyleIndex];
-                if (cardLevelIndices == null)
-                {
-                    cardLevelIndices = new List<int>();
-
-                    __cardLevelIndices[cardStyleIndex] = cardLevelIndices;
-                }
-                
-                cardLevelIndices.Add(i);
-            }
-        }
-        
-        return __cardLevelIndices[index];
-    }
-
     private bool __ApplyReward(in UserRewardData reward, List<UserReward> outRewards = null)
     {
         var flag = UserDataMain.flag;
@@ -138,14 +30,19 @@ public partial class UserDataMain
         {
             case UserRewardType.PurchasePoolKey:
                 int purchasePoolIndex = __GetPurchasePoolIndex(reward.name);
-                if ((_purchasePools[purchasePoolIndex].flag & PurchasePool.Flag.Hide) == PurchasePool.Flag.Hide)
-                    return __PurchasePool(purchasePoolIndex, reward.count, outRewards);
-                
-                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)
-                    UserDataMain.flag |= Flag.PurchasesUnlock;
-                
                 id = __ToID(purchasePoolIndex);
                 key = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{reward.name}";
+
+                if ((_purchasePools[purchasePoolIndex].flag & PurchasePool.Flag.Hide) == PurchasePool.Flag.Hide)
+                {
+                    PlayerPrefs.SetInt(key, reward.count);
+                    
+                    return __PurchasePool(purchasePoolIndex, reward.count, outRewards);
+                }
+
+                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)
+                    UserDataMain.flag |= Flag.PurchasesUnlock;
+
                 break;
             case UserRewardType.CardsCapacity:
                 if ((flag & Flag.CardUnlock) == 0)

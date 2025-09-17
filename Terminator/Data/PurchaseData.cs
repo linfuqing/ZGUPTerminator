@@ -39,6 +39,13 @@ public enum PurchaseType
     Other
 }
 
+public interface IPurchaseAPI
+{
+    public static IPurchaseAPI instance;
+
+    void Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete);
+}
+
 public interface IPurchaseData
 {
     public static IPurchaseData instance;
@@ -249,8 +256,17 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
     {
         yield return null;
 
-        long result = Buy(type, level);
-        onComplete(result);
+        var api = IPurchaseAPI.instance;
+        if (api == null)
+        {
+            long result = Buy(type, level);
+            onComplete(result);
+        }
+        else
+            api.Buy(userID, type, level, x =>
+            {
+                onComplete(x ? Buy(type, level) : null);
+            });
     }
 
     void Awake()

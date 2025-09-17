@@ -24,6 +24,13 @@ public enum AdvertisementType
     Other
 }
 
+public interface IAdvertisementAPI
+{
+    public static IAdvertisementAPI instance;
+    
+    void Broadcast(AdvertisementType type, string name, Action<bool> onComplete);
+}
+
 public interface IAdvertisementData
 {
     public struct Input
@@ -98,10 +105,25 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
     {
         yield return null;
 
-        var key = GetNameSpace(type, name);
-        PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
+        var api = IAdvertisementAPI.instance;
+        if (api == null)
+        {
+            var key = GetNameSpace(type, name);
+            PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
 
-        onComplete(true);
+            onComplete(true);
+        }
+        else
+            api.Broadcast(type, name, x =>
+            {
+                if (x)
+                {
+                    var key = GetNameSpace(type, name);
+                    PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
+                }
+
+                onComplete(x);
+            });
     }
 
     void Awake()

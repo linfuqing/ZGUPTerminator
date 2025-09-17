@@ -6,6 +6,31 @@ using ZG;
 
 public partial class UserDataMain
 {
+    private const string NAME_SPACE_USER_DIAMOND = "UserDiamond";
+
+    /// <summary>
+    /// 注意，实现钻石服务器逻辑的时候，要根据不同的平台调用不同的虚拟货币接口，我们游戏服务器是不直接存储钻石这个数据的。
+    /// 参见：
+    /// 查询剩余钻石：https://developers.weixin.qq.com/minigame/dev/api-backend/midas-payment-v2/pay_v2.getBalance.html
+    /// 消耗钻石：https://developers.weixin.qq.com/minigame/dev/api-backend/midas-payment-v2/pay_v2.pay.html
+    /// 奖励钻石：https://developers.weixin.qq.com/minigame/dev/api-backend/midas-payment-v2/pay_v2.present.html
+    /// </summary>
+    public static int diamond
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_DIAMOND);
+
+        private set
+        {
+            int result = value - diamond;
+            if (result > 0)
+                __AppendQuest(UserQuest.Type.DiamondsToGet, result);
+            else if(result < 0)
+                __AppendQuest(UserQuest.Type.DiamondsToUse, -result);
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_DIAMOND, value);
+        }
+    }
+
     [Serializable]
     internal struct PurchaseItem
     {

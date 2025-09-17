@@ -688,6 +688,39 @@ public partial class UserDataMain
     {
         return ((day - 1) % 7) + 1;
     }
+    
+    
+    private Dictionary<string, int> __activeNameToIndices;
+
+    private int __GetActiveIndex(string name)
+    {
+        if (__activeNameToIndices == null)
+        {
+            __activeNameToIndices = new Dictionary<string, int>();
+
+            int numActives = _actives.Length;
+            for(int i = 0; i < numActives; ++i)
+                __activeNameToIndices.Add(_actives[i].name, i);
+        }
+
+        return __activeNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
+    
+    private Dictionary<string, int> __questNameToIndices;
+
+    private int __GetQuestIndex(string name)
+    {
+        if (__questNameToIndices == null)
+        {
+            __questNameToIndices = new Dictionary<string, int>();
+
+            int numQuests = _quests.Length;
+            for(int i = 0; i < numQuests; ++i)
+                __questNameToIndices.Add(_quests[i].name, i);
+        }
+
+        return __questNameToIndices.TryGetValue(name, out int index) ? index : -1;
+    }
 }
 
 public partial class UserData
