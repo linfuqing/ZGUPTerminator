@@ -160,13 +160,16 @@ public partial class UserDataMain
                 break; 
             case UserRewardType.Diamond:
                 diamond += reward.count;
-                return true;
+                key = null;
+                break;
             case UserRewardType.Gold:
                 gold += reward.count;
-                return true;
+                key = null;
+                break;
             case UserRewardType.Energy:
                 __ApplyEnergy(-reward.count);
-                return true;
+                key = null;
+                break;
             case UserRewardType.EnergyMax:
                 id = 1;
                 key = NAME_SPACE_USER_ENERGY_MAX;
@@ -174,17 +177,20 @@ public partial class UserDataMain
             case UserRewardType.ActiveDay:
                 __AppendActive(reward.count, ActiveType.Day);
                 
-                return true;
+                key = null;
+                break;
             case UserRewardType.ActiveWeek:
                 __AppendActive(reward.count, ActiveType.Week);
                 
-                return true;
+                key = null;
+                break;
             case UserRewardType.Ticket:
                 var levelTicket = _levelTickets[__GetLevelTicketIndex(reward.name)];
                 
                 levelTicket.count += reward.count;
                 
-                return true;
+                key = null;
+                break;
             default:
                 return false;
         }
