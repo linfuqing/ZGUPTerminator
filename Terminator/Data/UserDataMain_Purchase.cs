@@ -327,8 +327,9 @@ public partial class UserDataMain
         UserPurchaseToken value;
         PurchaseToken token;
         string key;
-        int numPurchasesTokens = _purchaseTokens.Length;
-        for(int i = 0; i < numPurchasesTokens; ++i)
+        uint seconds;
+        int days, i, j, numOptions, numPurchasesTokens = _purchaseTokens.Length;
+        for(i = 0; i < numPurchasesTokens; ++i)
         {
             token = _purchaseTokens[i];
             if (token.type == type && 
@@ -338,24 +339,38 @@ public partial class UserDataMain
                 value.id = __ToID(i);
                 value.exp = token.exp;
 
+                value.options = token.options;
+
                 if ( token.exp <= result.exp && output.times > 0)
                 {
                     if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
                     {
                         key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
 
+                        seconds = (uint)PlayerPrefs.GetInt(key);
+
                         value.flag =
-                            PlayerPrefs.HasKey(key) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(key))
+                            seconds != 0 && DateTimeUtility.IsToday(seconds)
                                 ? UserPurchaseToken.Flag.Locked
                                 : 0;
+                        if (value.flag == 0 && seconds != 0)
+                        {
+                            numOptions = token.options == null ? 0 : token.options.Length;
+                            if (numOptions > 0)
+                            {
+                                days = DateTimeUtility.GetTotalDays(seconds, out _, out _);
+                                Array.Resize(ref value.options, days * numOptions);
+
+                                for (j = 0; j < days; ++j)
+                                    Array.Copy(token.options, 0, value.options, j * numOptions, numOptions);
+                            }
+                        }
                     }
                     else
                         value.flag = UserPurchaseToken.Flag.Collected;
                 }
                 else
                     value.flag = UserPurchaseToken.Flag.Locked;
-
-                value.options = token.options;
 
                 if (values == null)
                     values = new List<UserPurchaseToken>();
@@ -409,6 +424,8 @@ public partial class UserDataMain
 
         List<UserReward> rewards = null;
         
+        int i, days;
+        uint seconds;
         string secondsKey, key;
         foreach (var purchaseToken in _purchaseTokens)
         {
@@ -424,7 +441,8 @@ public partial class UserDataMain
                         out _))
                 {
                     secondsKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
-                    if (!(PlayerPrefs.HasKey(secondsKey) && ZG.DateTimeUtility.IsToday((uint)PlayerPrefs.GetInt(secondsKey))))
+                    seconds = (uint)PlayerPrefs.GetInt(secondsKey);
+                    if (!DateTimeUtility.IsToday(seconds))
                     {
                         key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
                         if (PlayerPrefs.GetInt(key) < times)
@@ -441,7 +459,9 @@ public partial class UserDataMain
                             if (rewards == null)
                                 rewards = new List<UserReward>();
 
-                            __ApplyRewards(purchaseToken.options, rewards);
+                            days = seconds == 0 ? 1 : DateTimeUtility.GetTotalDays(seconds, out _, out _);
+                            for(i = 0; i < days; ++i)
+                                __ApplyRewards(purchaseToken.options, rewards);
                         }
                     }
                 }
