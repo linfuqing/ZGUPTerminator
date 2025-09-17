@@ -22,11 +22,70 @@ public partial class UserDataMain
         [Tooltip("卡池类型")]
         public UserRewardType type;
 
+        [Tooltip("抽卡每日免费次数")]
+        public int freeTimes;
+        
         [Tooltip("抽卡需要多少钻石")]
         public int diamond;
 
         [Tooltip("抽一次可获得多少金币")]
         public int gold;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 卡池名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public int 卡池标签
+        {
+            set
+            {
+                flag = (Flag)value;
+            }
+        }
+        
+        [CSVField]
+        public int 卡池类型
+        {
+            set
+            {
+                type = (UserRewardType)value;
+            }
+        }
+        
+        [CSVField]
+        public int 卡池每日免费次数
+        {
+            set
+            {
+                freeTimes = value;
+            }
+        }
+
+        [CSVField]
+        public int 卡池需要钻石
+        {
+            set
+            {
+                diamond = value;
+            }
+        }
+        
+        [CSVField]
+        public int 卡池获得金币
+        {
+            set
+            {
+                gold = value;
+            }
+        }
+#endif
     }
     
     [Serializable]
@@ -149,6 +208,11 @@ public partial class UserDataMain
     [SerializeField] 
     internal PurchasePool[] _purchasePools;
     
+#if UNITY_EDITOR
+    [SerializeField, CSV("_purchasePools", guidIndex = -1, nameIndex = 0)] 
+    internal string _purchasePoolsPath;
+#endif
+
     [SerializeField]
     internal PurchasePoolOption[] _purchasePoolOptions;
 

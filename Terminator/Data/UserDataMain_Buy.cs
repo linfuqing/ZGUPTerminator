@@ -164,7 +164,7 @@ public partial class UserDataMain
     internal Product[] _products;
     
 #if UNITY_EDITOR
-    [SerializeField, CSV("_products")] 
+    [SerializeField, CSV("_products", guidIndex = -1, nameIndex = 0)] 
     internal string _productsPath;
 #endif
 

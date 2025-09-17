@@ -80,11 +80,11 @@ public partial class UserDataMain
     internal PurchaseItem[] _purchaseItems;
     
 #if UNITY_EDITOR
-    [SerializeField, CSV("_purchaseItems")] 
+    [SerializeField, CSV("_purchaseItems", guidIndex = -1, nameIndex = 0)] 
     internal string _purchaseItemsPath;
 #endif
     
-    public const string NAME_SPACE_USER_PURCHASE_ITEM = "UserPurchaseItem";
+    private const string NAME_SPACE_USER_PURCHASE_ITEM = "UserPurchaseItem";
     
     public IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
     {
@@ -247,7 +247,7 @@ public partial class UserDataMain
     internal PurchaseToken[] _purchaseTokens;
     
 #if UNITY_EDITOR
-    [SerializeField, CSV("_purchaseTokens")] 
+    [SerializeField, CSV("_purchaseTokens", guidIndex = -1, nameIndex = 0)] 
     internal string _purchaseTokensPath;
 #endif
 
