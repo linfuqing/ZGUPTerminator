@@ -93,7 +93,7 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
 
         int times = PlayerPrefs.GetInt(key) + 1;
 
-        if(QueryTimes(type, name) <= times)
+        if(QueryTimes(type, name) < times)
             return false;
         
         PlayerPrefs.SetInt(key, times);
@@ -105,7 +105,7 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
     {
         yield return null;
 
-        var api = IAdvertisementAPI.instance;
+        var api = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0).IsValid(1) ? IAdvertisementAPI.instance : null;
         if (api == null)
         {
             var key = GetNameSpace(type, name);

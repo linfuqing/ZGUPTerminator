@@ -813,6 +813,9 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.LevelProperty property)
     {
+        if(property.spawnerAttributes == null)
+            return;
+        
         LevelPlayerShared.effectRage = 0;
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
