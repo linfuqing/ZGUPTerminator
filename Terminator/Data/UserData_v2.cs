@@ -123,7 +123,7 @@ public partial interface IUserData
 
     IEnumerator CollectTip(
         uint userID,
-        Action<Memory<UserReward>> onComplete);
+        Action<long, Memory<UserReward>> onComplete);
 
     IEnumerator UseTip(
         uint userID,

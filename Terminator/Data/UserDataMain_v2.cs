@@ -240,20 +240,21 @@ public partial class UserDataMain
 
     public IEnumerator CollectTip(
         uint userID,
-        Action<Memory<UserReward>> onComplete)
+        Action<long, Memory<UserReward>> onComplete)
     {
         yield return __CreateEnumerator();
 
         var results = _tip.instance.Generate();
 
-        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)DateTimeUtility.GetSeconds());
+        uint seconds = DateTimeUtility.GetSeconds();
+        PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)seconds);
 
         var rewards = new List<UserReward>();
         __ApplyRewards(results, rewards);
         
         __AppendQuest(UserQuest.Type.Tip, 1);
 
-        onComplete(rewards.ToArray());
+        onComplete(DateTimeUtility.GetTicks(seconds), rewards.ToArray());
     }
 
     public IEnumerator UseTip(
@@ -458,7 +459,7 @@ public partial class UserData
     
     public IEnumerator CollectTip(
         uint userID,
-        Action<Memory<UserReward>> onComplete)
+        Action<long, Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectTip(userID, onComplete);
     }
