@@ -236,19 +236,22 @@ public partial class UserDataMain
             Product product;
             var random = new Unity.Mathematics.Random(seed.value);
             var randomSelector = new RandomSelector(ref random);
-            int numProducts = _products.Length, bitIndex = 0;
+            int numProducts = _products.Length, bitIndex = 0, chapter = UserData.chapter;
             bool result;
             for (int i = 0; i < numProducts; ++i)
             {
                 product = _products[i];
+                
+                if(product.minChapter > chapter ||
+                   product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
+                   !randomSelector.Select(ref random, product.chance))
+                    continue;
 
                 if (!randomSelector.Select(ref random, product.chance))
                     continue;
 
                 if (index == bitIndex)
                 {
-                    result = false;
-
                     switch (product.currencyType)
                     {
                         case UserCurrencyType.Gold:
