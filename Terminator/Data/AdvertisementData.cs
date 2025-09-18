@@ -66,7 +66,7 @@ public interface IAdvertisementData
     /// <param name="userID"></param>
     /// <param name="type"></param>
     /// <param name="name">
-    /// 平臺廣告位名稱
+    /// 当是PurchasedPool时，填宝箱名；Item时填写商品名。其它填空。
     /// </param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
