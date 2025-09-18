@@ -186,32 +186,17 @@ public partial class UserDataMain
         UserProduct userProduct;
         Product product;
         var random = new Unity.Mathematics.Random(seed.value);
-        float randomValue = random.NextFloat(), chance = 0.0f;
+        var randomSelector = new RandomSelector(ref random);
         int numProducts = _products.Length, bitIndex = 0, chapter = UserData.chapter;
-        bool isSelected = false;
         for (int i = 0; i < numProducts; ++i)
         {
             product = _products[i];
 
             if(product.minChapter > chapter ||
-               product.minChapter < product.maxChapter && product.maxChapter <= chapter)
+               product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
+               !randomSelector.Select(ref random, product.chance))
                 continue;
 
-            chance += product.chance;
-            if (chance > 1.0f)
-            {
-                chance -= 1.0f + Mathf.Epsilon;
-                
-                randomValue = random.NextFloat();
-                
-                isSelected = false;
-            }
-            
-            if(isSelected || chance < randomValue)
-                continue;
-
-            isSelected = true;
-            
             userProduct.name = product.name;
             userProduct.id = __ToID(bitIndex);
             userProduct.flag = (seed.bits & (1 << bitIndex)) == 0 ? 0 : UserProduct.Flag.Collected;
@@ -250,57 +235,47 @@ public partial class UserDataMain
         {
             Product product;
             var random = new Unity.Mathematics.Random(seed.value);
-            float randomValue = random.NextFloat(), chance = 0.0f;
+            var randomSelector = new RandomSelector(ref random);
             int numProducts = _products.Length, bitIndex = 0;
-            bool isSelected = false;
+            bool result;
             for (int i = 0; i < numProducts; ++i)
             {
                 product = _products[i];
 
-                chance += product.chance;
-                if (chance > 1.0f)
-                {
-                    chance -= 1.0f + Mathf.Epsilon;
-
-                    randomValue = random.NextFloat();
-
-                    isSelected = false;
-                }
-
-                if (isSelected || chance < randomValue)
+                if (!randomSelector.Select(ref random, product.chance))
                     continue;
 
                 if (index == bitIndex)
                 {
-                    isSelected = false;
+                    result = false;
 
                     switch (product.currencyType)
                     {
                         case UserCurrencyType.Gold:
-                            isSelected = gold >= product.price;
-                            if (isSelected)
+                            result = gold >= product.price;
+                            if (result)
                                 gold -= product.price;
 
                             break;
                         case UserCurrencyType.Diamond:
-                            isSelected = diamond >= product.price;
-                            if (isSelected)
+                            result = diamond >= product.price;
+                            if (result)
                                 diamond -= product.price;
 
                             break;
                         case UserCurrencyType.Ad:
-                            isSelected = AdvertisementData.Exchange(AdvertisementType.Product, product.name,
+                            result = AdvertisementData.Exchange(AdvertisementType.Product, product.name,
                                 NAME_SPACE_USER_PRODUCT_AD);
                             break;
                         case UserCurrencyType.Free:
-                            isSelected = true;
+                            result = true;
                             break;
                         default:
-                            isSelected = false;
+                            result = false;
                             break;
                     }
 
-                    if (isSelected)
+                    if (result)
                     {
                         if(UserProduct.Type.Normal != product.productType)
                             seed.bits |= 1 << index;
@@ -314,8 +289,6 @@ public partial class UserDataMain
 
                     break;
                 }
-
-                isSelected = true;
 
                 ++bitIndex;
             }

@@ -227,24 +227,11 @@ public partial class UserData
 
     public static void ApplyRewards(UserRewardOptionData[] options)
     {
-        bool isSelected = false;
-        float chance = UnityEngine.Random.value, total = 0.0f;
+        var randomSelector = new ZG.RandomSelector(0);
         foreach (var option in options)
-        {
-            total += option.chance;
-            if (total > 1.0f)
-            {
-                total -= 1.0f + Mathf.Epsilon;
-                        
-                chance = UnityEngine.Random.value;
-
-                isSelected = false;
-            }
-                    
-            if(isSelected || total < chance)
+        {   
+            if(!randomSelector.Select(option.chance))
                 continue;
-
-            isSelected = true;
 
             Rewards.Add(option.value);
         }

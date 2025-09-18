@@ -148,8 +148,8 @@ public partial class UserDataMain
                 if ((flag & Flag.RolesUnlock) == 0 && UserData.chapter > 0)//(flag & Flag.RolesCreated) == 0)
                     UserDataMain.flag |= Flag.RolesUnlock;
                 
-                uint accessoryID = (uint)Random.Range(int.MinValue, int.MaxValue);
-                __CreateAccessory(accessoryID, __GetAccessoryIndex(reward.name), reward.count);
+                id = (uint)Random.Range(int.MinValue, int.MaxValue);
+                __CreateAccessory(id, __GetAccessoryIndex(reward.name), reward.count);
 
                 key = null;
                 break;

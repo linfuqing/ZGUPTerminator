@@ -70,7 +70,8 @@ public struct SkillDefinition
         SkillActiveIndex skillActiveIndex;
         BulletActiveIndex bulletActiveIndex;
         Random random;
-        float chance, value;
+        RandomSelector randomSelector;
+        float value;
         int numActiveIndices = skillActiveIndices.Length,
             numPreIndices, 
             numBulletIndices,
@@ -270,28 +271,14 @@ public struct SkillDefinition
                 
                 __GetOrCreateRandom(status.cooldown, ref random);
 
-                value = random.NextFloat();
-                chance = 0;
-                isChanged = false;
+                randomSelector = new RandomSelector(ref random);
                 for (j = 0; j < numBulletIndices; ++j)
                 {
                     ref var bullet = ref this.bullets[skill.bulletIndices[j]];
-                    chance += bullet.chance;
                     
-                    if (chance > 1.0f)
-                    {
-                        chance -= 1.0f + math.FLT_MIN_NORMAL;
-                        
-                        value = random.NextFloat();
-
-                        isChanged = false;
-                    }
-
-                    if (isChanged || chance < value)
+                    if (!randomSelector.Select(ref random, bullet.chance))
                         continue;
 
-                    isChanged = true;
-                    
                     bulletActiveIndex.value = bullet.index;
                     bulletActiveIndex.damageScale = bullet.damageScale * skillActiveIndex.damageScale;
                     bulletActiveIndices.Add(bulletActiveIndex);

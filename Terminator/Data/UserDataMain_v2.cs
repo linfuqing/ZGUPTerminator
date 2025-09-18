@@ -142,8 +142,10 @@ public partial class UserDataMain
         [Tooltip("填1.2")]
         public float sweepCardMultiplier;
 
+        [Tooltip("每次快速游蕩消耗的縂時間")]
         public double intervalPerTime;
 
+        [Tooltip("最大挂機游蕩時間")]
         public double maxTime;
 
         public Reward[] rewards;

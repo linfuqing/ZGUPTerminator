@@ -1532,9 +1532,8 @@ public partial struct EffectSystem : ISystem
                     (targetHP.value != 0 && targetHP.messageLayerMask != 0 ||
                      damage != 0 && messageLayerMask != 0))
                 {
-                    bool isSelected = false;
-                    float chance = random.NextFloat(), totalChance = 0.0f;
                     float3 position = localToWorlds[index].Position;
+                    var randomSelector = new RandomSelector(ref random);
                     Entity messageReceiver;
                     MessageParameter messageParameter;
                     var messageParameters = index < this.messageParameters.Length
@@ -1546,24 +1545,9 @@ public partial struct EffectSystem : ISystem
                         if (targetMessage.layerMask == 0 ||
                             (targetMessage.layerMask & (targetHP.messageLayerMask | messageLayerMask)) != 0)
                         {
-                            totalChance += targetMessage.chance;
-                            if (totalChance > 1.0f)
-                            {
-                                totalChance -= 1.0f + math.FLT_MIN_NORMAL;
-                                
-                                chance = random.NextFloat();
-
-                                isSelected = false;
-                            }
-                            
-                            if(isSelected)
+                            if(!randomSelector.Select(ref random, targetMessage.chance))
                                 continue;
 
-                            if (totalChance > chance)
-                                isSelected = true;
-                            else
-                                continue;
-                            
                             if (targetMessage.deadTime > math.FLT_MIN_NORMAL && target.hp > 0)
                                 continue;
 
@@ -2422,32 +2406,22 @@ public partial struct EffectSystem : ISystem
         damageInstance.entity = instanceDamageParent.entity;
         damageInstance.layerMaskAndTags = instanceDamage.layerMaskAndTags;
 
-        bool isContains = false;
-        float chance = random.NextFloat(), totalChance = 0.0f;
+        var randomSelector = new RandomSelector(ref random);
         for (int i = 0; i < numPrefabs; ++i)
         {
             ref var prefab = ref prefabsDefinition[i];
-            if(prefab.damageLayerMask != 0 && (prefab.damageLayerMask & damageLayerMask) == 0)
-                continue;
-            
-            if(!prefab.layerMaskAndTags.BelongsTo(instanceDamage.layerMaskAndTags))
-                continue;
-            
-            totalChance += prefab.chance;
-            if (totalChance > 1.0f)
-            {
-                totalChance -= 1.0f + math.FLT_MIN_NORMAL;
-
-                chance = random.NextFloat();
-
-                isContains = false;
-            }
-
-            if (isContains || totalChance < chance)
+            if (prefab.damageLayerMask != 0 && (prefab.damageLayerMask & damageLayerMask) == 0)
                 continue;
 
-            damageInstance.scale = instanceDamage.scale * (math.abs(prefab.damageScale) > math.FLT_MIN_NORMAL ? prefab.damageScale : 1.0f);
-            
+            if (!prefab.layerMaskAndTags.BelongsTo(instanceDamage.layerMaskAndTags))
+                continue;
+
+            if (!randomSelector.Select(ref random, prefab.chance))
+                continue;
+
+            damageInstance.scale = instanceDamage.scale *
+                                   (math.abs(prefab.damageScale) > math.FLT_MIN_NORMAL ? prefab.damageScale : 1.0f);
+
             if (prefab.buffIndex >= 0 && prefab.buffIndex < buffsDefinition.Length)
             {
                 ref var buff = ref buffsDefinition[prefab.buffIndex];
@@ -2467,31 +2441,29 @@ public partial struct EffectSystem : ISystem
             }
 
             damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
-                switch (prefab.space)
-                {
-                    case EffectSpace.World:
-                        damageInstance.parent = Entity.Null;
-                        damageInstance.transform = transform;
+            switch (prefab.space)
+            {
+                case EffectSpace.World:
+                    damageInstance.parent = Entity.Null;
+                    damageInstance.transform = transform;
 
-                        damageInstances.Enqueue(damageInstance);
+                    damageInstances.Enqueue(damageInstance);
 
-                        break;
-                    case EffectSpace.Local:
-                        damageInstance.parent = parent;
-                        damageInstance.transform = RigidTransform.identity;
+                    break;
+                case EffectSpace.Local:
+                    damageInstance.parent = parent;
+                    damageInstance.transform = RigidTransform.identity;
 
-                        damageInstances.Enqueue(damageInstance);
+                    damageInstances.Enqueue(damageInstance);
 
-                        break;
-                    case EffectSpace.Camera:
-                        damageInstance.parent = Entity.Null;
-                        damageInstance.transform.rot = cameraRotation;
-                        damageInstance.transform.pos = transform.pos;
-                        damageInstances.Enqueue(damageInstance);
-                        break;
-                }
-
-            isContains = true;
+                    break;
+                case EffectSpace.Camera:
+                    damageInstance.parent = Entity.Null;
+                    damageInstance.transform.rot = cameraRotation;
+                    damageInstance.transform.pos = transform.pos;
+                    damageInstances.Enqueue(damageInstance);
+                    break;
+            }
         }
 
     }
