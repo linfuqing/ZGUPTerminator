@@ -27,6 +27,7 @@ public partial class UserDataMain
             yield break;
         }
 
+        var instance = _tip.instance;
         Tip.used = used;
         
         bool hasSweepCard = PurchaseData.IsValid(PurchaseType.SweepCard,
@@ -36,7 +37,7 @@ public partial class UserDataMain
             out _);
 
         float multiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
-        var rewards = _tip.instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
+        var rewards = instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
 
         var results = __ApplyRewards(rewards);
 
