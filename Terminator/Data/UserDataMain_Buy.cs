@@ -247,9 +247,6 @@ public partial class UserDataMain
                    !randomSelector.Select(ref random, product.chance))
                     continue;
 
-                if (!randomSelector.Select(ref random, product.chance))
-                    continue;
-
                 if (index == bitIndex)
                 {
                     switch (product.currencyType)
