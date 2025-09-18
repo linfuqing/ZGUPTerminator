@@ -57,6 +57,10 @@ public partial interface IUserData
         public UserRewardData[] Generate(long deltaTicks = 0)
         {
             uint hash = (uint)this.ticks ^ (uint)(this.ticks >> 32);
+            uint times = (uint)(timesFromAd + timesFromEnergy);
+            if (times > 0)
+                hash *= times;
+            
             var random = new Unity.Mathematics.Random(hash);
 
             bool isContains;
