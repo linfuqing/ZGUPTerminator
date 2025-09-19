@@ -469,7 +469,7 @@ public partial class UserDataMain
             roleName = _roles[__ToIndex(roleID)].name;
         if (PlayerPrefs.GetString(key) == roleName)
             PlayerPrefs.DeleteKey(key);
-        else
+        else if(((UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{roleName}") & UserRole.Flag.Unlocked) == UserRole.Flag.Unlocked)
             PlayerPrefs.SetString(key, roleName);
 
         onComplete(true);

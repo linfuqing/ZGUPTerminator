@@ -821,7 +821,7 @@ public partial struct EffectSystem : ISystem
                         {
                             //++times;
 
-                            damageScale = 1.0f + rage.value * damage.rageDamageMultiplier + target.shield * damage.shieldDamageMultiplier;
+                            damageScale = 1.0f + rage.value * damage.rageDamageMultiplier + (target.shield > 0 ? damage.shieldDamageMultiplier : 0.0f);
                             //damageScale = damageScale > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
                             damageScale *= instanceDamage.scale;
                             
