@@ -298,7 +298,7 @@ public partial class UserDataMain
                 result.exp = 0;
                 break;
             case PurchaseType.Fund:
-                result.exp = UserData.chapter;
+                result.exp = __GetChapterStageRewardCount();
                 
                 if (level == -1 && output.ticks == 0)
                 {

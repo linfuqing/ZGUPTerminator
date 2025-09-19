@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 
 public partial class UserDataMain
 {
@@ -26,10 +27,91 @@ public partial class UserDataMain
         [Tooltip("升星需要的数量")]
         public int count;
 
-        /// <summary>
-        /// 升阶之后获得的属性
-        /// </summary>
+        [Tooltip("升星之后获得的属性")]
         public UserPropertyData property;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 角色星级名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public string 角色星级对应角色
+        {
+            set => roleName = value;
+        }
+        
+        [CSVField]
+        public int 角色星级碎片数
+        {
+            set => count = value;
+        }
+
+        [CSVField]
+        public string 角色星级属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserPropertyData.Attribute attribute;
+                property.attributes = new UserPropertyData.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserPropertyData.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 角色星级技能
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserPropertyData.Skill skill;
+                property.skills = new UserPropertyData.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserPropertyData.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    property.skills[i] = skill;
+                }
+            }
+        }
+#endif
     }
 
     [Header("Roles")]
@@ -42,6 +124,11 @@ public partial class UserDataMain
     [SerializeField, Tooltip("角色星级")]
     internal RoleRank[] _roleRanks;
 
+#if UNITY_EDITOR
+    [CSV("_roleRanks", guidIndex = -1, nameIndex = 0)]
+    internal string _roleRanksPath;
+#endif
+    
     private const string NAME_SPACE_USER_ROLE_FLAG = "UserRoleFlag";
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
     private const string NAME_SPACE_USER_ROLE_RANK = "UserRoleRank";

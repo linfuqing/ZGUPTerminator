@@ -19,8 +19,8 @@ public partial class UserDataMain
     [SerializeField]
     internal Energies _energies;
 
-    public const string NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND = "UserEnergiesBuyTimesByDiamond";
-    public const string NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD = "UserEnergiesBuyTimesByAd";
+    private const string NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_DIAMOND = "UserEnergiesBuyTimesByDiamond";
+    private const string NAME_SPACE_USER_ENERGIES_BUY_TIMES_BY_AD = "UserEnergiesBuyTimesByAd";
     
     public IEnumerator QueryEnergies(uint userID, Action<IUserData.Energies> onComplete)
     {
