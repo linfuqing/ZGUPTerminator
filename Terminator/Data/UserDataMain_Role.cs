@@ -125,7 +125,7 @@ public partial class UserDataMain
     internal RoleRank[] _roleRanks;
 
 #if UNITY_EDITOR
-    [CSV("_roleRanks", guidIndex = -1, nameIndex = 0)]
+    [SerializeField, CSV("_roleRanks", guidIndex = -1, nameIndex = 0)]
     internal string _roleRanksPath;
 #endif
     
