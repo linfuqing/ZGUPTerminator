@@ -267,26 +267,14 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 public struct EffectTargetHP : IComponentData, IEnableableComponent
 {
     public int value;
-    public int layerMask;
+    public int shield;
     public int messageLayerMask;
     
-    public void Add(int value, int layerMask, int messageLayerMask)
+    public void Add(int value, int shield, int messageLayerMask)
     {
         Interlocked.Add(ref this.value, value);
 
-        if (layerMask == -1)
-            this.layerMask = -1;
-        else
-        {
-            if (layerMask == 0)
-                layerMask = 1;
-
-            int origin;
-            do
-            {
-                origin = this.layerMask;
-            } while (Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
-        }
+        Interlocked.Add(ref this.shield, shield);
         
         if (messageLayerMask == -1)
             this.messageLayerMask = -1;

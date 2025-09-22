@@ -1373,6 +1373,7 @@ public partial struct EffectSystem : ISystem
             var targetHP = targetHPs[index];
             if ((isFallToDestroy || 
                  targetHP.value != 0 || 
+                 targetHP.shield != 0 || 
                  targetDamage.value != 0 || 
                  targetDamage.valueImmunized != 0 && 
                  target.immunizedTime < 0.0f) && 
@@ -1395,9 +1396,18 @@ public partial struct EffectSystem : ISystem
                         (index < targetDamageScales.Length
                             ? targetDamageScales[index].value
                             : 1.0f));
-                    if (targetHP.value > targetDamage.value)
+                    if (damage < targetHP.shield)
                     {
-                        targetHP.value -= targetDamage.value;
+                        target.shield += targetHP.shield - damage;
+
+                        damage = 0;
+                    }
+                    else
+                        damage -= targetHP.shield;
+                    
+                    if (damage < targetHP.value)
+                    {
+                        targetHP.value -= damage;
 
                         damage = 0;
 
@@ -1529,7 +1539,7 @@ public partial struct EffectSystem : ISystem
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
-                    (targetHP.value != 0 && targetHP.messageLayerMask != 0 ||
+                    ((targetHP.value != 0 || targetHP.shield != 0) && targetHP.messageLayerMask != 0 ||
                      damage != 0 && messageLayerMask != 0))
                 {
                     float3 position = localToWorlds[index].Position;
@@ -1613,6 +1623,7 @@ public partial struct EffectSystem : ISystem
                 }
 
                 targetHP.value = 0;
+                targetHP.shield = 0;
                 if (target.hp > 0 && !isFallToDestroy)
                 {
                     if (delayTime > math.FLT_MIN_NORMAL)
@@ -1671,7 +1682,8 @@ public partial struct EffectSystem : ISystem
                             target.hp = 0;
 
                             targetHP.value = targetInstance.hpMax;
-                            targetHP.layerMask = damageLayerMask;
+                            targetHP.shield = 0;
+                            //targetHP.layerMask = damageLayerMask;
                             targetHP.messageLayerMask = messageLayerMask;
 
                             if (!targetInstance.recoveryMessageName.IsEmpty && messages.IsCreated)
