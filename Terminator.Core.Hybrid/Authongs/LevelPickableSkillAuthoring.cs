@@ -2,11 +2,11 @@ using Unity.Entities;
 using UnityEngine;
 
 #if UNITY_EDITOR
-public class LevelSkillPickableAuthoring : MonoBehaviour
+public class LevelPickableSkillAuthoring : MonoBehaviour
 {
-    class Baker : Baker<LevelSkillPickableAuthoring>
+    class Baker : Baker<LevelPickableSkillAuthoring>
     {
-        public override void Bake(LevelSkillPickableAuthoring authoring)
+        public override void Bake(LevelPickableSkillAuthoring authoring)
         {
             // Create an EntityPrefabReference from a GameObject.
             // By using a reference, we only need one baked prefab entity instead of
@@ -14,7 +14,7 @@ public class LevelSkillPickableAuthoring : MonoBehaviour
 
             var entity = GetEntity(TransformUsageFlags.None);
 
-            LevelSkillPickable instance;
+            LevelPickableSkill instance;
             instance.min =  Mathf.Max(authoring._min, 1);
             instance.max = Mathf.Max(authoring._max, 1);
             instance.priorityToStyleIndex = authoring._priorityToStyleIndex;

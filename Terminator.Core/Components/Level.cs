@@ -573,11 +573,14 @@ public struct LevelStageOption
                         {
                             levelItem.count += item.count;
 
+                            if (levelItem.count < 0)
+                                levelItems.RemoveAtSwapBack(i);
+
                             break;
                         }
                     }
 
-                    if (i == numItems)
+                    if (i == numItems && item.count > 0)
                     {
                         LevelItem levelItem;
                         levelItem.name = item.name;

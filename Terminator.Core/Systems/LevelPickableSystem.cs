@@ -8,7 +8,7 @@ using Unity.Mathematics;
 using Random = Unity.Mathematics.Random;
 
 [BurstCompile, UpdateAfter(typeof(PickableSystem))]
-public partial struct LevelSkillPickableSystem : ISystem
+public partial struct LevelPickableSystem : ISystem
 {
     private struct Result
     {
@@ -31,7 +31,12 @@ public partial struct LevelSkillPickableSystem : ISystem
         public NativeArray<PickableStatus> states;
 
         [ReadOnly] 
-        public NativeArray<LevelSkillPickable> instances;
+        public NativeArray<LevelPickableSkill> skills;
+
+        [ReadOnly] 
+        public NativeArray<LevelPickableItem> items;
+
+        public DynamicBuffer<LevelItem> levelItems;
 
         public NativeQueue<Result>.ParallelWriter results;
 
@@ -41,19 +46,54 @@ public partial struct LevelSkillPickableSystem : ISystem
             if (entity == Entity.Null)
                 return;
 
-            var instance = instances[index];
-            int count = random.NextInt(instance.min, instance.max + 1);
-
-            Result result;
-            result.version = entityArray[index];
-            result.selection = instance.selection;
-            result.priorityToStyleIndex = instance.priorityToStyleIndex;
-            result.count = count;
-            for (int i = 0; i < count; ++i)
+            if (index < skills.Length)
             {
-                result.index = i;
-                result.entity = entity;
-                results.Enqueue(result);
+                var skill = skills[index];
+                int count = random.NextInt(skill.min, skill.max + 1);
+
+                Result result;
+                result.version = entityArray[index];
+                result.selection = skill.selection;
+                result.priorityToStyleIndex = skill.priorityToStyleIndex;
+                result.count = count;
+                for (int i = 0; i < count; ++i)
+                {
+                    result.index = i;
+                    result.entity = entity;
+                    results.Enqueue(result);
+                }
+            }
+
+            if (index < items.Length && levelItems.IsCreated)
+            {
+                var item = items[index];
+                
+                int numLevelItems = levelItems.Length, i;
+                for (i = 0; i < numLevelItems; ++i)
+                {
+                    ref var levelItem = ref levelItems.ElementAt(i);
+                    if (levelItem.name == item.name)
+                    {
+                        levelItem.count += random.NextInt(item.min, item.max);
+                        
+                        if(levelItem.count < 0)
+                            levelItems.RemoveAtSwapBack(i);
+                        
+                        break;
+                    }
+                }
+
+                if (i == numLevelItems)
+                {
+                    LevelItem levelItem;
+                    levelItem.count = random.NextInt(item.min, item.max);
+                    if (levelItem.count > 0)
+                    {
+                        levelItem.name = item.name;
+
+                        levelItems.Add(levelItem);
+                    }
+                }
             }
         }
     }
@@ -63,6 +103,11 @@ public partial struct LevelSkillPickableSystem : ISystem
     {
         public double time;
 
+        public Entity levelEntity;
+        
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<LevelItem> levelItems;
+
         [ReadOnly] 
         public EntityTypeHandle entityType;
         
@@ -70,7 +115,10 @@ public partial struct LevelSkillPickableSystem : ISystem
         public ComponentTypeHandle<PickableStatus> statusType;
 
         [ReadOnly] 
-        public ComponentTypeHandle<LevelSkillPickable> instanceType;
+        public ComponentTypeHandle<LevelPickableSkill> skillType;
+
+        [ReadOnly] 
+        public ComponentTypeHandle<LevelPickableItem> itemType;
 
         public NativeQueue<Result>.ParallelWriter results;
 
@@ -83,7 +131,9 @@ public partial struct LevelSkillPickableSystem : ISystem
             collect.random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash ^ (uint)unfilteredChunkIndex);
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.states = chunk.GetNativeArray(ref statusType);
-            collect.instances = chunk.GetNativeArray(ref instanceType);
+            collect.skills = chunk.GetNativeArray(ref skillType);
+            collect.items = chunk.GetNativeArray(ref itemType);
+            collect.levelItems = levelItems.HasBuffer(levelEntity) ? levelItems[levelEntity] :　default;
             collect.results = results;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -188,10 +238,13 @@ public partial struct LevelSkillPickableSystem : ISystem
 
     private ComponentTypeHandle<PickableStatus> __statusType;
 
-    private ComponentTypeHandle<LevelSkillPickable> __instanceType;
+    private ComponentTypeHandle<LevelPickableItem> __itemType;
+    private ComponentTypeHandle<LevelPickableSkill> __skillType;
 
     private ComponentLookup<LevelSkillVersion> __versions;
     private ComponentLookup<LevelSkillDefinitionData> __definitions;
+
+    private BufferLookup<LevelItem> __items;
 
     private BufferLookup<LevelSkill> __skills;
 
@@ -208,17 +261,20 @@ public partial struct LevelSkillPickableSystem : ISystem
     {
         __entityType = state.GetEntityTypeHandle();
         __statusType = state.GetComponentTypeHandle<PickableStatus>(true);
-        __instanceType = state.GetComponentTypeHandle<LevelSkillPickable>(true);
+        __itemType = state.GetComponentTypeHandle<LevelPickableItem>(true);
+        __skillType = state.GetComponentTypeHandle<LevelPickableSkill>(true);
         
         __versions = state.GetComponentLookup<LevelSkillVersion>();
         __definitions = state.GetComponentLookup<LevelSkillDefinitionData>(true);
+        __items = state.GetBufferLookup<LevelItem>();
         __skills = state.GetBufferLookup<LevelSkill>();
         __skillGroups = state.GetBufferLookup<LevelSkillGroup>(true);
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
-                .WithAll<SimulationEvent, LevelSkillPickable>()
+                .WithAll<SimulationEvent>()
+                .WithAny<LevelPickableSkill, LevelPickableItem>()
                 .WithNone<Pickable>()
                 .Build(ref state);
         
@@ -238,14 +294,20 @@ public partial struct LevelSkillPickableSystem : ISystem
     {
         __entityType.Update(ref state);
         __statusType.Update(ref state);
-        __instanceType.Update(ref state);
+        __skillType.Update(ref state);
+        __itemType.Update(ref state);
+        __items.Update(ref state);
 
         double time = SystemAPI.Time.ElapsedTime;
         
         CollectEx collect;
         collect.time = time;
+        SystemAPI.TryGetSingletonEntity<LevelItem>(out collect.levelEntity);
+        collect.levelItems = __items;
+        
         collect.entityType = __entityType;
-        collect.instanceType = __instanceType;
+        collect.itemType = __itemType;
+        collect.skillType = __skillType;
         collect.statusType = __statusType;
         collect.results = __results.AsParallelWriter();
 
