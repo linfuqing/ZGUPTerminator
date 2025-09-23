@@ -214,6 +214,7 @@ public struct LevelStageOption
         SpawnerEntityRemaining = 7, 
         PrefabRemaining = 3, 
         PlayerArea = 4, 
+        Item = 13, 
         Millisecond = 5,
         Value = 0, 
         Max = 6, 
@@ -247,12 +248,14 @@ public struct LevelStageOption
         in SpawnerLayerMaskAndTagsOverride spawnerLayerMaskAndTagsOverride, 
         in SpawnerSingleton spawnerSingleton, 
         in LevelSpawners.ReadOnly spawners,
-        in NativeArray<LevelPrefab> prefabs, 
+        in DynamicBuffer<LevelItem> levelItems, 
+        in NativeArray<LevelPrefab> levelPrefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
         in BufferLookup<SpawnerStatus> spawnerStates, 
         in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions, 
         ref BlobArray<LayerMaskAndTags> layerMaskAndTags,
         ref BlobArray<LevelDefinition.Area> areas, 
+        ref BlobArray<LevelDefinition.Item> items, 
         ref LevelStageConditionStatus condition)
     {
 #if ENABLE_PROFILER
@@ -339,7 +342,7 @@ public struct LevelStageOption
                             SpawnerEntity spawnerEntity;
                             SpawnerDefinitionData spawnerDefinition;
                             DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
-                            var prefab = prefabs[value];
+                            var levelPrefab = levelPrefabs[value];
                             int i;
                             for (i = 0; i < numKeys; ++i)
                             {
@@ -361,7 +364,7 @@ public struct LevelStageOption
                                 if (spawnerPrefabBuffer.Length <= loaderIndex.value)
                                     continue;
 
-                                if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
+                                if (spawnerPrefabBuffer[loaderIndex.value].prefab != levelPrefab.reference)
                                     continue;
 
                                 condition.value = (int)Status.Start;
@@ -379,6 +382,25 @@ public struct LevelStageOption
                     return (Status)condition.value == Status.Finish;
                 case Type.PlayerArea:
                     return areas[value].Contains(playerPosition);
+                case Type.Item:
+                    ref var item = ref items[value];
+                    if (item.count > 0)
+                    {
+                        foreach (var levelItem in levelItems)
+                        {
+                            if (levelItem.name == item.name)
+                                return levelItem.count >= item.count;
+                        }
+                    }
+                    else
+                    {
+                        foreach (var levelItem in levelItems)
+                        {
+                            if (levelItem.name == item.name)
+                                return levelItem.count < item.count;
+                        }
+                    }
+                    break;
                 case Type.Millisecond:
                     if (value > 0)
                     {
@@ -402,6 +424,8 @@ public struct LevelStageOption
         ref EntityCommandBuffer.ParallelWriter entityManager, 
         ref BlobArray<LayerMaskAndTags> layerMaskAndTags,
         ref BlobArray<LevelDefinition.Area> areas, 
+        ref BlobArray<LevelDefinition.Item> items, 
+        ref DynamicBuffer<LevelItem> levelItems, 
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
@@ -410,7 +434,7 @@ public struct LevelStageOption
         ref SpawnerLayerMaskAndTagsExclude spawnerLayerMaskAndTagsExclude, 
         in SpawnerSingleton spawnerSingleton, 
         in LevelSpawners.ReadOnly spawners,
-        in NativeArray<LevelPrefab> prefabs, 
+        in NativeArray<LevelPrefab> levelPrefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
         in ComponentLookup<SpawnerDefinitionData> spawnerDefinitions)
     {
@@ -499,7 +523,7 @@ public struct LevelStageOption
                         SpawnerEntity spawnerEntity;
                         SpawnerDefinitionData spawnerDefinition;
                         DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
-                        var prefab = prefabs[value];
+                        var levelPrefab = levelPrefabs[value];
                         for (int i = 0; i < numKeys; ++i)
                         {
                             spawnerEntity = spawnerEntities[i];
@@ -520,7 +544,7 @@ public struct LevelStageOption
                             if (spawnerPrefabBuffer.Length <= loaderIndex.value)
                                 continue;
 
-                            if (spawnerPrefabBuffer[loaderIndex.value].prefab != prefab.reference)
+                            if (spawnerPrefabBuffer[loaderIndex.value].prefab != levelPrefab.reference)
                                 continue;
 
                             foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
@@ -537,6 +561,31 @@ public struct LevelStageOption
                     break;
                 case Type.Millisecond:
                     //status.time += value * 1000.0f;
+                    break;
+                case Type.Item:
+                {
+                    ref var item = ref items[value];
+                    int i, numItems = levelItems.Length;
+                    for (i = 0; i < numItems; ++i)
+                    {
+                        ref var levelItem = ref levelItems.ElementAt(i);
+                        if (levelItem.name == item.name)
+                        {
+                            levelItem.count += item.count;
+
+                            break;
+                        }
+                    }
+
+                    if (i == numItems)
+                    {
+                        LevelItem levelItem;
+                        levelItem.name = item.name;
+                        levelItem.count = item.count;
+
+                        levelItems.Add(levelItem);
+                    }
+                }
                     break;
             }
         }
@@ -597,11 +646,19 @@ public struct LevelDefinition
         }
     }
 
+    public struct Item
+    {
+        public FixedString32Bytes name;
+
+        public int count;
+    }
+
     public int mainStageIndex;
     public BlobArray<LayerMaskAndTags> layerMaskAndTags;
     public BlobArray<DefaultStage> defaultStages;
     public BlobArray<Stage> stages;
     public BlobArray<Area> areas;
+    public BlobArray<Item> items;
 }
 
 public struct LevelDefinitionData : IComponentData
@@ -646,6 +703,13 @@ public struct LevelStageResultStatus : IBufferElementData
 {
     public LayerMaskAndTags layerMaskAndTagsInclude;
     public LayerMaskAndTags layerMaskAndTagsExclude;
+}
+
+public struct LevelItem : IBufferElementData
+{
+    public FixedString32Bytes name;
+
+    public int count;
 }
 
 public struct LevelObject : IComponentData

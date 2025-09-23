@@ -51,7 +51,10 @@ public class SpriteAtlasManager : MonoBehaviour
 
     void OnDestroy()
     {
-        foreach (var loader in __loaders)
-            loader.Dispose();
+        if (__loaders != null)
+        {
+            foreach (var loader in __loaders)
+                loader.Dispose();
+        }
     }
 }

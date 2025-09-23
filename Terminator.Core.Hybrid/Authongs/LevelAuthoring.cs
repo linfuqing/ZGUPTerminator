@@ -329,7 +329,36 @@ public class LevelAuthoring : MonoBehaviour
         public float height;
         public float length;
     }
+    
+    [Serializable]
+    internal struct Item
+    {
+        public string name;
 
+        public int count;
+        
+        #region CSV
+
+        [CSVField]
+        public string 关卡物品名称
+        {
+            set
+            {
+                name = value;
+            }
+        }
+
+        [CSVField]
+        public int 关卡物品数量
+        {
+            set
+            {
+                count = value;
+            }
+        }
+        #endregion
+    }
+    
     class Baker : Baker<LevelAuthoring>
     {
         public override void Bake(LevelAuthoring authoring)
@@ -456,6 +485,17 @@ public class LevelAuthoring : MonoBehaviour
                     destination.aabb.Center = source.position;
                     destination.aabb.Extents = math.float3(source.width * 0.5f, source.height * 0.5f, source.length * 0.5f);
                 }
+                
+                int numItems = authoring._items == null ? 0 : authoring._items.Length;
+                var items = builder.Allocate(ref root.items, numItems);
+                for (i = 0; i < numItems; ++i)
+                {
+                    ref var source = ref authoring._items[i];
+                    ref var destination = ref items[i];
+                    
+                    destination.name = source.name;
+                    destination.count = source.count;
+                }
 
                 var layerMaskAndTagsArray = builder.Allocate(ref root.layerMaskAndTags, layerMaskAndTagsIndices.Count);
                 foreach (var pair in layerMaskAndTagsIndices)
@@ -519,6 +559,9 @@ public class LevelAuthoring : MonoBehaviour
                     levelPrefabs.ElementAt(i).reference = new EntityPrefabReference(authoring._prefabs[i]);
                 }
             }
+
+            if (authoring._items != null && authoring._items.Length > 0)
+                AddComponent<LevelItem>(entity);
         }
     }
 
@@ -540,14 +583,21 @@ public class LevelAuthoring : MonoBehaviour
     [SerializeField] 
     internal Stage[] _stages;
 
+    [CSV("_stages", guidIndex = -1, nameIndex = 0)]
+    [SerializeField]
+    internal string _stagesPath;
+    
     [SerializeField] 
     internal Area[] _areas;
 
     [SerializeField] 
-    internal GameObject[] _prefabs;
+    internal Item[] _items;
 
-    [CSV("_stages", guidIndex = -1, nameIndex = 0)]
+    [CSV("_items", guidIndex = -1, nameIndex = 0)]
     [SerializeField]
-    internal string _stagesPath;
+    internal string _itemsPath;
+
+    [SerializeField] 
+    internal GameObject[] _prefabs;
 }
 #endif

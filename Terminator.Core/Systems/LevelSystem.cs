@@ -47,6 +47,8 @@ public partial struct LevelSystem : ISystem
 
         public NativeArray<LevelStatus> states;
 
+        public BufferAccessor<LevelItem> items;
+
         public BufferAccessor<LevelStage> stages;
 
         public BufferAccessor<LevelStageConditionStatus> stageConditionStates;
@@ -81,6 +83,7 @@ public partial struct LevelSystem : ISystem
             SpawnerLayerMaskAndTagsExclude spawnerLayerMaskAndTagsExclude;
             ref var definition = ref instances[index].definition.Value;
             var status = states[index];
+            var items = index < this.items.Length ? this.items[index] : default;
             var prefabs = index < this.prefabs.Length ? this.prefabs[index].AsNativeArray() : default;
             for(i = 0; i < numStages; ++i)
             {
@@ -117,12 +120,14 @@ public partial struct LevelSystem : ISystem
                                     spawnerLayerMaskAndTagsOverride.ValueRO,
                                     spawnerSingleton,
                                     spawners, 
+                                    items, 
                                     prefabs,
                                     spawnerPrefabs,
                                     spawnerStates, 
                                     spawnerDefinitions, 
                                     ref definition.layerMaskAndTags, 
                                     ref definition.areas,
+                                    ref definition.items,
                                     ref stageConditionStates.ElementAt(conditionOffset + k)))
                                 break;
                         }
@@ -271,6 +276,8 @@ public partial struct LevelSystem : ISystem
                             ref entityManager,
                             ref definition.layerMaskAndTags,
                             ref definition.areas,
+                            ref definition.items,
+                            ref items, 
                             ref playerPosition,
                             ref random,
                             ref status,
@@ -366,6 +373,8 @@ public partial struct LevelSystem : ISystem
 
         public ComponentTypeHandle<LevelStatus> statusType;
 
+        public BufferTypeHandle<LevelItem> itemType;
+
         public BufferTypeHandle<LevelStage> stageType;
 
         public BufferTypeHandle<LevelStageConditionStatus> stageConditionStatusType;
@@ -407,6 +416,7 @@ public partial struct LevelSystem : ISystem
             update.prefabs = chunk.GetBufferAccessor(ref prefabType);
             update.instances = chunk.GetNativeArray(ref instanceType);
             update.states = chunk.GetNativeArray(ref statusType);
+            update.items = chunk.GetBufferAccessor(ref itemType);
             update.stages = chunk.GetBufferAccessor(ref stageType);
             update.stageConditionStates = chunk.GetBufferAccessor(ref stageConditionStatusType);
             update.stageResultStates = chunk.GetBufferAccessor(ref stageResultStatusType);
@@ -448,6 +458,8 @@ public partial struct LevelSystem : ISystem
     private ComponentTypeHandle<LevelDefinitionData> __instanceType;
     private ComponentTypeHandle<LevelStatus> __statusType;
     
+    private BufferTypeHandle<LevelItem> __itemType;
+
     private BufferTypeHandle<LevelStage> __stageType;
 
     private BufferTypeHandle<LevelStageConditionStatus> __stageConditionStatusType;
@@ -473,6 +485,7 @@ public partial struct LevelSystem : ISystem
         __prefabType = state.GetBufferTypeHandle<LevelPrefab>(true);
         __instanceType = state.GetComponentTypeHandle<LevelDefinitionData>(true);
         __statusType = state.GetComponentTypeHandle<LevelStatus>();
+        __itemType = state.GetBufferTypeHandle<LevelItem>();
         __stageType = state.GetBufferTypeHandle<LevelStage>();
         __stageConditionStatusType = state.GetBufferTypeHandle<LevelStageConditionStatus>();
         __stageResultStatusType = state.GetBufferTypeHandle<LevelStageResultStatus>();
@@ -511,6 +524,7 @@ public partial struct LevelSystem : ISystem
         __prefabType.Update(ref state);
         __instanceType.Update(ref state);
         __statusType.Update(ref state); 
+        __itemType.Update(ref state);
         __stageType.Update(ref state);
         __stageConditionStatusType.Update(ref state);
         __stageResultStatusType.Update(ref state);
@@ -538,6 +552,7 @@ public partial struct LevelSystem : ISystem
         update.prefabType = __prefabType;
         update.instanceType = __instanceType;
         update.statusType = __statusType;
+        update.itemType = __itemType;
         update.stageType = __stageType;
         update.stageConditionStatusType = __stageConditionStatusType;
         update.stageResultStatusType = __stageResultStatusType;
