@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.U2D;
 using ZG;
 
@@ -13,6 +14,9 @@ public class SpriteAtlasManager : MonoBehaviour
         
         public string filename;
     }
+    
+    [SerializeField]
+    internal UnityEvent _onAllAssetsLoaded;
     
     [SerializeField]
     internal Asset[] _assets;
@@ -37,6 +41,9 @@ public class SpriteAtlasManager : MonoBehaviour
             
             yield return loader;
         }
+        
+        if(_onAllAssetsLoaded != null)
+            _onAllAssetsLoaded.Invoke();
     }
 
     void OnDestroy()
