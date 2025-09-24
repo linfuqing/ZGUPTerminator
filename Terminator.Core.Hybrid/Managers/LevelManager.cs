@@ -430,12 +430,12 @@ public partial class LevelManager : MonoBehaviour
     {
         int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
         var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
-        if (numSkillActiveNames > 0)
-        {
-            numSkillActiveNames = 0;
-            foreach (var skillActiveName in __skillActiveNames.Values)
-                skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
-        }
+        if (numSkillActiveNames < 1)
+            return;
+        
+        numSkillActiveNames = 0;
+        foreach (var skillActiveName in __skillActiveNames.Values)
+            skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
 
         var levelData = ILevelData.instance;
         if (levelData != null)
