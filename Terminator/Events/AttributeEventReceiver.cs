@@ -49,7 +49,7 @@ public class AttributeEventReceiver : MonoBehaviour
         int dirtyFlag = 0;
         if (parameters.TryGet((int)EffectAttributeID.HPMax, out int hpMax))
         {
-            dirtyFlag |= (1 << (int)AttributeType.HP) |  (1 << (int)AttributeType.Shield);
+            dirtyFlag |= 1 << (int)AttributeType.HP;
             
             onHPMaxChanged?.Invoke(hpMax);
             
@@ -83,7 +83,6 @@ public class AttributeEventReceiver : MonoBehaviour
             dirtyFlag |= 1 << (int)AttributeType.Shield;
 
         if ((dirtyFlag & (1 << (int)AttributeType.Shield)) != 0)
-        {
             AttributeManager.instance.Set(
                 _space,
                 __instanceID,
@@ -91,7 +90,6 @@ public class AttributeEventReceiver : MonoBehaviour
                 (int)AttributeType.Shield,
                 shield,
                 __hpMax);
-        }
 
         if (parameters.TryGet((int)EffectAttributeID.RageMax, out int rageMax))
         {
