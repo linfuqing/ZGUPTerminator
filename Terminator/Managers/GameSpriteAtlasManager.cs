@@ -41,11 +41,7 @@ public class GameSpriteAtlasManager : MonoBehaviour
 
                 __loaders[i] = loader;
 
-                print($"{name} start to load sprite atlas {asset.name} from {asset.filename}");
-                
                 yield return loader;
-                
-                print($"{name} end to load sprite atlas {asset.name} from {asset.filename}");
             }
         }
 

@@ -22,6 +22,7 @@ public class PickableAuthoring : MonoBehaviour
             pickable.pickedUpTime = authoring._pickedUpTime;
             pickable.startTime = authoring._startTime;
             pickable.speed = authoring._speed;
+            pickable.layerMask = (uint)(int)authoring._layerMask;
             pickable.messageName = authoring._messageName;
             pickable.messageValue = authoring._messageValue;
             pickable.startMessageName = authoring._startMessageName;
@@ -50,6 +51,9 @@ public class PickableAuthoring : MonoBehaviour
     [SerializeField] 
     internal float _speed;
     
+    [SerializeField] 
+    internal LayerMask _layerMask;
+
     [SerializeField] 
     internal string _messageName;
     

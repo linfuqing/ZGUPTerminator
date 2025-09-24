@@ -19,6 +19,9 @@ public partial struct PickableSystem : ISystem
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
 
+        [ReadOnly]
+        public ComponentLookup<PhysicsCollider> physicsColliders;
+
         [ReadOnly] 
         public BufferAccessor<SimulationEvent> simulationEvents;
 
@@ -42,7 +45,6 @@ public partial struct PickableSystem : ISystem
 
         public PickableStatus.Value Execute(int index)
         {
-            var simulationEvents = this.simulationEvents[index];
             var instance = instances[index];
             var status = states[index];
             if (status.time > math.DBL_MIN_NORMAL)
@@ -50,13 +52,20 @@ public partial struct PickableSystem : ISystem
                 if (status.time > time)
                     return status.value;
 
+                /*if (!__IsValidEntity(instance.layerMask, status.entity, status.colliderKey))
+                    status.entity = __FilterEntity(instance.layerMask, simulationEvents[index].AsNativeArray(),
+                        out status.colliderKey);*/
+
                 //deltaTime = (float)(time - status.time);
 
                 status.time = time;
             }
-            else if (simulationEvents.Length > 0)
+            else
             {
-                status.entity = simulationEvents[0].entity;
+                status.entity = __FilterEntity(instance.layerMask, simulationEvents[index].AsNativeArray(),
+                    out status.colliderKey);
+                if (status.entity == Entity.Null)
+                    return status.value;
                 
                 status.time = time + instance.startTime;
                 if (status.time > time)
@@ -79,9 +88,6 @@ public partial struct PickableSystem : ISystem
                 //deltaTime = 0.0f;
             } 
 
-            if(!localTransforms.HasComponent(status.entity) && simulationEvents.Length > 0)
-                status.entity = simulationEvents[0].entity;
-            
             if (localTransforms.TryGetComponent(status.entity, out var destination))
             {
                 if (index < physicsGravityFactors.Length)
@@ -155,6 +161,29 @@ public partial struct PickableSystem : ISystem
 
             return status.value;
         }
+
+        private bool __IsValidEntity(uint belongsTo, in Entity entity, in ColliderKey colliderKey)
+        {
+            return physicsColliders.TryGetComponent(entity, out var physicsCollider) &&
+                   physicsCollider.IsValid &&
+                   (physicsCollider.Value.Value.GetCollisionFilter(colliderKey).BelongsTo & belongsTo) != 0;
+        }
+
+        private Entity __FilterEntity(uint belongsTo, in NativeArray<SimulationEvent> simulationEvents, out ColliderKey colliderKey)
+        {
+            foreach (var simulationEvent in simulationEvents)
+            {
+                if (__IsValidEntity(belongsTo, simulationEvent.entity, simulationEvent.colliderKey))
+                {
+                    colliderKey = simulationEvent.colliderKey;
+                    return simulationEvent.entity;
+                }
+            }
+            
+            colliderKey = ColliderKey.Empty;
+
+            return Entity.Null;
+        }
     }
 
     [BurstCompile]
@@ -165,6 +194,9 @@ public partial struct PickableSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public ComponentLookup<PhysicsCollider> physicsColliders;
 
         [ReadOnly] 
         public BufferTypeHandle<SimulationEvent> simulationEventType;
@@ -192,6 +224,7 @@ public partial struct PickableSystem : ISystem
             pick.deltaTime = deltaTime;
             pick.time = time;
             pick.localTransforms = localTransforms;
+            pick.physicsColliders = physicsColliders;
             pick.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
             pick.entityArray = chunk.GetNativeArray(entityType);
             pick.instances = chunk.GetNativeArray(ref instanceType);
@@ -232,6 +265,8 @@ public partial struct PickableSystem : ISystem
 
     private ComponentLookup<LocalTransform> __localTransforms;
 
+    private ComponentLookup<PhysicsCollider> __physicsColliders;
+
     private BufferTypeHandle<SimulationEvent> __simulationEventType;
 
     private EntityTypeHandle __entityType;
@@ -253,6 +288,7 @@ public partial struct PickableSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
+        __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
         __entityType = state.GetEntityTypeHandle();
         __instanceType = state.GetComponentTypeHandle<Pickable>();
@@ -277,6 +313,7 @@ public partial struct PickableSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __localTransforms.Update(ref state);
+        __physicsColliders.Update(ref state);
         __simulationEventType.Update(ref state);
         __entityType.Update(ref state);
         __instanceType.Update(ref state);
@@ -290,6 +327,7 @@ public partial struct PickableSystem : ISystem
         pick.deltaTime = SystemAPI.GetSingleton<FixedFrame>().deltaTime;
         pick.time = SystemAPI.Time.ElapsedTime;
         pick.localTransforms = __localTransforms;
+        pick.physicsColliders = __physicsColliders;
         pick.entityType = __entityType;
         pick.simulationEventType = __simulationEventType;
         pick.instanceType = __instanceType;
