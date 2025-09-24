@@ -302,7 +302,15 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
     public int Add(int value, int valueImmunized, int layerMask, int messageLayerMask)
     {
         int result = Interlocked.Add(ref this.value, value);
-        result += Interlocked.Add(ref this.valueImmunized, valueImmunized);
+        
+        int source, destination;
+        do
+        {
+            source = this.valueImmunized;
+            destination = math.max(valueImmunized, source);
+        } while (Interlocked.CompareExchange(ref this.valueImmunized, destination, source) != source);
+        
+        result += destination - source;
 
         if (layerMask == -1)
             this.layerMask = -1;
@@ -311,11 +319,12 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
             if (layerMask == 0)
                 layerMask = 1;
 
-            int origin;
             do
             {
-                origin = this.layerMask;
-            } while (Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
+                source = this.layerMask;
+
+                destination = source | layerMask;
+            } while (Interlocked.CompareExchange(ref this.layerMask, destination, source) != source);
         }
         
         if (messageLayerMask == -1)
@@ -325,11 +334,12 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
             if (messageLayerMask == 0)
                 messageLayerMask = 1;
 
-            int origin;
             do
             {
-                origin = this.messageLayerMask;
-            } while (Interlocked.CompareExchange(ref this.messageLayerMask, origin | messageLayerMask, origin) != origin);
+                source = this.messageLayerMask;
+                
+                destination = source | messageLayerMask;
+            } while (Interlocked.CompareExchange(ref this.messageLayerMask, destination, source) != source);
         }
         
         return result;
