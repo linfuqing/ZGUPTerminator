@@ -113,6 +113,7 @@ public class AttributeManager : MonoBehaviour
         Transform transform;
         RectTransform rectTransform;
         Attribute attribute;
+        Vector3 position;
         Vector2 point;
         foreach (var pair in __attributes)
         {
@@ -128,7 +129,16 @@ public class AttributeManager : MonoBehaviour
             if(transform == null)
                 continue;
             
-            point = RectTransformUtility.WorldToScreenPoint(_camera, transform.position);
+            if(_camera == null)
+                point = RectTransformUtility.WorldToScreenPoint(_camera, transform.position);
+            else
+            {
+                position = _camera.WorldToScreenPoint(transform.position);
+                rectTransform.gameObject.SetActive(position.z >= 0.0f);
+                
+                point = new Vector2(position.x, position.y);
+            }
+
             if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(
                    rectTransform.parent as RectTransform,
                 point,
