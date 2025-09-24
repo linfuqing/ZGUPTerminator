@@ -1059,7 +1059,7 @@ public sealed class LoginManager : MonoBehaviour
             assetManager = gameObject.AddComponent<GameAssetManager>();
         }
 
-        assetManager.LoadScene(sceneName/*_levels[__selectedLevelIndex].name*/, null, new GameSceneActivation());
+        assetManager.LoadScene(sceneName, null, new GameSceneActivation());
     }
 
     private IEnumerator __CollectAndQueryLevels()

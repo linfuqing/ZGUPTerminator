@@ -5,7 +5,7 @@ using UnityEngine.Events;
 using UnityEngine.U2D;
 using ZG;
 
-public class SpriteAtlasManager : MonoBehaviour
+public class GameSpriteAtlasManager : MonoBehaviour
 {
     [Serializable]
     public struct Asset
@@ -41,7 +41,11 @@ public class SpriteAtlasManager : MonoBehaviour
 
                 __loaders[i] = loader;
 
+                print($"{name} start to load sprite atlas {asset.name} from {asset.filename}");
+                
                 yield return loader;
+                
+                print($"{name} end to load sprite atlas {asset.name} from {asset.filename}");
             }
         }
 
