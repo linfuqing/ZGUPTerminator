@@ -19,6 +19,7 @@ public class AttributeEventReceiver : MonoBehaviour
 
     private int __instanceID;
 
+    private int __shield;
     private int __hpMax;
     private int __rageMax;
     private int __rage;
@@ -79,8 +80,12 @@ public class AttributeEventReceiver : MonoBehaviour
                 __hpMax);
         }
 
-        if (parameters.TryGet((int)EffectAttributeID.Shield, out int shield))
+        if (parameters.TryGet((int)EffectAttributeID.Shield, out int shield) && shield != __shield)
+        {
+            __shield = shield;
+            
             dirtyFlag |= 1 << (int)AttributeType.Shield;
+        }
 
         if ((dirtyFlag & (1 << (int)AttributeType.Shield)) != 0)
             AttributeManager.instance.Set(

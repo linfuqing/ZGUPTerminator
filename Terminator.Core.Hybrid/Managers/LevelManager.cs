@@ -428,28 +428,30 @@ public partial class LevelManager : MonoBehaviour
 
     private void __Submit(int stage, int gold, int exp, int maxExp)
     {
+        var levelData = ILevelData.instance;
+        if (levelData == null)
+            return;
+        
         int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
-        var skillActiveNames = numSkillActiveNames > 0 ? new string[numSkillActiveNames] : null;
         if (numSkillActiveNames < 1)
             return;
         
+        var skillActiveNames = new string[numSkillActiveNames];
         numSkillActiveNames = 0;
         foreach (var skillActiveName in __skillActiveNames.Values)
             skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
 
-        var levelData = ILevelData.instance;
-        if (levelData != null)
-            __StartCoroutine(levelData.SubmitStage(
-                __dataFlag, 
-                stage,
-                __killCount, 
-                __killBossCount, 
-                gold,
-                rage, 
-                exp,
-                maxExp,
-                skillActiveNames,
-                __OnStageChanged));
+        __StartCoroutine(levelData.SubmitStage(
+            __dataFlag, 
+            stage,
+            __killCount, 
+            __killBossCount, 
+            gold,
+            rage, 
+            exp,
+            maxExp,
+            skillActiveNames,
+            __OnStageChanged));
     }
 
     void Start()
