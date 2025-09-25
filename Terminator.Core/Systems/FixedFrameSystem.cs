@@ -4,10 +4,10 @@ using Unity.Physics;
 
 public struct FixedFrame : IComponentData
 {
-    public float deltaTime;
     public int count;
-    
-    public double elapsedTime => (double)deltaTime * count;
+
+    public float deltaTime;
+    public double elapsedTime;
 }
 
 [BurstCompile, UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
@@ -33,6 +33,7 @@ public partial struct FixedFrameSystem : ISystem
         ++fixedFrame.count;
 
         fixedFrame.deltaTime = SystemAPI.Time.DeltaTime;
+        fixedFrame.elapsedTime = SystemAPI.Time.ElapsedTime;
         
         SystemAPI.SetSingleton(fixedFrame);
     }

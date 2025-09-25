@@ -6,6 +6,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.Systems;
+using Unity.Physics.GraphicsIntegration;
 using Unity.Transforms;
 
 
@@ -138,6 +139,8 @@ public partial struct LookAtSystem : ISystem
         [ReadOnly]
         public NativeArray<LookAt> instances;
 
+        public NativeArray<LookAtOrigin> origins;
+        
         public NativeArray<LookAtTarget> targets;
 
         public NativeArray<ThirdPersonCharacterLookAt> characterLookAts;
@@ -155,6 +158,13 @@ public partial struct LookAtSystem : ISystem
             Entity entity = entityArray[index];
             var instance = instances[index];
             var localTransform = localTransforms[entity];
+
+            if (index < origins.Length)
+            {
+                LookAtOrigin origin;
+                origin.transform = math.RigidTransform(localTransform.Rotation, localTransform.Scale);
+                origins[index] = origin;
+            }
 
             var transform = math.RigidTransform(localTransform.Rotation, localTransform.Position);
             float4x4 parentToWorld;
@@ -372,31 +382,6 @@ public partial struct LookAtSystem : ISystem
                 localTransforms[entity] = localTransform;
             }
         }
-
-        public static bool TryGetLocalToWorld(
-            in Entity entity, 
-            in ComponentLookup<Parent> parents, 
-            in ComponentLookup<LocalTransform> localTransforms, 
-            out float4x4 matrix)
-        {
-            if (!localTransforms.TryGetComponent(entity, out var localTransform))
-            {
-                matrix = float4x4.identity;
-
-                return false;
-            }
-
-            matrix = localTransform.ToMatrix();
-            if (parents.TryGetComponent(entity, out var parent) && 
-                TryGetLocalToWorld(
-                    parent.Value, 
-                    parents, 
-                    localTransforms, 
-                    out var parentMatrix))
-                matrix = math.mul(parentMatrix, matrix);
-
-            return true;
-        }
     }
 
     [BurstCompile]
@@ -426,6 +411,8 @@ public partial struct LookAtSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<LookAt> instanceType;
 
+        public ComponentTypeHandle<LookAtOrigin> originType;
+
         public ComponentTypeHandle<LookAtTarget> targetType;
 
         public ComponentTypeHandle<ThirdPersonCharacterLookAt> characterLookAtType;
@@ -449,6 +436,7 @@ public partial struct LookAtSystem : ISystem
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.followTargetParents = chunk.GetNativeArray(ref followTargetParentType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
+            apply.origins = chunk.GetNativeArray(ref originType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.lookAtAndFollows = chunk.GetNativeArray(ref lookAtAndFollowType);
             apply.characterLookAts = chunk.GetNativeArray(ref characterLookAtType);
@@ -478,6 +466,8 @@ public partial struct LookAtSystem : ISystem
 
     private ComponentTypeHandle<LookAt> __instanceType;
 
+    private ComponentTypeHandle<LookAtOrigin> __originType;
+
     private ComponentTypeHandle<LookAtTarget> __targetType;
 
     private ComponentTypeHandle<ThirdPersonCharacterLookAt> __characterLookAtType;
@@ -485,6 +475,31 @@ public partial struct LookAtSystem : ISystem
     private BufferTypeHandle<ThirdPersonCharacterStandTime> __characterStandTimeType;
 
     private EntityQuery __group;
+    
+    public static bool TryGetLocalToWorld(
+        in Entity entity, 
+        in ComponentLookup<Parent> parents, 
+        in ComponentLookup<LocalTransform> localTransforms, 
+        out float4x4 matrix)
+    {
+        if (!localTransforms.TryGetComponent(entity, out var localTransform))
+        {
+            matrix = float4x4.identity;
+
+            return false;
+        }
+
+        matrix = localTransform.ToMatrix();
+        if (parents.TryGetComponent(entity, out var parent) && 
+            TryGetLocalToWorld(
+                parent.Value, 
+                parents, 
+                localTransforms, 
+                out var parentMatrix))
+            matrix = math.mul(parentMatrix, matrix);
+
+        return true;
+    }
     
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -497,6 +512,7 @@ public partial struct LookAtSystem : ISystem
         __followTargetParentType = state.GetComponentTypeHandle<FollowTargetParent>(true);
         __lookAtAndFollowType = state.GetComponentTypeHandle<LookAtAndFollow>(true);
         __instanceType = state.GetComponentTypeHandle<LookAt>(true);
+        __originType = state.GetComponentTypeHandle<LookAtOrigin>();
         __targetType = state.GetComponentTypeHandle<LookAtTarget>();
         __characterLookAtType = state.GetComponentTypeHandle<ThirdPersonCharacterLookAt>();
         __characterStandTimeType = state.GetBufferTypeHandle<ThirdPersonCharacterStandTime>();
@@ -522,6 +538,7 @@ public partial struct LookAtSystem : ISystem
         __followTargetParentType.Update(ref state);
         __lookAtAndFollowType.Update(ref state);
         __instanceType.Update(ref state);
+        __originType.Update(ref state);
         __targetType.Update(ref state);
         __characterLookAtType.Update(ref state);
         __characterStandTimeType.Update(ref state);
@@ -536,6 +553,7 @@ public partial struct LookAtSystem : ISystem
         apply.followTargetParentType = __followTargetParentType;
         apply.lookAtAndFollowType = __lookAtAndFollowType;
         apply.instanceType = __instanceType;
+        apply.originType = __originType;
         apply.targetType = __targetType;
         apply.characterLookAtType = __characterLookAtType;
         apply.characterStandTimeType = __characterStandTimeType;
@@ -543,5 +561,146 @@ public partial struct LookAtSystem : ISystem
         apply.followTargets = __followTargets;
 
         state.Dependency = apply.ScheduleParallelByRef(__group, state.Dependency);
+    }
+}
+
+[BurstCompile, UpdateInGroup(typeof(TransformSystemGroup)), UpdateBefore(typeof(LocalToWorldSystem))]
+public partial struct LookAtTransformSystem : ISystem
+{
+    private struct Transform
+    {
+        public float normalizedTimeAhead;
+        
+        [ReadOnly]
+        public ComponentLookup<Parent> parentMap;
+
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransformMap;
+        
+        [ReadOnly]
+        public NativeArray<LocalTransform> localTransforms;
+        
+        [ReadOnly]
+        public NativeArray<LookAtOrigin> origins;
+
+        [ReadOnly]
+        public NativeArray<Parent> parents;
+
+        public NativeArray<LocalToWorld> localToWorlds;
+
+        public void Execute(int index)
+        {
+            var localTransform = localTransforms[index];
+
+            var transform = GraphicalSmoothingUtility.Interpolate(
+                origins[index].transform, math.RigidTransform(localTransform.Rotation, localTransform.Position), normalizedTimeAhead);
+
+            var matrix = float4x4.TRS(transform.pos, transform.rot, localTransform.Scale);
+            float4x4 localToParent;
+            if (index < parents.Length && 
+                LookAtSystem.TryGetLocalToWorld(parents[index].Value, parentMap, localTransformMap, out localToParent))
+                matrix = math.mul(localToParent, matrix);
+
+            LocalToWorld localToWorld;
+            localToWorld.Value = matrix;
+            localToWorlds[index] = localToWorld;
+        }
+    }
+    
+    [BurstCompile]
+    private struct TransformEx : IJobChunk
+    {
+        public float normalizedTimeAhead;
+        
+        [ReadOnly]
+        public ComponentLookup<Parent> parents;
+
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransforms;
+        
+        [ReadOnly]
+        public ComponentTypeHandle<LocalTransform> localTransformType;
+        
+        [ReadOnly]
+        public ComponentTypeHandle<LookAtOrigin> originType;
+
+        [ReadOnly]
+        public ComponentTypeHandle<Parent> parentType;
+
+        public ComponentTypeHandle<LocalToWorld> localToWorldType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            Transform transform;
+            transform.normalizedTimeAhead = normalizedTimeAhead;
+            transform.parentMap = parents;
+            transform.localTransformMap = localTransforms;
+            transform.localTransforms = chunk.GetNativeArray(ref localTransformType);
+            transform.origins = chunk.GetNativeArray(ref originType);
+            transform.parents = chunk.GetNativeArray(ref parentType);
+            transform.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while(iterator.NextEntityIndex(out int i))
+                transform.Execute(i);
+        }
+    }
+    
+    private ComponentLookup<Parent> __parents;
+
+    private ComponentLookup<LocalTransform> __localTransforms;
+        
+    private ComponentTypeHandle<LocalTransform> __localTransformType;
+        
+    private ComponentTypeHandle<LookAtOrigin> __originType;
+
+    private ComponentTypeHandle<Parent> __parentType;
+
+    private ComponentTypeHandle<LocalToWorld> __localToWorldType;
+
+    private EntityQuery __group;
+
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        __parents = state.GetComponentLookup<Parent>(true);
+        __localTransforms = state.GetComponentLookup<LocalTransform>(true);
+        __localTransformType = state.GetComponentTypeHandle<LocalTransform>(true);
+        __originType = state.GetComponentTypeHandle<LookAtOrigin>(true);
+        __parentType = state.GetComponentTypeHandle<Parent>(true);
+        __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>();
+        
+        using(var builder = new EntityQueryBuilder(Allocator.Temp))
+            __group = builder
+                .WithAll<LookAtTarget, LocalTransform>()
+                .WithNone<ThirdPersonCharacterLookAt, PhysicsGraphicalSmoothing>()
+                .WithOptions(EntityQueryOptions.FilterWriteGroup)
+                .Build(ref state);
+        
+        state.RequireForUpdate<FixedFrame>();
+    }
+
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        __parents.Update(ref state);
+        __localTransforms.Update(ref state);
+        __localTransformType.Update(ref state);
+        __originType.Update(ref state);
+        __parentType.Update(ref state);
+        __localToWorldType.Update(ref state);
+
+        var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
+        var timeAhead = (float)(SystemAPI.Time.ElapsedTime - fixedFrame.elapsedTime);
+        TransformEx transform;
+        transform.normalizedTimeAhead = math.saturate(timeAhead / fixedFrame.deltaTime);
+        transform.parents = __parents;
+        transform.localTransforms = __localTransforms;
+        transform.localTransformType = __localTransformType;
+        transform.originType = __originType;
+        transform.parentType = __parentType;
+        transform.localToWorldType = __localToWorldType;
+
+        state.Dependency = transform.ScheduleParallelByRef(__group, state.Dependency);
     }
 }

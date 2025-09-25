@@ -23,6 +23,11 @@ public struct LookAt : IComponentData
     public float speed;
 }
 
+public struct LookAtOrigin : IComponentData
+{
+    public RigidTransform transform;
+}
+
 public struct LookAtTarget : IComponentData, IEnableableComponent
 {
     public double time;
