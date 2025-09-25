@@ -162,7 +162,7 @@ public partial struct LookAtSystem : ISystem
             if (index < origins.Length)
             {
                 LookAtOrigin origin;
-                origin.transform = math.RigidTransform(localTransform.Rotation, localTransform.Scale);
+                origin.transform = math.RigidTransform(localTransform.Rotation, localTransform.Position);
                 origins[index] = origin;
             }
 
