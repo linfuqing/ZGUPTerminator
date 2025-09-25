@@ -222,8 +222,9 @@ public partial struct BulletSystem : ISystem
             DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes;
             if (character == Entity.Null)
             {
-                characterStandTimes = default;
-
+                //characterStandTimes = default;
+                this.characterStandTimes.TryGetBuffer(entity, out characterStandTimes);
+                
                 location = (BulletLocation)~0;
             }
             else
