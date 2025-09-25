@@ -153,24 +153,35 @@ public partial struct LookAtSystem : ISystem
 
         public void Execute(int index)
         {
-            if (index < characterStandTimes.Length && ThirdPersonCharacterStandTime.IsStand(time, characterStandTimes[index]))
-                return;
-            
             Entity entity = entityArray[index];
             var instance = instances[index];
             var localTransform = localTransforms[entity];
 
-            float3 position = localTransform.Position;
+            var transform = math.RigidTransform(localTransform.Rotation, localTransform.Position);
             float4x4 parentToWorld;
             if (parents.TryGetComponent(entity, out var parent) &&
                 TryGetLocalToWorld(parent.Value, parents, localTransforms, out var matrix))
             {
                 parentToWorld = matrix;
 
-                position = math.transform(matrix, position);
+                transform = math.mul(math.RigidTransform(matrix), transform);
             }
             else
                 parentToWorld = float4x4.identity;
+
+            if (index < characterStandTimes.Length &&
+                ThirdPersonCharacterStandTime.IsStand(time, characterStandTimes[index]))
+            {
+                if (index < targets.Length)
+                {
+                    var target = targets[index];
+                    target.time = time;
+                    target.origin = transform.rot;
+                    targets[index] = target;
+                }
+                
+                return;
+            }
 
             CollisionFilter filter;
             filter.GroupIndex = 0;
@@ -178,7 +189,7 @@ public partial struct LookAtSystem : ISystem
             filter.CollidesWith = (uint)instance.layerMask;
             PointDistanceInput pointDistanceInput = default;
             pointDistanceInput.MaxDistance = instance.maxDistance;
-            pointDistanceInput.Position = position;
+            pointDistanceInput.Position = transform.pos;
             pointDistanceInput.Filter = filter;
 
             float minDistance = instance.minDistance, maxDistance = instance.maxDistance;
@@ -203,7 +214,7 @@ public partial struct LookAtSystem : ISystem
                         instance.minDot, 
                         minDistance, 
                         maxDistance, 
-                        position, 
+                        transform.pos, 
                         cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
@@ -234,7 +245,7 @@ public partial struct LookAtSystem : ISystem
                         instance.minDot, 
                         instance.minDistance, 
                         instance.maxDistance,  
-                        position, 
+                        transform.pos, 
                         cameraDirection, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
@@ -250,7 +261,7 @@ public partial struct LookAtSystem : ISystem
                     instance.minDot, 
                     instance.minDistance, 
                     instance.maxDistance,  
-                    position, 
+                    transform.pos, 
                     cameraDirection, 
                     characterBodies);
                 if (collisionWorld.CalculateDistance(pointDistanceInput, ref collector))
@@ -263,7 +274,7 @@ public partial struct LookAtSystem : ISystem
                 {
                     LookAtTarget target;
                     target.time = time;
-                    target.origin = quaternion.identity;
+                    target.origin = transform.rot;
                     target.entity = Entity.Null;
                     targets[index] = target;
                 }
@@ -284,8 +295,8 @@ public partial struct LookAtSystem : ISystem
                 __Apply(
                     index, 
                     instance.speed, 
-                    position, 
                     parentToWorld, 
+                    transform, 
                     entity, 
                     closestHit, 
                     ref localTransform);
@@ -294,8 +305,8 @@ public partial struct LookAtSystem : ISystem
         private void __Apply(
             int index, 
             float speed, 
-            in float3 position, 
             in float4x4 parentToWorld, 
+            in RigidTransform transform, 
             in Entity entity, 
             in DistanceHit closestHit, 
             ref LocalTransform localTransform)
@@ -309,7 +320,7 @@ public partial struct LookAtSystem : ISystem
                 if (target.entity != targetEntity)
                 {
                     target.time = time;
-                    target.origin = math.mul(math.quaternion(parentToWorld), localTransforms[entity].Rotation);
+                    target.origin = transform.rot;
                     target.entity = targetEntity;
                     targets[index] = target;
                 }
@@ -346,7 +357,7 @@ public partial struct LookAtSystem : ISystem
 
             quaternion rotation = MathUtilities.CreateRotationWithUpPriority(
                 characterBodies.TryGetComponent(entity, out var characterBody) ? characterBody.GroundingUp : math.up(), 
-                math.normalizesafe(closestHit.Position - position));
+                math.normalizesafe(closestHit.Position - transform.pos));
 
             rotation = math.slerp(origin, rotation, interpolation);
 
