@@ -127,9 +127,6 @@ public partial struct LookAtSystem : ISystem
         public ComponentLookup<Parent> parents;
 
         [ReadOnly] 
-        public BufferAccessor<ThirdPersonCharacterStandTime> characterStandTimes;
-
-        [ReadOnly] 
         public NativeArray<Entity> entityArray;
         
         [ReadOnly]
@@ -144,6 +141,8 @@ public partial struct LookAtSystem : ISystem
         public NativeArray<LookAtTarget> targets;
 
         public NativeArray<ThirdPersonCharacterLookAt> characterLookAts;
+
+        public BufferAccessor<ThirdPersonCharacterStandTime> characterStandTimes;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalTransform> localTransforms;
@@ -418,9 +417,6 @@ public partial struct LookAtSystem : ISystem
         [ReadOnly]
         public ComponentLookup<KinematicCharacterBody> characterBodies;
 
-        [ReadOnly] 
-        public BufferTypeHandle<ThirdPersonCharacterStandTime> characterStandTimeType;
-
         [ReadOnly]
         public ComponentTypeHandle<FollowTargetParent> followTargetParentType;
 
@@ -433,6 +429,8 @@ public partial struct LookAtSystem : ISystem
         public ComponentTypeHandle<LookAtTarget> targetType;
 
         public ComponentTypeHandle<ThirdPersonCharacterLookAt> characterLookAtType;
+
+        public BufferTypeHandle<ThirdPersonCharacterStandTime> characterStandTimeType;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalTransform> localTransforms;
@@ -448,13 +446,13 @@ public partial struct LookAtSystem : ISystem
             apply.collisionWorld = collisionWorld;
             apply.parents = parents;
             apply.characterBodies = characterBodies;
-            apply.characterStandTimes = chunk.GetBufferAccessor(ref characterStandTimeType);
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.followTargetParents = chunk.GetNativeArray(ref followTargetParentType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.lookAtAndFollows = chunk.GetNativeArray(ref lookAtAndFollowType);
             apply.characterLookAts = chunk.GetNativeArray(ref characterLookAtType);
+            apply.characterStandTimes = chunk.GetBufferAccessor(ref characterStandTimeType);
             apply.localTransforms = localTransforms;
             apply.followTargets = followTargets;
 
@@ -474,8 +472,6 @@ public partial struct LookAtSystem : ISystem
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
-    private BufferTypeHandle<ThirdPersonCharacterStandTime> __characterStandTimeType;
-
     private ComponentTypeHandle<FollowTargetParent> __followTargetParentType;
 
     private ComponentTypeHandle<LookAtAndFollow> __lookAtAndFollowType;
@@ -485,6 +481,8 @@ public partial struct LookAtSystem : ISystem
     private ComponentTypeHandle<LookAtTarget> __targetType;
 
     private ComponentTypeHandle<ThirdPersonCharacterLookAt> __characterLookAtType;
+
+    private BufferTypeHandle<ThirdPersonCharacterStandTime> __characterStandTimeType;
 
     private EntityQuery __group;
     
@@ -496,12 +494,12 @@ public partial struct LookAtSystem : ISystem
         __followTargets = state.GetComponentLookup<FollowTarget>();
         __parents = state.GetComponentLookup<Parent>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
-        __characterStandTimeType = state.GetBufferTypeHandle<ThirdPersonCharacterStandTime>(true);
         __followTargetParentType = state.GetComponentTypeHandle<FollowTargetParent>(true);
         __lookAtAndFollowType = state.GetComponentTypeHandle<LookAtAndFollow>(true);
         __instanceType = state.GetComponentTypeHandle<LookAt>(true);
         __targetType = state.GetComponentTypeHandle<LookAtTarget>();
         __characterLookAtType = state.GetComponentTypeHandle<ThirdPersonCharacterLookAt>();
+        __characterStandTimeType = state.GetBufferTypeHandle<ThirdPersonCharacterStandTime>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -521,12 +519,12 @@ public partial struct LookAtSystem : ISystem
         __localTransforms.Update(ref state);
         __followTargets.Update(ref state);
         __characterBodies.Update(ref state);
-        __characterStandTimeType.Update(ref state);
         __followTargetParentType.Update(ref state);
         __lookAtAndFollowType.Update(ref state);
         __instanceType.Update(ref state);
         __targetType.Update(ref state);
         __characterLookAtType.Update(ref state);
+        __characterStandTimeType.Update(ref state);
         
         ApplyEx apply;
         apply.time = SystemAPI.Time.ElapsedTime;
@@ -535,12 +533,12 @@ public partial struct LookAtSystem : ISystem
         apply.entityType = __entityType;
         apply.parents = __parents;
         apply.characterBodies = __characterBodies;
-        apply.characterStandTimeType = __characterStandTimeType;
         apply.followTargetParentType = __followTargetParentType;
         apply.lookAtAndFollowType = __lookAtAndFollowType;
         apply.instanceType = __instanceType;
         apply.targetType = __targetType;
         apply.characterLookAtType = __characterLookAtType;
+        apply.characterStandTimeType = __characterStandTimeType;
         apply.localTransforms = __localTransforms;
         apply.followTargets = __followTargets;
 
