@@ -217,6 +217,8 @@ public partial class UserDataMain
         int stage = __GetDontCacheStage(level, closestStage), stageCount = __GetStageCount(level);
         if (!__ApplyLevel(level.name, stage < stageCount ? __GetStage(level, stage).energy : 0))
         {
+            Debug.LogError("Apply level failed!");
+            
             onComplete(default);
 
             yield break;

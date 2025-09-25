@@ -204,7 +204,7 @@ public partial class UserData
         var levelCache = UserData.levelCache;
         if (levelCache == null)
         {
-            UnityEngine.Debug.LogError("WTF?");
+            Debug.LogError("WTF?");
 
             onComplete(false);
             
