@@ -153,7 +153,7 @@ public partial struct LookAtSystem : ISystem
 
         public void Execute(int index)
         {
-            if (ThirdPersonCharacterStandTime.IsStand(time, characterStandTimes[index]))
+            if (index < characterStandTimes.Length && ThirdPersonCharacterStandTime.IsStand(time, characterStandTimes[index]))
                 return;
             
             Entity entity = entityArray[index];
