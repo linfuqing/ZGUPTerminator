@@ -624,14 +624,14 @@ public partial class UserDataMain
                     if ((__GetStageRewardFlag(
                             stageReward.name,
                             level.name,
-                            i,
+                            j,
                             stageReward.conditionValue,
                             stageReward.condition,
                             out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
                         ++result;
                 }
 
-                if ((UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) !=
+                if ((UserData.GetStageFlag(level.name, j) & IUserData.StageFlag.Normal) !=
                     IUserData.StageFlag.Normal)
                     break;
             }
