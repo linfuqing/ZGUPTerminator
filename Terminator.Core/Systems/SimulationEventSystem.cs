@@ -130,7 +130,7 @@ public partial struct SimulationEventSystem : ISystem
                     body.Entity, 
                     ref instances);
                 result = collisionWorld.CastCollider(
-                    new ColliderCastInput(body.Collider, collision.position, transform.pos, transform.rot),
+                    new ColliderCastInput(body.Collider, collision.position, transform.pos, quaternion.identity/*transform.rot*/),
                     ref collector);
 
                 if (collector.closestHit.Entity != collision.closestHit.Entity)
