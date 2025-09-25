@@ -683,6 +683,11 @@ public partial struct LookAtTransformSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
+        var timeAhead = (float)(SystemAPI.Time.ElapsedTime - fixedFrame.elapsedTime);
+        if (timeAhead < 0.0f || fixedFrame.deltaTime < math.FLT_MIN_NORMAL)
+            return;
+        
         __parents.Update(ref state);
         __localTransforms.Update(ref state);
         __localTransformType.Update(ref state);
@@ -690,8 +695,6 @@ public partial struct LookAtTransformSystem : ISystem
         __parentType.Update(ref state);
         __localToWorldType.Update(ref state);
 
-        var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
-        var timeAhead = (float)(SystemAPI.Time.ElapsedTime - fixedFrame.elapsedTime);
         TransformEx transform;
         transform.normalizedTimeAhead = math.saturate(timeAhead / fixedFrame.deltaTime);
         transform.parents = __parents;
