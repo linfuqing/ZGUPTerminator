@@ -113,6 +113,8 @@ public partial struct LookAtSystem : ISystem
     }
     private struct Apply
     {
+        public double time;
+        
         public float3 cameraDirection;
         
         [ReadOnly]
@@ -123,6 +125,9 @@ public partial struct LookAtSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<Parent> parents;
+
+        [ReadOnly] 
+        public BufferAccessor<ThirdPersonCharacterStandTime> characterStandTimes;
 
         [ReadOnly] 
         public NativeArray<Entity> entityArray;
@@ -148,6 +153,9 @@ public partial struct LookAtSystem : ISystem
 
         public void Execute(int index)
         {
+            if (ThirdPersonCharacterStandTime.IsStand(time, characterStandTimes[index]))
+                return;
+            
             Entity entity = entityArray[index];
             var instance = instances[index];
             var localTransform = localTransforms[entity];
@@ -254,6 +262,8 @@ public partial struct LookAtSystem : ISystem
                 if (index < targets.Length)
                 {
                     LookAtTarget target;
+                    target.time = time;
+                    target.origin = quaternion.identity;
                     target.entity = Entity.Null;
                     targets[index] = target;
                 }
@@ -271,23 +281,42 @@ public partial struct LookAtSystem : ISystem
                 }
             }
             else
-                __Apply(index, position, parentToWorld, entity, closestHit, ref localTransform);
+                __Apply(
+                    index, 
+                    instance.speed, 
+                    position, 
+                    parentToWorld, 
+                    entity, 
+                    closestHit, 
+                    ref localTransform);
         }
 
         private void __Apply(
             int index, 
+            float speed, 
             in float3 position, 
             in float4x4 parentToWorld, 
             in Entity entity, 
             in DistanceHit closestHit, 
             ref LocalTransform localTransform)
         {
+            float interpolation = 1.0f;
+            quaternion origin = quaternion.identity;
             Entity targetEntity = closestHit.Entity;
             if (index < targets.Length)
             {
-                LookAtTarget target;
-                target.entity = targetEntity;
-                targets[index] = target;
+                var target = targets[index];
+                if (target.entity != targetEntity)
+                {
+                    target.time = time;
+                    target.origin = math.mul(math.quaternion(parentToWorld), localTransforms[entity].Rotation);
+                    target.entity = targetEntity;
+                    targets[index] = target;
+                }
+
+                origin = target.origin;
+                if(speed > math.FLT_MIN_NORMAL)
+                    interpolation = math.saturate((float)(time - target.time) * speed);
             }
             
             if (index < lookAtAndFollows.Length && followTargets.HasComponent(entity))
@@ -318,6 +347,8 @@ public partial struct LookAtSystem : ISystem
             quaternion rotation = MathUtilities.CreateRotationWithUpPriority(
                 characterBodies.TryGetComponent(entity, out var characterBody) ? characterBody.GroundingUp : math.up(), 
                 math.normalizesafe(closestHit.Position - position));
+
+            rotation = math.slerp(origin, rotation, interpolation);
 
             if (index < characterLookAts.Length)
             {
@@ -361,6 +392,7 @@ public partial struct LookAtSystem : ISystem
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
+        public double time;
         public float3 cameraDirection;
 
         [ReadOnly]
@@ -374,6 +406,9 @@ public partial struct LookAtSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<KinematicCharacterBody> characterBodies;
+
+        [ReadOnly] 
+        public BufferTypeHandle<ThirdPersonCharacterStandTime> characterStandTimeType;
 
         [ReadOnly]
         public ComponentTypeHandle<FollowTargetParent> followTargetParentType;
@@ -397,10 +432,12 @@ public partial struct LookAtSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
+            apply.time = time;
             apply.cameraDirection = cameraDirection;
             apply.collisionWorld = collisionWorld;
-            apply.characterBodies = characterBodies;
             apply.parents = parents;
+            apply.characterBodies = characterBodies;
+            apply.characterStandTimes = chunk.GetBufferAccessor(ref characterStandTimeType);
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.followTargetParents = chunk.GetNativeArray(ref followTargetParentType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
@@ -420,11 +457,13 @@ public partial struct LookAtSystem : ISystem
 
     private ComponentLookup<LocalTransform> __localTransforms;
 
+    private ComponentLookup<FollowTarget> __followTargets;
+
     private ComponentLookup<Parent> __parents;
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
-    private ComponentLookup<FollowTarget> __followTargets;
+    private BufferTypeHandle<ThirdPersonCharacterStandTime> __characterStandTimeType;
 
     private ComponentTypeHandle<FollowTargetParent> __followTargetParentType;
 
@@ -443,9 +482,10 @@ public partial struct LookAtSystem : ISystem
     {
         __entityType = state.GetEntityTypeHandle();
         __localTransforms = state.GetComponentLookup<LocalTransform>();
+        __followTargets = state.GetComponentLookup<FollowTarget>();
         __parents = state.GetComponentLookup<Parent>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
-        __followTargets = state.GetComponentLookup<FollowTarget>();
+        __characterStandTimeType = state.GetBufferTypeHandle<ThirdPersonCharacterStandTime>(true);
         __followTargetParentType = state.GetComponentTypeHandle<FollowTargetParent>(true);
         __lookAtAndFollowType = state.GetComponentTypeHandle<LookAtAndFollow>(true);
         __instanceType = state.GetComponentTypeHandle<LookAt>(true);
@@ -466,10 +506,11 @@ public partial struct LookAtSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __entityType.Update(ref state);
-        __localTransforms.Update(ref state);
         __parents.Update(ref state);
-        __characterBodies.Update(ref state);
+        __localTransforms.Update(ref state);
         __followTargets.Update(ref state);
+        __characterBodies.Update(ref state);
+        __characterStandTimeType.Update(ref state);
         __followTargetParentType.Update(ref state);
         __lookAtAndFollowType.Update(ref state);
         __instanceType.Update(ref state);
@@ -477,11 +518,13 @@ public partial struct LookAtSystem : ISystem
         __characterLookAtType.Update(ref state);
         
         ApplyEx apply;
+        apply.time = SystemAPI.Time.ElapsedTime;
         apply.cameraDirection = math.forward(SystemAPI.GetSingleton<MainCameraTransform>().rotation);
         apply.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         apply.entityType = __entityType;
         apply.parents = __parents;
         apply.characterBodies = __characterBodies;
+        apply.characterStandTimeType = __characterStandTimeType;
         apply.followTargetParentType = __followTargetParentType;
         apply.lookAtAndFollowType = __lookAtAndFollowType;
         apply.instanceType = __instanceType;

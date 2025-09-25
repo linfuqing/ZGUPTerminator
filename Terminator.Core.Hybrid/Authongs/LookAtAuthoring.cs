@@ -18,6 +18,7 @@ public class LookAtAuthoring : MonoBehaviour
             instance.minDistance = authoring._minDistance;
             instance.minDistance = authoring._minDistance;
             instance.maxDistance = authoring._maxDistance;
+            instance.speed = authoring._speed;
             AddComponent(entity, instance);
 
             AddComponent<LookAtTarget>(entity);
@@ -36,5 +37,7 @@ public class LookAtAuthoring : MonoBehaviour
     internal float _minDistance;
     [SerializeField] 
     internal float _maxDistance;
+    [SerializeField] 
+    internal float _speed;
 }
 #endif

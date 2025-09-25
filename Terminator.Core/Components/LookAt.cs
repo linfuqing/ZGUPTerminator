@@ -1,5 +1,6 @@
 using System;
 using Unity.Entities;
+using Unity.Mathematics;
 
 [Flags]
 public enum LookAtLocation
@@ -18,9 +19,13 @@ public struct LookAt : IComponentData
     
     public float minDistance;
     public float maxDistance;
+
+    public float speed;
 }
 
 public struct LookAtTarget : IComponentData, IEnableableComponent
 {
+    public double time;
+    public quaternion origin;
     public Entity entity;
 }

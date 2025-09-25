@@ -12,8 +12,12 @@ public partial struct FollowPlayerSystem : ISystem
 {
     private struct Apply
     {
+        public double time;
         public Entity playerEntity;
         
+        [ReadOnly]
+        public NativeArray<LocalToWorld> localToWorlds;
+
         [ReadOnly]
         public NativeArray<FollowPlayer> instances;
 
@@ -38,6 +42,8 @@ public partial struct FollowPlayerSystem : ISystem
             if (index < lookAtTargets.Length)
             {
                 LookAtTarget lookAtTarget;
+                lookAtTarget.time = time;
+                lookAtTarget.origin = localToWorlds[index].Rotation;
                 lookAtTarget.entity = playerEntity;
                 lookAtTargets[index] = lookAtTarget;
             }
@@ -47,8 +53,12 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
+        public double time;
         public Entity playerEntity;
         
+        [ReadOnly]
+        public ComponentTypeHandle<LocalToWorld> localToWorldType;
+
         [ReadOnly]
         public ComponentTypeHandle<FollowPlayer> instanceType;
 
@@ -59,7 +69,9 @@ public partial struct FollowPlayerSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
+            apply.time = time;
             apply.playerEntity = playerEntity;
+            apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
             apply.followTargets = chunk.GetNativeArray(ref followTargetType);
             apply.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
@@ -80,6 +92,8 @@ public partial struct FollowPlayerSystem : ISystem
         }
     }
     
+    private ComponentTypeHandle<LocalToWorld> __localToWorldType;
+
     private ComponentTypeHandle<FollowPlayer> __instanceType;
     
     private ComponentTypeHandle<FollowTarget> __followTargetType;
@@ -91,6 +105,7 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
         __instanceType = state.GetComponentTypeHandle<FollowPlayer>(true);
         __followTargetType = state.GetComponentTypeHandle<FollowTarget>();
         
@@ -114,12 +129,15 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __localToWorldType.Update(ref state);
         __instanceType.Update(ref state);
         __followTargetType.Update(ref state);
         __lookAtTargetType.Update(ref state);
         
         ApplyEx apply;
+        apply.time = SystemAPI.Time.ElapsedTime;
         apply.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
+        apply.localToWorldType = __localToWorldType;
         apply.instanceType = __instanceType;
         apply.followTargetType = __followTargetType;
         apply.lookAtTargetType = __lookAtTargetType;

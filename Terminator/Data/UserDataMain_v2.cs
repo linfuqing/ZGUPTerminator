@@ -285,6 +285,8 @@ public partial class UserDataMain
 
         var results = __ApplyRewards(rewards);
 
+        __AppendQuest(UserQuest.Type.Tip, 1);
+
         onComplete(results == null ? null : results.ToArray());
     }
     
