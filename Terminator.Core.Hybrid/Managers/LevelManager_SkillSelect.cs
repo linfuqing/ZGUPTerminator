@@ -205,13 +205,11 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
-                int //index = 0,
-                    //guidePriority = 0,
-                    guideIndex = -1,
-                    recommendIndex = -1,
-                    recommendCount = 0,
+                int guideIndex = -1,
+                    //recommendIndex = -1,
+                    //recommendCount = 0,
                     recommendKeyCount = Mathf.Max(maxSkillActiveKeyCount, destination.style.child == null ? 0 : 1), //destination.style.child == null ? 0 : 1,
-                    skillKeyCount = 0, 
+                    //skillKeyCount = 0, 
                     keyCount;
                 SkillAsset asset;
                 string[] keyNames, oldKeyNames;
@@ -283,8 +281,11 @@ public partial class LevelManager
                                 keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName) + 1);
                             }
                         }
-
-                        if (keyCount > recommendKeyCount)
+                        
+                        if (keyCount > recommendKeyCount && style.onRecommend != null)
+                            style.onRecommend.Invoke();
+                            
+                        /*if (keyCount > recommendKeyCount)
                         {
                             recommendKeyCount = keyCount;
                             recommendIndex = i;
@@ -294,7 +295,7 @@ public partial class LevelManager
                         else if (keyCount == recommendKeyCount)
                             ++recommendCount;
 
-                        ++skillKeyCount;
+                        ++skillKeyCount;*/
                     }
                     
                     /*else if (keyCount == recommendKeyCount)
@@ -309,13 +310,13 @@ public partial class LevelManager
                         yield return new WaitForSecondsRealtime(destination.delayTime);
                 }
 
-                if (recommendIndex != -1 && recommendCount != skillKeyCount)
+                /*if (recommendIndex != -1 && recommendCount != skillKeyCount)
                 {
                     var skillName = skills[recommendIndex].name;
                     style = __skillStyles[skillName];
                     if (style.onRecommend != null)
                         style.onRecommend.Invoke();
-                }
+                }*/
 
                 if (guideIndex != -1)
                 {
