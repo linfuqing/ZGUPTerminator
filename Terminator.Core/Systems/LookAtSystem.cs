@@ -672,7 +672,7 @@ public partial struct LookAtTransformSystem : ISystem
         
         using(var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
-                .WithAll<LookAtTarget, LocalTransform>()
+                .WithAll<LookAtTarget, LookAtOrigin, LocalTransform>()
                 .WithNone<ThirdPersonCharacterLookAt, PhysicsGraphicalSmoothing>()
                 .WithOptions(EntityQueryOptions.FilterWriteGroup)
                 .Build(ref state);

@@ -1,6 +1,7 @@
 using System;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 
 [Flags]
 public enum LookAtLocation
@@ -23,6 +24,7 @@ public struct LookAt : IComponentData
     public float speed;
 }
 
+[WriteGroup(typeof(LocalToWorld))]
 public struct LookAtOrigin : IComponentData
 {
     public RigidTransform transform;
