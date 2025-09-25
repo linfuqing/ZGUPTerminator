@@ -23,6 +23,9 @@ public class LookAtAuthoring : MonoBehaviour
 
             AddComponent<LookAtTarget>(entity);
 
+            if (authoring.GetComponent<ThirdPersonCharacterAuthoring>() == null)
+                AddComponent<ThirdPersonCharacterStandTime>(entity);
+
             //SetComponentEnabled<LookAtTarget>(entity, false);
         }
     }
