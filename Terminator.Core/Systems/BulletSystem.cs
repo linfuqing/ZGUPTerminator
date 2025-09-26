@@ -126,6 +126,8 @@ public partial struct BulletSystem : ISystem
         public bool isFire;
 
         public double time;
+        
+        public float3 gravity;
 
         public Random random;
 
@@ -294,6 +296,7 @@ public partial struct BulletSystem : ISystem
                 location, 
                 damageScale, 
                 time,
+                gravity, 
                 up, 
                 cameraRotation, 
                 localToWorld, 
@@ -361,6 +364,8 @@ public partial struct BulletSystem : ISystem
         public bool isFire;
         
         public double time;
+
+        public float3 gravity;
 
         public quaternion cameraRotation;
 
@@ -449,6 +454,7 @@ public partial struct BulletSystem : ISystem
             Collect collect;
             collect.isFire = isFire;
             collect.time = time;
+            collect.gravity = gravity;
             collect.random = Random.CreateFromIndex((uint)((int)hash ^ (int)(hash >> 32) ^ unfilteredChunkIndex));
             collect.cameraRotation = cameraRotation;
             collect.levelStatus = levelStates.TryGetComponent(levelEntity, out var levelStatus) ? levelStatus : default;
@@ -632,6 +638,7 @@ public partial struct BulletSystem : ISystem
         CollectEx collect;
         collect.isFire = __targetGroup.CalculateEntityCount() > 1;
         collect.time = SystemAPI.Time.ElapsedTime;
+        collect.gravity = SystemAPI.TryGetSingleton<PhysicsStep>(out var physicsStep) ? physicsStep.Gravity : PhysicsStep.Default.Gravity;
         collect.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         SystemAPI.TryGetSingletonEntity<LevelStatus>(out collect.levelEntity);
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;

@@ -42,7 +42,9 @@ public enum BulletTargetCoordinate
 public enum BulletDirection
 {
     Forward,
-    Horizontal
+    Horizontal, 
+    ParabolaNear, 
+    ParabolaFar
 }
 
 public enum BulletFollowTarget
@@ -529,6 +531,7 @@ public struct BulletDefinition
         int version,
         float damageScale,
         double time,
+        in float3 gravity, 
         in float3 up, 
         in quaternion cameraRotation, 
         in float4x4 transform,
@@ -747,6 +750,16 @@ public struct BulletDefinition
             case BulletDirection.Horizontal:
                 transformResult.rot = MathUtilities.CreateRotationWithUpPriority(up, math.forward(targetStatus.transform.rot));
                 break;
+            case BulletDirection.ParabolaNear:
+            case BulletDirection.ParabolaFar:
+                var distance = targetStatus.targetPosition - targetStatus.transform.pos;
+                Math.CalculateParabolaAngleAndTime(
+                    data.direction == BulletDirection.ParabolaNear, 
+                    data.linearSpeed, 
+                    gravity, 
+                    ref distance);
+                transformResult.rot = quaternion.LookRotationSafe(distance, up);
+                break;
             default:
                 transformResult.rot = targetStatus.transform.rot;
                 break;
@@ -827,6 +840,7 @@ public struct BulletDefinition
         BulletLocation location, 
         float damageScale, 
         double time,
+        in float3 gravity, 
         in float3 up, 
         in quaternion cameraRotation, 
         in float4x4 transform,
@@ -890,6 +904,7 @@ public struct BulletDefinition
                 version.value,
                 activeIndex.damageScale * damageScale,
                 time,
+                gravity, 
                 up, 
                 cameraRotation, 
                 transform,

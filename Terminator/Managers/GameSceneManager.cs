@@ -13,7 +13,7 @@ public class GameSceneManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void LoadToDefault()
     {
-        GameAssetManager.instance.LoadScene(_defaultSceneName, null);
+        GameAssetManager.instance.LoadScene(_defaultSceneName, null, null, false);
     }
 
     void Start()

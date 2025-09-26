@@ -263,10 +263,18 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             onComplete(result);
         }
         else
+        {
+            bool result = false;
             api.Buy(userID, type, level, x =>
             {
+                result = true;
+                
                 onComplete(x ? Buy(type, level) : null);
             });
+            
+            while(!result)
+                yield return null;
+        }
     }
 
     void Awake()

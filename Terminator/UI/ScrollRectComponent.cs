@@ -700,6 +700,8 @@ namespace ZG
                 node.velocity = math.lerp(node.velocity, distance / instance.elasticity, t);
 
                 node.normalizedPosition -= math.select(float2.zero, node.velocity / length, length > math.FLT_MIN_NORMAL) * deltaTime;
+
+                node.normalizedPosition = math.saturate(node.normalizedPosition);
                 
                 node.index = instance.GetIndex(count, node.normalizedPosition, length, cellLength, offset);
                 

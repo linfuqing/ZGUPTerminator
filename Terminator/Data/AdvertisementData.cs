@@ -105,7 +105,7 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
     {
         yield return null;
 
-        var api = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0).IsValid(1) ? IAdvertisementAPI.instance : null;
+        var api = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0).IsValid(1) ? null : IAdvertisementAPI.instance;
         if (api == null)
         {
             var key = GetNameSpace(type, name);
@@ -114,6 +114,9 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
             onComplete(true);
         }
         else
+        {
+            bool result = false;
+            
             api.Broadcast(type, name, x =>
             {
                 if (x)
@@ -122,8 +125,15 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
                     PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
                 }
 
+                result = true;
+                
                 onComplete(x);
             });
+            
+            
+            while(!result)
+                yield return null;
+        }
     }
 
     void Awake()
