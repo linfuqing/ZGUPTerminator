@@ -27,7 +27,7 @@ public struct LookAt : IComponentData
 [WriteGroup(typeof(LocalToWorld))]
 public struct LookAtOrigin : IComponentData
 {
-    public RigidTransform transform;
+    public quaternion rotation;
 }
 
 public struct LookAtTarget : IComponentData, IEnableableComponent

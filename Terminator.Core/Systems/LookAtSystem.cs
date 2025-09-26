@@ -162,7 +162,7 @@ public partial struct LookAtSystem : ISystem
             if (index < origins.Length)
             {
                 LookAtOrigin origin;
-                origin.transform = math.RigidTransform(localTransform.Rotation, localTransform.Position);
+                origin.rotation = localTransform.Rotation;
                 origins[index] = origin;
             }
 
@@ -592,10 +592,10 @@ public partial struct LookAtTransformSystem : ISystem
         {
             var localTransform = localTransforms[index];
 
-            var transform = GraphicalSmoothingUtility.Interpolate(
-                origins[index].transform, math.RigidTransform(localTransform.Rotation, localTransform.Position), normalizedTimeAhead);
+            var rotation = math.nlerp(
+                origins[index].rotation, localTransform.Rotation, normalizedTimeAhead);
 
-            var matrix = float4x4.TRS(transform.pos, transform.rot, localTransform.Scale);
+            var matrix = float4x4.TRS(localTransform.Position, rotation, localTransform.Scale);
             float4x4 localToParent;
             if (index < parents.Length && 
                 LookAtSystem.TryGetLocalToWorld(parents[index].Value, parentMap, localTransformMap, out localToParent))
