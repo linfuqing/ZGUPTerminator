@@ -592,7 +592,7 @@ public partial struct LookAtTransformSystem : ISystem
         {
             var localTransform = localTransforms[index];
 
-            var rotation = math.nlerp(
+            var rotation = math.slerp(
                 origins[index].rotation, localTransform.Rotation, normalizedTimeAhead);
 
             var matrix = float4x4.TRS(localTransform.Position, rotation, localTransform.Scale);
