@@ -169,7 +169,7 @@ public partial struct LookAtSystem : ISystem
             var transform = math.RigidTransform(localTransform.Rotation, localTransform.Position);
             float4x4 parentToWorld;
             if (parents.TryGetComponent(entity, out var parent) &&
-                TransformUtility.TryGetLocalToWorld(parent.Value, parents, localTransforms, out var matrix))
+                new FixedLocalToWorld(parents, localTransforms).TryGetMatrix(parent.Value, out var matrix))
             {
                 parentToWorld = matrix;
 
@@ -545,12 +545,8 @@ public partial struct LookAtTransformSystem : ISystem
     private struct Transform
     {
         public float normalizedTimeAhead;
-        
-        [ReadOnly]
-        public ComponentLookup<Parent> parentMap;
 
-        [ReadOnly]
-        public ComponentLookup<LocalTransform> localTransformMap;
+        public FixedLocalToWorld fixedLocalToWorld;
         
         [ReadOnly]
         public NativeArray<LocalTransform> localTransforms;
@@ -561,6 +557,9 @@ public partial struct LookAtTransformSystem : ISystem
         [ReadOnly]
         public NativeArray<Parent> parents;
 
+        [ReadOnly] 
+        public NativeArray<PostTransformMatrix> postTransformMatrices;
+        
         public NativeArray<LocalToWorld> localToWorlds;
 
         public void Execute(int index)
@@ -573,8 +572,11 @@ public partial struct LookAtTransformSystem : ISystem
             var matrix = float4x4.TRS(localTransform.Position, rotation, localTransform.Scale);
             float4x4 localToParent;
             if (index < parents.Length && 
-                TransformUtility.TryGetLocalToWorld(parents[index].Value, parentMap, localTransformMap, out localToParent))
+                fixedLocalToWorld.TryGetMatrix(parents[index].Value, out localToParent))
                 matrix = math.mul(localToParent, matrix);
+            
+            if(index < postTransformMatrices.Length)
+                matrix = math.mul(matrix, postTransformMatrices[index].Value);
 
             LocalToWorld localToWorld;
             localToWorld.Value = matrix;
@@ -587,12 +589,8 @@ public partial struct LookAtTransformSystem : ISystem
     {
         public float normalizedTimeAhead;
         
-        [ReadOnly]
-        public ComponentLookup<Parent> parents;
+        public FixedLocalToWorld fixedLocalToWorld;
 
-        [ReadOnly]
-        public ComponentLookup<LocalTransform> localTransforms;
-        
         [ReadOnly]
         public ComponentTypeHandle<LocalTransform> localTransformType;
         
@@ -605,17 +603,20 @@ public partial struct LookAtTransformSystem : ISystem
         [ReadOnly]
         public ComponentTypeHandle<Parent> parentType;
 
+        [ReadOnly] 
+        public ComponentTypeHandle<PostTransformMatrix> postTransformMatrixType;
+
         public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Transform transform;
             transform.normalizedTimeAhead = chunk.Has(ref targetType) ? normalizedTimeAhead : 1.0f;
-            transform.parentMap = parents;
-            transform.localTransformMap = localTransforms;
+            transform.fixedLocalToWorld = fixedLocalToWorld;
             transform.localTransforms = chunk.GetNativeArray(ref localTransformType);
             transform.origins = chunk.GetNativeArray(ref originType);
             transform.parents = chunk.GetNativeArray(ref parentType);
+            transform.postTransformMatrices = chunk.GetNativeArray(ref postTransformMatrixType);
             transform.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -629,10 +630,8 @@ public partial struct LookAtTransformSystem : ISystem
         }
     }
     
-    private ComponentLookup<Parent> __parents;
+    private FixedLocalToWorld __fixedLocalToWorld;
 
-    private ComponentLookup<LocalTransform> __localTransforms;
-        
     private ComponentTypeHandle<LocalTransform> __localTransformType;
         
     private ComponentTypeHandle<LookAtOrigin> __originType;
@@ -641,6 +640,8 @@ public partial struct LookAtTransformSystem : ISystem
 
     private ComponentTypeHandle<Parent> __parentType;
 
+    private ComponentTypeHandle<PostTransformMatrix> __postTransformMatrixType;
+
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
     private EntityQuery __group;
@@ -648,12 +649,12 @@ public partial struct LookAtTransformSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __parents = state.GetComponentLookup<Parent>(true);
-        __localTransforms = state.GetComponentLookup<LocalTransform>(true);
+        __fixedLocalToWorld = new FixedLocalToWorld(ref state);
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>(true);
         __originType = state.GetComponentTypeHandle<LookAtOrigin>(true);
         __targetType = state.GetComponentTypeHandle<LookAtTarget>(true);
         __parentType = state.GetComponentTypeHandle<Parent>(true);
+        __postTransformMatrixType = state.GetComponentTypeHandle<PostTransformMatrix>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>();
         
         using(var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -674,22 +675,22 @@ public partial struct LookAtTransformSystem : ISystem
         if (timeAhead < 0.0f || fixedFrame.deltaTime < math.FLT_MIN_NORMAL)
             return;
         
-        __parents.Update(ref state);
-        __localTransforms.Update(ref state);
+        __fixedLocalToWorld.Update(ref state);
         __localTransformType.Update(ref state);
         __originType.Update(ref state);
         __targetType.Update(ref state);
         __parentType.Update(ref state);
+        __postTransformMatrixType.Update(ref state);
         __localToWorldType.Update(ref state);
 
         TransformEx transform;
         transform.normalizedTimeAhead = math.saturate(timeAhead / fixedFrame.deltaTime);
-        transform.parents = __parents;
-        transform.localTransforms = __localTransforms;
+        transform.fixedLocalToWorld = __fixedLocalToWorld;
         transform.localTransformType = __localTransformType;
         transform.originType = __originType;
         transform.targetType = __targetType;
         transform.parentType = __parentType;
+        transform.postTransformMatrixType = __postTransformMatrixType;
         transform.localToWorldType = __localToWorldType;
 
         state.Dependency = transform.ScheduleParallelByRef(__group, state.Dependency);
