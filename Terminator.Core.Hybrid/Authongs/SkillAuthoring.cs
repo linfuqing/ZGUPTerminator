@@ -310,6 +310,8 @@ public class SkillAuthoring : MonoBehaviour, IMessageOverride
                     preIndices = builder.Allocate(ref destination.preIndices, numPreIndices);
                     for (j = 0; j < numPreIndices; ++j)
                     {
+                        UnityEngine.Debug.LogError($"{authoring} wtf?", authoring);
+                        
                         preIndices[j] = -1;
                         
                         preName = source.preNames[j];
