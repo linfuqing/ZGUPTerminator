@@ -3,37 +3,37 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.Collections;
 
-public readonly struct FixedLocalToWorld
+public struct FixedLocalToWorld
 {
     [ReadOnly]
-    public readonly ComponentLookup<Parent> Parents;
+    public ComponentLookup<Parent> parents;
 
     [ReadOnly] 
-    public readonly ComponentLookup<LocalTransform> LocalTransforms;
+    public ComponentLookup<LocalTransform> localTransforms;
 
     public FixedLocalToWorld(ref SystemState state)
     {
-        Parents = state.GetComponentLookup<Parent>(true);
-        LocalTransforms = state.GetComponentLookup<LocalTransform>(true);
+        parents = state.GetComponentLookup<Parent>(true);
+        localTransforms = state.GetComponentLookup<LocalTransform>(true);
     }
     
     public FixedLocalToWorld(in ComponentLookup<Parent> parents, in ComponentLookup<LocalTransform> localTransforms)
     {
-        Parents = parents;
-        LocalTransforms = localTransforms;
+        this.parents = parents;
+        this.localTransforms = localTransforms;
     }
 
     public void Update(ref SystemState state)
     {
-        Parents.Update(ref state);
-        LocalTransforms.Update(ref state);
+        parents.Update(ref state);
+        localTransforms.Update(ref state);
     }
     
     public bool TryGetMatrix(
         in Entity entity, 
         out float4x4 matrix)
     {
-        if (!LocalTransforms.TryGetComponent(entity, out var localTransform))
+        if (!localTransforms.TryGetComponent(entity, out var localTransform))
         {
             matrix = float4x4.identity;
 
@@ -41,7 +41,7 @@ public readonly struct FixedLocalToWorld
         }
 
         matrix = localTransform.ToMatrix();
-        if (Parents.TryGetComponent(entity, out var parent) && 
+        if (parents.TryGetComponent(entity, out var parent) && 
             TryGetMatrix(
                 parent.Value, 
                 out var parentMatrix))
@@ -53,11 +53,11 @@ public readonly struct FixedLocalToWorld
     
     public float4x4 GetMatrix(in Entity entity)
     {
-        float4x4 matrix = LocalTransforms.TryGetComponent(entity, out var localTransform)
+        float4x4 matrix = localTransforms.TryGetComponent(entity, out var localTransform)
             ? localTransform.ToMatrix()
             : float4x4.identity;
 
-        if (Parents.TryGetComponent(entity, out var parent))
+        if (parents.TryGetComponent(entity, out var parent))
             matrix = math.mul(GetMatrix(parent.Value), matrix);
 
         return matrix;

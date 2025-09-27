@@ -301,7 +301,7 @@ public partial struct BulletSystem : ISystem
                 layerMaskAndTags,
                 levelStatus, 
                 collisionWorld, 
-                fixedLocalToWorld.Parents, 
+                fixedLocalToWorld.parents, 
                 characterBodies, 
                 animationCurveDeltas, 
                 colliders[index].AsNativeArray(), 
