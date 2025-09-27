@@ -610,8 +610,8 @@ public partial struct LookAtTransformSystem : ISystem
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
+            float normalizedTimeAhead = chunk.Has(ref targetType) ? this.normalizedTimeAhead : 1.0f;
             Transform transform;
-            transform.normalizedTimeAhead = chunk.Has(ref targetType) ? normalizedTimeAhead : 1.0f;
             transform.fixedLocalToWorld = fixedLocalToWorld;
             transform.localTransforms = chunk.GetNativeArray(ref localTransformType);
             transform.origins = chunk.GetNativeArray(ref originType);
@@ -622,8 +622,7 @@ public partial struct LookAtTransformSystem : ISystem
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
-                if (transform.normalizedTimeAhead < math.FLT_MIN_NORMAL && !chunk.IsComponentEnabled(ref targetType, i))
-                    transform.normalizedTimeAhead = 1.0f;
+                transform.normalizedTimeAhead = normalizedTimeAhead < 1.0f && !chunk.IsComponentEnabled(ref targetType, i) ? 1.0f : normalizedTimeAhead;
                 
                 transform.Execute(i);
             }
