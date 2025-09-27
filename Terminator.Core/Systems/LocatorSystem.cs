@@ -2,6 +2,7 @@ using System;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -9,7 +10,7 @@ using Unity.Transforms;
 using ZG;
 using Random = Unity.Mathematics.Random;
 
-[UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true)]
+[BurstCompile]//[UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true)]
 public partial struct LocatorSystem : ISystem
 {
     [Flags]
@@ -26,7 +27,13 @@ public partial struct LocatorSystem : ISystem
         public Random random;
         
         [ReadOnly]
-        public NativeArray<LocalToWorld> localToWorlds;
+        public ComponentLookup<Parent> parents;
+
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public NativeArray<Entity> entityArray;
 
         [ReadOnly]
         public NativeArray<LocatorDefinitionData> instances;
@@ -91,8 +98,9 @@ public partial struct LocatorSystem : ISystem
                     int areaIndex = action.areaIndices[random.NextInt(numAreaIndices)];
                     ref var aabb = ref definition.areas[areaIndex].aabb;
                     float3 position = random.NextFloat3(aabb.Min, aabb.Max);
-                    var localToWorld = localToWorlds[index];
-                    velocity.value = position - localToWorld.Position;
+
+                    TransformUtility.TryGetLocalToWorld(entityArray[index], parents, localTransforms, out var maxtrix);
+                    velocity.value = position - maxtrix.c3.xyz;
                     velocity.time = 0.0;
                     if (action.time > math.FLT_MIN_NORMAL)
                     {
@@ -192,7 +200,13 @@ public partial struct LocatorSystem : ISystem
         public double time;
 
         [ReadOnly]
-        public ComponentTypeHandle<LocalToWorld> localToWorldType;
+        public ComponentLookup<Parent> parents;
+
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public EntityTypeHandle entityType;
 
         [ReadOnly]
         public ComponentTypeHandle<LocatorDefinitionData> instanceType;
@@ -224,7 +238,9 @@ public partial struct LocatorSystem : ISystem
             Locate locate;
             locate.time = time;
             locate.random = Random.CreateFromIndex((uint)((int)hash ^ (hash >> 32) ^ unfilteredChunkIndex));
-            locate.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
+            locate.parents = parents;
+            locate.localTransforms = localTransforms;
+            locate.entityArray = chunk.GetNativeArray(entityType);
             locate.instances = chunk.GetNativeArray(ref instanceType);
             locate.speeds = chunk.GetNativeArray(ref speedType);
             locate.velocities = chunk.GetNativeArray(ref velocityType);
@@ -261,8 +277,14 @@ public partial struct LocatorSystem : ISystem
 
         public Random random;
 
-        //[ReadOnly]
-        //public NativeArray<LocalToWorld> localToWorlds;
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransformMap;
+
+        [ReadOnly]
+        public ComponentLookup<Parent> parentMap;
+
+        [ReadOnly]
+        public NativeArray<Parent> parents;
 
         [ReadOnly]
         public NativeArray<LocatorDefinitionData> instances;
@@ -272,6 +294,7 @@ public partial struct LocatorSystem : ISystem
 
         public NativeArray<LocatorTime> times;
 
+        [NativeDisableContainerSafetyRestriction]
         public NativeArray<LocalTransform> localTransforms;
 
         public NativeArray<PhysicsVelocity> physicsVelocities;
@@ -341,6 +364,10 @@ public partial struct LocatorSystem : ISystem
                     }
                     else
                     {
+                        if (index < parents.Length && TransformUtility.TryGetLocalToWorld(parents[index].Value,
+                                parentMap, localTransformMap, out var matrix))
+                            rotation = math.mul(math.inverse(math.quaternion(matrix)), rotation);
+                        
                         var localTransform = localTransforms[index];
                         localTransform.Rotation = rotation;
                         localTransforms[index] = localTransform;
@@ -350,6 +377,7 @@ public partial struct LocatorSystem : ISystem
             else
             {
                 bool isTransform;
+                float4x4 matrix = float4x4.identity;
                 LocalTransform localTransform;
                 if (LocatorDirection.DontCare == velocity.direction)
                 {
@@ -360,6 +388,13 @@ public partial struct LocatorSystem : ISystem
                 else
                 {
                     isTransform = true;
+
+                    if (index < parents.Length && TransformUtility.TryGetLocalToWorld(parents[index].Value,
+                            parentMap, localTransformMap, out matrix))
+                    {
+                        matrix = math.inverse(matrix);
+                        rotation = math.mul(math.quaternion(matrix), rotation);
+                    }
 
                     localTransform = localTransforms[index];
                     localTransform.Rotation = rotation;
@@ -379,11 +414,16 @@ public partial struct LocatorSystem : ISystem
                     {
                         isTransform = true;
                         
+                        if (index < parents.Length && TransformUtility.TryGetLocalToWorld(parents[index].Value,
+                                parentMap, localTransformMap, out matrix))
+                            matrix = math.inverse(matrix);
+                        
                         localTransform = localTransforms[index];
                     }
                     
                     float3 distance = velocity.value * (float)(nextTime - time.value);
-
+                    distance = math.mul(math.float3x3(matrix), distance);
+                    
                     localTransform.Position += distance;
                 }
                 
@@ -466,8 +506,14 @@ public partial struct LocatorSystem : ISystem
     {
         public double time;
 
-        //[ReadOnly]
-        //public ComponentTypeHandle<LocalToWorld> localToWorldType;
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public ComponentLookup<Parent> parents;
+
+        [ReadOnly]
+        public ComponentTypeHandle<Parent> parentType;
 
         [ReadOnly]
         public ComponentTypeHandle<LocatorDefinitionData> instanceType;
@@ -476,6 +522,7 @@ public partial struct LocatorSystem : ISystem
 
         public ComponentTypeHandle<LocatorTime> timeType;
 
+        [NativeDisableContainerSafetyRestriction]
         public ComponentTypeHandle<LocalTransform> localTransformType;
 
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
@@ -501,7 +548,9 @@ public partial struct LocatorSystem : ISystem
             Update update;
             update.time = time;
             update.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
-            //update.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
+            update.localTransformMap = localTransforms;
+            update.parentMap = parents;
+            update.parents = chunk.GetNativeArray(ref parentType);
             update.instances = chunk.GetNativeArray(ref instanceType);
             update.velocities = chunk.GetNativeArray(ref velocityType);
             update.times = chunk.GetNativeArray(ref timeType);
@@ -530,8 +579,12 @@ public partial struct LocatorSystem : ISystem
             }
         }
     }
-    
-    private ComponentTypeHandle<LocalToWorld> __localToWorldType;
+
+    private EntityTypeHandle __entityType;
+
+    private ComponentLookup<LocalTransform> __localTransforms;
+    private ComponentLookup<Parent> __parents;
+    private ComponentTypeHandle<Parent> __parentType;
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
@@ -567,7 +620,10 @@ public partial struct LocatorSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
+        __entityType = state.GetEntityTypeHandle();
+        __localTransforms = state.GetComponentLookup<LocalTransform>(true);
+        __parents = state.GetComponentLookup<Parent>(true);
+        __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
         __characterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
@@ -585,7 +641,7 @@ public partial struct LocatorSystem : ISystem
 
         using (var builder = new EntityQueryBuilder(Allocator.Persistent))
             __groupToLocate = builder
-                .WithAll<LocalToWorld, LocatorDefinitionData>()
+                .WithAll<LocalTransform, LocatorDefinitionData>()
                 .WithAllRW<LocatorTime, LocatorStatus>()
                 .WithPresentRW<LocatorVelocity>()
                 .Build(ref state);
@@ -600,7 +656,9 @@ public partial struct LocatorSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        __localToWorldType.Update(ref state);
+        __entityType.Update(ref state);
+        __parents.Update(ref state);
+        __localTransforms.Update(ref state);
         __instanceType.Update(ref state);
         __speedType.Update(ref state);
         __velocityType.Update(ref state);
@@ -616,7 +674,9 @@ public partial struct LocatorSystem : ISystem
         
         LocateEx locate;
         locate.time = time;
-        locate.localToWorldType = __localToWorldType;
+        locate.entityType = __entityType;
+        locate.parents = __parents;
+        locate.localTransforms = __localTransforms;
         locate.instanceType = __instanceType;
         locate.speedType = __speedType;
         locate.velocityType = __velocityType;
@@ -629,6 +689,7 @@ public partial struct LocatorSystem : ISystem
         locate.inputMessageType = __inputMessageType;
         var jobHandle = locate.ScheduleParallelByRef(__groupToLocate, state.Dependency);
 
+        __parentType.Update(ref state);
         __localTransformType.Update(ref state);
         __physicsVelocityType.Update(ref state);
         __characterControlType.Update(ref state);
@@ -636,7 +697,9 @@ public partial struct LocatorSystem : ISystem
         
         UpdateEx update;
         update.time = time;
-        //update.localToWorldType = __localToWorldType;
+        update.localTransforms = __localTransforms;
+        update.parents = __parents;
+        update.parentType = __parentType;
         update.instanceType = __instanceType;
         update.velocityType = __velocityType;
         update.timeType = __timeType;

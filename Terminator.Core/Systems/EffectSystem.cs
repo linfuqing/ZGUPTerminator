@@ -270,7 +270,7 @@ public partial struct EffectSystem : ISystem
         public NativeArray<Parent> parents;
         
         public BufferAccessor<SimulationEvent> simulationEvents;
-        public EntityCommandBuffer.ParallelWriter entityManager;
+        //public EntityCommandBuffer.ParallelWriter entityManager;
 
         public bool Execute(int index)
         {
@@ -321,7 +321,7 @@ public partial struct EffectSystem : ISystem
                     spawn.targets = targets;
                     spawn.parents = chunk.GetNativeArray(ref parentType);
                     spawn.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
-                    spawn.entityManager = entityManager;
+                    //spawn.entityManager = entityManager;
 
                     var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
                     while (iterator.NextEntityIndex(out int i))

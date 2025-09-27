@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using Unity.CharacterController;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Physics;
 using ZG;
@@ -173,6 +174,8 @@ public partial struct FollowTargetSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __sharedData.Update(ref state, 
+            out _,
+            out _,
             out var localTransformType, 
             out var physicsVelocityType, 
             out var characterBodyType,
@@ -199,7 +202,7 @@ public partial struct FollowTargetSystem : ISystem
     }
 }
 
-[BurstCompile, UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true)]
+[BurstCompile]//, UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true)]
 public partial struct FollowTargetTransformSystem : ISystem
 {
     private struct Wrapper : IReadOnlyListWrapper<FollowTargetDistance, DynamicBuffer<FollowTargetDistance>>
@@ -213,26 +216,40 @@ public partial struct FollowTargetTransformSystem : ISystem
     {
         public float deltaTime;
         
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransformMap;
+
+        [ReadOnly]
+        public ComponentLookup<Parent> parentMap;
+
+        [ReadOnly] 
+        public NativeArray<Parent> parents;
+
         [ReadOnly] 
         public NativeArray<FollowTargetVelocity> velocities;
 
-        //[ReadOnly]
+        [NativeDisableContainerSafetyRestriction]
         public NativeArray<LocalTransform> localTransforms;
         
         public void Execute(int index)
         {
             var velocity = velocities[index];
             var localTransform = localTransforms[index];
+            
+            float4x4 matrix = float4x4.identity;
+            if (index < parents.Length && TransformUtility.TryGetLocalToWorld(parents[index].Value,
+                    parentMap, localTransformMap, out matrix))
+                matrix = math.inverse(matrix);
 
             bool isRotation = math.lengthsq(velocity.lookAt) > math.FLT_MIN_NORMAL;
 
             if (isRotation)
-                localTransform.Rotation = velocity.lookAt;//math.mul(velocity.direction, localTransform.Rotation);
+                localTransform.Rotation = math.mul(math.quaternion(matrix), velocity.lookAt);//math.mul(velocity.direction, localTransform.Rotation);
 
             if (math.abs(velocity.value) > math.FLT_MIN_NORMAL)
-                localTransform.Position += deltaTime * velocity.value * velocity.direction;
+                localTransform.Position += math.mul(math.float3x3(matrix), deltaTime * velocity.value * velocity.direction);
             else
-                localTransform.Position = velocity.target;
+                localTransform.Position = math.transform(matrix, velocity.target);
             
             localTransforms[index] = localTransform;
         }
@@ -244,15 +261,27 @@ public partial struct FollowTargetTransformSystem : ISystem
         public float deltaTime;
         
         [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public ComponentLookup<Parent> parents;
+
+        [ReadOnly] 
+        public ComponentTypeHandle<Parent> parentType;
+
+        [ReadOnly]
         public ComponentTypeHandle<FollowTargetVelocity> velocityType;
         
-        //[ReadOnly]
+        [NativeDisableContainerSafetyRestriction]
         public ComponentTypeHandle<LocalTransform> localTransformType;
         
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             ApplyTransforms applyTransforms;
             applyTransforms.deltaTime = deltaTime;
+            applyTransforms.localTransformMap = localTransforms;
+            applyTransforms.parentMap = parents;
+            applyTransforms.parents = chunk.GetNativeArray(ref parentType);
             applyTransforms.velocities = chunk.GetNativeArray(ref velocityType);
             applyTransforms.localTransforms = chunk.GetNativeArray(ref localTransformType);
 
@@ -266,8 +295,11 @@ public partial struct FollowTargetTransformSystem : ISystem
     {
         public quaternion cameraRotation;
 
-        [ReadOnly] 
-        public ComponentLookup<LocalToWorld> localToWorlds;
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransformMap;
+
+        [ReadOnly]
+        public ComponentLookup<Parent> parentMap;
 
         [ReadOnly]
         public NativeArray<Parent> parents;
@@ -295,16 +327,15 @@ public partial struct FollowTargetTransformSystem : ISystem
         public bool Execute(int index)
         {
             var instance = instances[index];
-            if (!localToWorlds.TryGetComponent(instance.entity, out var localToWorld))
+            if (!TransformUtility.TryGetLocalToWorld(instance.entity, parentMap, localTransformMap, out var targetLocalToWorld))
                 return false;
 
-            float4x4 parentLocalToWorld, targetLocalToWorld = localToWorld.Value;
+            float4x4 parentLocalToWorld;
             var transform = localTransforms[index];
             bool hasParent;
             if (index < parents.Length &&
-                localToWorlds.TryGetComponent(parents[index].Value,  out localToWorld))
+                TransformUtility.TryGetLocalToWorld(parents[index].Value, parentMap, localTransformMap, out parentLocalToWorld))
             {
-                parentLocalToWorld = localToWorld.Value;
                 transform = LocalTransform.FromMatrix(math.mul(parentLocalToWorld, transform.ToMatrix()));
 
                 hasParent = true;
@@ -399,8 +430,11 @@ public partial struct FollowTargetTransformSystem : ISystem
     {
         public quaternion cameraRotation;
 
-        [ReadOnly] 
-        public ComponentLookup<LocalToWorld> localToWorlds;
+        [ReadOnly]
+        public ComponentLookup<LocalTransform> localTransforms;
+
+        [ReadOnly]
+        public ComponentLookup<Parent> parents;
 
         [ReadOnly]
         public ComponentTypeHandle<Parent> parentType;
@@ -428,7 +462,8 @@ public partial struct FollowTargetTransformSystem : ISystem
         {
             ComputeVelocities computeVelocities;
             computeVelocities.cameraRotation = cameraRotation;
-            computeVelocities.localToWorlds = localToWorlds;
+            computeVelocities.localTransformMap = localTransforms;
+            computeVelocities.parentMap = parents;
             computeVelocities.parents = chunk.GetNativeArray(ref parentType);
             computeVelocities.localTransforms = chunk.GetNativeArray(ref localTransformType);
             computeVelocities.characterBodies = chunk.GetNativeArray(ref characterBodyType);
@@ -447,8 +482,6 @@ public partial struct FollowTargetTransformSystem : ISystem
         }
     }
 
-    private ComponentLookup<LocalToWorld> __localToWorlds;
-
     private ComponentTypeHandle<Parent> __parentType;
 
     private ComponentTypeHandle<FollowTargetUp> __upType;
@@ -466,7 +499,6 @@ public partial struct FollowTargetTransformSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __localToWorlds = state.GetComponentLookup<LocalToWorld>(true);
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __upType = state.GetComponentTypeHandle<FollowTargetUp>(true);
         __speedType = state.GetComponentTypeHandle<FollowTargetSpeed>(true);
@@ -495,14 +527,21 @@ public partial struct FollowTargetTransformSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         __sharedData.Update(ref state, 
+            out var parents, 
+            out var localTransforms, 
             out var localTransformType, 
             out _, 
             out var characterBodyType,
             out var instanceType, 
             out var velocityType);
         
+        __parentType.Update(ref state);
+        
         ApplyTransformsEx applyTransforms;
         applyTransforms.deltaTime = SystemAPI.Time.DeltaTime;
+        applyTransforms.localTransforms = localTransforms;
+        applyTransforms.parents = parents;
+        applyTransforms.parentType = __parentType;
         applyTransforms.velocityType = velocityType;
         applyTransforms.localTransformType = localTransformType;
 
@@ -514,17 +553,17 @@ public partial struct FollowTargetTransformSystem : ISystem
             ref state, 
             out _);
         
-        __localToWorlds.Update(ref state);
-        __parentType.Update(ref state);
         __upType.Update(ref state);
         __speedType.Update(ref state);
         __distanceType.Update(ref state);
         
         ComputeVelocitiesEx computeVelocities;
         computeVelocities.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
-        computeVelocities.localToWorlds = __localToWorlds;
-        computeVelocities.localTransformType = localTransformType;
+        
+        computeVelocities.localTransforms = localTransforms;
+        computeVelocities.parents = parents;
         computeVelocities.parentType = __parentType;
+        computeVelocities.localTransformType = localTransformType;
         computeVelocities.characterBodyType = characterBodyType;
         computeVelocities.instanceType = instanceType;
         computeVelocities.upType = __upType;
@@ -598,7 +637,7 @@ public struct FollowTargetSharedData
         public void Execute(int index)
         {
             var parent = parents[index];
-            if (!TryGetLocalToWorld(parent.entity, transformParents, localTransforms, out var localToWorld))
+            if (!TransformUtility.TryGetLocalToWorld(parent.entity, transformParents, localTransforms, out var localToWorld))
             {
                 //velocities[index] = default;
                 
@@ -853,31 +892,6 @@ public struct FollowTargetSharedData
     private EntityQuery __parentGroup;
     private EntityQuery __bezierGroup;
 
-    public static bool TryGetLocalToWorld(
-        in Entity entity, 
-        in ComponentLookup<Parent> parents, 
-        in ComponentLookup<LocalTransform> localTransforms, 
-        out float4x4 matrix)
-    {
-        if (!localTransforms.TryGetComponent(entity, out var localTransform))
-        {
-            matrix = float4x4.identity;
-
-            return false;
-        }
-
-        matrix = localTransform.ToMatrix();
-        if (parents.TryGetComponent(entity, out var parent) && 
-            TryGetLocalToWorld(
-                parent.Value, 
-                parents, 
-                localTransforms, 
-                out var parentMatrix))
-            matrix = math.mul(parentMatrix, matrix);
-
-        return true;
-    }
-
     public FollowTargetSharedData(bool isPhysicsVelocityTypeReadOnly, ref SystemState state)
     {
         __entityType = state.GetEntityTypeHandle();
@@ -911,6 +925,8 @@ public struct FollowTargetSharedData
 
     public void Update(
         ref SystemState state,
+        out ComponentLookup<Parent> parents,
+        out ComponentLookup<LocalTransform> localTransforms,
         out ComponentTypeHandle<LocalTransform> localTransformType,
         out ComponentTypeHandle<PhysicsVelocity> physicsVelocityType,
         out ComponentTypeHandle<KinematicCharacterBody> characterBodyType,
@@ -927,6 +943,8 @@ public struct FollowTargetSharedData
         __velocityType.Update(ref state);
         __localTransforms.Update(ref state);
 
+        parents = __parents;
+        localTransforms = __localTransforms;
         physicsVelocityType = __physicsVelocityType;
         characterBodyType = __characterBodyType;
         instanceType = __instanceType;
