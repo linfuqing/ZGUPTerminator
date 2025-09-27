@@ -68,6 +68,8 @@ public partial class LevelManager
             ActiveSkillStyle[] styles;
             if (__styles.Count == level)
             {
+                UnityEngine.Debug.LogError($"wtf?? {asset.name}");
+                
                 ActiveSkillStyle style;
                 styles = (ActiveSkillStyle[])__styles[0].Clone();
                 numStyles = styles.Length;
