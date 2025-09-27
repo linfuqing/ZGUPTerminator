@@ -7,6 +7,9 @@ public class PlayerArrow : MonoBehaviour
     internal bool _isUp;
 
     [SerializeField] 
+    internal float _scale = 1.0f;
+
+    [SerializeField] 
     internal Vector2 _offsetSpeed = new float2(0, 2f);
     
     [SerializeField] 
@@ -50,7 +53,7 @@ public class PlayerArrow : MonoBehaviour
             localScale.z = (Quaternion.Inverse(rotation) * distance).z;
             transform.localScale = localScale;
 
-            material.mainTextureScale = new Vector2(1.0f, localScale.z);
+            material.mainTextureScale = new Vector2(1.0f, localScale.z * (_scale > Mathf.Epsilon ? _scale : 1.0f));
         }
 
         material.mainTextureOffset += _offsetSpeed * Time.deltaTime;
