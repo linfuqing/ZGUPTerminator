@@ -134,15 +134,11 @@ public partial struct BulletSystem : ISystem
         public quaternion cameraRotation;
 
         public LevelStatus levelStatus;
+        
+        public FixedLocalToWorld fixedLocalToWorld;
 
         [ReadOnly] 
         public CollisionWorld collisionWorld;
-
-        [ReadOnly]
-        public ComponentLookup<Parent> parents;
-
-        [ReadOnly] 
-        public ComponentLookup<LocalTransform> localTransforms;
 
         [ReadOnly]
         public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
@@ -286,7 +282,7 @@ public partial struct BulletSystem : ISystem
             else if(layerMaskAndTags.isEmpty)
                 layerMaskAndTags = LayerMaskAndTags.AllLayers;
 
-            var localToWorld = GetLocalToWorld(entity);
+            var localToWorld = fixedLocalToWorld.GetMatrix(entity);
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var targetStates = this.targetStates[index];
             var states = this.states[index];
@@ -305,7 +301,7 @@ public partial struct BulletSystem : ISystem
                 layerMaskAndTags,
                 levelStatus, 
                 collisionWorld, 
-                parents, 
+                fixedLocalToWorld.Parents, 
                 characterBodies, 
                 animationCurveDeltas, 
                 colliders[index].AsNativeArray(), 
@@ -345,17 +341,6 @@ public partial struct BulletSystem : ISystem
             return outputMessages.IsCreated && outputMessages.Length > 0;
         }
 
-        public float4x4 GetLocalToWorld(in Entity entity)
-        {
-            float4x4 matrix = localTransforms.TryGetComponent(entity, out var localTransform)
-                ? localTransform.ToMatrix()
-                : float4x4.identity;
-
-            if (parents.TryGetComponent(entity, out var parent))
-                matrix = math.mul(GetLocalToWorld(parent.Value), matrix);
-
-            return matrix;
-        }
     }
 
     [BurstCompile]
@@ -371,14 +356,10 @@ public partial struct BulletSystem : ISystem
 
         public Entity levelEntity;
 
+        public FixedLocalToWorld fixedLocalToWorld;
+
         [ReadOnly] 
         public CollisionWorld collisionWorld;
-
-        [ReadOnly]
-        public ComponentLookup<Parent> parents;
-
-        [ReadOnly] 
-        public ComponentLookup<LocalTransform> localTransforms;
 
         [ReadOnly]
         public ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers;
@@ -458,9 +439,8 @@ public partial struct BulletSystem : ISystem
             collect.random = Random.CreateFromIndex((uint)((int)hash ^ (int)(hash >> 32) ^ unfilteredChunkIndex));
             collect.cameraRotation = cameraRotation;
             collect.levelStatus = levelStates.TryGetComponent(levelEntity, out var levelStatus) ? levelStatus : default;
+            collect.fixedLocalToWorld = fixedLocalToWorld;
             collect.collisionWorld = collisionWorld;
-            collect.parents = parents;
-            collect.localTransforms = localTransforms;
             collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
             collect.characterInterpolations = characterInterpolations;
             collect.characterBodies = characterBodies;
@@ -495,10 +475,8 @@ public partial struct BulletSystem : ISystem
         }
     }
 
-    private ComponentLookup<Parent> __parents;
+    private FixedLocalToWorld __fixedLocalToWorld;
 
-    private ComponentLookup<LocalTransform> __localTransforms;
-    
     private ComponentLookup<PhysicsGraphicalInterpolationBuffer> __physicsGraphicalInterpolationBuffers;
 
     private ComponentLookup<CharacterInterpolation> __characterInterpolations;
@@ -553,8 +531,7 @@ public partial struct BulletSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        __parents = state.GetComponentLookup<Parent>(true);
-        __localTransforms = state.GetComponentLookup<LocalTransform>(true);
+        __fixedLocalToWorld = new FixedLocalToWorld(ref state);
         __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
@@ -608,8 +585,7 @@ public partial struct BulletSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        __parents.Update(ref state);
-        __localTransforms.Update(ref state);
+        __fixedLocalToWorld.Update(ref state);
         __physicsGraphicalInterpolationBuffers.Update(ref state);
         __characterInterpolations.Update(ref state);
         __characterBodies.Update(ref state);
@@ -642,8 +618,7 @@ public partial struct BulletSystem : ISystem
         collect.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         SystemAPI.TryGetSingletonEntity<LevelStatus>(out collect.levelEntity);
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
-        collect.parents = __parents;
-        collect.localTransforms = __localTransforms;
+        collect.fixedLocalToWorld = __fixedLocalToWorld;
         collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
         collect.characterInterpolations = __characterInterpolations;
         collect.characterBodies = __characterBodies;

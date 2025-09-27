@@ -11,10 +11,11 @@ using Unity.Transforms;
 using Math = ZG.Mathematics.Math;
 
 [BurstCompile]
-[UpdateInGroup(typeof(TransformSystemGroup))]
-[UpdateBefore(typeof(LocalToWorldSystem))]
-[UpdateAfter(typeof(SmoothRigidBodiesGraphicalMotion))]
-[UpdateAfter(typeof(CharacterInterpolationSystem))]
+[UpdateInGroup(typeof(TransformSystemGroup)/*, OrderLast = true*/)]
+[UpdateAfter(typeof(LocalToWorldSystem))]
+//[UpdateBefore(typeof(LocalToWorldSystem))]
+//[UpdateAfter(typeof(SmoothRigidBodiesGraphicalMotion))]
+//[UpdateAfter(typeof(CharacterInterpolationSystem))]
 [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation | WorldSystemFilterFlags.ClientSimulation)]//, UpdateInGroup(typeof(AfterPhysicsSystemGroup), OrderLast = true)]
 public partial struct SuctionSystem : ISystem
 {
@@ -96,6 +97,12 @@ public partial struct SuctionSystem : ISystem
         public float deltaTime;
         
         [ReadOnly]
+        public ComponentLookup<Parent> parents;
+
+        [ReadOnly]
+        public ComponentLookup<LocalToWorld> localToWorlds;
+
+        [ReadOnly]
         public BufferLookup<SimulationEvent> simulationEvents;
 
         [ReadOnly]
@@ -103,12 +110,6 @@ public partial struct SuctionSystem : ISystem
 
         [ReadOnly]
         public NativeArray<Entity> entityArray;
-
-        [ReadOnly]
-        public ComponentLookup<Parent> parents;
-
-        [ReadOnly]
-        public ComponentLookup<LocalTransform> localTransforms;
 
         [ReadOnly]
         public ComponentLookup<EffectTarget> effectTargets;
@@ -124,11 +125,11 @@ public partial struct SuctionSystem : ISystem
             {
                 var instance = this.instances[index];
 
-                var localToWorld = GetLocalToWorld(entity);
+                var localToWorld = localToWorlds[entity].Value;
                 RigidTransform transform;
                 transform.pos = math.transform(localToWorld, instance.center);
                 
-                LocalTransform targetLocalTransform;
+                LocalToWorld targetLocalTransform;
                 quaternion rotation;
                 float3x3 matrix;
                 float3 velocity, tangentVelocity;
@@ -138,7 +139,7 @@ public partial struct SuctionSystem : ISystem
                     if (!velocities.HasComponent(simulationEvent.entity))
                         continue;
 
-                    if (!localTransforms.TryGetComponent(simulationEvent.entity, out targetLocalTransform))
+                    if (!localToWorlds.TryGetComponent(simulationEvent.entity, out targetLocalTransform))
                         continue;
                     
                     if(effectTargets.HasComponent(simulationEvent.entity) && !effectTargets.IsComponentEnabled(simulationEvent.entity))
@@ -221,18 +222,6 @@ public partial struct SuctionSystem : ISystem
             }
         }
 
-        public float4x4 GetLocalToWorld(in Entity entity)
-        {
-            if (!localTransforms.TryGetComponent(entity, out var localTransform))
-                return float4x4.identity;
-
-            var matrix = localTransform.ToMatrix();
-            if (parents.TryGetComponent(entity, out var parent))
-                matrix = math.mul(GetLocalToWorld(parent.Value), matrix);
-
-            return matrix;
-        }
-
         public DynamicBuffer<SimulationEvent> GetEvents(in Entity entity)
         {
             if (simulationEvents.TryGetBuffer(entity, out var results))
@@ -263,7 +252,7 @@ public partial struct SuctionSystem : ISystem
         public ComponentLookup<Parent> parents;
 
         [ReadOnly]
-        public ComponentLookup<LocalTransform> localTransforms;
+        public ComponentLookup<LocalToWorld> localToWorlds;
 
         [ReadOnly]
         public ComponentLookup<EffectTarget> effectTargets;
@@ -279,7 +268,7 @@ public partial struct SuctionSystem : ISystem
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
             collect.parents = parents;
-            collect.localTransforms = localTransforms;
+            collect.localToWorlds = localToWorlds;
             collect.effectTargets = effectTargets;
             collect.velocities = velocities;
 
@@ -438,7 +427,7 @@ public partial struct SuctionSystem : ISystem
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
-    private ComponentLookup<LocalTransform> __localTransforms;
+    private ComponentLookup<LocalToWorld> __localToWorlds;
 
     private ComponentLookup<Parent> __parents;
 
@@ -463,9 +452,9 @@ public partial struct SuctionSystem : ISystem
         __targetCharacterDisabledType = state.GetComponentTypeHandle<SuctionTargetCharacterDisabled>(true);
         __targetVelocityType = state.GetComponentTypeHandle<SuctionTargetVelocity>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>();
-        __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
-        __localTransforms = state.GetComponentLookup<LocalTransform>(true);
+        __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>();
+        __localToWorlds = state.GetComponentLookup<LocalToWorld>(true);
         __parents = state.GetComponentLookup<Parent>(true);
         __effectTargets = state.GetComponentLookup<EffectTarget>(true);
         __velocities = state.GetComponentLookup<SuctionTargetVelocity>();
@@ -500,7 +489,7 @@ public partial struct SuctionSystem : ISystem
         __entityType.Update(ref state);
         __instanceType.Update(ref state);
         __parents.Update(ref state);
-        __localTransforms.Update(ref state);
+        __localToWorlds.Update(ref state);
         __effectTargets.Update(ref state);
         __velocities.Update(ref state);
         __simulationEvents.Update(ref state);
@@ -514,7 +503,7 @@ public partial struct SuctionSystem : ISystem
             collect.simulationEvents = __simulationEvents;
             collect.instanceType = __instanceType;
             collect.parents = __parents;
-            collect.localTransforms = __localTransforms;
+            collect.localToWorlds = __localToWorlds;
             collect.effectTargets = __effectTargets;
             collect.velocities = __velocities;
             jobHandle = collect.ScheduleParallelByRef(__instanceGroup, jobHandle);

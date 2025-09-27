@@ -49,4 +49,17 @@ public readonly struct FixedLocalToWorld
 
         return true;
     }
+    
+    
+    public float4x4 GetMatrix(in Entity entity)
+    {
+        float4x4 matrix = LocalTransforms.TryGetComponent(entity, out var localTransform)
+            ? localTransform.ToMatrix()
+            : float4x4.identity;
+
+        if (Parents.TryGetComponent(entity, out var parent))
+            matrix = math.mul(GetMatrix(parent.Value), matrix);
+
+        return matrix;
+    }
 }

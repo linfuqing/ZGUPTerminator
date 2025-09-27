@@ -94,14 +94,10 @@ public partial struct SimulationEventSystem : ISystem
 
         public bool isCollision;
 
+        public FixedLocalToWorld fixedLocalToWorld;
+
         [ReadOnly] 
         public CollisionWorld collisionWorld;
-
-        [ReadOnly]
-        public ComponentLookup<LocalTransform> localTransforms;
-
-        [ReadOnly]
-        public ComponentLookup<Parent> parents;
 
         [ReadOnly]
         public NativeArray<Entity> entityArray; 
@@ -117,7 +113,7 @@ public partial struct SimulationEventSystem : ISystem
                 return false;
             
             var body = collisionWorld.Bodies[rigidBodyIndex];
-            var localToWorld = GetLocalToWorld(body.Entity);
+            var localToWorld = fixedLocalToWorld.GetMatrix(body.Entity);
             var transform = math.RigidTransform(localToWorld);
 
             var instances = this.instances[index];
@@ -160,28 +156,15 @@ public partial struct SimulationEventSystem : ISystem
 
             return result;
         }
-
-        public float4x4 GetLocalToWorld(in Entity entity)
-        {
-            var local = localTransforms.TryGetComponent(entity, out var localTransform) ? localTransform.ToMatrix() : float4x4.identity;
-            if (parents.TryGetComponent(entity, out var parent))
-                return math.mul(GetLocalToWorld(parent.Value), local);
-
-            return local;
-        }
     }
 
     [BurstCompile]
     private struct CollectStaticEx : IJobChunk
     {
+        public FixedLocalToWorld fixedLocalToWorld;
+
         [ReadOnly] 
         public CollisionWorld collisionWorld;
-
-        [ReadOnly]
-        public ComponentLookup<LocalTransform> localTransforms;
-
-        [ReadOnly]
-        public ComponentLookup<Parent> parents;
 
         [ReadOnly]
         public EntityTypeHandle entityType; 
@@ -193,9 +176,8 @@ public partial struct SimulationEventSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             CollectStatic collectStatic;
+            collectStatic.fixedLocalToWorld = fixedLocalToWorld;
             collectStatic.collisionWorld = collisionWorld;
-            collectStatic.localTransforms = localTransforms;
-            collectStatic.parents = parents;
             collectStatic.entityArray = chunk.GetNativeArray(entityType);
             collectStatic.collisions = chunk.GetNativeArray(ref collisionType);
             collectStatic.instances = chunk.GetBufferAccessor(ref instanceType);
@@ -282,9 +264,8 @@ public partial struct SimulationEventSystem : ISystem
         }
     }
 
+    private FixedLocalToWorld __fixedLocalToWorld;
     private EntityTypeHandle __entityType;
-    private ComponentLookup<LocalTransform> __localTransforms;
-    private ComponentLookup<Parent> __parents;
     private ComponentTypeHandle<SimulationCollision> __collisionType;
     private BufferTypeHandle<SimulationEvent> __instanceType;
     private BufferLookup<SimulationEvent> __instances;
@@ -294,9 +275,8 @@ public partial struct SimulationEventSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __fixedLocalToWorld = new FixedLocalToWorld(ref state);
         __entityType = state.GetEntityTypeHandle();
-        __localTransforms = state.GetComponentLookup<LocalTransform>(true);
-        __parents = state.GetComponentLookup<Parent>(true);
         __collisionType = state.GetComponentTypeHandle<SimulationCollision>();
         __instanceType = state.GetBufferTypeHandle<SimulationEvent>();
         __instances = state.GetBufferLookup<SimulationEvent>();
@@ -329,15 +309,13 @@ public partial struct SimulationEventSystem : ISystem
         clear.instanceType = __instanceType;
         var jobHandle = clear.ScheduleParallelByRef(__eventGroup, state.Dependency);
         
-        __localTransforms.Update(ref state);
-        __parents.Update(ref state);
+        __fixedLocalToWorld.Update(ref state);
         __entityType.Update(ref state);
         __collisionType.Update(ref state);
         
         CollectStaticEx collectStatic;
+        collectStatic.fixedLocalToWorld = __fixedLocalToWorld;
         collectStatic.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
-        collectStatic.localTransforms = __localTransforms;
-        collectStatic.parents = __parents;
         collectStatic.entityType = __entityType;
         collectStatic.collisionType = __collisionType;
         collectStatic.instanceType = __instanceType;
