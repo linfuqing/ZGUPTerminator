@@ -405,7 +405,20 @@ public partial class LevelSystemManaged
         if (SystemAPI.TryGetSingletonEntity<LevelSkillVersion>(out Entity entity))
         {
             var skillVersion = SystemAPI.GetComponent<LevelSkillVersion>(entity);
-            if (__skillSelection.version.Equals(skillVersion))
+
+            bool isWaiting = false;
+            switch (__skillSelection.status)
+            {
+                case SkillSelectionStatus.End:
+                case SkillSelectionStatus.Finish:
+                    isWaiting = true;
+                    break;
+                default:
+                    isWaiting = __skillSelection.version.Equals(skillVersion);
+                    break;
+            }
+            
+            if (isWaiting)
             {
                 if (SystemAPI.IsBufferEnabled<LevelSkill>(entity))
                 {

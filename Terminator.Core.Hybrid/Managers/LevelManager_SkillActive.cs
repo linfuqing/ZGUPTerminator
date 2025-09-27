@@ -146,13 +146,14 @@ public partial class LevelManager
         public int rank;
         public LevelSkillKeyStyle[] styles;
     }
-    
+
     [SerializeField] 
     internal SkillActiveData[] _skillActiveDatas;
 
     private Pool<SkillActive> __skillActives;
 
     private Dictionary<string, SkillActiveKeyData> __skillActiveKeys;
+    private Dictionary<string, int> __skillChildKeyCounts;
 
     public int maxSkillActiveKeyCount
     {
@@ -173,6 +174,13 @@ public partial class LevelManager
     {
         return __skillActiveKeys != null && __skillActiveKeys.TryGetValue(keyName, out var skillActiveKey)
             ? skillActiveKey.count
+            : 0;
+    }
+    
+    public int GetSkillChildKeyCount(string keyName)
+    {
+        return __skillChildKeyCounts != null && __skillChildKeyCounts.TryGetValue(keyName, out var skillKeyCount)
+            ? skillKeyCount
             : 0;
     }
 
@@ -205,6 +213,8 @@ public partial class LevelManager
                 foreach (var key in keys)
                     __RemoveActiveSkillKey(key);
             }
+            
+            __RemoveChildSkillKey(name);
 
             return true;
         }
@@ -237,30 +247,37 @@ public partial class LevelManager
             origin.Reset(level, asset, keyIcons);
 
             int numKeys = keys == null ? 0 : keys.Length;
-            if (!oldName.IsEmpty && SkillManager.TryGetAsset(oldName, out _, out var oldKeys, out _) && oldKeys != null)
+            if (!oldName.IsEmpty)
             {
-                keys = keys?.Clone() as string[];
-
-                int keyIndex;
-                foreach (var key in oldKeys)
+                __RemoveChildSkillKey(oldName);
+                
+                if (SkillManager.TryGetAsset(oldName, out _, out var oldKeys, out _) && oldKeys != null)
                 {
-                    keyIndex = keys == null ? -1 : Array.IndexOf(keys, key);
-                    if (keyIndex != -1)
+                    keys = keys?.Clone() as string[];
+
+                    int keyIndex;
+                    foreach (var key in oldKeys)
                     {
-                        keys[keyIndex] = keys[--numKeys];
-                        
-                        continue;
+                        keyIndex = keys == null ? -1 : Array.IndexOf(keys, key);
+                        if (keyIndex != -1)
+                        {
+                            keys[keyIndex] = keys[--numKeys];
+
+                            continue;
+                        }
+
+                        __RemoveActiveSkillKey(key);
                     }
-                    
-                    __RemoveActiveSkillKey(key);
                 }
             }
-            
+
             if (numKeys > 0)
             {
                 for(int i = 0; i < numKeys; ++i)
                     __AddActiveSkillKey(keys[i]);
             }
+            
+            __AddChildSkillKey(name);
         }
     }
 
@@ -272,11 +289,49 @@ public partial class LevelManager
         value.Set(level, cooldown, elapsedTime);
     }
 
+    private void __AddChildSkillKey(in FixedString128Bytes skillName)
+    {
+        var childKeys = SkillManager.GetChildKeyNames(skillName);
+        if (childKeys != null)
+        {
+            if(__skillChildKeyCounts == null)
+                __skillChildKeyCounts = new Dictionary<string, int>();
+            
+            int childKeyCount;
+            foreach (var childKey in childKeys)
+            {
+                if (__skillChildKeyCounts.TryGetValue(childKey, out childKeyCount))
+                    ++childKeyCount;
+                else
+                    childKeyCount = 1;
+                        
+                __skillChildKeyCounts[childKey] = childKeyCount;
+            }
+        }
+    }
+    
+    private void __RemoveChildSkillKey(in FixedString128Bytes skillName)
+    {
+        var childKeys = SkillManager.GetChildKeyNames(skillName);
+        if (childKeys != null)
+        {
+            int childKeyCount;
+            foreach (var childKey in childKeys)
+            {
+                childKeyCount = __skillChildKeyCounts[childKey];
+                if (childKeyCount > 1)
+                    __skillChildKeyCounts[childKey] = childKeyCount - 1;
+                else
+                    __skillChildKeyCounts.Remove(childKey);
+            }
+        }
+    }
+
     private bool __RemoveActiveSkillKey(string name)
     {
         if (__skillActiveKeys == null || !__skillActiveKeys.TryGetValue(name, out var result))
             return false;
-
+        
         bool isDisable = false;
         if (result.count > 1)
         {

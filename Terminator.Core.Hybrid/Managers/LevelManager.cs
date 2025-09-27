@@ -311,13 +311,10 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void ClearTimeScales()
     {
-        if (__timeScaleIndices != null)
-        {
-            foreach (var timeScaleIndex in __timeScaleIndices)
-                TimeScaleUtility.Remove(timeScaleIndex);
-            
-            __timeScaleIndices.Clear();
-        }
+        if (__coroutineEnumerators != null && __coroutineEnumerators.Count > 0)
+            return;
+
+        __ClearTimeScales();
     }
 
     [UnityEngine.Scripting.Preserve]
@@ -377,7 +374,18 @@ public partial class LevelManager : MonoBehaviour
 
         __coroutine = null;
     }
-
+    
+    private void __ClearTimeScales()
+    {
+        if (__timeScaleIndices != null)
+        {
+            foreach (var timeScaleIndex in __timeScaleIndices)
+                TimeScaleUtility.Remove(timeScaleIndex);
+            
+            __timeScaleIndices.Clear();
+        }
+    }
+    
     private void __StartCoroutine(IEnumerator enumerator)
     {
         if (__coroutineEnumerators == null)
@@ -409,7 +417,7 @@ public partial class LevelManager : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(time);
         
-        ClearTimeScales();
+        __ClearTimeScales();
         
         if (_onQuit != null)
             _onQuit.Invoke();

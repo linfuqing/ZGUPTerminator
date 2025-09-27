@@ -89,6 +89,8 @@ public partial class LevelManager
     private Dictionary<string, LevelSkillStyle> __skillStyles;
 
     public bool isClear => __gameObjectsToDestroy == null || __gameObjectsToDestroy.Count < 1;
+
+    //public bool isSkillSelecting => __skillSelectionStatus != 0;
     
     public int selectedSkillSelectionIndex
     {
@@ -205,18 +207,19 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
-                int guideIndex = -1,
+                bool isRecommend;
+                int guideIndex = -1;//,
                     //recommendIndex = -1,
-                    recommendCount = 0,
-                    recommendKeyCount = 1, //Mathf.Max(maxSkillActiveKeyCount, destination.style.child == null ? 0 : 1), //destination.style.child == null ? 0 : 1,
-                    skillKeyCount = 0, 
-                    keyCount;
+                    //recommendCount = 0,
+                    //recommendKeyCount = Mathf.Max(maxSkillActiveKeyCount, destination.style.child == null ? 0 : 1), //destination.style.child == null ? 0 : 1,
+                    //skillKeyCount = 0, 
+                    //keyCount, childKeyCount;
                 SkillAsset asset;
                 string[] keyNames, oldKeyNames;
                 Sprite[] keyIcons;
                 LevelSkillStyle style;
                 LevelSkillData? skill = null;
-                List<int> recommendIndices = null;
+                //List<int> recommendIndices = null;
                 for (int i = 0; i < numSkills; ++i)
                 {
                     var source = skills[i];
@@ -265,28 +268,43 @@ public partial class LevelManager
 
                     style.SetAsset(asset, keyIcons);
 
-                    if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
-                        oldKeyNames = null;
+                    /*if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
+                        oldKeyNames = null;*/
                     
-                    keyCount = __SetSkillKeyStyles(style.keyStyles, keyNames, oldKeyNames);
+                    isRecommend = __SetSkillKeyStyles(style.keyStyles, keyNames/*, oldKeyNames*/);
                     if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
                     {
-                        keyNames = SkillManager.GetChildKeyNames(source.name);
-                        if (keyNames != null)
+                        if (!isRecommend)
                         {
-                            foreach (var keyName in keyNames)
+                            keyNames = SkillManager.GetChildKeyNames(source.name);
+                            if (keyNames != null)
                             {
-                                if(oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
-                                    continue;
-                                
-                                keyCount = Mathf.Max(keyCount, GetSkillActiveKeyCount(keyName) + 1);
+                                int count;
+                                SkillKeyAsset keyAsset;
+                                foreach (var keyName in keyNames)
+                                {
+                                    /*if (oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
+                                        continue;*/
+                                    
+                                    if(!SkillManager.TryGetAsset(keyName, out keyAsset))
+                                        continue;
+
+                                    count = GetSkillActiveKeyCount(name);
+                                    if(keyAsset.BinarySearch(count) < keyAsset.BinarySearch(count + GetSkillChildKeyCount(keyName)))
+                                    {
+                                        isRecommend = true;
+
+                                        break;
+                                    }
+                                    //childKeyCount = Mathf.Max(childKeyCount, GetSkillActiveKeyCount(keyName) + 1);
+                                }
                             }
                         }
-                        
-                        /*if (keyCount > recommendKeyCount && style.onRecommend != null)
-                            style.onRecommend.Invoke();*/
+
+                        if (isRecommend && style.onRecommend != null)
+                            style.onRecommend.Invoke();
                             
-                        if (keyCount > recommendKeyCount)
+                        /*if (keyCount > recommendKeyCount)
                         {
                             //recommendKeyCount = keyCount;
                             //recommendIndex = i;
@@ -300,11 +318,11 @@ public partial class LevelManager
                         else if (keyCount == recommendKeyCount)
                             ++recommendCount;
 
-                        ++skillKeyCount;
+                        ++skillKeyCount;*/
                     }
-                    else if (keyCount == recommendKeyCount && recommendIndices != null)
+                    //else if (keyCount == recommendKeyCount && recommendIndices != null)
                         //recommendIndex = -1;
-                        recommendIndices.Clear();
+                    //    recommendIndices.Clear();
 
                     if (__skillStyles == null)
                         __skillStyles = new Dictionary<string, LevelSkillStyle>();
@@ -315,7 +333,7 @@ public partial class LevelManager
                         yield return new WaitForSecondsRealtime(destination.delayTime);
                 }
 
-                if (recommendIndices != null/*recommendIndex != -1*/ && recommendCount != skillKeyCount)
+                /*if (recommendIndices != null/*recommendIndex != -1 && recommendCount != skillKeyCount)
                 {
                     foreach (var recommendIndex in recommendIndices)
                     {
@@ -323,7 +341,7 @@ public partial class LevelManager
                         if (style.onRecommend != null)
                             style.onRecommend.Invoke();
                     }
-                }
+                }*/
 
                 if (guideIndex != -1)
                 {
@@ -447,7 +465,7 @@ public partial class LevelManager
             {
                 style.SetAsset(asset, keyIcons);
                 
-                __SetSkillKeyStyles(style.keyStyles, keyNames, null);
+                __SetSkillKeyStyles(style.keyStyles, keyNames);
 
                 if (style.close == null)
                     Destroy(style.gameObject, selection.destroyTime);
@@ -543,7 +561,7 @@ public partial class LevelManager
         while ((__skillSelectionStatus & SkillSelectionStatus.Complete) != SkillSelectionStatus.Complete)
             yield return null;
         
-        ClearTimeScales();
+        __ClearTimeScales();
     }
 
     private IEnumerator __FinishSkillSelection()
@@ -594,12 +612,14 @@ public partial class LevelManager
         }
     }
 
-    private int __SetSkillKeyStyles(
+    private bool __SetSkillKeyStyles(
         IReadOnlyList<SkillKeyStyle> styles, 
-        string[] names, 
-        string[] oldNames)
+        string[] names/*, 
+        string[] oldNames*/)
     {
-        int maxCount = 0, count;
+        //int maxCount = 0, count;
+        bool result = false;
+        int count, rank;
         string name;
         LevelSkillKeyStyle style; 
         SkillKeyAsset asset;
@@ -607,23 +627,29 @@ public partial class LevelManager
         for (int i = 0; i < numNames; ++i)
         {
             name = names[i];
-            count = GetSkillActiveKeyCount(name);
+            /*count = GetSkillActiveKeyCount(name);
+            count = (oldNames != null && Array.IndexOf(oldNames, name) != -1 ? 0 : 1)
 
-            maxCount = Mathf.Max(maxCount, count + (oldNames != null && Array.IndexOf(oldNames, name) != -1 ? 0 : 1));
+            maxCount = Mathf.Max(maxCount, count + (oldNames != null && Array.IndexOf(oldNames, name) != -1 ? 0 : 1));*/
+
+            if(!SkillManager.TryGetAsset(name, out asset))
+                continue;
 
             style = i < numStyles ? styles[i] as LevelSkillKeyStyle : null;
             if (style == null)
                 continue;
-            
-            if(!SkillManager.TryGetAsset(name, out asset))
-                continue;
 
-            style.SetAsset(asset, count);
-            
+            count = GetSkillActiveKeyCount(name);
+            rank = style.SetAsset(asset, count);
+
+            if (/*(oldNames == null || Array.IndexOf(oldNames, name) == -1) &&
+                */asset.BinarySearch(count + GetSkillChildKeyCount(name)) > rank)
+                result = true;
+
             //style.gameObject.SetActive(true);
         }
 
-        return maxCount;
+        return result;
     }
 
     void OnDestroy()
