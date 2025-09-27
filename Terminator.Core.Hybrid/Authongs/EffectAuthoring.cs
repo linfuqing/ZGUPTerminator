@@ -60,11 +60,13 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         
         public float chance;
 
+        public float randomAngleMin;
+        public float randomAngleMax;
+        
         public float damageScale;
 
         public LayerMask damageLayerMask;
 
-        [UnityEngine.Serialization.FormerlySerializedAs("bulletLayerMask")]
         public LayerMaskAndTagsAuthoring layerMaskAndTags;
 
         public GameObject gameObject;
@@ -98,6 +100,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
             prefab.chance = chance;
             prefab.damageScale = damageScale;
+            prefab.randomAngleMin = randomAngleMin;
+            prefab.randomAngleMax = randomAngleMax;
             prefab.damageLayerMask = damageLayerMask;
             prefab.layerMaskAndTags = layerMaskAndTags;
         }

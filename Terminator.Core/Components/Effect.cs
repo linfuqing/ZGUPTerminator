@@ -55,6 +55,8 @@ public struct EffectDefinition
         public int damageLayerMask;
         public float damageScale;
         public float chance;
+        public float randomAngleMin;
+        public float randomAngleMax;
         public LayerMaskAndTags layerMaskAndTags;
     }
     

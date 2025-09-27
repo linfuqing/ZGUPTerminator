@@ -289,7 +289,7 @@ public partial class LevelManager
                                     if(!SkillManager.TryGetAsset(keyName, out keyAsset))
                                         continue;
 
-                                    count = GetSkillActiveKeyCount(name);
+                                    count = GetSkillActiveKeyCount(keyName);
                                     if(keyAsset.BinarySearch(count) < keyAsset.BinarySearch(count + GetSkillChildKeyCount(keyName)))
                                     {
                                         isRecommend = true;

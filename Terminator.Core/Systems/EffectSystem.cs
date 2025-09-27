@@ -2455,27 +2455,31 @@ public partial struct EffectSystem : ISystem
             damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
             switch (prefab.space)
             {
-                case EffectSpace.World:
-                    damageInstance.parent = Entity.Null;
-                    damageInstance.transform = transform;
-
-                    damageInstances.Enqueue(damageInstance);
-
-                    break;
                 case EffectSpace.Local:
                     damageInstance.parent = parent;
                     damageInstance.transform = RigidTransform.identity;
-
-                    damageInstances.Enqueue(damageInstance);
 
                     break;
                 case EffectSpace.Camera:
                     damageInstance.parent = Entity.Null;
                     damageInstance.transform.rot = cameraRotation;
                     damageInstance.transform.pos = transform.pos;
-                    damageInstances.Enqueue(damageInstance);
+                    break;
+                default:
+                    damageInstance.parent = Entity.Null;
+                    damageInstance.transform = transform;
+
                     break;
             }
+
+            if (prefab.randomAngleMin < prefab.randomAngleMax)
+            {
+                quaternion rotation = quaternion.AxisAngle(math.up(),
+                    random.NextFloat(prefab.randomAngleMin, prefab.randomAngleMax));
+                damageInstance.transform.rot = math.mul(damageInstance.transform.rot, rotation);
+            }
+
+            damageInstances.Enqueue(damageInstance);
         }
 
     }
