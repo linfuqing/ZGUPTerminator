@@ -222,7 +222,7 @@ public partial class UserDataMain
 #endif
 
     private const string NAME_SPACE_USER_PURCHASE_POOL_KEY = "UserPurchasePoolKey";
-    private const string NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES = "UserPurchasePoolTimes";
+    private const string NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES = "UserPurchasePoolFreeTimes";
     
     public IEnumerator QueryPurchases(
         uint userID,
@@ -367,14 +367,10 @@ public partial class UserDataMain
         //var results = new List<UserItem>();
         //UserItem userItem;
         string timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}";
-        float chance, total;
         int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), chapter = UserData.chapter, i;
-        bool isSelected;
         for (i = 0; i < times; ++i)
         {
-            isSelected = false;
-            total = 0.0f;
-            chance = UnityEngine.Random.value;
+            var randomSelector = new ZG.RandomSelector(0);
             foreach (var purchasePoolOption in _purchasePoolOptions)
             {
                 if(purchasePoolOption.poolName != purchasePool.name)
@@ -387,22 +383,10 @@ public partial class UserDataMain
                 if(purchasePoolOption.minChapter > chapter ||
                    purchasePoolOption.minChapter < purchasePoolOption.maxChapter && purchasePoolOption.maxChapter <= chapter)
                     continue;
-
-                total += purchasePoolOption.chance;
-                if (total > 1.0f)
-                {
-                    total -= 1.0f + Mathf.Epsilon;
-                    
-                    chance = UnityEngine.Random.value;
-
-                    isSelected = false;
-                }
-
-                if (isSelected || total < chance)
+                
+                if(!randomSelector.Select(purchasePoolOption.chance))
                     continue;
 
-                isSelected = true;
-                
                 reward.name = purchasePoolOption.name;
                 reward.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount);
 
