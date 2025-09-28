@@ -339,6 +339,22 @@ public sealed class LoginManager : MonoBehaviour
             foreach (var style in __levelStyles.Values)
                 Destroy(style.gameObject);
         }
+
+        bool isSelected = false;
+        foreach (var level in levelChapters.levels)
+        {
+            if (level.id == __selectedUserLevelID)
+            {
+                isSelected = true;
+                break;
+            }
+        }
+
+        if (!isSelected)
+        {
+            __selectedUserLevelID = 0;
+            __selectedStageIndex = -1;
+        }
         
         int i, numLevels = _levels.Length;
         var levelIndices = new Dictionary<string, int>(numLevels);
@@ -346,7 +362,7 @@ public sealed class LoginManager : MonoBehaviour
             levelIndices[_levels[i].name] = i;
 
         numLevels = levelChapters.levels.Length;
-        bool isHot = false, isSelected;
+        bool isHot = false;
         int selectedLevelIndex = -1, numStageRewards = 0, numStages, index, j;
         uint selectedStageID = 0;
         UserLevel userLevel;

@@ -268,10 +268,10 @@ public partial class LevelManager
 
                     style.SetAsset(asset, keyIcons);
 
-                    /*if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
-                        oldKeyNames = null;*/
+                    if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
+                        oldKeyNames = null;
                     
-                    isRecommend = __SetSkillKeyStyles(style.keyStyles, keyNames/*, oldKeyNames*/);
+                    isRecommend = __SetSkillKeyStyles(style.keyStyles, keyNames, oldKeyNames);
                     if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
                     {
                         if (!isRecommend)
@@ -283,8 +283,8 @@ public partial class LevelManager
                                 SkillKeyAsset keyAsset;
                                 foreach (var keyName in keyNames)
                                 {
-                                    /*if (oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
-                                        continue;*/
+                                    if (oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
+                                        continue;
                                     
                                     if(!SkillManager.TryGetAsset(keyName, out keyAsset))
                                         continue;
@@ -465,7 +465,7 @@ public partial class LevelManager
             {
                 style.SetAsset(asset, keyIcons);
                 
-                __SetSkillKeyStyles(style.keyStyles, keyNames);
+                __SetSkillKeyStyles(style.keyStyles, keyNames, null);
 
                 if (style.close == null)
                     Destroy(style.gameObject, selection.destroyTime);
@@ -614,8 +614,8 @@ public partial class LevelManager
 
     private bool __SetSkillKeyStyles(
         IReadOnlyList<SkillKeyStyle> styles, 
-        string[] names/*, 
-        string[] oldNames*/)
+        string[] names, 
+        string[] oldNames)
     {
         //int maxCount = 0, count;
         bool result = false;
@@ -635,15 +635,25 @@ public partial class LevelManager
             if(!SkillManager.TryGetAsset(name, out asset))
                 continue;
 
+            count = GetSkillActiveKeyCount(name);
             style = i < numStyles ? styles[i] as LevelSkillKeyStyle : null;
             if (style == null)
-                continue;
+            {
+                if(result)
+                    continue;
 
-            count = GetSkillActiveKeyCount(name);
-            rank = style.SetAsset(asset, count);
+                rank = asset.BinarySearch(count);
+            }
+            else
+            {
+                rank = style.SetAsset(asset, count);
+                
+                if(result)
+                    continue;
+            }
 
-            if (/*(oldNames == null || Array.IndexOf(oldNames, name) == -1) &&
-                */asset.BinarySearch(count + GetSkillChildKeyCount(name)) > rank)
+            if ((oldNames == null || Array.IndexOf(oldNames, name) == -1) &&
+                asset.BinarySearch(count + GetSkillChildKeyCount(name)) > rank)
                 result = true;
 
             //style.gameObject.SetActive(true);
