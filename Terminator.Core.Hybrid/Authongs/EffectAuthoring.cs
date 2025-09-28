@@ -67,6 +67,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
         public LayerMask damageLayerMask;
 
+        [UnityEngine.Serialization.FormerlySerializedAs("bulletLayerMask")]
         public LayerMaskAndTagsAuthoring layerMaskAndTags;
 
         public GameObject gameObject;
