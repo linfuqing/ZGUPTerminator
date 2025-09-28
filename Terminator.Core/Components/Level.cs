@@ -404,13 +404,13 @@ public struct LevelStageOption
                 case Type.Millisecond:
                     if (value > 0)
                     {
-                        condition.value += (int)(deltaTime * 1000);
+                        condition.value = (int)math.round(condition.value + deltaTime * 1000);
 
                         return condition.value >= value;
                     }
 
                     //继承后倒计时
-                    condition.value -= (int)(deltaTime * 1000);
+                    condition.value = (int)math.round(condition.value - deltaTime * 1000);
                     return condition.value <= value;
             }
 

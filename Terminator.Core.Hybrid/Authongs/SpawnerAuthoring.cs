@@ -387,7 +387,7 @@ public class SpawnerAuthoring : MonoBehaviour
                             index =  parameter.IndexOf(":", count + 1);
                             if (index == -1)
                             {
-                                area.layerMask.value = int.Parse(parameter.Substring(count + 1));
+                                area.layerMask.value = int.TryParse(parameter.Substring(count + 1), out int layerMask) ? layerMask : 0;
                                 area.tags = null;
                             }
                             else
