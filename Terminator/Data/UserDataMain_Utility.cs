@@ -37,7 +37,7 @@ public partial class UserDataMain
                 {
                     PlayerPrefs.SetInt(key, reward.count);
                     
-                    return __PurchasePool(purchasePoolIndex, reward.count, outRewards);
+                    return __PurchasePool(purchasePoolIndex, reward.count, out _, outRewards);
                 }
 
                 if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)

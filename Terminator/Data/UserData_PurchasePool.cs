@@ -7,11 +7,8 @@ public struct UserPurchasePool
 
     public uint id;
 
-    //该卡池抽的保底次数（固定值，剩余次数可以用times%timesToGuarantee获得）
-    public int timesToGuarantee;
-    
-    //卡池总抽取次数
-    public int times;
+    //剩余保底次数
+    public int guaranteedTimes;
     
     //剩余每日免费次数
     public int freeTimes;
@@ -58,6 +55,14 @@ public partial interface IUserData
         public PoolKey[] poolKeys;
     }
 
+    public struct PurchaseResult
+    {
+        //剩余保底次数
+        public int guaranteedTimes;
+
+        public UserItem[] items;
+    }
+
     /// <summary>
     /// 商店
     /// </summary>
@@ -72,5 +77,5 @@ public partial interface IUserData
         uint userID,
         uint purchasePoolID, 
         int times, 
-        Action<Memory<UserItem>> onComplete);
+        Action<PurchaseResult> onComplete);
 }
