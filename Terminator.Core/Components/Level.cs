@@ -397,7 +397,7 @@ public struct LevelStageOption
                         foreach (var levelItem in levelItems)
                         {
                             if (levelItem.name == item.name)
-                                return levelItem.count < item.count;
+                                return levelItem.count < -item.count;
                         }
                     }
                     break;
