@@ -7,6 +7,12 @@ public struct UserPurchasePool
 
     public uint id;
 
+    //该卡池抽的保底次数（固定值，剩余次数可以用times%timesToGuarantee获得）
+    public int timesToGuarantee;
+    
+    //卡池总抽取次数
+    public int times;
+    
     //剩余每日免费次数
     public int freeTimes;
     

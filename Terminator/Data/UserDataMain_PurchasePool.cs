@@ -17,15 +17,20 @@ public partial class UserDataMain
         
         public string name;
 
+        public string guaranteedPoolName;
+
         public Flag flag;
         
         [Tooltip("卡池类型")]
         public UserRewardType type;
 
-        [Tooltip("抽卡每日免费次数")]
+        [Tooltip("抽多少次保底")]
+        public int timesToGuarantee;
+
+        [Tooltip("每日免费次数")]
         public int freeTimes;
         
-        [Tooltip("抽卡需要多少钻石")]
+        [Tooltip("需要多少钻石")]
         public int diamond;
 
         [Tooltip("抽一次可获得多少金币")]
@@ -222,6 +227,7 @@ public partial class UserDataMain
 #endif
 
     private const string NAME_SPACE_USER_PURCHASE_POOL_KEY = "UserPurchasePoolKey";
+    private const string NAME_SPACE_USER_PURCHASE_POOL_TIMES = "UserPurchasePoolTimes";
     private const string NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES = "UserPurchasePoolFreeTimes";
     
     public IEnumerator QueryPurchases(
@@ -254,6 +260,9 @@ public partial class UserDataMain
             
             userPurchasePool.name = purchasePool.name;
             userPurchasePool.id = __ToID(i);
+            
+            userPurchasePool.timesToGuarantee = purchasePool.timesToGuarantee;
+            userPurchasePool.times = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}");
 
             freeTimes = new Active<int>(
                 PlayerPrefs.GetString($"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}"), __Parse);
@@ -321,8 +330,6 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
     
-    private const string NAME_SPACE_USER_PURCHASE_POOL_TIMES = "UserPurchasePoolTimes";
-
     private bool __PurchasePool(int purchasePoolIndex, int times, List<UserReward> outRewards)
     {
         var purchasePool = _purchasePools[purchasePoolIndex];
@@ -366,14 +373,19 @@ public partial class UserDataMain
         
         //var results = new List<UserItem>();
         //UserItem userItem;
-        string timeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}";
-        int purchasePoolTimes = PlayerPrefs.GetInt(timeKey), chapter = UserData.chapter, i;
+        string timesKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}", purchasePoolName;
+        int purchasePoolTimes = PlayerPrefs.GetInt(timesKey), chapter = UserData.chapter, i;
         for (i = 0; i < times; ++i)
         {
+            purchasePoolName = !string.IsNullOrEmpty(purchasePool.guaranteedPoolName) &&
+                               purchasePool.timesToGuarantee > 0 &&
+                               purchasePoolTimes % purchasePool.timesToGuarantee == 0
+                ? purchasePool.guaranteedPoolName
+                : purchasePool.name;
             var randomSelector = new ZG.RandomSelector(0);
             foreach (var purchasePoolOption in _purchasePoolOptions)
             {
-                if(purchasePoolOption.poolName != purchasePool.name)
+                if(purchasePoolOption.poolName != purchasePoolName)
                     continue;
                 
                 if(purchasePoolOption.minTimes > purchasePoolTimes || 
@@ -396,7 +408,7 @@ public partial class UserDataMain
             ++purchasePoolTimes;
         }
         
-        PlayerPrefs.SetInt(timeKey, purchasePoolTimes);
+        PlayerPrefs.SetInt(timesKey, purchasePoolTimes);
 
         return true;
     }
