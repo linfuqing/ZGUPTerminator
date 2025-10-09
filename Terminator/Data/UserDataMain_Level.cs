@@ -741,6 +741,8 @@ public partial class UserData
         {
             yield return null;
             
+            StartStage(_defaultSceneName, closestStage);
+            
             LevelCache levelCache;
             levelCache.name = _defaultSceneName;
             levelCache.id = levelID;

@@ -283,9 +283,9 @@ public partial class UserDataMain
         float multiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
         var rewards = instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
 
-        var results = __ApplyRewards(rewards);
-
         __AppendQuest(UserQuest.Type.Tip, 1);
+
+        var results = __ApplyRewards(rewards);
 
         onComplete(results == null ? null : results.ToArray());
     }

@@ -381,6 +381,9 @@ public class GameMain : GameUser
     public const string NAME_SPACE_PLAYER_PREF_VERSION = "PlayerPrefVersion";
 
     [SerializeField] 
+    internal SpawnerAttribute.Scale[] _defaultSpawnerAttributes;
+    
+    [SerializeField] 
     internal int _playerPrefVersion = 1;
     
     private bool __isActivated;
@@ -603,7 +606,15 @@ public class GameMain : GameUser
             yield return IUserData.instance.ApplyLevel(userID, 1, 0, null);
 
             IRewardData.instance = new GameRewardData(userID);
-            //LevelPlayerShared.effectTargetRecovery = 1024.0f;
+            
+            
+            LevelShared.spawnerAttributeScales.Clear();
+
+            if (_defaultSpawnerAttributes != null)
+            {
+                foreach (var spawnerAttribute in _defaultSpawnerAttributes)
+                    LevelShared.spawnerAttributeScales.Add(spawnerAttribute);
+            }
         }
 
         var assetPaths = new GameAssetManager.AssetPath[2];

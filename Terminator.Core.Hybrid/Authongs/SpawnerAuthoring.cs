@@ -371,28 +371,28 @@ public class SpawnerAuthoring : MonoBehaviour
                     {
                         area.name = parameter.Remove(index);
                         
-                        count = parameter.IndexOf(":", index + 1);
+                        count = parameter.IndexOf(":", ++index);
                         if (count == -1)
                         {
-                            area.attributeName = null;
+                            area.attributeName = parameter.Substring(index);
                             
-                            area.layerMask.value = int.Parse(parameter.Substring(index + 1));
+                            area.layerMask.value = 0;
 
                             area.tags = null;
                         }
                         else
                         {
-                            area.attributeName = parameter.Substring(index + 1, count - index - 1);
+                            area.attributeName = parameter.Substring(index, count - index);
                             
-                            index =  parameter.IndexOf(":", count + 1);
+                            index =  parameter.IndexOf(":", ++count);
                             if (index == -1)
                             {
-                                area.layerMask.value = int.TryParse(parameter.Substring(count + 1), out int layerMask) ? layerMask : 0;
+                                area.layerMask.value = int.TryParse(parameter.Substring(count), out int layerMask) ? layerMask : 0;
                                 area.tags = null;
                             }
                             else
                             {
-                                area.layerMask.value = int.Parse(parameter.Substring(count + 1, index - count - 1));
+                                area.layerMask.value = int.Parse(parameter.Substring(count, index - count));
                                 area.tags = parameter.Substring(index + 1).Split(':');
                             }
                         }

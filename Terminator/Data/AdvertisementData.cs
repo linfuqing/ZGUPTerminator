@@ -109,30 +109,31 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
         if (api == null)
         {
             var key = GetNameSpace(type, name);
-            PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
+            int times = PlayerPrefs.GetInt(key);
+            PlayerPrefs.SetInt(key, times + 1);
 
             onComplete(true);
         }
         else
         {
-            bool result = false;
+            bool? result = null;
             
+            //非主綫程回調
             api.Broadcast(type, name, x =>
             {
-                if (x)
-                {
-                    var key = GetNameSpace(type, name);
-                    PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
-                }
-
-                result = true;
-                
-                onComplete(x);
+                result = x;
             });
             
-            
-            while(!result)
+            while(result == null)
                 yield return null;
+            
+            if (result.Value)
+            {
+                var key = GetNameSpace(type, name);
+                PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key) + 1);
+            }
+
+            onComplete(result.Value);
         }
     }
 
