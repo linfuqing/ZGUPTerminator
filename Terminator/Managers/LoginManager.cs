@@ -724,32 +724,36 @@ public sealed class LoginManager : MonoBehaviour
                                                 toggle.interactable = i != currentSceneIndex && sceneUnlocked != null && sceneUnlocked.ContainsKey(i);
                                             }
 
+                                            var assetManager = GameAssetManager.instance?.dataManager;
                                             var prefab = level.scenes[currentSceneIndex].prefab;
                                             if (prefab != loader.Value)
                                             {
                                                 loader.Value?.Dispose();
-                                                prefab?.Load(
-                                                    GameAssetManager.instance?.dataManager, 
-                                                    this, 
-                                                    style.scenes[currentSceneIndex].root);
+                                                
+                                                prefab?.Init(this, style.scenes[currentSceneIndex].root);
+                                                prefab?.Load(assetManager);
 
                                                 loader.Value = prefab;
                                             }
 
-                                            var node = loader.Previous?.Previous;
-                                            if (node != null && node.Value != null)
+                                            var node = loader.Previous;
+                                            if (node != null)
                                             {
-                                                node.Value.Dispose();
-
-                                                node.Value = null;
+                                                if(node.Value != null && !node.Value.isLoading)
+                                                    node.Value?.Load(assetManager);
+                                                
+                                                for (node = node.Previous; node != null; node = node.Previous)
+                                                    node.Value?.Dispose();
                                             }
 
-                                            node = loader.Next?.Next;
-                                            if (node != null && node.Value != null)
+                                            node = loader.Next;
+                                            if (node != null)
                                             {
-                                                node.Value.Dispose();
+                                                if(node.Value != null && !node.Value.isLoading)
+                                                    node.Value?.Load(assetManager);
 
-                                                node.Value = null;
+                                                for (node = node.Next; node != null; node = node.Next)
+                                                    node.Value?.Dispose();
                                             }
                                         }
                                     };
