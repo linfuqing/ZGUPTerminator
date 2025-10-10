@@ -739,7 +739,7 @@ public sealed class LoginManager : MonoBehaviour
                                             var node = loader.Previous;
                                             if (node != null)
                                             {
-                                                if(node.Value != null && !node.Value.isLoading)
+                                                if(node.Value != null)
                                                     node.Value?.Load(assetManager);
                                                 
                                                 for (node = node.Previous; node != null; node = node.Previous)
@@ -749,7 +749,7 @@ public sealed class LoginManager : MonoBehaviour
                                             node = loader.Next;
                                             if (node != null)
                                             {
-                                                if(node.Value != null && !node.Value.isLoading)
+                                                if(node.Value != null)
                                                     node.Value?.Load(assetManager);
 
                                                 for (node = node.Next; node != null; node = node.Next)
