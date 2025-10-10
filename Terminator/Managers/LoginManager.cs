@@ -101,6 +101,9 @@ public sealed class LoginManager : MonoBehaviour
     internal StringEvent _onStageReward;
 
     [SerializeField]
+    internal StringEvent _onStageRewardAll;
+
+    [SerializeField]
     internal StringEvent _onGold;
 
     [SerializeField]
@@ -380,7 +383,7 @@ public sealed class LoginManager : MonoBehaviour
 
         numLevels = levelChapters.levels.Length;
         bool isHot = false;
-        int selectedLevelIndex = -1, numStageRewards = 0, numStages, index, j;
+        int selectedLevelIndex = -1, numStageRewards = 0, numStageRewardsTotal = 0, numStages, index, j;
         uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -431,6 +434,8 @@ public sealed class LoginManager : MonoBehaviour
                             isSelected = true;
                         }
                     }
+                    
+                    numStageRewardsTotal += stage.rewardFlags.Length;
                 }
             }
 
@@ -827,6 +832,9 @@ public sealed class LoginManager : MonoBehaviour
         if(_onStageReward != null)
             _onStageReward?.Invoke(numStageRewards.ToString());
         
+        if(_onStageRewardAll != null)
+            _onStageRewardAll?.Invoke(numStageRewardsTotal.ToString());
+
         onChapterLoaded?.Invoke(levelChapters);
     }
 
