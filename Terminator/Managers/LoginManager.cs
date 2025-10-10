@@ -728,7 +728,10 @@ public sealed class LoginManager : MonoBehaviour
                                             if (prefab != loader.Value)
                                             {
                                                 loader.Value?.Dispose();
-                                                prefab?.Load(GameAssetManager.instance.dataManager, this);
+                                                prefab?.Load(
+                                                    GameAssetManager.instance?.dataManager, 
+                                                    this, 
+                                                    style.scenes[currentSceneIndex].root);
 
                                                 loader.Value = prefab;
                                             }
