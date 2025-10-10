@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
+using ZG;
 using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
@@ -21,7 +22,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         public string name;
         
-        public GameObject prefab;
+        public AssetObjectLoader prefab;
         
         public int[] stageIndices;
     }
@@ -127,6 +128,7 @@ public sealed class LoginManager : MonoBehaviour
     private List<StageStyle> __stageStyles;
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
+    private LinkedList<AssetObjectLoader> __loaders;
 
     private string __levelName;
     private string __sceneName;
@@ -340,6 +342,21 @@ public sealed class LoginManager : MonoBehaviour
                 Destroy(style.gameObject);
         }
 
+        if (__loaders == null)
+            __loaders = new LinkedList<AssetObjectLoader>();
+        else
+        {
+            foreach (var loader in __loaders)
+            {
+                if(loader == null)
+                    continue;
+                
+                loader.Dispose();
+            }
+            
+            __loaders.Clear();
+        }
+
         bool isSelected = false;
         foreach (var level in levelChapters.levels)
         {
@@ -442,10 +459,12 @@ public sealed class LoginManager : MonoBehaviour
             //if(style.onImage != null)
             //    style.onImage.Invoke(level.sprite);
 
-            int numScenes = style.scenes.Length, numPrefabs = Mathf.Min(numScenes, level.scenes.Length);
-            var prefabs = new GameObject[numPrefabs];
-            for(j = 0; j < numPrefabs; ++j)
-                prefabs[j] = Instantiate(level.scenes[j].prefab, style.scenes[j].root);
+            //int numScenes = style.scenes.Length, numPrefabs = Mathf.Min(numScenes, level.scenes.Length);
+            //var prefabs = new GameObject[numPrefabs];
+            //for(j = 0; j < numPrefabs; ++j)
+            //    prefabs[j] = Instantiate(level.scenes[j].prefab, style.scenes[j].root);
+
+            var loader = __loaders.AddLast((AssetObjectLoader)null);
 
             style.toggle.onValueChanged.AddListener(x =>
             {
@@ -465,6 +484,7 @@ public sealed class LoginManager : MonoBehaviour
                 }
                 
                 Toggle toggle;
+                int numScenes = style.scenes.Length;
                 for(int i = 0; i < numScenes; ++i)
                 {
                     toggle = style.scenes[i].toggle;
@@ -702,6 +722,31 @@ public sealed class LoginManager : MonoBehaviour
                                                     continue;
                                                 
                                                 toggle.interactable = i != currentSceneIndex && sceneUnlocked != null && sceneUnlocked.ContainsKey(i);
+                                            }
+
+                                            var prefab = level.scenes[currentSceneIndex].prefab;
+                                            if (prefab != loader.Value)
+                                            {
+                                                loader.Value?.Dispose();
+                                                prefab?.Load(GameAssetManager.instance.dataManager, this);
+
+                                                loader.Value = prefab;
+                                            }
+
+                                            var node = loader.Previous?.Previous;
+                                            if (node != null && node.Value != null)
+                                            {
+                                                node.Value.Dispose();
+
+                                                node.Value = null;
+                                            }
+
+                                            node = loader.Next?.Next;
+                                            if (node != null && node.Value != null)
+                                            {
+                                                node.Value.Dispose();
+
+                                                node.Value = null;
                                             }
                                         }
                                     };
