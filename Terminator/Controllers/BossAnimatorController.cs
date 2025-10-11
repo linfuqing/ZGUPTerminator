@@ -10,7 +10,8 @@ public class BossAnimatorController : MonoBehaviour
     internal struct BoneRotation
     {
         public Transform transform;
-        public Vector3 offset;
+        [UnityEngine.Serialization.FormerlySerializedAs("offset")]
+        public Vector3 eulerAngles;
         public float weight;
     }
 
@@ -52,7 +53,7 @@ public class BossAnimatorController : MonoBehaviour
                 foreach (var bone in bones)
                 {
                     rotation = Quaternion.LookRotation(position - bone.transform.position, Vector3.up);//Quaternion.Lerp(Quaternion.LookRotation(forward, Vector3.up), Quaternion.LookRotation(__target - bone.transform.position, Vector3.up), __weight);
-                    rotation *= Quaternion.Euler(bone.offset);
+                    rotation *= Quaternion.Euler(bone.eulerAngles);
                     rotation = Quaternion.Lerp(bone.transform.rotation, rotation, bone.weight * weight);
                     bone.transform.rotation = rotation;
                 }
