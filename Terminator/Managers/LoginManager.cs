@@ -522,8 +522,7 @@ public sealed class LoginManager : MonoBehaviour
                         if (numScenes > 0)
                         {
                             bool isHot, isUnlocked, temp;
-                            int i,
-                                j,
+                            int i, j, k, 
                                 numStageStyles, 
                                 numRanks,
                                 numRewardFlags,
@@ -603,15 +602,15 @@ public sealed class LoginManager : MonoBehaviour
                                             isHot = false;
                                             numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
                                             numRewardFlags = stage.rewardFlags.Length;
-                                            for (j = 0; j < numRewardFlags; ++j)
+                                            for (k = 0; k < numRewardFlags; ++k)
                                             {
-                                                rewardFlag = stage.rewardFlags[j];
+                                                rewardFlag = stage.rewardFlags[k];
                                                 if ((rewardFlag & UserStageReward.Flag.Unlocked) ==
                                                     UserStageReward.Flag.Unlocked)
                                                 {
                                                     isUnlocked = true;
 
-                                                    rank = numRanks > j ? stageStyle.ranks[j] : null;
+                                                    rank = numRanks > k ? stageStyle.ranks[k] : null;
                                                     if (rank != null)
                                                         rank.SetActive(true);
 
