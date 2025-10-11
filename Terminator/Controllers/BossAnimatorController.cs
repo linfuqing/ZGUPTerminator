@@ -21,15 +21,13 @@ public class BossAnimatorController : MonoBehaviour
         public Rect range;
         public BoneRotation[] bones;
 
-        private float __weight;
-
-        public void Execute(in Vector3 position, Transform transform)
+        public void Execute(ref float weight, in Vector3 position, Transform transform)
         {
             int numBones = bones == null ? 0 : bones.Length;
             var head = numBones > 0 ? bones[numBones - 1].transform : transform;
 
             bool result = range.xMax > range.xMin || range.yMax > range.yMin;
-            if (!result)
+            if (result)
             {
                 Vector3 direction = position - head.position,
                     temp = Quaternion.FromToRotation(new Vector3(direction.x, 0.0f, direction.z).normalized,
@@ -46,7 +44,7 @@ public class BossAnimatorController : MonoBehaviour
                 }
             }
 
-            __weight = Mathf.Lerp(__weight, result ? 0.0f : 1.0f, weightSpeed * Time.deltaTime);
+            weight = Mathf.Lerp(weight, result ? 0.0f : 1.0f, weightSpeed * Time.deltaTime);
             
             if (numBones > 0)
             {
@@ -55,7 +53,7 @@ public class BossAnimatorController : MonoBehaviour
                 {
                     rotation = Quaternion.LookRotation(position - bone.transform.position, Vector3.up);//Quaternion.Lerp(Quaternion.LookRotation(forward, Vector3.up), Quaternion.LookRotation(__target - bone.transform.position, Vector3.up), __weight);
                     rotation *= Quaternion.Euler(bone.offset);
-                    rotation = Quaternion.Lerp(bone.transform.rotation, rotation, bone.weight * __weight);
+                    rotation = Quaternion.Lerp(bone.transform.rotation, rotation, bone.weight * weight);
                     bone.transform.rotation = rotation;
                 }
             }
@@ -67,12 +65,14 @@ public class BossAnimatorController : MonoBehaviour
     private float __previousRotation;
     private Animator __animator;
 
-    [SerializeField] 
-    internal Vector3 _lookAtOffset;
-    
+    private float[] __lookAtWeights;
+
     [SerializeField]
     internal LookAtPlayer[] _lookAtPlayers;
 
+    [SerializeField] 
+    internal Vector3 _lookAtOffset;
+    
     void Start()
     {
         __animator = GetComponent<Animator>();
@@ -89,12 +89,18 @@ public class BossAnimatorController : MonoBehaviour
 
         __previousRotation = rotation;
         
-        if (_lookAtPlayers != null && PlayerPosition.instance != null)
+        if (PlayerPosition.instance != null)
         {
-            Vector3 position = PlayerPosition.instance.transform.position + _lookAtOffset;
-            var transform = base.transform;
-            foreach (var lookAtPlayer in _lookAtPlayers)
-                lookAtPlayer.Execute(position, transform);
+            int numLookAtPlayers = _lookAtPlayers == null ? 0 : _lookAtPlayers.Length;
+            if (numLookAtPlayers > 0)
+            {
+                Array.Resize(ref __lookAtWeights, numLookAtPlayers);
+                
+                Vector3 position = PlayerPosition.instance.transform.position + _lookAtOffset;
+                var transform = base.transform;
+                for(int i = 0; i < numLookAtPlayers; ++i)
+                    _lookAtPlayers[i].Execute(ref __lookAtWeights[i], position, transform);
+            }
         }
     }
 }
