@@ -64,6 +64,7 @@ public class BossAnimatorController : MonoBehaviour
     public static readonly int Parameter = Animator.StringToHash("Turn");
 
     private float __previousRotation;
+    private float __rotationVelocity;
     private Animator __animator;
 
     private float[] __lookAtWeights;
@@ -74,6 +75,9 @@ public class BossAnimatorController : MonoBehaviour
     [SerializeField] 
     internal Vector3 _lookAtOffset;
     
+    [SerializeField]
+    internal float _rotationSmoothTime = 0.3f;
+    
     void Start()
     {
         __animator = GetComponent<Animator>();
@@ -83,10 +87,10 @@ public class BossAnimatorController : MonoBehaviour
     
     void LateUpdate()
     {
-        float rotation = transform.localEulerAngles.y;
-        float deltaTime = Time.deltaTime;
-        if (deltaTime > Mathf.Epsilon)
-            __animator.SetFloat(Parameter, (rotation - __previousRotation) / deltaTime);
+        float rotation = transform.eulerAngles.y;
+        __previousRotation =
+            Mathf.SmoothDampAngle(__previousRotation, rotation, ref __rotationVelocity, _rotationSmoothTime);
+        __animator.SetFloat(Parameter, __rotationVelocity);
 
         __previousRotation = rotation;
         
