@@ -92,8 +92,6 @@ public class BossAnimatorController : MonoBehaviour
             Mathf.SmoothDampAngle(__previousRotation, rotation, ref __rotationVelocity, _rotationSmoothTime);
         __animator.SetFloat(Parameter, __rotationVelocity);
 
-        __previousRotation = rotation;
-        
         if (PlayerPosition.instance != null)
         {
             int numLookAtPlayers = _lookAtPlayers == null ? 0 : _lookAtPlayers.Length;
