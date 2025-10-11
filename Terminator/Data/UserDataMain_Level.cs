@@ -63,8 +63,6 @@ public partial class UserDataMain
                 int numParameters = parameters.Length;
                 sweepRewards = new UserRewardData[numParameters];
 
-                string parameter;
-                string[] values;
                 for (int i = 0; i < numParameters; ++i)
                     sweepRewards[i] = UserRewardData.Parse(parameters[i]);
             }

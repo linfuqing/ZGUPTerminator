@@ -21,7 +21,7 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 
         public Toggle toggle;
 
-        public StageStyle stageStyle;
+        public StageStyle[] stageStyles;
     }
     
     public StringEvent onEnergy;

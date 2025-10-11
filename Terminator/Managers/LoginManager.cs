@@ -128,7 +128,7 @@ public sealed class LoginManager : MonoBehaviour
     internal Reward[] _rewards;
 
     private List<StageRewardStyle> __rewardStyles;
-    private List<StageStyle> __stageStyles;
+    private List<StageStyle>[] __stageStyles;
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
     private LinkedList<(Progressbar, AssetObjectLoader)> __loaders;
@@ -291,11 +291,12 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void RefreshStages()
     {
+        var stageStyles = __stageStyles[0];
         StageStyle stageStyle;
-        int numStageStyles = __stageStyles.Count;
+        int numStageStyles = stageStyles.Count;
         for (int i = numStageStyles - 1; i >= 0; --i)
         {
-            stageStyle = __stageStyles[i];
+            stageStyle = stageStyles[i];
             if(stageStyle == null || !stageStyle.isActiveAndEnabled || !stageStyle.toggle.interactable)
                 continue;
 
@@ -306,7 +307,7 @@ public sealed class LoginManager : MonoBehaviour
         
         for (int i = 0; i < numStageStyles; ++i)
         {
-            stageStyle = __stageStyles[i];
+            stageStyle = stageStyles[i];
             if(stageStyle == null || stageStyle.isActiveAndEnabled)
                 continue;
 
@@ -378,7 +379,7 @@ public sealed class LoginManager : MonoBehaviour
 
         numLevels = levelChapters.levels.Length;
         bool isHot = false;
-        int selectedLevelIndex = -1, numStageRewards = 0, numStageRewardsTotal = 0, numStages, index, j;
+        int selectedLevelIndex = -1, numStageRewards = 0, numStageRewardsTotal = 0, numStages, index;
         uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -472,15 +473,21 @@ public sealed class LoginManager : MonoBehaviour
 
                 if (__stageStyles != null)
                 {
-                    foreach (var stageStyle in __stageStyles)
+                    foreach (var stageStyles in __stageStyles)
                     {
-                        if (stageStyle.onDestroy != null)
-                            stageStyle.onDestroy.Invoke();
-                            
-                        Destroy(stageStyle.gameObject, _stageStyleDestroyTime);
-                    }
+                        if(stageStyles == null)
+                            continue;
                         
-                    __stageStyles.Clear();
+                        foreach (var stageStyle in stageStyles)
+                        {
+                            if (stageStyle.onDestroy != null)
+                                stageStyle.onDestroy.Invoke();
+
+                            Destroy(stageStyle.gameObject, _stageStyleDestroyTime);
+                        }
+
+                        stageStyles.Clear();
+                    }
                 }
                 
                 Toggle toggle;
@@ -514,34 +521,32 @@ public sealed class LoginManager : MonoBehaviour
                             level.scenes.Length);
                         if (numScenes > 0)
                         {
-                            if (__stageStyles == null)
-                                __stageStyles = new List<StageStyle>();
-
                             bool isHot, isUnlocked, temp;
                             int i,
                                 j,
+                                numStageStyles, 
                                 numRanks,
                                 numRewardFlags,
-                                stageStyleStartIndex = __stageStyles.Count,
-                                selectedStageIndex = 0, 
+                                //selectedStageIndex = 0, 
                                 selectedSceneIndex = 0, 
                                 previousSceneIndex = -1;
                             uint currentStageID = 0;
                             UserStageReward.Flag rewardFlag;
                             StageStyle stageStyle;
                             GameObject rank;
+                            List<StageStyle> stageStyles;
                             Dictionary<int, bool> sceneUnlocked = null;
                             for (i = 0; i < numStages; ++i)
                             {
                                 var stage = selectedLevel.stages[i];
 
-                                int stageIndex = -1;
+                                int sceneStageIndex = -1;
                                 for (j = 0; j < numScenes; ++j)
                                 {
                                     ref var levelScene = ref level.scenes[j];
 
-                                    stageIndex = Array.IndexOf(levelScene.stageIndices, i);
-                                    if (stageIndex != -1)
+                                    sceneStageIndex = Array.IndexOf(levelScene.stageIndices, i);
+                                    if (sceneStageIndex != -1)
                                         break;
                                 }
                                 
@@ -551,123 +556,176 @@ public sealed class LoginManager : MonoBehaviour
                                 if(style.scenes == null || style.scenes.Length <= j)
                                     continue;
 
-                                int sceneIndex = j;
+                                int stageIndex = i, sceneIndex = j;
 
                                 var styleScene = style.scenes[sceneIndex];
 
-                                stageStyle = styleScene.stageStyle;
-                                stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
-
-                                if (stageStyle.onTitle != null)
-                                    stageStyle.onTitle.Invoke((/*i*/stageIndex + 1).ToString());
-
-                                if (stage.rewardFlags == null)
+                                numStageStyles = styleScene.stageStyles == null ? 0 : styleScene.stageStyles.Length;
+                                if (numStageStyles > 0)
                                 {
-                                    if (stageStyle.onHot != null)
-                                        stageStyle.onHot.Invoke(false);
-
-                                    if (stageStyle.toggle != null)
-                                    {
-                                        stageStyle.toggle.interactable = false;
-
-                                        stageStyle.toggle.isOn = false;
-                                    }
+                                    if (numStageStyles > (__stageStyles == null ? 0 : __stageStyles.Length))
+                                        Array.Resize(ref __stageStyles, numStageStyles);
                                     
-                                    __CreateRewards(stageStyle.rewardStyle, stage.rewards);
-                                }
-                                else
-                                {
-                                    isUnlocked = false;
-                                    
-                                    isHot = false;
-                                    numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
-                                    numRewardFlags = stage.rewardFlags.Length;
-                                    for (j = 0; j < numRewardFlags; ++j)
+                                    for(j = 0; j < numStageStyles; ++j)
                                     {
-                                        rewardFlag = stage.rewardFlags[j];
-                                        if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                                        stageStyles = __stageStyles[j];
+                                        if (stageStyles == null)
                                         {
-                                            isUnlocked = true;
-                                            
-                                            rank = numRanks > j ? stageStyle.ranks[j] : null;
-                                            if (rank != null)
-                                                rank.SetActive(true);
+                                            stageStyles = new List<StageStyle>();
 
-                                            if ((rewardFlag & UserStageReward.Flag.Collected) !=
-                                                UserStageReward.Flag.Collected)
-                                                isHot = true;
+                                            __stageStyles[j] = stageStyles;
                                         }
-                                    }
 
-                                    if (!isUnlocked)
-                                        __CreateRewards(stageStyle.rewardStyle, stage.rewards);
+                                        stageStyle = styleScene.stageStyles[j];
+                                        stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
-                                    if (sceneUnlocked == null)
-                                        sceneUnlocked = new Dictionary<int, bool>();
+                                        if (stageStyle.onTitle != null)
+                                            stageStyle.onTitle.Invoke(( /*i*/sceneStageIndex + 1).ToString());
 
-                                    sceneUnlocked[sceneIndex] = sceneUnlocked.TryGetValue(sceneIndex, out temp)
-                                        ? temp | isUnlocked
-                                        : isUnlocked;
-
-                                    if (stageStyle.onHot != null)
-                                        stageStyle.onHot.Invoke(isHot);
-
-                                    int stageStyleIndex = __stageStyles.Count;
-                                    if (stageStyle.toggle != null)
-                                    {
-                                        int selectedStage = i;
-                                        
-                                        var onSelected = stageStyle.onSelected;
-
-                                        stageStyle.toggle.isOn = false;
-                                        stageStyle.toggle.interactable = true;
-                                        stageStyle.toggle.onValueChanged.AddListener(x =>
+                                        if (stage.rewardFlags == null)
                                         {
-                                            //__DestroyRewards();
+                                            if (stageStyle.onHot != null)
+                                                stageStyle.onHot.Invoke(false);
 
-                                            if (x)
+                                            if (stageStyle.toggle != null)
                                             {
-                                                if (selectedStageIndex != stageStyleIndex)
-                                                {
-                                                    if (onSelected != null)
-                                                        onSelected.Invoke();
-                                                }
+                                                stageStyle.toggle.interactable = false;
 
-                                                __sceneName = level.scenes[sceneIndex].name;
-
-                                                __selectedStageIndex = selectedStage;
-
-                                                if (onStageChanged != null)
-                                                {
-                                                    Stage result;
-                                                    result.name = (stageIndex + 1).ToString();
-                                                    result.levelName = level.title;
-                                                    result.id = stage.id;
-                                                    onStageChanged.Invoke(result);
-                                                }
-
-                                                selectedEnergy = stage.energy;
-
-                                                if (style.onEnergy != null)
-                                                    style.onEnergy.Invoke(stage.energy.ToString());
+                                                stageStyle.toggle.isOn = false;
                                             }
-                                        });
-                                    }
 
-                                    if ((selectedStageID == 0 || selectedStageID != currentStageID) && 
-                                        (__sceneActiveDepth <= 0 || 
-                                         sceneUnlocked != null && sceneUnlocked.TryGetValue(sceneIndex, out temp) && temp))
-                                    {
-                                        currentStageID = stage.id;
-                                        
-                                        selectedStageIndex = stageStyleIndex;
-                                        
-                                        selectedSceneIndex = sceneIndex;
+                                            __CreateRewards(stageStyle.rewardStyle, stage.rewards);
+                                        }
+                                        else
+                                        {
+                                            isUnlocked = false;
+
+                                            isHot = false;
+                                            numRanks = stageStyle.ranks == null ? 0 : stageStyle.ranks.Length;
+                                            numRewardFlags = stage.rewardFlags.Length;
+                                            for (j = 0; j < numRewardFlags; ++j)
+                                            {
+                                                rewardFlag = stage.rewardFlags[j];
+                                                if ((rewardFlag & UserStageReward.Flag.Unlocked) ==
+                                                    UserStageReward.Flag.Unlocked)
+                                                {
+                                                    isUnlocked = true;
+
+                                                    rank = numRanks > j ? stageStyle.ranks[j] : null;
+                                                    if (rank != null)
+                                                        rank.SetActive(true);
+
+                                                    if ((rewardFlag & UserStageReward.Flag.Collected) !=
+                                                        UserStageReward.Flag.Collected)
+                                                        isHot = true;
+                                                }
+                                            }
+
+                                            if (!isUnlocked)
+                                                __CreateRewards(stageStyle.rewardStyle, stage.rewards);
+
+                                            if (sceneUnlocked == null)
+                                                sceneUnlocked = new Dictionary<int, bool>();
+
+                                            sceneUnlocked[sceneIndex] = sceneUnlocked.TryGetValue(sceneIndex, out temp)
+                                                ? temp | isUnlocked
+                                                : isUnlocked;
+
+                                            if (stageStyle.onHot != null)
+                                                stageStyle.onHot.Invoke(isHot);
+
+                                            var onSelected = stageStyle.onSelected;
+
+                                            if (0 == j)
+                                            {
+                                                if (stageStyle.toggle != null)
+                                                {
+                                                    //int selectedStage = i;
+
+                                                    stageStyle.toggle.isOn = false;
+                                                    stageStyle.toggle.interactable = true;
+                                                    stageStyle.toggle.onValueChanged.AddListener(x =>
+                                                    {
+                                                        //__DestroyRewards();
+
+                                                        if (x)
+                                                        {
+                                                            if (__selectedStageIndex != stageIndex)
+                                                            {
+                                                                if (onSelected != null)
+                                                                    onSelected.Invoke();
+                                                            }
+
+                                                            __selectedStageIndex = stageIndex;
+
+                                                            __sceneName = level.scenes[sceneIndex].name;
+
+                                                            if (onStageChanged != null)
+                                                            {
+                                                                Stage result;
+                                                                result.name = (sceneStageIndex + 1).ToString();
+                                                                result.levelName = level.title;
+                                                                result.id = stage.id;
+                                                                onStageChanged.Invoke(result);
+                                                            }
+
+                                                            selectedEnergy = stage.energy;
+
+                                                            if (style.onEnergy != null)
+                                                                style.onEnergy.Invoke(stage.energy.ToString());
+
+                                                            int numStageStyles, i;
+                                                            foreach (var stageStyles in __stageStyles)
+                                                            {
+                                                                numStageStyles = stageStyles == null
+                                                                    ? 0
+                                                                    : stageStyles.Count;
+                                                                for(i = 0; i < numStageStyles; ++i)
+                                                                    stageStyles[i].toggle.SetIsOnWithoutNotify(i == stageIndex);
+                                                            }
+                                                        }
+                                                    });
+                                                }
+
+                                                if ((selectedStageID == 0 || selectedStageID != currentStageID) &&
+                                                    (__sceneActiveDepth <= 0 ||
+                                                     sceneUnlocked != null &&
+                                                     sceneUnlocked.TryGetValue(sceneIndex, out temp) &&
+                                                     temp))
+                                                {
+                                                    currentStageID = stage.id;
+
+                                                    //selectedStageStyleIndex = stageStyleIndex;
+
+                                                    selectedSceneIndex = sceneIndex;
+                                                }
+                                            }
+                                            else if (stageStyle.toggle != null)
+                                            {
+                                                stageStyle.toggle.isOn = false;
+                                                stageStyle.toggle.interactable = true;
+                                                stageStyle.toggle.onValueChanged.AddListener(x =>
+                                                {
+                                                    //__DestroyRewards();
+
+                                                    if (x)
+                                                    {
+                                                        if (__selectedStageIndex != stageIndex)
+                                                        {
+                                                            if (onSelected != null)
+                                                                onSelected.Invoke();
+                                                        }
+
+                                                        __stageStyles[0][stageIndex].toggle.isOn = true;
+                                                    }
+                                                });
+                                            }
+                                        }
+                                        //stageStyle.gameObject.SetActive(true);
+
+                                        stageStyles.Add(stageStyle);
                                     }
                                 }
-                                //stageStyle.gameObject.SetActive(true);
-
-                                __stageStyles.Add(stageStyle);
                             }
 
                             UnityAction<bool> handler;
@@ -767,12 +825,20 @@ public sealed class LoginManager : MonoBehaviour
                                     }
                                 }
                             }
-                            
-                            __stageStyles[selectedStageIndex].toggle.isOn = true;
 
-                            int numStageStyles = __stageStyles.Count;
-                            for (i = stageStyleStartIndex; i < numStageStyles; ++i)
-                                __stageStyles[i].gameObject.SetActive(true);
+                            stageStyles = __stageStyles[0];
+                            stageStyles[__selectedStageIndex == -1 ? __selectedStageIndex : stageStyles.Count - 1].toggle.isOn = true;
+
+                            numStageStyles = __stageStyles.Length;
+                            for (i = 0; i < numStageStyles; ++i)
+                            {
+                                stageStyles = __stageStyles[i];
+                                if(stageStyles == null)
+                                    continue;
+
+                                foreach (var stageStyleTemp in stageStyles)
+                                    stageStyleTemp.gameObject.SetActive(true);
+                            }
                         }
                     }
 
