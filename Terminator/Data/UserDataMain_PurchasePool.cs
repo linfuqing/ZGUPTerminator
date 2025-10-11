@@ -65,6 +65,15 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public string 卡池保底
+        {
+            set
+            {
+                guaranteedPoolName = value;
+            }
+        }
+
+        [CSVField]
         public int 卡池保底次数
         {
             set
