@@ -12,6 +12,18 @@ public class BossAnimatorController : MonoBehaviour
         public Transform transform;
         public Vector3 offset;
         public float weight;
+
+        private Quaternion __localRotation;
+
+        public void Init()
+        {
+            __localRotation = transform.localRotation;
+        }
+
+        public void SetRotation(in Quaternion value)
+        {
+            transform.rotation = value * __localRotation;
+        }
     }
 
     [Serializable]
@@ -20,6 +32,13 @@ public class BossAnimatorController : MonoBehaviour
         public float weightSpeed;
         public Rect range;
         public BoneRotation[] bones;
+
+        public void Init()
+        {
+            int numBones = bones == null ? 0 : bones.Length;
+            for(int i = 0; i < numBones; ++i)
+                bones[i].Init();
+        }
 
         public void Execute(ref float weight, in Vector3 position, Transform transform)
         {
@@ -54,7 +73,7 @@ public class BossAnimatorController : MonoBehaviour
                     rotation = Quaternion.LookRotation(position - bone.transform.position, Vector3.up);//Quaternion.Lerp(Quaternion.LookRotation(forward, Vector3.up), Quaternion.LookRotation(__target - bone.transform.position, Vector3.up), __weight);
                     rotation *= Quaternion.Euler(bone.offset);
                     rotation = Quaternion.Lerp(bone.transform.rotation, rotation, bone.weight * weight);
-                    bone.transform.rotation = rotation;
+                    bone.SetRotation(rotation);
                 }
             }
         }
@@ -78,6 +97,13 @@ public class BossAnimatorController : MonoBehaviour
         __animator = GetComponent<Animator>();
 
         __previousRotation = transform.localEulerAngles.y;
+
+        if (_lookAtPlayers != null)
+        {
+            int numLookAtPlayers = _lookAtPlayers == null ? 0 : _lookAtPlayers.Length;
+            for(int i = 0; i < numLookAtPlayers; ++i)
+                _lookAtPlayers[i].Init();
+        }
     }
     
     void LateUpdate()
