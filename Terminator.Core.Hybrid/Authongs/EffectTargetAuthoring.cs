@@ -73,8 +73,8 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             target.times = authoring._times;
             target.hp = authoring._hp;
             target.shield = authoring._shield;
-            target.immunizedTime = 0.0f;
-            target.invincibleTime = 0.0f;
+            target.immunizedTime = authoring._immunizedTime;
+            target.invincibleTime = authoring._invincibleTime;
             target.time = 0.0;
             AddComponent(entity, target);
 
@@ -182,7 +182,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
 
     [SerializeField]
     internal int _shield = 0;
-
+    
     [SerializeField] 
     internal int _level = 1;
 
@@ -192,6 +192,12 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
     [SerializeField] 
     internal int _gold = 1;
     
+    [Tooltip("起始免疫时间"), SerializeField]
+    internal float _immunizedTime  = 0.0f;
+
+    [Tooltip("起始无敌时间"), SerializeField]
+    internal float _invincibleTime  = 0.0f;
+
     [SerializeField] 
     internal float _damageScale = 1.0f;
 

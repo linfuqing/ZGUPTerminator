@@ -131,7 +131,7 @@ public sealed class LoginManager : MonoBehaviour
     private List<StageStyle> __stageStyles;
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
-    private LinkedList<AssetObjectLoader> __loaders;
+    private LinkedList<(Progressbar, AssetObjectLoader)> __loaders;
 
     private string __levelName;
     private string __sceneName;
@@ -346,16 +346,11 @@ public sealed class LoginManager : MonoBehaviour
         }
 
         if (__loaders == null)
-            __loaders = new LinkedList<AssetObjectLoader>();
+            __loaders = new LinkedList<(Progressbar, AssetObjectLoader)>();
         else
         {
             foreach (var loader in __loaders)
-            {
-                if(loader == null)
-                    continue;
-                
-                loader.Dispose();
-            }
+                loader.Item2?.Dispose();
             
             __loaders.Clear();
         }
@@ -469,7 +464,7 @@ public sealed class LoginManager : MonoBehaviour
             //for(j = 0; j < numPrefabs; ++j)
             //    prefabs[j] = Instantiate(level.scenes[j].prefab, style.scenes[j].root);
 
-            var loader = __loaders.AddLast((AssetObjectLoader)null);
+            var loader = __loaders.AddLast(default((Progressbar, AssetObjectLoader)));
 
             style.toggle.onValueChanged.AddListener(x =>
             {
@@ -731,34 +726,32 @@ public sealed class LoginManager : MonoBehaviour
 
                                             var assetManager = GameAssetManager.instance?.dataManager;
                                             var prefab = level.scenes[currentSceneIndex].prefab;
-                                            if (prefab != loader.Value)
+                                            if (prefab != loader.Value.Item2)
                                             {
-                                                loader.Value?.Dispose();
+                                                loader.Value.Item2?.Dispose();
                                                 
                                                 prefab?.Init(this, style.scenes[currentSceneIndex].root);
                                                 prefab?.Load(assetManager);
 
-                                                loader.Value = prefab;
+                                                loader.Value = (style.loaderProgressbar, prefab);
                                             }
 
                                             var node = loader.Previous;
                                             if (node != null)
                                             {
-                                                if(node.Value != null)
-                                                    node.Value?.Load(assetManager);
+                                                node.Value.Item2?.Load(assetManager);
                                                 
                                                 for (node = node.Previous; node != null; node = node.Previous)
-                                                    node.Value?.Dispose();
+                                                    node.Value.Item2?.Dispose();
                                             }
 
                                             node = loader.Next;
                                             if (node != null)
                                             {
-                                                if(node.Value != null)
-                                                    node.Value?.Load(assetManager);
+                                                node.Value.Item2?.Load(assetManager);
 
                                                 for (node = node.Next; node != null; node = node.Next)
-                                                    node.Value?.Dispose();
+                                                    node.Value.Item2?.Dispose();
                                             }
                                         }
                                     };
@@ -1233,6 +1226,17 @@ public sealed class LoginManager : MonoBehaviour
             
             if(_onEnergyTime != null)
                 _onEnergyTime.Invoke(string.Empty);
+        }
+
+        if (__loaders != null)
+        {
+            foreach (var loader in __loaders)
+            {
+                if(loader.Item1 == null)
+                    continue;
+                
+                loader.Item1.value = loader.Item2 == null ? 1.0f : loader.Item2.progress;
+            }
         }
     }
 }

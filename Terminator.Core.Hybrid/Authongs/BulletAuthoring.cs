@@ -385,6 +385,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         public Quaternion rotation;
         [Tooltip("出手点")]
         public Vector3 position;
+        [Tooltip("随机角度")]
+        public Vector3 randomAngles;
         [Tooltip("角速度")]
         public Vector3 angularSpeed;
         [Tooltip("发射速度")]
@@ -516,6 +518,17 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             }
         }
         
+        [CSVField]
+        public string 子弹出手随机角度
+        {
+            set
+            {
+                var parameters = value.Split('/');
+
+                rotation = Quaternion.Euler(float.Parse(parameters[0]), float.Parse(parameters[1]), float.Parse(parameters[2]));
+            }
+        }
+
         [CSVField]
         public string 子弹出手点旋转
         {
@@ -933,6 +946,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                     }
                     
                     destination.transform = math.RigidTransform(source.rotation, source.position);
+                    destination.randomAngles = source.randomAngles * Mathf.Deg2Rad;
                     destination.angularSpeed = source.angularSpeed;
                     destination.linearSpeed = source.linearSpeed;
                     destination.animationCurveSpeed = source.animationCurveSpeed;

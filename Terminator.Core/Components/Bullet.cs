@@ -440,6 +440,7 @@ public struct BulletDefinition
     public struct Bullet
     {
         public RigidTransform transform;
+        public float3 randomAngles;
         public float3 angularSpeed;
         public float linearSpeed;
         public float animationCurveSpeed;
@@ -766,6 +767,10 @@ public struct BulletDefinition
         }
 
         transformResult = math.mul(transformResult, data.transform);
+
+        float3 randomAngle = random.NextFloat3(data.randomAngles);
+        quaternion randomRotation = quaternion.Euler(randomAngle);
+        transformResult.rot = math.mul(transformResult.rot, randomRotation);
 
         if (data.targetPositionInterpolation > math.FLT_MIN_NORMAL)
         {
