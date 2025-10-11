@@ -525,7 +525,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             {
                 var parameters = value.Split('/');
 
-                rotation = Quaternion.Euler(float.Parse(parameters[0]), float.Parse(parameters[1]), float.Parse(parameters[2]));
+                randomAngles = new Vector3(float.Parse(parameters[0]), float.Parse(parameters[1]), float.Parse(parameters[2]));
             }
         }
 
