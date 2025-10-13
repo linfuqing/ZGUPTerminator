@@ -32,7 +32,7 @@ public class AttributeEventReceiver : MonoBehaviour
     
     public void Die()
     {
-        if(!isActiveAndEnabled)
+        if(!isActiveAndEnabled || __instanceID == 0)
             return;
 
         AttributeManager.instance.Set(
