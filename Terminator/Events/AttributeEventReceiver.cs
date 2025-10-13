@@ -32,6 +32,9 @@ public class AttributeEventReceiver : MonoBehaviour
     
     public void Die()
     {
+        if(!isActiveAndEnabled)
+            return;
+
         AttributeManager.instance.Set(
             _space, 
             __instanceID, 
@@ -44,6 +47,9 @@ public class AttributeEventReceiver : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void UpdateAttribute(Parameters parameters)
     {
+        if(!isActiveAndEnabled)
+            return;
+        
         if(__instanceID == 0)
             __instanceID = transform.GetInstanceID();
 
