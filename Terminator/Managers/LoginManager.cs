@@ -43,7 +43,7 @@ public sealed class LoginManager : MonoBehaviour
         public Sprite sprite;
     }
 
-    public static event Action<Memory<UserRewardData>> onAwake;
+    public static event Action<IUserData.LevelStage> onAwake;
     
     /// <summary>
     /// 可以激活商业化，不需要播放章节解锁或者下篇动画
@@ -902,12 +902,9 @@ public sealed class LoginManager : MonoBehaviour
         __selectedStageIndex = levelStage.levelID == 0 ? -1 : levelStage.stage;
         
         int numRewards = levelStage.rewards == null ? 0 : levelStage.rewards.Length;
-        UserRewardData[] results;
         if (numRewards > 0)
         {
             bool isReward = false;
-            UserRewardData result;
-            results = new UserRewardData[numRewards];
             for (int i = 0; i < numRewards; ++i)
             {
                 ref var reward = ref levelStage.rewards[i];
@@ -927,22 +924,14 @@ public sealed class LoginManager : MonoBehaviour
                         isReward = true;
                         break;
                 }
-
-                result.name = reward.name;
-                result.count = reward.count;
-                result.type = reward.type;
-
-                results[i] = result;
             }
             
             if(isReward)
                 __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
         }
-        else
-            results = null;
 
         if(onAwake != null)
-            onAwake(results);
+            onAwake(levelStage);
     }
 
     private void __ApplyLevel(IUserData.LevelProperty property)
