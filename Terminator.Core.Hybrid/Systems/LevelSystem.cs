@@ -159,8 +159,6 @@ public partial class LevelSystemManaged : SystemBase
 #endif
             {
                 //manager.Pause();
-                __DestroyEntities(__group);
-
                 status.exp = LevelShared.exp;
                 status.expMax = LevelShared.expMax;
                 status.killCount = 0;
@@ -184,6 +182,8 @@ public partial class LevelSystemManaged : SystemBase
 
                 if (thirdPersonPlayerEntity != Entity.Null)
                     EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
+                
+                __DestroyEntities(__group);
             }
         }
         /*else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))

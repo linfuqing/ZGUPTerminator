@@ -195,7 +195,8 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 output = Query(input);
                 if (output.times < 1)
                 {
-                    seconds = (int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
+                    seconds = output.GetDeadline(ticks);
+                    seconds += (int)(TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond);//(int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
                 
                     PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 }
@@ -229,6 +230,8 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 break;
             default:
                 seconds = 0;
+                
+                PlayerPrefs.DeleteKey(input.ToString(NAME_SPACE_DEADLINE));
                 break;
         }
 

@@ -105,7 +105,9 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
     {
         yield return null;
 
-        var api = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0).IsValid(1) ? null : IAdvertisementAPI.instance;
+        var output = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0);
+        var api = output.IsValid(1) || output.GetDeadline(DateTime.UtcNow.Ticks) > 0 ? 
+            null : IAdvertisementAPI.instance;
         if (api == null)
         {
             var key = GetNameSpace(type, name);

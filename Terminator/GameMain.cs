@@ -607,7 +607,6 @@ public class GameMain : GameUser
 
             IRewardData.instance = new GameRewardData(userID);
             
-            
             LevelShared.spawnerAttributeScales.Clear();
 
             if (_defaultSpawnerAttributes != null)
