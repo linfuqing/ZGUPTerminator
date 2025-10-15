@@ -86,7 +86,7 @@ public interface IPurchaseData
         
         public int GetDeadline(long ticks)
         {
-            int seconds = (int)((ticks - this.ticks) / TimeSpan.TicksPerSecond);
+            int seconds = this.ticks > 0 ? (int)((ticks - this.ticks) / TimeSpan.TicksPerSecond) : 0;
 
             return seconds < deadline ? deadline - seconds : 0;
         }
