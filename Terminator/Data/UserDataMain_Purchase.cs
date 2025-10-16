@@ -461,7 +461,7 @@ public partial class UserDataMain
                             {
                                 days = DateTimeUtility.GetTotalDays(seconds, out _, out now);
                                 
-                                seconds = (uint)(now.Ticks / TimeSpan.TicksPerSecond);
+                                seconds = DateTimeUtility.GetSeconds(now.ToUniversalTime().Ticks);
                             }
 
                             if (isWriteSeconds)
