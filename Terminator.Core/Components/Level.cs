@@ -399,6 +399,8 @@ public struct LevelStageOption
                             if (levelItem.name == item.name)
                                 return levelItem.count < -item.count;
                         }
+
+                        return true;
                     }
                     break;
                 case Type.Millisecond:
