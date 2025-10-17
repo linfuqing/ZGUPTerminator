@@ -84,6 +84,8 @@ public partial interface IUserData
         /// 购买日期
         /// </summary>
         public long ticks;
+        
+        public IPurchaseAPI.Metadata? metadata;
 
         /// <summary>
         /// 奖励，会随机取
@@ -108,7 +110,7 @@ public partial interface IUserData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<PurchaseItems> onComplete);
+    IEnumerator QueryPurchaseItems(uint userID, PurchaseType type, int level, Action<PurchaseItems> onComplete);
 
     /// <summary>
     /// 针对首充、补给卡、月卡、游荡卡日常奖励或令牌路线奖励的查询
@@ -117,7 +119,7 @@ public partial interface IUserData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<PurchaseTokens> onComplete);
+    IEnumerator QueryPurchaseTokens(uint userID, PurchaseType type, int level, Action<PurchaseTokens> onComplete);
     
     /// <summary>
     /// 付费后
@@ -126,7 +128,7 @@ public partial interface IUserData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator CollectPurchaseItem(PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
+    IEnumerator CollectPurchaseItem(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
 
     /// <summary>
     /// 领取首充、补给卡、月卡、游荡卡日常奖励
@@ -135,7 +137,7 @@ public partial interface IUserData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
+    IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete);
     
     /// <summary>
     /// 领取赛季开始至今日的所有令牌奖励
@@ -144,5 +146,5 @@ public partial interface IUserData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete);
+    IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, Action<Memory<UserReward>> onComplete);
 }

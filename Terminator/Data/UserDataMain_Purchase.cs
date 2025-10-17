@@ -111,8 +111,12 @@ public partial class UserDataMain
     
     private const string NAME_SPACE_USER_PURCHASE_ITEM = "UserPurchaseItem";
     
-    public IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
+    public IEnumerator QueryPurchaseItems(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
     {
+        //客户端
+        while (IPurchaseAPI.instance != null && IPurchaseAPI.instance.isPending)
+            yield return null;
+        
         yield return __CreateEnumerator();
         
         IUserData.PurchaseItems result;
@@ -158,10 +162,21 @@ public partial class UserDataMain
             }
         }
 
+        result.metadata = null;
+        
+        //客户端（服务器返回时）
+        if (IUserData.PurchaseItems.Status.Invalid == result.status && IPurchaseAPI.instance != null)
+        {
+            IPurchaseAPI.instance.Query(userID, type, level, x =>
+            {
+                result.metadata = x;
+            });
+        }
+
         onComplete(result);
     }
 
-    public IEnumerator CollectPurchaseItem(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseItem(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -280,7 +295,7 @@ public partial class UserDataMain
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS = "UserPurchaseTokenSeconds";
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_TIMES = "UserPurchaseTokenTimes";
 
-    public IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
+    public IEnumerator QueryPurchaseTokens(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -384,7 +399,7 @@ public partial class UserDataMain
         onComplete(result);
     }
     
-    public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -484,7 +499,7 @@ public partial class UserDataMain
         onComplete(rewards == null ? null : rewards.ToArray());
     }
     
-    public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, Action<Memory<UserReward>> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -552,28 +567,28 @@ public partial class UserDataMain
 
 public partial class UserData
 {
-    public IEnumerator QueryPurchaseItems(PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
+    public IEnumerator QueryPurchaseItems(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
     {
-        return UserDataMain.instance.QueryPurchaseItems(type, level, onComplete);
+        return UserDataMain.instance.QueryPurchaseItems(userID, type, level, onComplete);
     }
     
-    public IEnumerator CollectPurchaseItem(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseItem(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.CollectPurchaseItem(type, level, onComplete);
+        return UserDataMain.instance.CollectPurchaseItem(userID, type, level, onComplete);
     }
 
-    public IEnumerator QueryPurchaseTokens(PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
+    public IEnumerator QueryPurchaseTokens(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
     {
-        return UserDataMain.instance.QueryPurchaseTokens(type, level, onComplete);
+        return UserDataMain.instance.QueryPurchaseTokens(userID, type, level, onComplete);
     }
 
-    public IEnumerator CollectPurchaseToken(PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.CollectPurchaseToken(type, level, onComplete);
+        return UserDataMain.instance.CollectPurchaseToken(userID, type, level, onComplete);
     }
     
-    public IEnumerator CollectPurchaseToken(PurchaseType type, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.CollectPurchaseToken(type, onComplete);
+        return UserDataMain.instance.CollectPurchaseToken(userID, type, onComplete);
     }
 }

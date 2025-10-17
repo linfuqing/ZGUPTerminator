@@ -41,7 +41,7 @@ public enum PurchaseType
 
 public interface IPurchaseAPI
 {
-    public struct Product
+    /*public struct Product
     {
         public PurchaseType type;
 
@@ -57,7 +57,7 @@ public interface IPurchaseAPI
         {
             return $"{prefix}{type}{level}";
         }
-    }
+    }*/
 
     public struct Metadata
     {
@@ -81,7 +81,7 @@ public interface IPurchaseAPI
 
     public static IPurchaseAPI instance;
 
-    public static readonly Product[] AllProducts = new []
+    /*public static readonly Product[] AllProducts = new []
     {
         new Product(PurchaseType.FirstCharge, 0), 
         new Product(PurchaseType.FirstCharge, 1), 
@@ -125,18 +125,13 @@ public interface IPurchaseAPI
         new Product(PurchaseType.Diamond, 11), 
         
         new Product(PurchaseType.Energy, 0)
-    };
-
-    void Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete);
-}
-
-public interface IPurchaseAPIClient
-{
-    public static IPurchaseAPIClient instance;
-
-    //void Check(uint userID, PurchaseType type, int level, Action<bool> onComplete);
+    };*/
     
-    void Confirm(uint userID, PurchaseType type, int level, Action<bool> onComplete);
+    bool isPending { get; }
+
+    void Query(uint userID, PurchaseType purchaseType, int level, Action<Metadata?> onComplete);
+    
+    void Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete);
 }
 
 public interface IPurchaseData
