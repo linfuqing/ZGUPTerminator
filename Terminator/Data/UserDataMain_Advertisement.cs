@@ -30,14 +30,10 @@ public partial class UserDataMain
         var instance = _tip.instance;
         Tip.used = used;
         
-        bool hasSweepCard = PurchaseData.IsValid(PurchaseType.SweepCard,
-            0,
-            NAME_SPACE_USER_PURCHASE_ITEM,
-            out _,
-            out _);
+        bool hasSweepCard = __HasSweepCard();
 
-        float multiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
-        var rewards = instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
+        instance.sweepCardMultiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
+        var rewards = instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
         
         __AppendQuest(UserQuest.Type.Tip, 1);
 

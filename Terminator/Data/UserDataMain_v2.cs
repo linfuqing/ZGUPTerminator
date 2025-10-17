@@ -244,7 +244,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        var results = _tip.instance.Generate();
+        var instance = _tip.instance;
+        instance.sweepCardMultiplier = __HasSweepCard() ? _tip.sweepCardMultiplier : 1.0f;
+        var results = instance.Generate();
 
         uint seconds = DateTimeUtility.GetSeconds();
         PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)seconds);
@@ -263,11 +265,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        bool hasSweepCard = PurchaseData.IsValid(PurchaseType.SweepCard,
-            0,
-            NAME_SPACE_USER_PURCHASE_ITEM,
-            out _,
-            out _);
+        bool hasSweepCard = __HasSweepCard();
         var used = Tip.used;
         if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy && !hasSweepCard || 
             !__ApplyEnergy(_tip.energiesPerTime))
@@ -280,14 +278,23 @@ public partial class UserDataMain
         var instance = _tip.instance;
         Tip.used = used;
 
-        float multiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
-        var rewards = instance.Generate((long)(_tip.intervalPerTime * multiplier * TimeSpan.TicksPerSecond));
+        instance.sweepCardMultiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
+        var rewards = instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
 
         __AppendQuest(UserQuest.Type.Tip, 1);
 
         var results = __ApplyRewards(rewards);
 
         onComplete(results == null ? null : results.ToArray());
+    }
+
+    private bool __HasSweepCard()
+    {
+        return PurchaseData.IsValid(PurchaseType.SweepCard,
+            0,
+            NAME_SPACE_USER_PURCHASE_ITEM,
+            out _,
+            out _);
     }
     
     [Serializable]

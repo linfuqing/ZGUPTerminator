@@ -41,15 +41,97 @@ public enum PurchaseType
 
 public interface IPurchaseAPI
 {
+    public struct Product
+    {
+        public PurchaseType type;
+
+        public int level;
+
+        public Product(PurchaseType type, int level)
+        {
+            this.type = type;
+            this.level = level;
+        }
+
+        public string ToString(string prefix)
+        {
+            return $"{prefix}{type}{level}";
+        }
+    }
+
+    public struct Metadata
+    {
+        public string localizedPriceString;
+        public string localizedTitle;
+        public string localizedDescription;
+        public string isoCurrencyCode;
+        public string localizedPrice;
+    }
+
     public static IPurchaseAPI instance;
 
+    public static readonly Product[] AllProducts = new []
+    {
+        new Product(PurchaseType.FirstCharge, 0), 
+        new Product(PurchaseType.FirstCharge, 1), 
+        new Product(PurchaseType.FirstCharge, 2), 
+        
+        new Product(PurchaseType.AdvertisingFreeCard, 0), 
+        new Product(PurchaseType.DiamondCard, 0), 
+        new Product(PurchaseType.MonthlyCard, 0), 
+        new Product(PurchaseType.SweepCard, 0), 
+        
+        new Product(PurchaseType.Fund, 0), 
+        new Product(PurchaseType.Fund, 1), 
+        
+        new Product(PurchaseType.Pass, 0), 
+        new Product(PurchaseType.Pass, 1), 
+        
+        new Product(PurchaseType.Level, 0), 
+        new Product(PurchaseType.Level, 1), 
+        new Product(PurchaseType.Level, 2), 
+        new Product(PurchaseType.Level, 3), 
+        new Product(PurchaseType.Level, 4), 
+        new Product(PurchaseType.Level, 5), 
+        new Product(PurchaseType.Level, 6), 
+        new Product(PurchaseType.Level, 7), 
+        new Product(PurchaseType.Level, 8),  
+        new Product(PurchaseType.Level, 9), 
+        
+        new Product(PurchaseType.GoldBank, 0), 
+        
+        new Product(PurchaseType.Diamond, 0), 
+        new Product(PurchaseType.Diamond, 1), 
+        new Product(PurchaseType.Diamond, 2), 
+        new Product(PurchaseType.Diamond, 3), 
+        new Product(PurchaseType.Diamond, 4), 
+        new Product(PurchaseType.Diamond, 5), 
+        
+        new Product(PurchaseType.Diamond, 6), 
+        new Product(PurchaseType.Diamond, 7), 
+        new Product(PurchaseType.Diamond, 8), 
+        new Product(PurchaseType.Diamond, 9), 
+        new Product(PurchaseType.Diamond, 11), 
+        
+        new Product(PurchaseType.Energy, 0)
+    };
+
     void Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete);
+}
+
+public interface IPurchaseAPIClient
+{
+    public static IPurchaseAPIClient instance;
+
+    //void Check(uint userID, PurchaseType type, int level, Action<bool> onComplete);
+    
+    void Confirm(uint userID, PurchaseType type, int level, Action<bool> onComplete);
 }
 
 public interface IPurchaseData
 {
     public static IPurchaseData instance;
-
+    
     public struct Input
     {
         public PurchaseType type;
@@ -124,7 +206,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
     public static IPurchaseData.Output Query(in IPurchaseData.Input input)
     {
         IPurchaseData.Output result;
-        
+        //在服务器，该数据结构要有订单号及状态，如果订单未完成，需要查询平台端有没有完成，完成了执行Buy逻辑
         result.times = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_TIMES));
         result.deadline = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_DEADLINE));
         result.ticks = DateTimeUtility.GetTicks((uint)PlayerPrefs.GetInt(input.ToString(NAME_SPACE_PAY_TIME)));
@@ -182,7 +264,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         input.level = level;
         
         var output = Query(input);
-
+        
         PlayerPrefs.SetInt(input.ToString(NAME_SPACE_TIMES), ++output.times);
 
         int seconds;
@@ -272,6 +354,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             {
                 result = true;
                 
+                //这里实现服务器的时候要注意，平台回调或者确认订单（在服务端，该数据结构要有订单号）完成后，Buy才会被执行（而不是在这里执行）。
                 onComplete(x ? Buy(type, level) : null);
             });
             
