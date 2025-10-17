@@ -101,8 +101,8 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
             prefab.chance = chance;
             prefab.damageScale = damageScale;
-            prefab.randomAngleMin = randomAngleMin;
-            prefab.randomAngleMax = randomAngleMax;
+            prefab.randomAngleMin = randomAngleMin * Mathf.Deg2Rad;
+            prefab.randomAngleMax = randomAngleMax * Mathf.Deg2Rad;
             prefab.damageLayerMask = damageLayerMask;
             prefab.layerMaskAndTags = layerMaskAndTags;
         }
