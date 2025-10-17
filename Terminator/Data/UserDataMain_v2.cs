@@ -161,29 +161,28 @@ public partial class UserDataMain
 
             set => PlayerPrefs.SetString(NAME_SPACE_USER_TIP_USED, new Active<Used>(value).ToString());
         }
-        
-        public IUserData.Tip instance
-        {
-            get
-            {
-                int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
-                if (time == 0)
-                {
-                    time = (int)DateTimeUtility.GetSeconds();
-                    PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
-                }
 
-                return Create(DateTimeUtility.GetTicks((uint)time), used);
+        public IUserData.Tip instance => Create(used);
+
+        public IUserData.Tip Create(in Used used)
+        {
+            int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
+            if (time == 0)
+            {
+                time = (int)DateTimeUtility.GetSeconds();
+                PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
             }
+
+            return Create(__HasSweepCard(), DateTimeUtility.GetTicks((uint)time), used);
         }
 
-        public IUserData.Tip Create(long ticks, in Used used)
+        public IUserData.Tip Create(bool hasSweepCard, long ticks, in Used used)
         {
             IUserData.Tip result;
             result.timesFromAd = timesPerDayFromAd - used.timesFromAd;
             result.timesFromEnergy = timesPerDayFromEnergy - used.timesFromEnergy;
             result.energiesPerTime = energiesPerTime;
-            result.sweepCardMultiplier = sweepCardMultiplier;
+            result.sweepCardMultiplier = hasSweepCard ? sweepCardMultiplier : 1.0f;
             result.ticksPerTime =  (long)Math.Round(intervalPerTime * TimeSpan.TicksPerSecond);
             result.maxTime = (long)Math.Round(maxTime * TimeSpan.TicksPerSecond);
             result.ticks = ticks;
@@ -244,9 +243,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        var instance = _tip.instance;
-        instance.sweepCardMultiplier = __HasSweepCard() ? _tip.sweepCardMultiplier : 1.0f;
-        var results = instance.Generate();
+        var results = _tip.instance.Generate();
 
         uint seconds = DateTimeUtility.GetSeconds();
         PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, (int)seconds);
@@ -265,9 +262,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        bool hasSweepCard = __HasSweepCard();
         var used = Tip.used;
-        if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy && !hasSweepCard || 
+        var instance = _tip.Create(used);
+        if (++used.timesFromEnergy > _tip.timesPerDayFromEnergy && instance.sweepCardMultiplier < 1.0f + Mathf.Epsilon || 
             !__ApplyEnergy(_tip.energiesPerTime))
         {
             onComplete(null);
@@ -275,10 +272,8 @@ public partial class UserDataMain
             yield break;
         }
 
-        var instance = _tip.instance;
         Tip.used = used;
 
-        instance.sweepCardMultiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
         var rewards = instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
 
         __AppendQuest(UserQuest.Type.Tip, 1);
@@ -288,7 +283,7 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
 
-    private bool __HasSweepCard()
+    private static bool __HasSweepCard()
     {
         return PurchaseData.IsValid(PurchaseType.SweepCard,
             0,

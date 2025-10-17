@@ -30,9 +30,6 @@ public partial class UserDataMain
         var instance = _tip.instance;
         Tip.used = used;
         
-        bool hasSweepCard = __HasSweepCard();
-
-        instance.sweepCardMultiplier = hasSweepCard ? _tip.sweepCardMultiplier : 1.0f;
         var rewards = instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
         
         __AppendQuest(UserQuest.Type.Tip, 1);
