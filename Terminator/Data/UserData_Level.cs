@@ -80,6 +80,7 @@ public partial interface IUserData
     public struct Property
     {
         public string name;
+        public int hpMax;
         public LayerMaskAndTagsAuthoring spawnerLayerMaskAndTags;
         public Skill[] skills;
         public UserAttributeData[] attributes;

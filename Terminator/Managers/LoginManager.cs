@@ -1000,10 +1000,10 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
 
-        float effectDamageScale = 0.0f, 
+        float effectTargetHPScale = 0.0f, 
+            effectTargetRecovery = 0.0f, 
             effectTargetDamageScale = 0.0f, 
-            effectTargetHPScale = 0.0f, 
-            effectTargetRecovery = 0.0f;
+            effectDamageScale = 0.0f;
         if (property.attributes != null)
         {
             foreach (var attribute in property.attributes)
@@ -1027,9 +1027,9 @@ public sealed class LoginManager : MonoBehaviour
         }
         
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
-        LevelPlayerShared.effectDamageScale = effectDamageScale;
-        LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
         LevelPlayerShared.effectTargetRecovery = effectTargetRecovery;
+        LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
+        LevelPlayerShared.effectDamageScale = effectDamageScale;
         
         LevelPlayerShared.instanceName = property.name;
 

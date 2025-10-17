@@ -65,7 +65,18 @@ public interface IPurchaseAPI
         public string localizedTitle;
         public string localizedDescription;
         public string isoCurrencyCode;
-        public string localizedPrice;
+
+        public Metadata(
+            string localizedPriceString, 
+            string localizedTitle, 
+            string localizedDescription, 
+            string isoCurrencyCode)
+        {
+            this.localizedPriceString = localizedPriceString;
+            this.localizedTitle = localizedTitle;
+            this.localizedDescription = localizedDescription;
+            this.isoCurrencyCode = isoCurrencyCode;
+        }
     }
 
     public static IPurchaseAPI instance;

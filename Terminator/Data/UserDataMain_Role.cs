@@ -11,6 +11,8 @@ public partial class UserDataMain
     {
         public string name;
 
+        public int hpMax;
+
         public string instanceName;
         
         [Tooltip("技能")]

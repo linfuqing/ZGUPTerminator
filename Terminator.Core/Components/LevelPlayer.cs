@@ -39,19 +39,23 @@ public static class LevelPlayerShared
         
     }
     
-    private class EffectDamageScale : Value<EffectDamageScale, float>
+    private class EffectTargetHP : Value<EffectTargetHP, int>
     {
     }
-    
-    private class EffectTargetDamageScale : Value<EffectTargetDamageScale, float>
-    {
-    }
-    
+
     private class EffectTargetHPScale : Value<EffectTargetHPScale, float>
     {
     }
 
     private class EffectTargetRecovery : Value<EffectTargetRecovery, float>
+    {
+    }
+
+    private class EffectTargetDamageScale : Value<EffectTargetDamageScale, float>
+    {
+    }
+
+    private class EffectDamageScale : Value<EffectDamageScale, float>
     {
     }
 
@@ -81,6 +85,27 @@ public static class LevelPlayerShared
         
         set => EffectRage.value = value;
     }
+    
+    public static int effectTargetHP
+    {
+        get => EffectTargetHP.value;
+
+        set => EffectTargetHP.value = value;
+    }
+
+    public static float effectTargetHPScale
+    {
+        get => EffectTargetHPScale.value;
+
+        set => EffectTargetHPScale.value = value;
+    }
+
+    public static float effectTargetDamageScale
+    {
+        get => EffectTargetDamageScale.value;
+
+        set => EffectTargetDamageScale.value = value;
+    }
 
     public static float effectDamageScale
     {
@@ -89,20 +114,6 @@ public static class LevelPlayerShared
         set => EffectDamageScale.value = value;
     }
     
-    public static float effectTargetDamageScale
-    {
-        get => EffectTargetDamageScale.value;
-
-        set => EffectTargetDamageScale.value = value;
-    }
-    
-    public static float effectTargetHPScale
-    {
-        get => EffectTargetHPScale.value;
-
-        set => EffectTargetHPScale.value = value;
-    }
-
     public static float effectTargetRecovery
     {
         get => EffectTargetRecovery.value;

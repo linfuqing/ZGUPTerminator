@@ -14,10 +14,11 @@ public partial struct LevelPlayerSystem : ISystem
     {
         public int effectRage;
         
-        public float effectDamageScale;
-        public float effectTargetDamageScale;
+        public int effectTargetHP;
         public float effectTargetHPScale;
         public float effectTargetRecovery;
+        public float effectTargetDamageScale;
+        public float effectDamageScale;
 
         public FixedString32Bytes instanceName;
 
@@ -143,7 +144,8 @@ public partial struct LevelPlayerSystem : ISystem
 
             if (effectTargets.TryGetComponent(player, out var effectTarget))
             {
-                int hp = effectTarget.hp + (int)math.round(effectTarget.hp * effectTargetHPScale);
+                int hp = effectTargetHP == 0 ? effectTarget.hp : effectTargetHP;
+                hp = hp + (int)math.round(hp * effectTargetHPScale);
                 if (this.messageParameters.TryGetBuffer(player, out var messageParameters))
                 {
                     int numMessageParameters = messageParameters.Length;
@@ -295,10 +297,11 @@ public partial struct LevelPlayerSystem : ISystem
             
         Apply apply;
         apply.effectRage = LevelPlayerShared.effectRage;
-        apply.effectDamageScale = LevelPlayerShared.effectDamageScale;
-        apply.effectTargetDamageScale = LevelPlayerShared.effectTargetDamageScale;
+        apply.effectTargetHP = LevelPlayerShared.effectTargetHP;
         apply.effectTargetHPScale = LevelPlayerShared.effectTargetHPScale;
         apply.effectTargetRecovery = LevelPlayerShared.effectTargetRecovery;
+        apply.effectTargetDamageScale = LevelPlayerShared.effectTargetDamageScale;
+        apply.effectDamageScale = LevelPlayerShared.effectDamageScale;
         apply.instanceName = LevelPlayerShared.instanceName;
         apply.activeSkills = LevelPlayerShared.activeSkills;
         apply.skillGroups = LevelPlayerShared.skillGroups;
