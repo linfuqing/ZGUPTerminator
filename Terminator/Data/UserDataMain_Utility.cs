@@ -72,21 +72,23 @@ public partial class UserDataMain
                     isDirty = true;
                 }
 
-                if ((flag & (Flag.CardUnlock | Flag.CardUpgrade)) == 0)
+                /*if ((flag & (Flag.CardUnlock | Flag.CardUpgrade)) == 0)
                 {
                     flag |= Flag.CardUpgrade;
 
                     isDirty = true;
-                }
+                }*/
 
                 id = __ToID(cardIndex);
                 key = $"{NAME_SPACE_USER_CARD_COUNT}{reward.name}";
                 
+                int cardCount = PlayerPrefs.GetInt(key) + reward.count;
+
                 string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{reward.name}";
                 int level = PlayerPrefs.GetInt(levelKey, -1);
                 if (level == -1)
                 {
-                    if ((flag & Flag.CardReplace) == 0)
+                    if ((flag & Flag.CardReplace) == 0 && UserData.chapter > 0)
                     {
                         int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
                         foreach (var card in _cards)
@@ -108,14 +110,27 @@ public partial class UserDataMain
                     if (isDirty)
                         UserDataMain.flag = flag;
                     
-                    int cardCount = PlayerPrefs.GetInt(key) + reward.count;
-                    
                     PlayerPrefs.SetInt(key, cardCount - 1);
                     PlayerPrefs.SetInt(levelKey, 0);
 
                     key = null;
                     break;
                     //return id;
+                }
+                
+                var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(_cards[cardIndex].styleName));
+                if (levelIndices.Count > level)
+                {
+                    var cardLevel = _cardLevels[levelIndices[level]];
+                    
+                    if (cardLevel.count <= cardCount && 
+                        //cardLevel.gold <= gold && 
+                        (flag & (Flag.CardUnlock | Flag.CardUpgrade)) == 0)
+                    {
+                        flag |= Flag.CardUpgrade;
+
+                        isDirty = true;
+                    }
                 }
                 
                 if (isDirty)

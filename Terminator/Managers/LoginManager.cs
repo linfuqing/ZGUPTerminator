@@ -43,6 +43,22 @@ public sealed class LoginManager : MonoBehaviour
         public Sprite sprite;
     }
 
+    private struct Loader
+    {
+        public Progressbar progressbar;
+
+        public AssetObjectLoader[] assetObjects;
+
+        public void Dispose()
+        {
+            if (assetObjects != null)
+            {
+                foreach (var assetObject in assetObjects)
+                    assetObject.Dispose();
+            }
+        }
+    }
+
     public static event Action<IUserData.LevelStage> onAwake;
     
     /// <summary>
@@ -755,7 +771,7 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
                                                 
-                                                if (__sceneActiveDepth == 0 && isEndOfLevels && onLevelActivated != null)
+                                                if (__sceneActiveDepth == 0 && /*isEndOfLevels && */onLevelActivated != null)
                                                     onLevelActivated();
                                             }
                                             else

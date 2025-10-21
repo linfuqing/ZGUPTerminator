@@ -99,6 +99,11 @@ public partial interface IUserData
         /// 首充代表天数，补给卡，月卡，游荡卡为0，基金代表章节，通行证代表活跃度
         /// </summary>
         public int exp;
+
+        /// <summary>
+        /// 累计天数
+        /// </summary>
+        public int days;
         
         public UserPurchaseToken[] values;
     }

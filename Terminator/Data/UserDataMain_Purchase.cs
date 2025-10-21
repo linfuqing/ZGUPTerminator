@@ -337,13 +337,15 @@ public partial class UserDataMain
             default:
                 yield break;
         }
+
+        result.days = 1;
         
         List<UserPurchaseToken> values = null;
         UserPurchaseToken value;
         PurchaseToken token;
+        Active<string> name;
         string key;
-        uint seconds;
-        int days, i, j, numOptions, numPurchasesTokens = _purchaseTokens.Length;
+        int i, j, numOptions, numPurchasesTokens = _purchaseTokens.Length;
         for(i = 0; i < numPurchasesTokens; ++i)
         {
             token = _purchaseTokens[i];
@@ -362,21 +364,19 @@ public partial class UserDataMain
                     {
                         key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
 
-                        seconds = (uint)PlayerPrefs.GetInt(key);
+                        name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
 
-                        value.flag =
-                            seconds != 0 && DateTimeUtility.IsToday(seconds)
-                                ? UserPurchaseToken.Flag.Locked
-                                : 0;
-                        if (value.flag == 0 && seconds != 0)
+                        value.flag = name.ToDay() == null ? 0 : UserPurchaseToken.Flag.Locked;
+                        if (value.flag == 0 && name.seconds != 0)
                         {
                             numOptions = token.options == null ? 0 : token.options.Length;
                             if (numOptions > 0)
                             {
-                                days = DateTimeUtility.GetTotalDays(seconds, out _, out _);
-                                Array.Resize(ref value.options, days * numOptions);
+                                if(name.value == token.name)
+                                    result.days = DateTimeUtility.GetTotalDays(name.seconds, out _, out _);
+                                Array.Resize(ref value.options, result.days * numOptions);
 
-                                for (j = 0; j < days; ++j)
+                                for (j = 0; j < result.days; ++j)
                                     Array.Copy(token.options, 0, value.options, j * numOptions, numOptions);
                             }
                         }
@@ -440,8 +440,8 @@ public partial class UserDataMain
         List<UserReward> rewards = null;
         
         int i, days;
-        uint seconds;
         string secondsKey, key;
+        Active<string> name;
         DateTime now;
         foreach (var purchaseToken in _purchaseTokens)
         {
@@ -457,8 +457,8 @@ public partial class UserDataMain
                         out _))
                 {
                     secondsKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
-                    seconds = (uint)PlayerPrefs.GetInt(secondsKey);
-                    if (!DateTimeUtility.IsToday(seconds))
+                    name = new Active<string>(PlayerPrefs.GetString(secondsKey), __PurchaseParse);
+                    if (name.ToDay() == null)
                     {
                         key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
                         if (PlayerPrefs.GetInt(key) < times)
@@ -466,22 +466,25 @@ public partial class UserDataMain
                             if (isWriteTimes)
                                 PlayerPrefs.SetInt(key, times);
 
-                            if (seconds == 0)
+                            if (name.seconds == 0)
                             {
                                 days = 1;
 
-                                seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
+                                name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
                             }
                             else
                             {
-                                days = DateTimeUtility.GetTotalDays(seconds, out _, out now);
+                                days = DateTimeUtility.GetTotalDays(name.seconds, out _, out now);
                                 
-                                seconds = DateTimeUtility.GetSeconds(now.ToUniversalTime().Ticks);
+                                name.seconds = DateTimeUtility.GetSeconds(now.ToUniversalTime().Ticks);
                             }
 
                             if (isWriteSeconds)
-                                PlayerPrefs.SetInt(secondsKey, (int)seconds);
-                            
+                            {
+                                name.value = purchaseToken.name;
+                                PlayerPrefs.SetString(secondsKey, name.ToString());
+                            }
+
                             if(expKey != null)
                                 PlayerPrefs.SetInt(expKey, exp + 1);
 
@@ -563,6 +566,12 @@ public partial class UserDataMain
         
         onComplete(rewards == null ? null : rewards.ToArray());
     }
+    
+    private static string __PurchaseParse(Memory<string> parameters)
+    {
+        return parameters.Span[0];
+    }
+
 }
 
 public partial class UserData
