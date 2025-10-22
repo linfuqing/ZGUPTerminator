@@ -133,6 +133,8 @@ public partial struct BulletSystem : ISystem
 
         public quaternion cameraRotation;
 
+        public RenderFrustumPlanes renderFrustumPlanes;
+        
         public LevelStatus levelStatus;
         
         public FixedLocalToWorld fixedLocalToWorld;
@@ -295,6 +297,7 @@ public partial struct BulletSystem : ISystem
                 gravity, 
                 up, 
                 cameraRotation, 
+                renderFrustumPlanes, 
                 localToWorld, 
                 entity,
                 index < lookAtTargets.Length ? lookAtTargets[index].entity : Entity.Null, 
@@ -353,6 +356,8 @@ public partial struct BulletSystem : ISystem
         public float3 gravity;
 
         public quaternion cameraRotation;
+
+        public RenderFrustumPlanes renderFrustumPlanes;
 
         public Entity levelEntity;
 
@@ -438,6 +443,7 @@ public partial struct BulletSystem : ISystem
             collect.gravity = gravity;
             collect.random = Random.CreateFromIndex((uint)((int)hash ^ (int)(hash >> 32) ^ unfilteredChunkIndex));
             collect.cameraRotation = cameraRotation;
+            collect.renderFrustumPlanes = renderFrustumPlanes;
             collect.levelStatus = levelStates.TryGetComponent(levelEntity, out var levelStatus) ? levelStatus : default;
             collect.fixedLocalToWorld = fixedLocalToWorld;
             collect.collisionWorld = collisionWorld;
@@ -611,11 +617,14 @@ public partial struct BulletSystem : ISystem
         __characterStandTimes.Update(ref state);
         //__prefabLoader.Update(ref state);
 
+        var mainCameraEntity = SystemAPI.GetSingletonEntity<MainCameraTransform>();
+
         CollectEx collect;
         collect.isFire = __targetGroup.CalculateEntityCount() > 1;
         collect.time = SystemAPI.Time.ElapsedTime;
         collect.gravity = SystemAPI.TryGetSingleton<PhysicsStep>(out var physicsStep) ? physicsStep.Gravity : PhysicsStep.Default.Gravity;
-        collect.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
+        collect.cameraRotation = SystemAPI.GetComponent<MainCameraTransform>(mainCameraEntity).rotation;
+        collect.renderFrustumPlanes = SystemAPI.GetComponent<RenderFrustumPlanes>(mainCameraEntity);
         SystemAPI.TryGetSingletonEntity<LevelStatus>(out collect.levelEntity);
         collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         collect.fixedLocalToWorld = __fixedLocalToWorld;

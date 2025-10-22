@@ -6,8 +6,8 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.Systems;
-using Unity.Physics.GraphicsIntegration;
 using Unity.Transforms;
+using ZG;
 
 
 [BurstCompile, 
@@ -22,6 +22,8 @@ public partial struct LookAtSystem : ISystem
         private float __minDistance;
         private float3 __position;
         private float3 __cameraDirection;
+        private RenderFrustumPlanes __renderFrustumPlanes;
+        private NativeArray<RigidBody> __rigidBodies;
         private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
         public bool EarlyOutOnFirstHit => false;
@@ -55,6 +57,8 @@ public partial struct LookAtSystem : ISystem
             float maxDistance, 
             in float3 position, 
             in float3 cameraDirection, 
+            in RenderFrustumPlanes renderFrustumPlanes,
+            in NativeArray<RigidBody> rigidBodies, 
             in ComponentLookup<KinematicCharacterBody> characterBodies)
         {
             __dynamicBodiesCount = dynamicBodiesCount;
@@ -66,6 +70,9 @@ public partial struct LookAtSystem : ISystem
 
             __position = position;
             __cameraDirection = cameraDirection;
+
+            __renderFrustumPlanes = renderFrustumPlanes;
+            __rigidBodies = rigidBodies;
 
             __characterBodies = characterBodies;
 
@@ -104,6 +111,10 @@ public partial struct LookAtSystem : ISystem
                     return false;
             }
             
+            var aabb = __rigidBodies[hit.RigidBodyIndex].CalculateAabb();
+            if (RenderFrustumPlanes.IntersectResult.Out == __renderFrustumPlanes.Intersect(aabb.Center, aabb.Extents))
+                return false;
+            
             MaxFraction = distance;
             NumHits = 1;
 
@@ -117,6 +128,8 @@ public partial struct LookAtSystem : ISystem
         public double time;
         
         public float3 cameraDirection;
+        
+        public RenderFrustumPlanes renderFrustumPlanes;
         
         [ReadOnly]
         public CollisionWorld collisionWorld;
@@ -225,6 +238,8 @@ public partial struct LookAtSystem : ISystem
                         maxDistance, 
                         transform.pos, 
                         cameraDirection, 
+                        renderFrustumPlanes, 
+                        collisionWorld.Bodies, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
@@ -256,6 +271,8 @@ public partial struct LookAtSystem : ISystem
                         instance.maxDistance,  
                         transform.pos, 
                         cameraDirection, 
+                        renderFrustumPlanes, 
+                        collisionWorld.Bodies, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
@@ -272,6 +289,8 @@ public partial struct LookAtSystem : ISystem
                     instance.maxDistance,  
                     transform.pos, 
                     cameraDirection, 
+                    renderFrustumPlanes, 
+                    collisionWorld.Bodies, 
                     characterBodies);
                 if (collisionWorld.CalculateDistance(pointDistanceInput, ref collector))
                     closestHit = collector.closestHit;
@@ -390,6 +409,8 @@ public partial struct LookAtSystem : ISystem
         public double time;
         public float3 cameraDirection;
 
+        public RenderFrustumPlanes renderFrustumPlanes;
+
         [ReadOnly]
         public CollisionWorld collisionWorld;
         
@@ -430,6 +451,7 @@ public partial struct LookAtSystem : ISystem
             Apply apply;
             apply.time = time;
             apply.cameraDirection = cameraDirection;
+            apply.renderFrustumPlanes = renderFrustumPlanes;
             apply.collisionWorld = collisionWorld;
             apply.parents = parents;
             apply.characterBodies = characterBodies;
@@ -518,9 +540,12 @@ public partial struct LookAtSystem : ISystem
         __characterLookAtType.Update(ref state);
         __characterStandTimeType.Update(ref state);
         
+        var mainCameraEntity = SystemAPI.GetSingletonEntity<MainCameraTransform>();
+        
         ApplyEx apply;
         apply.time = SystemAPI.Time.ElapsedTime;
-        apply.cameraDirection = math.forward(SystemAPI.GetSingleton<MainCameraTransform>().rotation);
+        apply.cameraDirection = math.forward(SystemAPI.GetComponent<MainCameraTransform>(mainCameraEntity).rotation);
+        apply.renderFrustumPlanes = SystemAPI.GetComponent<RenderFrustumPlanes>(mainCameraEntity);
         apply.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
         apply.entityType = __entityType;
         apply.parents = __parents;
@@ -673,7 +698,7 @@ public partial struct LookAtTransformSystem : ISystem
         var timeAhead = (float)(SystemAPI.Time.ElapsedTime - fixedFrame.elapsedTime);
         if (timeAhead < 0.0f || fixedFrame.deltaTime < math.FLT_MIN_NORMAL)
             return;
-        
+
         __fixedLocalToWorld.Update(ref state);
         __localTransformType.Update(ref state);
         __originType.Update(ref state);

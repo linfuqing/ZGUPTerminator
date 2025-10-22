@@ -21,9 +21,9 @@ public struct MainCameraTransform : IComponentData
     }
 }
 
-public struct MainCameraScreenToWorld : IComponentData
+/*public struct MainCameraScreenToWorld : IComponentData
 {
     public float pixelHeight;
     public float aspect;
     public float4x4 previousViewProjectionMatrix;
-}
+}*/

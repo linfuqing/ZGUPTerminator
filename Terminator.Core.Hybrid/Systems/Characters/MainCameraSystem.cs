@@ -1,24 +1,32 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using ZG;
 
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 //[UpdateAfter(typeof(TransformSystemGroup))]
 public partial class MainCameraSystem : SystemBase
 {
+    private Entity __entity;
+    
     protected override void OnCreate()
     {
         base.OnCreate();
 
+        var entItyManager = EntityManager;
+
         MainCameraTransform transform;
         transform.value = RigidTransform.identity;
-        EntityManager.CreateSingleton(transform);
+        __entity = entItyManager.CreateSingleton(transform);
 
-        MainCameraScreenToWorld screenToWorld;
+        entItyManager.AddComponent<RenderFrustumPlanes>(__entity);
+
+        //ZG.RenderFrustumPlanes
+        /*MainCameraScreenToWorld screenToWorld;
         screenToWorld.pixelHeight = 0.0f;
         screenToWorld.aspect = 1.0f;
         screenToWorld.previousViewProjectionMatrix = float4x4.identity;
-        EntityManager.CreateSingleton(screenToWorld);
+        EntityManager.CreateSingleton(screenToWorld);*/
     }
 
     protected override void OnUpdate()
@@ -39,13 +47,14 @@ public partial class MainCameraSystem : SystemBase
             else
                 transform.value = math.RigidTransform(camera.transform.localToWorldMatrix);
             
-            SystemAPI.SetSingleton(transform);
+            SystemAPI.SetComponent(__entity, transform);
+            SystemAPI.SetComponent(__entity, new RenderFrustumPlanes(camera));
             
-            MainCameraScreenToWorld screenToWorld;
+            /*MainCameraScreenToWorld screenToWorld;
             screenToWorld.pixelHeight = camera.pixelHeight;
             screenToWorld.aspect = camera.aspect;
             screenToWorld.previousViewProjectionMatrix = camera.previousViewProjectionMatrix.inverse;
-            SystemAPI.SetSingleton(screenToWorld);
+            SystemAPI.SetSingleton(screenToWorld);*/
         }
     }
 }

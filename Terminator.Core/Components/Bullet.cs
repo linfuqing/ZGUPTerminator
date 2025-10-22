@@ -62,6 +62,7 @@ public struct BulletDefinition
         //private BlobAssetReference<Collider> __collider;
         private ComponentLookup<KinematicCharacterBody> __characterBodies;
         private NativeArray<BulletTargetStatus> __states;
+        private RenderFrustumPlanes __renderFrustumPlanes;
         private RigidTransform __transform;
         private double __time;
         private float __minDistance;
@@ -81,11 +82,12 @@ public struct BulletDefinition
         public DistanceHit closestHit { get; private set; }
 
         public Collector(
-            in RigidTransform transform,
+            in CollisionWorld collisionWorld,
             in ComponentLookup<KinematicCharacterBody> characterBodies, 
             in NativeArray<BulletTargetStatus> states, 
+            in RenderFrustumPlanes renderFrustumPlanes, 
+            in RigidTransform transform,
             //in BlobAssetReference<Collider> collider,
-            in CollisionWorld collisionWorld,
             double time, 
             //in float3 up, 
             float minDistance,
@@ -96,11 +98,12 @@ public struct BulletDefinition
             int version, 
             BulletLocation location)
         {
-            __transform = transform;
-            __states = states;
-            __characterBodies = characterBodies;
-            //__collider = collider;
             __collisionWorld = collisionWorld;
+            __characterBodies = characterBodies;
+            __states = states;
+            __renderFrustumPlanes = renderFrustumPlanes;
+            __transform = transform;
+            //__collider = collider;
             __time = time;
             //__up = up;
             __minDistance = minDistance;
@@ -122,16 +125,21 @@ public struct BulletDefinition
 
         public bool AddHit(DistanceHit hit)
         {
-            if ((__collisionWorld.Bodies[hit.RigidBodyIndex].Collider.Value.GetCollisionFilter(hit.ColliderKey)
+            var body = __collisionWorld.Bodies[hit.RigidBodyIndex];
+            if ((body.Collider.Value.GetCollisionFilter(hit.ColliderKey)
                     .BelongsTo & __hitWith) == 0)
                 return false;
             
             if (!__Check(__dot, __minDistance, hit.Position - __transform.pos, __transform.rot))
                 return false;
             
-            if (!__Check(__location, __groundBelongsTo, hit.Entity, __collisionWorld, __characterBodies))
+            if (!__Check(__location, __groundBelongsTo, hit.RigidBodyIndex, hit.Entity, __collisionWorld, __characterBodies))
                 return false;
 
+            var aabb = body.CalculateAabb();
+            if(RenderFrustumPlanes.IntersectResult.Out == __renderFrustumPlanes.Intersect(aabb.Center, aabb.Extents))
+                return false;
+            
             /*float3 position = hit.Position;
             var input = new ColliderCastInput(
                 __collider,
@@ -204,6 +212,7 @@ public struct BulletDefinition
             double time, 
             in float3 up,
             in quaternion cameraRotation,
+            in RenderFrustumPlanes renderFrustumPlanes, 
             in float4x4 transform,
             in Entity lookAt,
             in CollisionWorld collisionWorld,
@@ -293,6 +302,7 @@ public struct BulletDefinition
                                 time,
                                 lookAt,
                                 rigidTransform,
+                                renderFrustumPlanes, 
                                 collider,
                                 collisionWorld,
                                 characterBodies,
@@ -309,6 +319,7 @@ public struct BulletDefinition
                                 time,
                                 status.target,
                                 rigidTransform,
+                                renderFrustumPlanes, 
                                 collider,
                                 collisionWorld,
                                 characterBodies,
@@ -322,10 +333,11 @@ public struct BulletDefinition
                             var input = new ColliderDistanceInput(collider, maxDistance, rigidTransform);
 
                             var collector = new Collector(
-                                rigidTransform,
+                                collisionWorld,
                                 characterBodies,
                                 states,
-                                collisionWorld,
+                                renderFrustumPlanes, 
+                                rigidTransform,
                                 time,
                                 minDistance,
                                 maxDistance,
@@ -382,6 +394,7 @@ public struct BulletDefinition
             double time, 
             in Entity entity, 
             in RigidTransform transform, 
+            in RenderFrustumPlanes renderFrustumPlanes, 
             in BlobAssetReference<Collider> collider, 
             in CollisionWorld collisionWorld, 
             in ComponentLookup<KinematicCharacterBody> characterBodies, 
@@ -397,10 +410,11 @@ public struct BulletDefinition
             }
 
             var rigidBody = collisionWorld.Bodies[rigidBodyIndex];
+            var aabb = rigidBody.CalculateAabb();
             switch (coordinate)
             {
                 case BulletTargetCoordinate.Center:
-                    targetPosition = rigidBody.CalculateAabb().Center;
+                    targetPosition = aabb.Center;
                     break;
                 default:
                     targetPosition = rigidBody.WorldFromBody.pos;
@@ -424,9 +438,12 @@ public struct BulletDefinition
             if (!BulletDefinition.__Check(dot, minDistance, closestHit.Position - transform.pos, transform.rot))
                 return false;
             
-            if (!BulletDefinition.__Check(location, groundBelongsTo, entity, collisionWorld, characterBodies))
+            if (!BulletDefinition.__Check(location, groundBelongsTo, rigidBodyIndex, entity, collisionWorld, characterBodies))
                 return false;
             
+            if(RenderFrustumPlanes.IntersectResult.Out == renderFrustumPlanes.Intersect(aabb.Center, aabb.Extents))
+                return false;
+
             foreach (var status in states)
             {
                 if ((status.version == version || status.cooldown > time) && status.target == entity)
@@ -535,6 +552,7 @@ public struct BulletDefinition
         in float3 gravity, 
         in float3 up, 
         in quaternion cameraRotation, 
+        in RenderFrustumPlanes renderFrustumPlanes, 
         in float4x4 transform,
         in Entity parent,
         in Entity lookAt, 
@@ -580,6 +598,7 @@ public struct BulletDefinition
                         time,
                         up,
                         cameraRotation,
+                        renderFrustumPlanes, 
                         transform,
                         lookAt,
                         collisionWorld,
@@ -594,6 +613,7 @@ public struct BulletDefinition
                     result = temp.target == Entity.Null || data.targetLocation == 0 || __Check(
                         data.targetLocation,
                         uint.MaxValue,
+                        -1,
                         temp.target,
                         collisionWorld,
                         characterBodies);
@@ -848,6 +868,7 @@ public struct BulletDefinition
         in float3 gravity, 
         in float3 up, 
         in quaternion cameraRotation, 
+        in RenderFrustumPlanes renderFrustumPlanes, 
         in float4x4 transform,
         in Entity entity,
         in Entity lookAt, 
@@ -912,6 +933,7 @@ public struct BulletDefinition
                 gravity, 
                 up, 
                 cameraRotation, 
+                renderFrustumPlanes, 
                 transform,
                 entity, 
                 lookAt, 
@@ -953,6 +975,7 @@ public struct BulletDefinition
     private static bool __Check(
         BulletLocation location, 
         uint groundBelongsTo, 
+        int rigidBodyIndex, 
         in Entity entity, 
         in CollisionWorld collisionWorld, 
         in ComponentLookup<KinematicCharacterBody> characterBodies)
@@ -969,7 +992,7 @@ public struct BulletDefinition
 
             if (!isGrounded)
             {
-                int rigidBodyIndex = collisionWorld.GetRigidBodyIndex(entity);
+                rigidBodyIndex = rigidBodyIndex == -1 ? collisionWorld.GetRigidBodyIndex(entity) : rigidBodyIndex;
                 isGrounded = rigidBodyIndex == -1 || rigidBodyIndex >= collisionWorld.NumDynamicBodies;
             }
             
