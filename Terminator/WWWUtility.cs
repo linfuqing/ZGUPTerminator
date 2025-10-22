@@ -48,6 +48,7 @@ public static class WWWUtility
 
     public static IEnumerator MD5Request(
         Predicate<BinaryReader> read, 
+        WWWForm form, 
         string url, 
         float interval = 1.0f)
     {
@@ -58,7 +59,7 @@ public static class WWWUtility
         byte[] md5 = null;
         while(true)
         {
-            www = UnityWebRequest.Get(url);
+            www = form == null ? UnityWebRequest.Get(url) :  UnityWebRequest.Post(url, form);
             yield return www.SendWebRequest();
             error = www.error;
             if (string.IsNullOrEmpty(error))
