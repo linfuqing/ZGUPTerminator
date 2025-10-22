@@ -23,7 +23,7 @@ public partial struct LookAtSystem : ISystem
         private float3 __position;
         private float3 __cameraDirection;
         private RenderFrustumPlanes __renderFrustumPlanes;
-        private NativeArray<RigidBody> __rigidBodies;
+        private CollisionWorld __collisionWorld;
         private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
         public bool EarlyOutOnFirstHit => false;
@@ -58,7 +58,7 @@ public partial struct LookAtSystem : ISystem
             in float3 position, 
             in float3 cameraDirection, 
             in RenderFrustumPlanes renderFrustumPlanes,
-            in NativeArray<RigidBody> rigidBodies, 
+            in CollisionWorld collisionWorld, 
             in ComponentLookup<KinematicCharacterBody> characterBodies)
         {
             __dynamicBodiesCount = dynamicBodiesCount;
@@ -72,7 +72,7 @@ public partial struct LookAtSystem : ISystem
             __cameraDirection = cameraDirection;
 
             __renderFrustumPlanes = renderFrustumPlanes;
-            __rigidBodies = rigidBodies;
+            __collisionWorld = collisionWorld;
 
             __characterBodies = characterBodies;
 
@@ -97,6 +97,14 @@ public partial struct LookAtSystem : ISystem
                 location &= ~LookAtLocation.Camera;
             }
 
+            int rigidBodyIndex = hit.RigidBodyIndex;
+            if (rigidBodyIndex == -1)
+            {
+                rigidBodyIndex = __collisionWorld.GetRigidBodyIndex(hit.Entity);
+                if (rigidBodyIndex == -1)
+                    return false;
+            }
+
             if (hit.RigidBodyIndex >= __dynamicBodiesCount || 
                 __characterBodies.TryGetComponent(hit.Entity, out var characterBody) && 
                 __characterBodies.IsComponentEnabled(hit.Entity) && 
@@ -111,7 +119,7 @@ public partial struct LookAtSystem : ISystem
                     return false;
             }
             
-            var aabb = __rigidBodies[hit.RigidBodyIndex].CalculateAabb();
+            var aabb = __collisionWorld.Bodies[rigidBodyIndex].CalculateAabb();
             if (RenderFrustumPlanes.IntersectResult.Out == __renderFrustumPlanes.Intersect(aabb.Center, aabb.Extents))
                 return false;
             
@@ -239,7 +247,7 @@ public partial struct LookAtSystem : ISystem
                         transform.pos, 
                         cameraDirection, 
                         renderFrustumPlanes, 
-                        collisionWorld.Bodies, 
+                        collisionWorld, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
@@ -272,7 +280,7 @@ public partial struct LookAtSystem : ISystem
                         transform.pos, 
                         cameraDirection, 
                         renderFrustumPlanes, 
-                        collisionWorld.Bodies, 
+                        collisionWorld, 
                         characterBodies);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
@@ -290,7 +298,7 @@ public partial struct LookAtSystem : ISystem
                     transform.pos, 
                     cameraDirection, 
                     renderFrustumPlanes, 
-                    collisionWorld.Bodies, 
+                    collisionWorld, 
                     characterBodies);
                 if (collisionWorld.CalculateDistance(pointDistanceInput, ref collector))
                     closestHit = collector.closestHit;
