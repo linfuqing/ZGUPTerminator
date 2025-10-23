@@ -145,7 +145,7 @@ public partial struct LevelPlayerSystem : ISystem
             if (effectTargets.TryGetComponent(player, out var effectTarget))
             {
                 int hp = effectTargetHP == 0 ? effectTarget.hp : effectTargetHP;
-                hp = hp + (int)math.round(hp * effectTargetHPScale);
+                hp = effectTarget.hp + (int)math.round(hp * effectTargetHPScale);
                 if (this.messageParameters.TryGetBuffer(player, out var messageParameters))
                 {
                     int numMessageParameters = messageParameters.Length;

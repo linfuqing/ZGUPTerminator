@@ -1041,7 +1041,8 @@ public sealed class LoginManager : MonoBehaviour
                 }
             }
         }
-        
+
+        LevelPlayerShared.effectTargetHP = property.hpMax;
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
         LevelPlayerShared.effectTargetRecovery = effectTargetRecovery;
         LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
