@@ -900,24 +900,14 @@ public partial class UserDataMain
                         if (j == numAccessorySlots && accessoryID != 0)
                         {
                             var skillName = _accessories[accessoryInfo.index].skillName;
-                            if (string.IsNullOrEmpty(skillName))
-                                Array.Copy(
-                                    cacheSkills, 
-                                    i + 1, 
-                                    cacheSkills, 
-                                    i, 
-                                    --numCacheSkills - i);
+                            string cacheSkillGroupName = __GetSkillGroupName(cacheSkill);
+                            if (string.IsNullOrEmpty(cacheSkillGroupName))
+                                cacheSkills[i] = skillName;
                             else
                             {
-                                string cacheSkillGroupName = __GetSkillGroupName(cacheSkill);
-                                if (string.IsNullOrEmpty(cacheSkillGroupName))
-                                    cacheSkills[i] = skillName;
-                                else
-                                {
-                                    int skillIndex = __GetSkillGroupSkillNames(cacheSkillGroupName).IndexOf(cacheSkillGroupName);
-                                    
-                                    cacheSkills[i] = __GetSkillGroupSkillNames(__GetSkillGroupName(skillName))[skillIndex];
-                                }
+                                int skillIndex = __GetSkillGroupSkillNames(cacheSkillGroupName).IndexOf(cacheSkill);
+                                
+                                cacheSkills[i] = __GetSkillGroupSkillNames(__GetSkillGroupName(skillName))[skillIndex];
                             }
 
                             if (accessoryStyleSlotIndices == null)
