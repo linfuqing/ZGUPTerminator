@@ -897,7 +897,7 @@ public partial class UserDataMain
                                 accessoryID = 0;
                         }
 
-                        if (i == numAccessorySlots && accessoryID != 0)
+                        if (j == numAccessorySlots && accessoryID != 0)
                         {
                             var skillName = _accessories[accessoryInfo.index].skillName;
                             if (string.IsNullOrEmpty(skillName))
