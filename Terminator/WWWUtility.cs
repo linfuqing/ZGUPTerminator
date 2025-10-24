@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 
 public static class WWWUtility
 {
-    public static bool IsEqual(byte[] x, byte[] y)
+    public static bool IsEqual(in ReadOnlySpan<byte> x, in ReadOnlySpan<byte> y)
     {
         int length = x.Length;
         if (length != y.Length)
@@ -34,16 +34,10 @@ public static class WWWUtility
         return result;
     }
 
-    public static MemoryStream MD5Read(byte[] bytes, ref byte[] md5)
+    public static bool MD5Vail(byte[] bytes)
     {
-        var stream = new MemoryStream(bytes);
-        long length = stream.Length - 16;
-        stream.Position = length;
-        Array.Resize(ref md5, 16);
-        stream.Read(md5, 0, 16);
-        stream.SetLength(length);
-        stream.Position = 0L;
-        return IsEqual(MD5.Create().ComputeHash(stream), md5) ? stream : null;
+        int length = bytes.Length - 16;
+        return IsEqual(MD5.Create().ComputeHash(bytes, 0, length), bytes.AsSpan(length, 16));
     }
 
     public static IEnumerator MD5Request(
@@ -55,8 +49,7 @@ public static class WWWUtility
         bool result = false;
         string error;
         UnityWebRequest www;
-        MemoryStream stream;
-        byte[] md5 = null;
+        byte[] bytes;
         while(true)
         {
             www = form == null ? UnityWebRequest.Get(url) :  UnityWebRequest.Post(url, form);
@@ -66,13 +59,15 @@ public static class WWWUtility
             {
                 try
                 {
-                    stream = MD5Read(www.downloadHandler.data, ref md5);
-                    if (stream != null)
+                    bytes = www.downloadHandler.data;
+                    if(MD5Vail(bytes))
                     {
-                        using var reader = new BinaryReader(stream);
+                        using var reader = new BinaryReader(new MemoryStream(bytes));
                         
                         result = read(reader);
                     }
+                    else
+                        Debug.LogError(www.downloadHandler.text);
                 }
                 catch (Exception e)
                 {
