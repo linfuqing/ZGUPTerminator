@@ -79,6 +79,18 @@ public sealed partial class UserDataMain : MonoBehaviour
         }
     }
 
+    private const string NAME_SPACE_USER_EXP = "UserExp";
+
+    public static int exp
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_EXP);
+
+        set
+        {
+            PlayerPrefs.SetInt(NAME_SPACE_USER_EXP, value);
+        }
+    }
+    
     public static int goldBank => __GetQuest(UserQuest.Type.GoldsToGet, ActiveType.Day, out _);
 
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";

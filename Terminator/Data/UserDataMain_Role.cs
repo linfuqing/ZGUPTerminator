@@ -540,9 +540,9 @@ public partial class UserDataMain
             yield break;
         }
 
-        int gold = UserDataMain.gold;
+        int gold = UserDataMain.gold, exp = UserDataMain.exp;
         
-        if (talent.gold > gold)
+        if (talent.gold > gold || talent.exp > exp)
         {
             onComplete(false);
             
@@ -550,6 +550,7 @@ public partial class UserDataMain
         }
 
         UserDataMain.gold = gold - talent.gold;
+        UserDataMain.exp = exp - talent.exp;
 
         flag |= UserTalent.Flag.Collected;
         PlayerPrefs.SetInt(key, (int)flag);
@@ -579,6 +580,7 @@ public partial class UserDataMain
             userTalent.id = __ToID(i);
             userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
             userTalent.gold = talent.gold;
+            userTalent.exp = talent.exp;
             userTalent.skillGroupDamage = talent.skillGroupDamage;
             userTalent.attribute = talent.attribute;
             userTalents.Add(userTalent);

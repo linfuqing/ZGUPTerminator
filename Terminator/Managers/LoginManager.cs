@@ -402,9 +402,10 @@ public sealed class LoginManager : MonoBehaviour
         __levelStyles = new Dictionary<int, LevelStyle>(levelChapters.levels.Length);
         for(i = 0; i < numLevels; ++i)
         {
-            userLevel = levelChapters.levels[i];
+            int userLevelIndex = i;
+            userLevel = levelChapters.levels[userLevelIndex];
 
-            bool isEndOfLevels = i + 1 == numLevels;
+            bool isEndOfLevels = userLevelIndex + 1 == numLevels;
             isSelected = false;
             if (userLevel.stages != null)
             {
@@ -460,7 +461,7 @@ public sealed class LoginManager : MonoBehaviour
                 isSelected = false;
             
             if (isSelected)
-                selectedLevelIndex = i;
+                selectedLevelIndex = userLevelIndex;
 
             var style = Instantiate(_style, parent);
             style.name = userLevel.name;
@@ -759,6 +760,7 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
+                                            bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 || 
                                                 sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp)
                                                 //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
@@ -770,9 +772,11 @@ public sealed class LoginManager : MonoBehaviour
                                                     else
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
-                                                
-                                                if (__sceneActiveDepth == 0 && /*isEndOfLevels && */onLevelActivated != null)
-                                                    onLevelActivated();
+
+                                                if (__sceneActiveDepth == 0/* && *isEndOfLevels && */
+                                                    /*onLevelActivated != null*/)
+                                                    isLevelActive = true;
+                                                //onLevelActivated();
                                             }
                                             else
                                             {
@@ -780,9 +784,20 @@ public sealed class LoginManager : MonoBehaviour
 
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
-                                                
-                                                if (isEndOfLevels && onLevelActivatedFirst != null)
+                                                isLevelActive = true;
+                                                //if (isEndOfLevels/* && onLevelActivatedFirst != null*/)
                                                     onLevelActivatedFirst();
+                                            }
+
+                                            if (isLevelActive)
+                                            {
+                                                if (selectedLevelIndex == userLevelIndex)
+                                                {
+                                                    if(onLevelActivatedFirst != null)
+                                                        onLevelActivatedFirst();
+                                                }
+                                                else if(onLevelActivated != null)
+                                                    onLevelActivated();
                                             }
 
                                             previousSceneIndex = currentSceneIndex;

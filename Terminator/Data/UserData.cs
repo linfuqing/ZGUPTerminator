@@ -16,7 +16,8 @@ public enum UserRewardType
     EnergyMax, 
     ActiveDay, 
     ActiveWeek, 
-    Ticket
+    Ticket, 
+    Exp
 }
 
 public enum UserSkillType
@@ -112,6 +113,7 @@ public struct UserTalent
     public uint id;
     public Flag flag;
     public int gold;
+    public int exp;
     public float skillGroupDamage;
     public UserAttributeData attribute;
 }

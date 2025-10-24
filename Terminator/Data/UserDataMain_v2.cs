@@ -298,6 +298,7 @@ public partial class UserDataMain
         public string name;
         public string roleName;
         public int gold;
+        public int exp;
         public float skillGroupDamage;
         public UserAttributeData attribute;
         
@@ -329,6 +330,15 @@ public partial class UserDataMain
             }
         }
         
+        [CSVField]
+        public int 能力解锁消耗经验
+        {
+            set
+            {
+                exp = value;
+            }
+        }
+
         [CSVField]
         public float 能力技能组伤害加成
         {
@@ -403,6 +413,7 @@ public partial class UserDataMain
                 userTalent.id = __ToID(i);
                 userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
                 userTalent.gold = talent.gold;
+                userTalent.exp = talent.exp;
                 userTalent.skillGroupDamage = talent.skillGroupDamage;
                 userTalent.attribute = talent.attribute;
                 userTalents[i] = userTalent;
@@ -431,9 +442,9 @@ public partial class UserDataMain
             yield break;
         }
 
-        int gold = UserDataMain.gold;
+        int gold = UserDataMain.gold, exp = UserDataMain.exp;
         
-        if (talent.gold > gold)
+        if (talent.gold > gold || talent.exp > exp)
         {
             onComplete(false);
             
@@ -441,6 +452,7 @@ public partial class UserDataMain
         }
 
         UserDataMain.gold = gold - talent.gold;
+        UserDataMain.exp = exp - talent.exp;
 
         flag |= UserTalent.Flag.Collected;
         PlayerPrefs.SetInt(key, (int)flag);

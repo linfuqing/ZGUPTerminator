@@ -467,6 +467,7 @@ public partial class UserDataMain
         UserDataMain.gold = gold - cardLevel.gold;
         
         var flag = UserDataMain.flag;
+        flag &= ~Flag.CardsUnlockFirst;
         flag &= ~Flag.CardUpgradeFirst;
 
         UserDataMain.flag = flag;

@@ -206,6 +206,10 @@ public partial class UserDataMain
                 
                 key = null;
                 break;
+            case UserRewardType.Exp:
+                exp += reward.count;
+                key = null;
+                break;
             default:
                 return false;
         }

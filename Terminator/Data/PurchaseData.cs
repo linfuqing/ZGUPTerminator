@@ -281,7 +281,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 input.type = PurchaseType.AdvertisingFreeCard;
                 input.level = level;
                 output = Query(input);
-                if (output.times < 1)
+                //if (output.times < 1)
                 {
                     seconds = output.GetDeadline(ticks);
                     seconds += (int)(TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond);//(int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);

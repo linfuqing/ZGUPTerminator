@@ -180,8 +180,9 @@ public partial class UserDataMain
         Action<IUserData.Stage> onComplete)
     {
         yield return __CreateEnumerator();
-
+        
         var levelStage = __GetLevelStageInfo(stageID);
+        
         IUserData.Stage result;
         var level = _levels[levelStage.levelIndex];
 
