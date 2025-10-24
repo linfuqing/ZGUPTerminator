@@ -62,7 +62,7 @@ public static class WWWUtility
                     bytes = www.downloadHandler.data;
                     if(MD5Vail(bytes))
                     {
-                        using var reader = new BinaryReader(new MemoryStream(bytes));
+                        using var reader = new BinaryReader(new MemoryStream(bytes, 0, bytes.Length - 16, false ));
                         
                         result = read(reader);
                     }
