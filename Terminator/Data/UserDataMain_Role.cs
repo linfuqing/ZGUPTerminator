@@ -445,12 +445,12 @@ public partial class UserDataMain
                 ref userRoleGroupIDs, 
                 ref skillNames))
         {
-            onComplete(default);
+            onComplete(userRole);
             
             yield break;
         }
             
-        onComplete(userRole);
+        onComplete(default);
     }
     
     public IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete)

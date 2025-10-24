@@ -760,7 +760,7 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
-                                            bool isLevelActive = false;
+                                            //bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 || 
                                                 sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp)
                                                 //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
@@ -773,10 +773,10 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
 
-                                                if (__sceneActiveDepth == 0/* && *isEndOfLevels && */
-                                                    /*onLevelActivated != null*/)
-                                                    isLevelActive = true;
-                                                //onLevelActivated();
+                                                if (__sceneActiveDepth == 0 && isEndOfLevels && 
+                                                    onLevelActivated != null)
+                                                    //isLevelActive = true;
+                                                    onLevelActivated();
                                             }
                                             else
                                             {
@@ -784,12 +784,12 @@ public sealed class LoginManager : MonoBehaviour
 
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
-                                                isLevelActive = true;
-                                                //if (isEndOfLevels/* && onLevelActivatedFirst != null*/)
+                                                //isLevelActive = true;
+                                                if (isEndOfLevels && onLevelActivatedFirst != null)
                                                     onLevelActivatedFirst();
                                             }
 
-                                            if (isLevelActive)
+                                            /*if (isLevelActive)
                                             {
                                                 if (selectedLevelIndex == userLevelIndex)
                                                 {
@@ -798,7 +798,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 }
                                                 else if(onLevelActivated != null)
                                                     onLevelActivated();
-                                            }
+                                            }*/
 
                                             previousSceneIndex = currentSceneIndex;
 
