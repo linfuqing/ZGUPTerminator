@@ -51,7 +51,7 @@ public sealed class LoginManager : MonoBehaviour
 
         public void Dispose(float destroyTime = 0.0f)
         {
-            assetObject?.Dispose(destroyTime);
+            assetObject?.Dispose(destroyTime, false);
         }
 
         public void Load(AssetManager assetManager)
