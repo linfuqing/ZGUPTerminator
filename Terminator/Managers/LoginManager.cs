@@ -78,6 +78,37 @@ public sealed class LoginManager : MonoBehaviour
     {
         public Loader[] values;
 
+        public void Init(
+            int index, 
+            MonoBehaviour monoBehaviour,
+            AssetManager assetManager, 
+            LevelStyle levelStyle, 
+            in Level level)
+        {
+            var levelStyleScene = levelStyle.scenes[index];
+            var source = level.scenes[index].prefab;
+            var destination = values[index];
+            if (destination.assetObject != source)
+            {
+                destination.assetObject?.Dispose();
+
+                source?.Init(monoBehaviour, levelStyleScene.root);
+                source?.Load(assetManager);
+
+                destination.assetObject = source;
+                destination.progressbar = levelStyleScene.loaderProgressbar;
+
+                values[index] = destination;
+            }
+            else if (destination.progressbar !=
+                     levelStyleScene.loaderProgressbar)
+            {
+                destination.progressbar = levelStyleScene.loaderProgressbar;
+
+                values[index] = destination;
+            }
+        }
+
         public void Load(AssetManager assetManager)
         {
             if (values == null)
@@ -863,61 +894,46 @@ public sealed class LoginManager : MonoBehaviour
                                             }*/
 
                                             previousSceneIndex = currentSceneIndex;
+                                            
+                                            LevelStyle.Scene levelStyleScene;
+                                            for (int i = 0; i < numScenes; ++i)
+                                            {
+                                                levelStyleScene = style.scenes[i];
+                                                if (levelStyleScene.toggle == null)
+                                                    continue;
+                                                    
+                                                levelStyleScene.toggle.interactable = i != currentSceneIndex &&
+                                                    sceneUnlocked != null &&
+                                                    sceneUnlocked.ContainsKey(i);
+                                            }
 
                                             var assetManager = GameAssetManager.instance?.dataManager;
                                             
-                                            LevelStyle.Scene levelStyleScene;
-                                            AssetObjectLoader source;
-                                            Loader destination;
-                                            Loaders loaders;
-                                            for(int i = 0; i < numScenes; ++i)
+                                            var loaders = loader.Value;
+                                            if (loaders.values == null || loaders.values.Length < numScenes)
                                             {
-                                                levelStyleScene = style.scenes[i];
-                                                if (levelStyleScene.toggle != null)
-                                                    levelStyleScene.toggle.interactable = i != currentSceneIndex &&
-                                                                          sceneUnlocked != null &&
-                                                                          sceneUnlocked.ContainsKey(i);
-                                                
-                                                loaders = loader.Value;
-                                                if (loaders.values == null || loaders.values.Length < numScenes)
-                                                {
-                                                    Array.Resize(ref loaders.values, numScenes);
+                                                Array.Resize(ref loaders.values, numScenes);
 
-                                                    loader.Value = loaders;
-                                                }
-                                                
-                                                source = level.scenes[i].prefab;
-                                                destination = loaders.values[i];
-                                                if (destination.assetObject != source)
-                                                {
-                                                    destination.assetObject?.Dispose();
-                                                
-                                                    source?.Init(this, levelStyleScene.root);
-                                                    source?.Load(assetManager);
-
-                                                    destination.assetObject = source;
-                                                    destination.progressbar = levelStyleScene.loaderProgressbar;
-
-                                                    loaders.values[i] = destination;
-                                                }
-                                                else if (destination.progressbar != levelStyleScene.loaderProgressbar)
-                                                {
-                                                    destination.progressbar = levelStyleScene.loaderProgressbar;
-                                                    
-                                                    loaders.values[i] = destination;
-                                                }
+                                                loader.Value = loaders;
                                             }
 
-                                            /*var prefab = level.scenes[currentSceneIndex].prefab;
-                                            if (prefab != loader.Value.Item2)
+                                            if (endLevelIndex == userLevelIndex)
                                             {
-                                                loader.Value.Item2?.Dispose();
-                                                
-                                                prefab?.Init(this, style.scenes[currentSceneIndex].root);
-                                                prefab?.Load(assetManager);
+                                                for (int i = 0; i < numScenes; ++i)
+                                                    loaders.Init(i, this, assetManager, style, level);
+                                            }
+                                            else
+                                                loaders.Init(currentSceneIndex, this, assetManager, style, level);
+                                                /*var prefab = level.scenes[currentSceneIndex].prefab;
+                                                if (prefab != loader.Value.Item2)
+                                                {
+                                                    loader.Value.Item2?.Dispose();
 
-                                                loader.Value = (style.loaderProgressbar, prefab);
-                                            }*/
+                                                    prefab?.Init(this, style.scenes[currentSceneIndex].root);
+                                                    prefab?.Load(assetManager);
+
+                                                    loader.Value = (style.loaderProgressbar, prefab);
+                                                }*/
 
                                             var node = loader.Previous;
                                             if (node != null)
