@@ -39,13 +39,13 @@ public class PlayerController : MonoBehaviour
                 break;
             case "Die":
                 if(__attributeEventReceiver != null)
-                    __attributeEventReceiver.Die();
+                    __attributeEventReceiver.Clear();
                 
                 __SetStatus(Status.Dead);
                 break;
             case "Respawn":
                 if(__attributeEventReceiver != null)
-                    __attributeEventReceiver.Die();
+                    __attributeEventReceiver.Clear();
                 
                 __SetStatus(Status.Respawn);
                 break;
@@ -54,19 +54,25 @@ public class PlayerController : MonoBehaviour
         parameters.Apply(animator);
     }
 
-    private void __OnHPChanged(int value)
+    private void __OnChanged(int id, int value)
     {
-        (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHP(value);
+        switch ((EffectAttributeID)id)
+        {
+            case EffectAttributeID.HPMax:
+                (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHPMax(value);
+                break;
+            case EffectAttributeID.HP:
+                (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHP(value);
 
-        if(value > 0)
-            __SetStatus(0);
+                if(value > 0)
+                    __SetStatus(0);
+                break;
+            case EffectAttributeID.Rage:
+                LevelManager.instance.rage = value;
+                break;
+        }
     }
 
-    private void __OnRageChanged(int value)
-    {
-        LevelManager.instance.rage = value;
-    }
-    
     private void __SetStatus(Status value)
     {
         if (((value ^ __status) & Status.Dead) == Status.Dead)
@@ -105,15 +111,7 @@ public class PlayerController : MonoBehaviour
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
 
         if (__attributeEventReceiver != null)
-        {
-            var analytics = IAnalyticsEx.instance as IAnalyticsEx;
-            if (analytics != null)
-                __attributeEventReceiver.onHPMaxChanged += analytics.SetPlayerHPMax;
-            
-            __attributeEventReceiver.onHPChanged += __OnHPChanged;
-
-            __attributeEventReceiver.onRageChanged += __OnRageChanged;
-        }
+            __attributeEventReceiver.onChanged += __OnChanged;
     }
 
     private void OnEnable()
@@ -137,11 +135,7 @@ public class PlayerController : MonoBehaviour
     void OnDestroy()
     {
         if ((object)__attributeEventReceiver != null)
-        {
-            __attributeEventReceiver.onHPChanged -= __OnHPChanged;
-
-            __attributeEventReceiver.onRageChanged -= __OnRageChanged;
-        }
+            __attributeEventReceiver.onChanged -= __OnChanged;
         
         TimeScaleUtility.Remove(__timeScaleIndex);
 

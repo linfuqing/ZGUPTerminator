@@ -717,6 +717,14 @@ public struct LevelItem : IBufferElementData
     public int count;
 }
 
+public struct LevelItemMessage : IBufferElementData
+{
+    public int id;
+    public FixedString32Bytes itemName;
+    public FixedString32Bytes messageName;
+    public UnityObjectRef<UnityEngine.Object> messageValue;
+}
+
 public struct LevelObject : IComponentData
 {
     

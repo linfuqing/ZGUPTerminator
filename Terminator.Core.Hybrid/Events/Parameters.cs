@@ -9,7 +9,7 @@ public class Parameters : ScriptableObject, IMessage
 
     public int count => __values.Count;
 
-    public IEnumerable<int> values => __values.Values;
+    public IReadOnlyDictionary<int, int> values => __values;
 
     public int this[int id] => __values[id];
 
@@ -28,7 +28,7 @@ public class Parameters : ScriptableObject, IMessage
 
     public void Clear()
     {
-        if(__values != null )
+        if(__values != null)
             __values.Clear();
     }
 }

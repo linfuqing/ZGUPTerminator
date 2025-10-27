@@ -24,7 +24,7 @@ public class AnimatorEventReceiver : MonoBehaviour
             switch (parameters.name)
             {
                 case "Die":
-                    __attributeEventReceiver.Die();
+                    __attributeEventReceiver.Clear();
                     break;
             }
         }

@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using ZG;
 using Random = Unity.Mathematics.Random;
 
 [BurstCompile, /*UpdateBefore(typeof(SpawnerSystem)), UpdateAfter(typeof(SpawnerRecountSystem)), */UpdateBefore(typeof(TransformSystemGroup))]
@@ -438,6 +439,80 @@ public partial struct LevelSystem : ISystem
 
     }
 
+    private struct SendMessages
+    {
+        [ReadOnly] 
+        public BufferAccessor<LevelItem> items;
+        
+        [ReadOnly] 
+        public BufferAccessor<LevelItemMessage> inputs;
+        
+        public BufferAccessor<Message> outputs;
+        public BufferAccessor<MessageParameter> parameters;
+
+        public void Execute(int index, ref Random random)
+        {
+            MessageParameter parameter;
+            Message message;
+            var outputs = this.outputs[index];
+            var parameters = this.parameters[index];
+            var items = this.items[index];
+            foreach (var input in inputs[index])
+            {
+                foreach (var item in items)
+                {
+                    if (item.name == input.itemName)
+                    {
+                        message.key = random.NextInt();
+                        message.name = input.messageName;
+                        message.value = input.messageValue;
+                        outputs.Add(message);
+                        
+                        parameter.messageKey = message.key;
+                        parameter.id = input.id;
+                        parameter.value = item.count;
+                        parameters.Add(parameter);
+                        
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    [BurstCompile]
+    private struct SendMessagesEx : IJobChunk
+    {
+        public uint hash;
+        
+        [ReadOnly] 
+        public BufferTypeHandle<LevelItem> itemType;
+        
+        [ReadOnly] 
+        public BufferTypeHandle<LevelItemMessage> inputType;
+        
+        public BufferTypeHandle<Message> outputType;
+        public BufferTypeHandle<MessageParameter> parameterType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
+            in v128 chunkEnabledMask)
+        {
+            var random = new Random(hash ^ (uint)unfilteredChunkIndex);
+            
+            SendMessages sendMessages;
+            sendMessages.items = chunk.GetBufferAccessor(ref itemType);
+            sendMessages.inputs = chunk.GetBufferAccessor(ref inputType);
+            sendMessages.outputs = chunk.GetBufferAccessor(ref outputType);
+            sendMessages.parameters = chunk.GetBufferAccessor(ref parameterType);
+            
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+                sendMessages.Execute(i, ref random);
+        }
+    }
+
+    private uint __itemVersion;
+
     private ComponentLookup<LocalTransform> __localTransforms;
     private ComponentLookup<EffectTarget> __effectTargets;
 
@@ -466,7 +541,14 @@ public partial struct LevelSystem : ISystem
 
     private BufferTypeHandle<LevelStageResultStatus> __stageResultStatusType;
     
+    public BufferTypeHandle<MessageParameter> __messageParameterType;
+    
+    public BufferTypeHandle<Message> __outputMessageType;
+
+    public BufferTypeHandle<LevelItemMessage> __inputMessageType;
+        
     private EntityQuery __group;
+    private EntityQuery __itemMessageGroup;
 
     private LevelSpawners __spawners;
 
@@ -489,11 +571,19 @@ public partial struct LevelSystem : ISystem
         __stageType = state.GetBufferTypeHandle<LevelStage>();
         __stageConditionStatusType = state.GetBufferTypeHandle<LevelStageConditionStatus>();
         __stageResultStatusType = state.GetBufferTypeHandle<LevelStageResultStatus>();
+        __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
+        __outputMessageType = state.GetBufferTypeHandle<Message>();
+        __inputMessageType = state.GetBufferTypeHandle<LevelItemMessage>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
                 .WithAll<LevelDefinitionData, LevelStatus>()
                 .WithAllRW<LevelStage>()
+                .Build(ref state);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __itemMessageGroup = builder
+                .WithAll<LevelItemMessage, Message, MessageParameter>()
                 .Build(ref state);
         
         state.RequireForUpdate<SpawnerLayerMaskAndTags>();
@@ -559,6 +649,27 @@ public partial struct LevelSystem : ISystem
         update.spawnerStates = __spawnerStates;
         update.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-        state.Dependency = update.ScheduleParallelByRef(__group, jobHandle);
+        jobHandle = update.ScheduleParallelByRef(__group, jobHandle);
+
+        uint itemVersion = (uint)state.EntityManager.GetComponentOrderVersion<LevelItem>();
+        if(ChangeVersionUtility.DidChange(itemVersion, __itemVersion))
+        {
+            __itemVersion = itemVersion;
+            
+            __messageParameterType.Update(ref state);
+            __outputMessageType.Update(ref state);
+            __inputMessageType.Update(ref state);
+
+            var hash = math.aslong(time.ElapsedTime);
+            SendMessagesEx sendMessages;
+            sendMessages.hash = (uint)hash ^ (uint)(hash >> 32);
+            sendMessages.itemType = __itemType;
+            sendMessages.inputType = __inputMessageType;
+            sendMessages.outputType = __outputMessageType;
+            sendMessages.parameterType = __messageParameterType;
+            jobHandle = sendMessages.ScheduleParallelByRef(__itemMessageGroup, jobHandle);
+        }
+
+        state.Dependency = jobHandle;
     }
 }
