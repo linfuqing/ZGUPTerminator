@@ -87,7 +87,6 @@ public sealed class LoginManager : MonoBehaviour
                 destination.assetObject?.Dispose();
 
                 source?.Init(monoBehaviour, levelStyleScene.root);
-                source?.Load(assetManager);
 
                 destination.assetObject = source;
                 destination.progressbar = levelStyleScene.loaderProgressbar;
@@ -101,6 +100,8 @@ public sealed class LoginManager : MonoBehaviour
 
                 values[index] = destination;
             }
+            
+            source?.Load(assetManager);
         }
 
         public void Load(AssetManager assetManager)
