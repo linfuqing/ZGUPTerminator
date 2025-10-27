@@ -49,12 +49,6 @@ public sealed class LoginManager : MonoBehaviour
 
         public AssetObjectLoader assetObject;
 
-        public Loader(Progressbar progressbar, AssetObjectLoader assetObject)
-        {
-            this.progressbar = progressbar;
-            this.assetObject = assetObject;
-        }
-
         public void Dispose()
         {
             assetObject?.Dispose();
@@ -923,17 +917,25 @@ public sealed class LoginManager : MonoBehaviour
                                                     loaders.Init(i, this, assetManager, style, level);
                                             }
                                             else
-                                                loaders.Init(currentSceneIndex, this, assetManager, style, level);
-                                                /*var prefab = level.scenes[currentSceneIndex].prefab;
-                                                if (prefab != loader.Value.Item2)
+                                            {
+                                                for (int i = 0; i < numScenes; ++i)
                                                 {
-                                                    loader.Value.Item2?.Dispose();
+                                                    if(i == currentSceneIndex)
+                                                        loaders.Init(currentSceneIndex, this, assetManager, style, level);
+                                                    else
+                                                        loaders.values[i].Dispose();
+                                                }
+                                            }
+                                            /*var prefab = level.scenes[currentSceneIndex].prefab;
+                                            if (prefab != loader.Value.Item2)
+                                            {
+                                                loader.Value.Item2?.Dispose();
 
-                                                    prefab?.Init(this, style.scenes[currentSceneIndex].root);
-                                                    prefab?.Load(assetManager);
+                                                prefab?.Init(this, style.scenes[currentSceneIndex].root);
+                                                prefab?.Load(assetManager);
 
-                                                    loader.Value = (style.loaderProgressbar, prefab);
-                                                }*/
+                                                loader.Value = (style.loaderProgressbar, prefab);
+                                            }*/
 
                                             var node = loader.Previous;
                                             if (node != null)
