@@ -279,7 +279,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         {
             case PurchaseType.FirstCharge:
                 input.type = PurchaseType.AdvertisingFreeCard;
-                input.level = level;
+                input.level = 0;
                 output = Query(input);
                 if (output.times < 1)
                 {
@@ -300,10 +300,10 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 break;
             case PurchaseType.Pass:
                 seconds = output.GetDeadline(ticks);
-                seconds = (int)((seconds == 0
+                seconds = (int)(((seconds == 0
                         ? DateTime.Today
                         : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime()).AddMonths(1)
-                    .ToUniversalTime().Ticks - ticks);
+                    .ToUniversalTime().Ticks - ticks) / TimeSpan.TicksPerSecond);
                 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;

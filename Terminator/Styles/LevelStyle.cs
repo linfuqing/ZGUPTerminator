@@ -21,6 +21,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
 
         public Toggle toggle;
 
+        public Progressbar loaderProgressbar;
+        
         public StageStyle[] stageStyles;
     }
     
@@ -30,7 +32,6 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     public Toggle toggle;
 
     public Progressbar progressbar;
-    public Progressbar loaderProgressbar;
     
     //public Button button;
 

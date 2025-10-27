@@ -17,6 +17,32 @@ public partial class UserDataMain
         
         [Tooltip("技能")]
         public string[] skillNames;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 角色名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 角色血量最大值
+        {
+            set => hpMax = value;
+        }
+        
+        [CSVField]
+        public string 角色实例名字
+        {
+            set => instanceName = value;
+        }
+        
+        [CSVField]
+        public string 角色技能
+        {
+            set => skillNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
+        }
+#endif
     }
 
     [Serializable]
@@ -123,6 +149,12 @@ public partial class UserDataMain
     internal Group[] _roleGroups;
     [SerializeField, Tooltip("角色")] 
     internal Role[] _roles;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_roles", guidIndex = -1, nameIndex = 0)]
+    internal string _rolesPath;
+#endif
+
     [SerializeField, Tooltip("角色星级")]
     internal RoleRank[] _roleRanks;
 

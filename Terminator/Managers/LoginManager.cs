@@ -47,15 +47,62 @@ public sealed class LoginManager : MonoBehaviour
     {
         public Progressbar progressbar;
 
-        public AssetObjectLoader[] assetObjects;
+        public AssetObjectLoader assetObject;
+
+        public Loader(Progressbar progressbar, AssetObjectLoader assetObject)
+        {
+            this.progressbar = progressbar;
+            this.assetObject = assetObject;
+        }
 
         public void Dispose()
         {
-            if (assetObjects != null)
-            {
-                foreach (var assetObject in assetObjects)
-                    assetObject.Dispose();
-            }
+            assetObject?.Dispose();
+        }
+
+        public void Load(AssetManager assetManager)
+        {
+            assetObject?.Load(assetManager);
+        }
+        
+        public void Update()
+        {
+            if (progressbar == null || assetObject == null)
+                return;
+            
+            progressbar.value = assetObject.progress;
+        }
+    }
+
+    private struct Loaders
+    {
+        public Loader[] values;
+
+        public void Load(AssetManager assetManager)
+        {
+            if (values == null)
+                return;
+            
+            foreach (var loader in values)
+                loader.Load(assetManager);
+        }
+
+        public void Update()
+        {
+            if (values == null)
+                return;
+            
+            foreach (var loader in values)
+                loader.Update();
+        }
+        
+        public void Dispose()
+        {
+            if (values == null)
+                return;
+            
+            foreach (var loader in values)
+                loader.Dispose();
         }
     }
 
@@ -147,7 +194,7 @@ public sealed class LoginManager : MonoBehaviour
     private List<StageStyle>[] __stageStyles;
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
-    private LinkedList<(Progressbar, AssetObjectLoader)> __loaders;
+    private LinkedList<Loaders> __loaders;
 
     private string __levelName;
     private string __sceneName;
@@ -363,11 +410,11 @@ public sealed class LoginManager : MonoBehaviour
         }
 
         if (__loaders == null)
-            __loaders = new LinkedList<(Progressbar, AssetObjectLoader)>();
+            __loaders = new LinkedList<Loaders>();
         else
         {
             foreach (var loader in __loaders)
-                loader.Item2?.Dispose();
+                loader.Dispose();
             
             __loaders.Clear();
         }
@@ -395,7 +442,13 @@ public sealed class LoginManager : MonoBehaviour
 
         numLevels = levelChapters.levels.Length;
         bool isHot = false;
-        int selectedLevelIndex = -1, numStageRewards = 0, numStageRewardsTotal = 0, numStages, index;
+        int selectedLevelIndex = -1, 
+            finalLevelIndex = -1, 
+            endLevelIndex = -1, 
+            numStageRewards = 0, 
+            numStageRewardsTotal = 0, 
+            numStages, 
+            index;
         uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -405,7 +458,7 @@ public sealed class LoginManager : MonoBehaviour
             int userLevelIndex = i;
             userLevel = levelChapters.levels[userLevelIndex];
 
-            bool isEndOfLevels = userLevelIndex + 1 == numLevels;
+            //bool isEndOfLevels = userLevelIndex + 1 == numLevels;
             isSelected = false;
             if (userLevel.stages != null)
             {
@@ -459,9 +512,17 @@ public sealed class LoginManager : MonoBehaviour
             else if (isSelected && selectedLevelIndex != -1 &&
                      levelChapters.levels[selectedLevelIndex].id == __selectedUserLevelID)
                 isSelected = false;
-            
+
             if (isSelected)
+            {
                 selectedLevelIndex = userLevelIndex;
+
+                finalLevelIndex = userLevelIndex;
+            }
+            else if(__sceneActiveDepth != 0)
+                finalLevelIndex = userLevelIndex;
+
+            endLevelIndex = userLevelIndex;
 
             var style = Instantiate(_style, parent);
             style.name = userLevel.name;
@@ -482,7 +543,7 @@ public sealed class LoginManager : MonoBehaviour
             //for(j = 0; j < numPrefabs; ++j)
             //    prefabs[j] = Instantiate(level.scenes[j].prefab, style.scenes[j].root);
 
-            var loader = __loaders.AddLast(default((Progressbar, AssetObjectLoader)));
+            var loader = __loaders.AddLast(default(Loaders));
 
             style.toggle.onValueChanged.AddListener(x =>
             {
@@ -773,7 +834,8 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
 
-                                                if (__sceneActiveDepth == 0 && isEndOfLevels && 
+                                                if (__sceneActiveDepth == 0 && 
+                                                    finalLevelIndex == userLevelIndex && 
                                                     onLevelActivated != null)
                                                     //isLevelActive = true;
                                                     onLevelActivated();
@@ -785,13 +847,13 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
                                                 //isLevelActive = true;
-                                                if (isEndOfLevels && onLevelActivatedFirst != null)
+                                                if (/*isEndOfLevels && */onLevelActivatedFirst != null)
                                                     onLevelActivatedFirst();
                                             }
 
                                             /*if (isLevelActive)
                                             {
-                                                if (selectedLevelIndex == userLevelIndex)
+                                                if (finalLevelIndex == userLevelIndex)
                                                 {
                                                     if(onLevelActivatedFirst != null)
                                                         onLevelActivatedFirst();
@@ -802,18 +864,53 @@ public sealed class LoginManager : MonoBehaviour
 
                                             previousSceneIndex = currentSceneIndex;
 
-                                            Toggle toggle;
+                                            var assetManager = GameAssetManager.instance?.dataManager;
+                                            
+                                            LevelStyle.Scene levelStyleScene;
+                                            AssetObjectLoader source;
+                                            Loader destination;
+                                            Loaders loaders;
                                             for(int i = 0; i < numScenes; ++i)
                                             {
-                                                toggle = style.scenes[i].toggle;
-                                                if(toggle == null)
-                                                    continue;
+                                                levelStyleScene = style.scenes[i];
+                                                if (levelStyleScene.toggle != null)
+                                                    levelStyleScene.toggle.interactable = i != currentSceneIndex &&
+                                                                          sceneUnlocked != null &&
+                                                                          sceneUnlocked.ContainsKey(i);
                                                 
-                                                toggle.interactable = i != currentSceneIndex && sceneUnlocked != null && sceneUnlocked.ContainsKey(i);
+                                                source = level.scenes[i].prefab;
+                                                loaders = loader.Value;
+                                                if (loaders.values == null || loaders.values.Length < numScenes)
+                                                {
+                                                    Array.Resize(ref loaders.values, numScenes);
+
+                                                    loader.Value = loaders;
+                                                }
+                                                
+                                                destination = loaders.values[i];
+                                                if (destination.assetObject != source)
+                                                {
+                                                    destination.assetObject?.Dispose();
+                                                
+                                                    source?.Init(this, style.scenes[currentSceneIndex].root);
+                                                    source?.Load(assetManager);
+
+                                                    destination.assetObject = source;
+                                                    destination.progressbar = levelStyleScene.loaderProgressbar;
+
+                                                    loaders.values[i] = destination;
+                                                }
+                                                else if (destination.progressbar != levelStyleScene.loaderProgressbar)
+                                                {
+                                                    destination.progressbar = levelStyleScene.loaderProgressbar;
+                                                    
+                                                    loaders.values[i] = destination;
+                                                }
+
+                                                loaders.values[i] = destination;
                                             }
 
-                                            var assetManager = GameAssetManager.instance?.dataManager;
-                                            var prefab = level.scenes[currentSceneIndex].prefab;
+                                            /*var prefab = level.scenes[currentSceneIndex].prefab;
                                             if (prefab != loader.Value.Item2)
                                             {
                                                 loader.Value.Item2?.Dispose();
@@ -822,24 +919,24 @@ public sealed class LoginManager : MonoBehaviour
                                                 prefab?.Load(assetManager);
 
                                                 loader.Value = (style.loaderProgressbar, prefab);
-                                            }
+                                            }*/
 
                                             var node = loader.Previous;
                                             if (node != null)
                                             {
-                                                node.Value.Item2?.Load(assetManager);
-                                                
+                                                node.Value.Load(assetManager);
+
                                                 for (node = node.Previous; node != null; node = node.Previous)
-                                                    node.Value.Item2?.Dispose();
+                                                    node.Value.Dispose();
                                             }
 
                                             node = loader.Next;
                                             if (node != null)
                                             {
-                                                node.Value.Item2?.Load(assetManager);
+                                                node.Value.Load(assetManager);
 
                                                 for (node = node.Next; node != null; node = node.Next)
-                                                    node.Value.Item2?.Dispose();
+                                                    node.Value.Dispose();
                                             }
                                         }
                                     };
@@ -872,7 +969,7 @@ public sealed class LoginManager : MonoBehaviour
                         }
                     }
 
-                    if (isEndOfLevels && numStageRewards < levelChapters.stageRewardCount)
+                    if (endLevelIndex == userLevelIndex && numStageRewards < levelChapters.stageRewardCount)
                     {
                         if (__isLevelActive == null || __isLevelActive.Value)
                         {
@@ -1317,12 +1414,7 @@ public sealed class LoginManager : MonoBehaviour
         if (__loaders != null)
         {
             foreach (var loader in __loaders)
-            {
-                if(loader.Item1 == null)
-                    continue;
-                
-                loader.Item1.value = loader.Item2 == null ? 1.0f : loader.Item2.progress;
-            }
+                loader.Update();
         }
     }
 }
