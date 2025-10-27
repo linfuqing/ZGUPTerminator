@@ -129,7 +129,7 @@ public class AttributeEventReceiver : MonoBehaviour
             for (i = 0; i < numAttributes; ++i)
             {
                 ref var attribute = ref _attributes[i];
-                if (attribute.id == pair.Key || attribute.idMax == pair.Key)
+                if (attribute.id == id || attribute.idMax == id)
                     dirtyFlag |= 1 << i;
             }
         }

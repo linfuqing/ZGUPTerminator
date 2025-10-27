@@ -242,6 +242,11 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         parameter.value = _hp;
         messageParameters.Add(parameter);
 
+        parameter.messageKey = message.key;
+        parameter.id = (int)EffectAttributeID.HP;
+        parameter.value = _hp;
+        messageParameters.Add(parameter);
+
         if (_shield != 0)
         {
             parameter.messageKey = message.key;
