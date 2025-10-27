@@ -49,9 +49,9 @@ public sealed class LoginManager : MonoBehaviour
 
         public AssetObjectLoader assetObject;
 
-        public void Dispose()
+        public void Dispose(float destroyTime = 0.0f)
         {
-            assetObject?.Dispose();
+            assetObject?.Dispose(destroyTime);
         }
 
         public void Load(AssetManager assetManager)
@@ -74,10 +74,10 @@ public sealed class LoginManager : MonoBehaviour
 
         public void Init(
             int index, 
-            MonoBehaviour monoBehaviour,
-            AssetManager assetManager, 
+            in Level level, 
             LevelStyle levelStyle, 
-            in Level level)
+            MonoBehaviour monoBehaviour,
+            AssetManager assetManager)
         {
             var levelStyleScene = levelStyle.scenes[index];
             var source = level.scenes[index].prefab;
@@ -152,6 +152,9 @@ public sealed class LoginManager : MonoBehaviour
 
     [SerializeField] 
     internal float _startTime = 0.5f;
+
+    [SerializeField] 
+    internal float _scenePrefabDestroyTime = 1.0f;
 
     [SerializeField]
     internal float _stageStyleDestroyTime;
@@ -915,16 +918,16 @@ public sealed class LoginManager : MonoBehaviour
                                             if (endLevelIndex == userLevelIndex)
                                             {
                                                 for (int i = 0; i < numScenes; ++i)
-                                                    loaders.Init(i, this, assetManager, style, level);
+                                                    loaders.Init(i, level, style, this, assetManager);
                                             }
                                             else
                                             {
                                                 for (int i = 0; i < numScenes; ++i)
                                                 {
                                                     if(i == currentSceneIndex)
-                                                        loaders.Init(currentSceneIndex, this, assetManager, style, level);
+                                                        loaders.Init(currentSceneIndex, level, style, this, assetManager);
                                                     else
-                                                        loaders.values[i].Dispose();
+                                                        loaders.values[i].Dispose(_scenePrefabDestroyTime);
                                                 }
                                             }
                                             /*var prefab = level.scenes[currentSceneIndex].prefab;
