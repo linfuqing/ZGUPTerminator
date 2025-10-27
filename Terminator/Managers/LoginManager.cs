@@ -878,7 +878,6 @@ public sealed class LoginManager : MonoBehaviour
                                                                           sceneUnlocked != null &&
                                                                           sceneUnlocked.ContainsKey(i);
                                                 
-                                                source = level.scenes[i].prefab;
                                                 loaders = loader.Value;
                                                 if (loaders.values == null || loaders.values.Length < numScenes)
                                                 {
@@ -887,12 +886,13 @@ public sealed class LoginManager : MonoBehaviour
                                                     loader.Value = loaders;
                                                 }
                                                 
+                                                source = level.scenes[i].prefab;
                                                 destination = loaders.values[i];
                                                 if (destination.assetObject != source)
                                                 {
                                                     destination.assetObject?.Dispose();
                                                 
-                                                    source?.Init(this, style.scenes[currentSceneIndex].root);
+                                                    source?.Init(this, levelStyleScene.root);
                                                     source?.Load(assetManager);
 
                                                     destination.assetObject = source;
@@ -906,8 +906,6 @@ public sealed class LoginManager : MonoBehaviour
                                                     
                                                     loaders.values[i] = destination;
                                                 }
-
-                                                loaders.values[i] = destination;
                                             }
 
                                             /*var prefab = level.scenes[currentSceneIndex].prefab;
