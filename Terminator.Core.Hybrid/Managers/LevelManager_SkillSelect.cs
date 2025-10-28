@@ -248,6 +248,8 @@ public partial class LevelManager
                 Sprite[] keyIcons;
                 LevelSkillStyle style;
                 LevelSkillData? skill = null;
+                List<LevelSkillKeyStyle> uprankKeyStyles  = null;
+                Dictionary<string, int> uprankKeyCounts = null;
                 //List<int> recommendIndices = null;
                 for (int i = 0; i < numSkills; ++i)
                 {
@@ -272,8 +274,17 @@ public partial class LevelManager
 
                     if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
                         oldKeyNames = null;
+
+                    if (uprankKeyCounts == null)
+                        uprankKeyCounts = style.uprankKeyStyle == null ? null : new Dictionary<string, int>();
+                    else
+                        uprankKeyCounts.Clear();
                     
-                    isRecommend = __SetSkillKeyStyles(style.keyStyles, keyNames, oldKeyNames);
+                    isRecommend = __SetSkillKeyStyles(
+                        style.keyStyles, 
+                        keyNames, 
+                        oldKeyNames, 
+                        uprankKeyCounts == null ? null : uprankKeyCounts.Add);
                     if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
                     {
                         if (!isRecommend)
@@ -294,9 +305,11 @@ public partial class LevelManager
                                     count = GetSkillActiveKeyCount(keyName);
                                     if(keyAsset.BinarySearch(count) < keyAsset.BinarySearch(count + GetSkillChildKeyCount(keyName)))
                                     {
+                                        uprankKeyCounts.Add(keyName, count);
+                                        
                                         isRecommend = true;
 
-                                        break;
+                                        //break;
                                     }
                                 }
                             }
@@ -304,6 +317,27 @@ public partial class LevelManager
 
                         if (isRecommend && style.onRecommend != null)
                             style.onRecommend.Invoke();
+
+                        if (style.uprankKeyStyle != null && uprankKeyCounts.Count > 0)
+                        {
+                            SkillKeyAsset keyAsset;
+                            LevelSkillKeyStyle uprankKeyStyle;
+                            var uprankKeyStyleParent = style.uprankKeyStyle.transform.parent;
+                            foreach (var pair in uprankKeyCounts)
+                            {
+                                if(!SkillManager.TryGetAsset(pair.Key, out keyAsset))
+                                    continue;
+                                
+                                uprankKeyStyle = Instantiate(style.uprankKeyStyle, uprankKeyStyleParent);
+                                uprankKeyStyle.SetAsset(keyAsset, pair.Value);
+                                uprankKeyStyle.gameObject.SetActive(true);
+                                
+                                if(uprankKeyStyles == null)
+                                    uprankKeyStyles = new List<LevelSkillKeyStyle>();
+                                
+                                uprankKeyStyles.Add(uprankKeyStyle);
+                            }
+                        }
                     }
 
                     if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
@@ -366,6 +400,19 @@ public partial class LevelManager
                         __onSkillSelectionComplete = null;
                     }
                     //destination.onDisable.Invoke();
+                }
+
+                if (uprankKeyStyles != null)
+                {
+                    foreach (var uprankKeyStyle in uprankKeyStyles)
+                    {
+                        if (__gameObjectsToDestroy == null)
+                            __gameObjectsToDestroy = new List<GameObject>();
+
+                        __gameObjectsToDestroy.Add(uprankKeyStyle.gameObject);
+                    }
+                    
+                    uprankKeyStyles.Clear();
                 }
             }
         }
@@ -613,7 +660,8 @@ public partial class LevelManager
     private bool __SetSkillKeyStyles(
         IReadOnlyList<SkillKeyStyle> styles, 
         string[] names, 
-        string[] oldNames)
+        string[] oldNames, 
+        Action<string, int> uprankKeyCounts = null)
     {
         //int maxCount = 0, count;
         bool result = false;
@@ -637,7 +685,7 @@ public partial class LevelManager
             style = i < numStyles ? styles[i] as LevelSkillKeyStyle : null;
             if (style == null)
             {
-                if(result)
+                if(result && uprankKeyCounts == null)
                     continue;
 
                 rank = asset.BinarySearch(count);
@@ -646,14 +694,19 @@ public partial class LevelManager
             {
                 rank = style.SetAsset(asset, count);
                 
-                if(result)
+                if(result && uprankKeyCounts == null)
                     continue;
             }
 
             if ((oldNames == null || Array.IndexOf(oldNames, name) == -1) &&
                 asset.BinarySearch(count + GetSkillChildKeyCount(name)) > rank)
+            {
+                if (uprankKeyCounts != null)
+                    uprankKeyCounts(name, count);
+                
                 result = true;
-
+            }
+            
             //style.gameObject.SetActive(true);
         }
 

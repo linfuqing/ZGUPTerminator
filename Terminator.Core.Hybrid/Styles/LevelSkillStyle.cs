@@ -15,4 +15,5 @@ public class LevelSkillStyle : SkillStyle
     public Button button;
 
     public LevelSkillStyle child;
+    public LevelSkillKeyStyle uprankKeyStyle;
 }
