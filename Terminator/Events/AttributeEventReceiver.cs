@@ -73,7 +73,7 @@ public class AttributeEventReceiver : MonoBehaviour
         if(!isActiveAndEnabled || __instanceID == 0)
             return;
         
-        int numAttributes = __attributes.Count, value, max;
+        int numAttributes = _attributes.Length, value, max;
         for (int i = 0; i < numAttributes; ++i)
         {
             ref var attribute = ref _attributes[i];
