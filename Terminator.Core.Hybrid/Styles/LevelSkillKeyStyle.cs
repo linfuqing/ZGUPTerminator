@@ -23,7 +23,8 @@ public class LevelSkillKeyStyle : SkillKeyStyle
         
         SkillStyle.SetActive(ranks, index + 1);
 
-        progressbar.value = count * 1.0f / value.capacity;
+        if(progressbar != null)
+            progressbar.value = count * 1.0f / value.capacity;
 
         return index;
     }
