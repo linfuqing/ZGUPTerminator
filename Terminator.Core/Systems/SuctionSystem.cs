@@ -392,15 +392,19 @@ public partial struct SuctionSystem : ISystem
             apply.localTransforms = chunk.GetNativeArray(ref localTransformType);
             apply.localToWorlds = chunk.Has(ref characterInterpolationType) ? chunk.GetNativeArray(ref localToWorldType) : default;
 
-            bool isCharacter = apply.isCharacterDisabled && chunk.Has(ref characterBodyType);
+            var characters = apply.isCharacterDisabled ? chunk.GetNativeArray(ref characterBodyType) : default;
             
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
                 apply.Execute(i);
-                
-                if(isCharacter)
+
+                if (characters.IsCreated && characters.Length > i)
+                {
+                    characters.AsSpan()[i].IsGrounded = false;
+                    
                     chunk.SetComponentEnabled(ref characterBodyType, i, false);
+                }
             }
         }
     }

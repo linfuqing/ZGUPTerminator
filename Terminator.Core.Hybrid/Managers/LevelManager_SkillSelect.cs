@@ -196,9 +196,12 @@ public partial class LevelManager
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)
     {
-        while ((SkillSelectionStatus.Start & __skillSelectionStatus) == 0)
+        do
+        {
+            //等待队列
             yield return null;
-
+        } while ((SkillSelectionStatus.Start & __skillSelectionStatus) == 0);
+            
         bool result = false;
         int numSkills = skills.Length;
         if (styleIndex == -1)
