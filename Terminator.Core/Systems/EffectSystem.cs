@@ -1607,13 +1607,19 @@ public partial struct EffectSystem : ISystem
                                         messageParameters.Add(messageParameter);
                                     }
 
-                                    messageParameter.value = target.hp;
-                                    messageParameter.id = (int)EffectAttributeID.HP;
-                                    messageParameters.Add(messageParameter);
-                                    
-                                    messageParameter.value = target.shield;
-                                    messageParameter.id = (int)EffectAttributeID.Shield;
-                                    messageParameters.Add(messageParameter);
+                                    if (targetHP.value != 0)
+                                    {
+                                        messageParameter.value = target.hp;
+                                        messageParameter.id = (int)EffectAttributeID.HP;
+                                        messageParameters.Add(messageParameter);
+                                    }
+
+                                    if (targetHP.shield != 0)
+                                    {
+                                        messageParameter.value = target.shield;
+                                        messageParameter.id = (int)EffectAttributeID.Shield;
+                                        messageParameters.Add(messageParameter);
+                                    }
                                 }
 
                                 result |= EnabledFlags.Message;
