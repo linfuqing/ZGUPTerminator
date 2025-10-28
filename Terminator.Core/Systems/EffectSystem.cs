@@ -1381,6 +1381,7 @@ public partial struct EffectSystem : ISystem
             {
                 var targetInstance = targetInstances[index];
 
+                bool isShieldDirty = false, isHPDirty = false;
                 int damage, damageLayerMask, messageLayerMask;
                 if (isFallToDestroy)
                 {
@@ -1401,12 +1402,20 @@ public partial struct EffectSystem : ISystem
                         target.shield += targetHP.shield - damage;
 
                         damage = 0;
+
+                        isShieldDirty = true;
                     }
                     else
+                    {
                         damage -= targetHP.shield;
-                    
+                        
+                        isShieldDirty = targetHP.shield != 0;
+                    }
+
                     if (damage < targetHP.value)
                     {
+                        isHPDirty = true;
+                        
                         targetHP.value -= damage;
 
                         damage = 0;
@@ -1520,14 +1529,26 @@ public partial struct EffectSystem : ISystem
                         if (damage > 0)
                         {
                             if (target.shield > damage)
+                            {
                                 target.shield -= damage;
+
+                                isShieldDirty = true;
+                            }
                             else
                             {
+                                if (target.shield != 0)
+                                    isShieldDirty = true;
+                                
                                 damage -= target.shield;
                                 target.shield = 0;
-                                
+
                                 if (target.hp > 0)
+                                {
+                                    if (damage != 0)
+                                        isHPDirty = true;
+                                    
                                     target.hp += -damage;
+                                }
                                 else
                                     damage = 0;
                             }
@@ -1607,14 +1628,14 @@ public partial struct EffectSystem : ISystem
                                         messageParameters.Add(messageParameter);
                                     }
 
-                                    if (targetHP.value != 0)
+                                    if (isHPDirty)
                                     {
                                         messageParameter.value = target.hp;
                                         messageParameter.id = (int)EffectAttributeID.HP;
                                         messageParameters.Add(messageParameter);
                                     }
 
-                                    if (targetHP.shield != 0)
+                                    if (isShieldDirty)
                                     {
                                         messageParameter.value = target.shield;
                                         messageParameter.id = (int)EffectAttributeID.Shield;
