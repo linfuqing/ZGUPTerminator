@@ -418,10 +418,14 @@ public partial class LevelManager
         }
 
         if (result)
+        {
+            __DestroyGameObjects();
+
             yield break;
+        }
         
         //等待队列
-        yield return null;
+        //yield return null;
         
         if (__skillStyles != null)
         {
