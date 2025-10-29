@@ -442,7 +442,7 @@ public partial struct LevelSystem : ISystem
     private struct SendMessages
     {
         [ReadOnly] 
-        public BufferAccessor<LevelItem> items;
+        public DynamicBuffer<LevelItem> items;
         
         [ReadOnly] 
         public BufferAccessor<LevelItemMessage> inputs;
@@ -456,7 +456,6 @@ public partial struct LevelSystem : ISystem
             Message message;
             var outputs = this.outputs[index];
             var parameters = this.parameters[index];
-            var items = this.items[index];
             foreach (var input in inputs[index])
             {
                 foreach (var item in items)
@@ -484,9 +483,13 @@ public partial struct LevelSystem : ISystem
     private struct SendMessagesEx : IJobChunk
     {
         public uint hash;
+
+        public uint lastSystemVersion;
+
+        public Entity itemEntity;
         
         [ReadOnly] 
-        public BufferTypeHandle<LevelItem> itemType;
+        public BufferLookup<LevelItem> items;
         
         [ReadOnly] 
         public BufferTypeHandle<LevelItemMessage> inputType;
@@ -497,10 +500,13 @@ public partial struct LevelSystem : ISystem
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {
+            if (!items.DidChange(itemEntity, lastSystemVersion))
+                return;
+                
             var random = new Random(hash ^ (uint)unfilteredChunkIndex);
             
             SendMessages sendMessages;
-            sendMessages.items = chunk.GetBufferAccessor(ref itemType);
+            sendMessages.items = items[itemEntity];
             sendMessages.inputs = chunk.GetBufferAccessor(ref inputType);
             sendMessages.outputs = chunk.GetBufferAccessor(ref outputType);
             sendMessages.parameters = chunk.GetBufferAccessor(ref parameterType);
@@ -539,12 +545,14 @@ public partial struct LevelSystem : ISystem
 
     private BufferTypeHandle<LevelStageResultStatus> __stageResultStatusType;
     
-    public BufferTypeHandle<MessageParameter> __messageParameterType;
+    private BufferTypeHandle<MessageParameter> __messageParameterType;
     
-    public BufferTypeHandle<Message> __outputMessageType;
+    private BufferTypeHandle<Message> __outputMessageType;
 
-    public BufferTypeHandle<LevelItemMessage> __inputMessageType;
+    private BufferTypeHandle<LevelItemMessage> __inputMessageType;
         
+    private BufferLookup<LevelItem> __items;
+
     private EntityQuery __group;
     private EntityQuery __itemMessageGroup;
 
@@ -572,6 +580,7 @@ public partial struct LevelSystem : ISystem
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __inputMessageType = state.GetBufferTypeHandle<LevelItemMessage>(true);
+        __items = state.GetBufferLookup<LevelItem>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
@@ -649,18 +658,24 @@ public partial struct LevelSystem : ISystem
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         jobHandle = update.ScheduleParallelByRef(__group, jobHandle);
 
-        __messageParameterType.Update(ref state);
-        __outputMessageType.Update(ref state);
-        __inputMessageType.Update(ref state);
+        if (SystemAPI.TryGetSingletonEntity<LevelItem>(out Entity entity))
+        {
+            __messageParameterType.Update(ref state);
+            __outputMessageType.Update(ref state);
+            __inputMessageType.Update(ref state);
+            __items.Update(ref state);
 
-        var hash = math.aslong(time.ElapsedTime);
-        SendMessagesEx sendMessages;
-        sendMessages.hash = (uint)hash ^ (uint)(hash >> 32);
-        sendMessages.itemType = __itemType;
-        sendMessages.inputType = __inputMessageType;
-        sendMessages.outputType = __outputMessageType;
-        sendMessages.parameterType = __messageParameterType;
-        jobHandle = sendMessages.ScheduleParallelByRef(__itemMessageGroup, jobHandle);
+            var hash = math.aslong(time.ElapsedTime);
+            SendMessagesEx sendMessages;
+            sendMessages.hash = (uint)hash ^ (uint)(hash >> 32);
+            sendMessages.lastSystemVersion = state.LastSystemVersion;
+            sendMessages.itemEntity = entity;
+            sendMessages.items = __items;
+            sendMessages.inputType = __inputMessageType;
+            sendMessages.outputType = __outputMessageType;
+            sendMessages.parameterType = __messageParameterType;
+            jobHandle = sendMessages.ScheduleParallelByRef(__itemMessageGroup, jobHandle);
+        }
 
         state.Dependency = jobHandle;
     }
