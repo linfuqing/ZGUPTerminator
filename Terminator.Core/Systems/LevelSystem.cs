@@ -511,8 +511,6 @@ public partial struct LevelSystem : ISystem
         }
     }
 
-    private uint __itemVersion;
-
     private ComponentLookup<LocalTransform> __localTransforms;
     private ComponentLookup<EffectTarget> __effectTargets;
 
@@ -580,7 +578,7 @@ public partial struct LevelSystem : ISystem
                 .WithAll<LevelDefinitionData, LevelStatus>()
                 .WithAllRW<LevelStage>()
                 .Build(ref state);
-
+        
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __itemMessageGroup = builder
                 .WithAll<LevelItemMessage, Message, MessageParameter>()
@@ -651,24 +649,18 @@ public partial struct LevelSystem : ISystem
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         jobHandle = update.ScheduleParallelByRef(__group, jobHandle);
 
-        uint itemVersion = (uint)state.EntityManager.GetComponentOrderVersion<LevelItem>();
-        if(ChangeVersionUtility.DidChange(itemVersion, __itemVersion))
-        {
-            __itemVersion = itemVersion;
-            
-            __messageParameterType.Update(ref state);
-            __outputMessageType.Update(ref state);
-            __inputMessageType.Update(ref state);
+        __messageParameterType.Update(ref state);
+        __outputMessageType.Update(ref state);
+        __inputMessageType.Update(ref state);
 
-            var hash = math.aslong(time.ElapsedTime);
-            SendMessagesEx sendMessages;
-            sendMessages.hash = (uint)hash ^ (uint)(hash >> 32);
-            sendMessages.itemType = __itemType;
-            sendMessages.inputType = __inputMessageType;
-            sendMessages.outputType = __outputMessageType;
-            sendMessages.parameterType = __messageParameterType;
-            jobHandle = sendMessages.ScheduleParallelByRef(__itemMessageGroup, jobHandle);
-        }
+        var hash = math.aslong(time.ElapsedTime);
+        SendMessagesEx sendMessages;
+        sendMessages.hash = (uint)hash ^ (uint)(hash >> 32);
+        sendMessages.itemType = __itemType;
+        sendMessages.inputType = __inputMessageType;
+        sendMessages.outputType = __outputMessageType;
+        sendMessages.parameterType = __messageParameterType;
+        jobHandle = sendMessages.ScheduleParallelByRef(__itemMessageGroup, jobHandle);
 
         state.Dependency = jobHandle;
     }
