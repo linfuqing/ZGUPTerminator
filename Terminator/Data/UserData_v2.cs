@@ -118,6 +118,8 @@ public partial interface IUserData
 
         public Flag flag;
 
+        public int exp;
+
         public UserTalent[] talents;
     }
     

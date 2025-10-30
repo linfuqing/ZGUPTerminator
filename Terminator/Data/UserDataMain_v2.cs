@@ -386,6 +386,7 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         IUserData.Talents result;
+        result.exp = exp;
         result.flag = 0;
         if ((flag & Flag.TalentsUnlock) != 0)
         {
