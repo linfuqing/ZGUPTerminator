@@ -406,6 +406,9 @@ public partial class LevelManager
                 {
                     foreach (var uprankKeyStyle in uprankKeyStyles)
                     {
+                        if(uprankKeyStyle == null)
+                            continue;
+                        
                         if (__gameObjectsToDestroy == null)
                             __gameObjectsToDestroy = new List<GameObject>();
 
@@ -431,6 +434,9 @@ public partial class LevelManager
         {
             foreach (var skillStyle in __skillStyles.Values)
             {
+                if(skillStyle == null)
+                    continue;
+                
                 if (__gameObjectsToDestroy == null)
                     __gameObjectsToDestroy = new List<GameObject>();
 
@@ -456,6 +462,9 @@ public partial class LevelManager
         {
             foreach (var skillStyle in __skillStyles.Values)
             {
+                if(skillStyle == null)
+                    continue;
+                
                 skillStyle.onDestroy?.Invoke();
                 
                 if (__gameObjectsToDestroy == null)
@@ -573,6 +582,9 @@ public partial class LevelManager
         {
             foreach (var resultSkillStyle in __resultSkillStyles)
             {
+                if(resultSkillStyle == null)
+                    continue;
+                
                 if(__gameObjectsToDestroy == null)
                     __gameObjectsToDestroy = new List<GameObject>();
                 
