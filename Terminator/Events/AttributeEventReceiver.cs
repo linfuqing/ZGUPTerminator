@@ -67,6 +67,8 @@ public class AttributeEventReceiver : MonoBehaviour
     private Dictionary<int, int> __attributes;
 
     public event Action<int, int> onChanged;
+
+    public int this[int id] => __attributes.TryGetValue(id, out int value) ? value : 0;
     
     public void Clear()
     {

@@ -3,17 +3,27 @@ using System.Collections;
 
 public interface ILevelData
 {
-    [Flags]
+    public struct StageResult
+    {
+        public int rankFlag;
+
+        public int energyStage;
+        public int energyMax;
+    }
+
+    /*[Flags]
     public enum Flag
     {
         HasBeenDamaged = 0x01
-    }
+    }*/
 
     public static ILevelData instance;
     
     IEnumerator SubmitStage(
-        Flag flag, 
+        //Flag flag, 
         int stage, 
+        int time, 
+        int hpPercentage,
         int killCount, 
         int killBossCount, 
         int gold, 
@@ -21,11 +31,13 @@ public interface ILevelData
         int exp, 
         int expMax, 
         string[] skills,
-        Action<int> onComplete);
+        Action<StageResult> onComplete);
     
     IEnumerator SubmitLevel(
-        Flag flag, 
+        //Flag flag, 
         int stage, 
+        int time, 
+        int hpPercentage,
         int killCount, 
         int killBossCount, 
         int gold, 

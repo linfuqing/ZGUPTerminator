@@ -412,7 +412,19 @@ public partial class UserDataMain
         
         onComplete(rewards.Count > 0 ? rewards.ToArray() : null);
     }
+
+    public int GetStageEnergy(uint levelID,int stage)
+    {
+        var level = _levels[__ToIndex(levelID)];
+        int numStages = __GetStageCount(level);
+        return numStages > stage ? __GetStage(level, stage).energy : 0;
+    }
     
+    public bool ApplyStage(uint levelID, int stage, out int energy)
+    {
+        return __ApplyEnergy(GetStageEnergy(levelID, stage), out energy);
+    }
+
     private static int __GetStageCount(in Level level)
     {
 #if USER_DATA_VERSION_1
@@ -472,13 +484,19 @@ public partial class UserDataMain
                     if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
-                case UserStageReward.Condition.NoDamage:
-                    if ((stageFlag & IUserData.StageFlag.NoDamage) == IUserData.StageFlag.NoDamage)
+                case UserStageReward.Condition.HPPercentage:
+                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                        UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
                 case UserStageReward.Condition.KillCount:
                     if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
                         UserData.GetStageKillCount(levelName, stage) >= conditionValue)
+                        flag |= UserStageReward.Flag.Unlocked;
+                    break;
+                case UserStageReward.Condition.Time:
+                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                        UserData.GetStageTime(levelName, stage) <= conditionValue)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
             }
@@ -577,6 +595,104 @@ public partial class UserData
         return UserDataMain.instance.ApplyStage(userID, levelID, stage, onComplete);
     }
     
+    public IEnumerator SubmitStage(
+        uint userID,
+        int stage,
+        int time, 
+        int hpPercentage,
+        int killCount, 
+        int killBossCount, 
+        int gold, 
+        int rage, 
+        int exp, 
+        int expMax, 
+        string[] skills,
+        Action<IUserData.StageResult> onComplete)
+    {
+        yield return null;
+
+        var levelCache = UserData.levelCache;
+        if (levelCache == null)
+        {
+            Debug.LogError("WTF?");
+
+            onComplete(default);
+            
+            yield break;
+        }
+
+        var temp = levelCache.Value;
+        
+        IUserData.StageResult result;
+        var main = UserDataMain.instance;
+        if (main == null || stage <= temp.stage)
+        {
+            result.totalEnergy = 0;
+            result.nextStageEnergy = 0;
+        }
+        else
+        {
+            int previousStage = stage - 1;
+            if (previousStage > temp.stage)
+            {
+                if (!main.ApplyStage(temp.id, previousStage, out result.totalEnergy))
+                {
+                    Debug.LogError("WTF?");
+
+                    result.flag = 0;
+
+                    onComplete(default);
+
+                    yield break;
+                }
+                
+                result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
+            }
+            else
+            {
+                result.nextStageEnergy = 0;
+                result.totalEnergy = 0;
+            }
+        }
+
+        __SetStageTime(temp.name, temp.stage, time);
+
+        __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+
+        __SetStageKillCount(temp.name, temp.stage, killCount);
+
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+
+        __SubmitStageFlag(temp.name, stage, out _);
+
+        result.flag = 0;
+        if (temp.stage < stage)
+        {
+            result.flag = __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
+
+            IUserData.StageCache stageCache;
+            stageCache.rage = rage;
+            stageCache.exp = exp;
+            stageCache.expMax = expMax;
+            stageCache.skills = skills;
+            PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage),
+                stageCache.ToString());
+            
+            temp.stage = stage;
+        }
+        else
+            result.flag = (int)GetStageFlag(temp.name, temp.stage - 1);
+
+        temp.gold = Mathf.Max(temp.gold, gold);
+        temp.killCount = Mathf.Max(temp.killCount, killCount);
+        temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
+        UserData.levelCache = temp;
+        
+        onComplete(result);
+        
+        //return null;
+    }
+
     public IEnumerator CollectStageReward(uint userID, uint stageRewardID, Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectStageReward(userID, stageRewardID, onComplete);

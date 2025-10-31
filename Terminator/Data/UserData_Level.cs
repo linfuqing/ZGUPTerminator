@@ -18,7 +18,7 @@ public partial interface IUserData
     {
         Normal = 0x01, 
         Once = 0x02 | Normal, 
-        NoDamage = 0x04 | Normal
+        //HPPercentage = 0x04 | Normal
     }
 
     public struct LevelStage
@@ -101,8 +101,10 @@ public partial interface IUserData
 
     IEnumerator SubmitLevel(
         uint userID,
-        StageFlag flag,
+        //StageFlag flag,
         int stage, 
+        int time, 
+        int hpPercentage, 
         int killCount, 
         int killBossCount, 
         int gold, 
@@ -195,8 +197,10 @@ public partial class UserData
 
     public IEnumerator SubmitLevel(
         uint userID,
-        IUserData.StageFlag flag,
+        //IUserData.StageFlag flag,
         int stage,
+        int time, 
+        int hpPercentage,
         int killCount, 
         int killBossCount, 
         int gold,
@@ -224,10 +228,12 @@ public partial class UserData
         
         yield return null;
         
+        __SetStageTime(temp.name, temp.stage, time);
+        __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
         __SetStageKillCount(temp.name, temp.stage, killCount);
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
 
-        __SubmitStageFlag(flag, temp.name, temp.stage, stage);
+        __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
         
         temp.stage = stage;
         temp.gold = gold;

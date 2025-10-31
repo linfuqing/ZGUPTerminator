@@ -137,10 +137,10 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(user, userEnergy);
     }
 
-    private bool __ApplyEnergy(int value)
+    private bool __ApplyEnergy(int value, out int energy)
     {
         uint now = DateTimeUtility.GetSeconds(), time = now;
-        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
+        energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         if (_energy.uintTime > Mathf.Epsilon)
         {
             float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) /
@@ -156,19 +156,25 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
         }
 
-        energy -= value;
-        if (energy < 0)
+        if (energy < value)
             return false;
+        
+        energy -= value;
         
         if(value < 0)
             __AppendQuest(UserQuest.Type.EnergiesToBuy, 1);
-        else
+        else if(value > 0)
             __AppendQuest(UserQuest.Type.EnergiesToUse, value);
         
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));
 
         return true;
+    }
+
+    private bool __ApplyEnergy(int value)
+    {
+        return __ApplyEnergy(value, out _);
     }
 
     private static uint __ToID(int index) => (uint)(index + 1);

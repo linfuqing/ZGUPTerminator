@@ -34,9 +34,8 @@ public struct UserStageReward
     {
         Normal, 
         Once, 
-        NoDamage, 
-        KillCount, 
         HPPercentage, 
+        KillCount, 
         Time
     }
     
@@ -153,6 +152,14 @@ public partial interface IUserData
         public SpawnerAttribute.Scale[] spawnerAttributes;
     }
 
+    public struct StageResult
+    {
+        public int flag;
+
+        public int totalEnergy;
+        public int nextStageEnergy;
+    }
+
     /// <summary>
     /// 查询关卡
     /// </summary>
@@ -172,8 +179,9 @@ public partial interface IUserData
 
     IEnumerator SubmitStage(
         uint userID,
-        StageFlag flag,
         int stage,
+        int time, 
+        int hpPercentage,
         int killCount, 
         int killBossCount, 
         int gold,
@@ -181,8 +189,8 @@ public partial interface IUserData
         int exp,
         int expMax,
         string[] skills,
-        Action<int> onComplete);
-    
+        Action<StageResult> onComplete);
+
     /// <summary>
     /// 收集关卡奖励
     /// </summary>
@@ -209,6 +217,20 @@ public partial class UserData
     {
         return new IUserData.StageCache(
             PlayerPrefs.GetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, stage)));
+    }
+
+    private const string NAME_SPACE_USER_STAGE_TIME = "UserStageTime";
+
+    public static int GetStageTime(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_TIME, levelName, stage));
+    }
+
+    private const string NAME_SPACE_USER_STAGE_HP_PERCENTAGE = "UserStageHPPercentage";
+
+    public static int GetStageHPPercentage(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage));
     }
 
     private const string NAME_SPACE_USER_STAGE_KILL_COUNT = "UserStageKillCount";
@@ -278,67 +300,6 @@ public partial class UserData
         PlayerPrefs.DeleteKey(levelStartStageKey);
     }
 
-    public IEnumerator SubmitStage(
-        uint userID,
-        IUserData.StageFlag flag,
-        int stage,
-        int killCount, 
-        int killBossCount, 
-        int gold, 
-        int rage, 
-        int exp, 
-        int expMax, 
-        string[] skills,
-        Action<int> onComplete)
-    {
-        yield return null;
-
-        var levelCache = UserData.levelCache;
-        if (levelCache == null)
-        {
-            Debug.LogError("WTF?");
-
-            onComplete(0);
-            
-            yield break;
-        }
-
-        var temp = levelCache.Value;
-        __SetStageKillCount(temp.name, temp.stage, killCount);
-
-        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
-
-        __SubmitStageFlag(temp.name, stage, out _);
-
-        int result = 0;
-        if (temp.stage < stage)
-        {
-            result = __SubmitStageFlag(flag, temp.name, temp.stage, stage);
-
-            IUserData.StageCache stageCache;
-            stageCache.rage = rage;
-            stageCache.exp = exp;
-            stageCache.expMax = expMax;
-            stageCache.skills = skills;
-            PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage),
-                stageCache.ToString());
-            
-            temp.stage = stage;
-        }
-        else
-            result = (int)GetStageFlag(temp.name, temp.stage - 1);
-
-        temp.gold = Mathf.Max(temp.gold, gold);
-        temp.killCount = Mathf.Max(temp.killCount, killCount);
-        temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
-        UserData.levelCache = temp;
-        
-        onComplete(result);
-        
-        //return null;
-    }
-
-    
     private static void __SubmitStageFlag(string levelName, int stage, out string levelStartStageKey)
     {
         levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
@@ -357,12 +318,12 @@ public partial class UserData
     }
 
     private static int __SubmitStageFlag(
-        IUserData.StageFlag value, 
+        //IUserData.StageFlag value, 
         string levelName, 
         int fromStage, 
         int toStage)
     {
-        value |= IUserData.StageFlag.Normal;
+        var value = IUserData.StageFlag.Normal;
 
         int result = (int)value;
         
@@ -376,20 +337,35 @@ public partial class UserData
 
         return result;
     }
-    
-    private static void __SetStageKillCount(string levelName, int stage, int value)
+
+    private static void __SetStageTime(string levelName, int stage, int value)
     {
-        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage);
+        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_TIME, levelName, stage);
+        int origin = PlayerPrefs.GetInt(key);
+        if (origin > value)
+            PlayerPrefs.SetInt(key, value);
+    }
+    
+    private static void __SetStageValue(string key, string levelName, int stage, int value)
+    {
+        key = GetStageNameSpace(key, levelName, stage);
         int origin = PlayerPrefs.GetInt(key);
         if (origin < value)
             PlayerPrefs.SetInt(key, value);
     }
+    
+    private static void __SetStageHPPercentage(string levelName, int stage, int value)
+    {
+        __SetStageValue(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage, value);
+    }
+    
+    private static void __SetStageKillCount(string levelName, int stage, int value)
+    {
+        __SetStageValue(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage, value);
+    }
 
     private static void __SetStageKillBossCount(string levelName, int stage, int value)
     {
-        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT, levelName, stage);
-        int origin = PlayerPrefs.GetInt(key);
-        if (origin < value)
-            PlayerPrefs.SetInt(key, value);
+        __SetStageValue(NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT, levelName, stage, value);
     }
 }

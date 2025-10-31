@@ -81,8 +81,9 @@ public class GameLevelData : ILevelData
     }
     
     public IEnumerator SubmitStage(
-        ILevelData.Flag flag, 
         int stage, 
+        int time, 
+        int hpPercentage, 
         int killCount, 
         int killBossCount, 
         int gold, 
@@ -90,25 +91,37 @@ public class GameLevelData : ILevelData
         int exp, 
         int expMax, 
         string[] skills,
-        Action<int> onComplete)
+        Action<ILevelData.StageResult> onComplete)
     {
         return IUserData.instance.SubmitStage(
             __userID, 
-            ToStageFlag(flag),
+            //ToStageFlag(flag),
             stage, 
+            time, 
+            hpPercentage, 
             killCount, 
             killBossCount, 
             gold, 
             rage, 
             exp, 
             expMax,
-            skills, 
-            onComplete);
+            skills,
+            x =>
+            {
+                ILevelData.StageResult result;
+                result.rankFlag = x.flag;
+                result.energyStage = x.nextStageEnergy;
+                result.energyMax = x.totalEnergy;
+                
+                onComplete(result);
+            });
     }
         
     public IEnumerator SubmitLevel(
-        ILevelData.Flag flag, 
+        //ILevelData.Flag flag, 
         int stage,
+        int time, 
+        int hpPercentage, 
         int killCount, 
         int killBossCount, 
         int gold,
@@ -116,22 +129,24 @@ public class GameLevelData : ILevelData
     {
         return IUserData.instance.SubmitLevel(
             __userID, 
-            ToStageFlag(flag),
+            //ToStageFlag(flag),
             stage, 
+            time, 
+            hpPercentage, 
             killCount, 
             killBossCount, 
             gold, 
             onComplete);
     }
 
-    private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)
+    /*private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)
     {
         IUserData.StageFlag stageFlag = 0;
         if((flag & ILevelData.Flag.HasBeenDamaged) != ILevelData.Flag.HasBeenDamaged)
             stageFlag |= IUserData.StageFlag.NoDamage;
 
         return stageFlag;
-    }
+    }*/
 }
 
 public class GameMain : GameUser

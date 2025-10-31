@@ -309,10 +309,10 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 break;
             case PurchaseType.GoldBank:
                 seconds = output.GetDeadline(ticks);
-                seconds = (int)((seconds == 0
+                seconds = (int)(((seconds == 0
                         ? DateTime.Today
                         : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime()).AddDays(1)
-                    .ToUniversalTime().Ticks - ticks);
+                    .ToUniversalTime().Ticks - ticks) / TimeSpan.TicksPerSecond);
 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;

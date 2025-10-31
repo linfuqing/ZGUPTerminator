@@ -39,6 +39,16 @@ public partial class LevelManager : MonoBehaviour
 
     [SerializeField] 
     internal UnityEvent _onQuit;
+    
+    [SerializeField]
+    internal ActiveEvent _onNextStageActive;
+
+    [SerializeField]
+    internal StringEvent _onNextStageEnergy;
+    
+    [SerializeField]
+    internal StringEvent _onEnergyMax;
+
     [SerializeField] 
     internal StringEvent _onGameTime;
     [SerializeField] 
@@ -78,7 +88,7 @@ public partial class LevelManager : MonoBehaviour
     //private int __stageExpMax;
     //private string[] __stageActiveSkillNames;
 
-    private ILevelData.Flag __dataFlag;
+    //private ILevelData.Flag __dataFlag;
     
     private float __startTime;
     
@@ -112,19 +122,28 @@ public partial class LevelManager : MonoBehaviour
         set;
     } = true;
 
-    public int dataFlag
+    /*public int dataFlag
     {
         get => (int)__dataFlag;
         
         set => __dataFlag = (ILevelData.Flag)value;
-    }
+    }*/
+    
+    public int hpPercentage
+    {
+        get;
 
+        set;
+    }
+    
     public int rage
     {
         get;
 
         set;
     }
+
+    public float time => Time.time - __startTime;
 
     public void Set(
         int value, 
@@ -148,7 +167,7 @@ public partial class LevelManager : MonoBehaviour
             if (!isRestart && stage > __stage)
                 __Submit(stage, gold, exp, maxExp);
 
-            __dataFlag = 0;
+            //__dataFlag = 0;
 
             __stage = stage;
         }
@@ -237,7 +256,7 @@ public partial class LevelManager : MonoBehaviour
 
         if (isRestart)
         {
-            __dataFlag = 0;
+            //__dataFlag = 0;
             
             if(__skillSelectionGuideNames != null)
                 __skillSelectionGuideNames.Clear();
@@ -358,8 +377,10 @@ public partial class LevelManager : MonoBehaviour
                 __activeSkillNames.Values.CopyTo(activeSkillNames, 0);*/
             
             __StartCoroutine(levelData.SubmitLevel(
-                __dataFlag, 
+                //__dataFlag, 
                 __stage,
+                Mathf.RoundToInt(time), 
+                hpPercentage, 
                 __killCount,
                 __killBossCount, 
                 __gold,
@@ -397,13 +418,25 @@ public partial class LevelManager : MonoBehaviour
             __coroutine = StartCoroutine(__Coroutine());
     }
 
-    private void __OnStageChanged(int rankFlag)
+    private void __OnStageChanged(ILevelData.StageResult result)
     {
         __ShowTime();
         
         int numRanks = _ranks == null ? 0 : _ranks.Length;
         for (int i = 0; i < numRanks; ++i)
-            _ranks[i].SetActive((rankFlag & (1 << i)) != 0);
+            _ranks[i].SetActive((result.rankFlag & (1 << i)) != 0);
+
+        if (result.energyStage > 0)
+        {
+            if(_onEnergyMax != null)
+                _onEnergyMax.Invoke(result.energyMax.ToString());
+
+            if(_onNextStageEnergy != null)
+                _onNextStageEnergy.Invoke(result.energyStage.ToString());
+            
+            if(_onNextStageActive != null)
+                _onNextStageActive.Invoke(result.energyStage < result.energyMax);
+        }
         
         //__coroutine = null;
     }
@@ -429,7 +462,7 @@ public partial class LevelManager : MonoBehaviour
     {
         if (_onGameTime != null)
         {
-            var timeSpan = new TimeSpan((long)((Time.time - __startTime) * TimeSpan.TicksPerSecond));
+            var timeSpan = new TimeSpan((long)(time * TimeSpan.TicksPerSecond));
             _onGameTime.Invoke($"{timeSpan.Minutes} : {timeSpan.Seconds}");
         }
     }
@@ -450,8 +483,10 @@ public partial class LevelManager : MonoBehaviour
             skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
 
         __StartCoroutine(levelData.SubmitStage(
-            __dataFlag, 
+            //__dataFlag, 
             stage,
+            Mathf.RoundToInt(time), 
+            hpPercentage, 
             __killCount, 
             __killBossCount, 
             gold,

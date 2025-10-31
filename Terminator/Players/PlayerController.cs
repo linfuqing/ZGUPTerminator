@@ -33,7 +33,7 @@ public class PlayerController : MonoBehaviour
         switch (parameters.name)
         {
             case "Hit":
-                LevelManager.instance.dataFlag |= (int)ILevelData.Flag.HasBeenDamaged;
+                //LevelManager.instance.dataFlag |= (int)ILevelData.Flag.HasBeenDamaged;
                 
                 VibrateUtility.Apply(VibrationType.Peek);
                 break;
@@ -60,12 +60,16 @@ public class PlayerController : MonoBehaviour
         {
             case EffectAttributeID.HPMax:
                 (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHPMax(value);
+
+                LevelManager.instance.hpPercentage = __attributeEventReceiver[(int)EffectAttributeID.HP] * 100 / value;
                 break;
             case EffectAttributeID.HP:
                 (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHP(value);
 
                 if(value > 0)
                     __SetStatus(0);
+                
+                LevelManager.instance.hpPercentage = value * 100 / __attributeEventReceiver[(int)EffectAttributeID.HPMax];
                 break;
             case EffectAttributeID.Rage:
                 LevelManager.instance.rage = value;
