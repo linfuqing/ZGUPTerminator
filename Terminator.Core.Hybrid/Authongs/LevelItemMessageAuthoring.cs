@@ -74,6 +74,11 @@ public class LevelItemMessageAuthoring : MonoBehaviour, IMessageOverride
             messages.Add(destination);
 
             messageParameter.messageKey = destination.key;
+            messageParameter.id = source.id;
+            messageParameter.value = 0;
+            messageParameters.Add(messageParameter);
+            
+            messageParameter.messageKey = destination.key;
             messageParameter.id = source.idMax;
             messageParameter.value = source.max;
             messageParameters.Add(messageParameter);

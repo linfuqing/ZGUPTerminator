@@ -35,7 +35,9 @@ public struct UserStageReward
         Normal, 
         Once, 
         NoDamage, 
-        KillCount
+        KillCount, 
+        HPPercentage, 
+        Time
     }
     
     public string name;
