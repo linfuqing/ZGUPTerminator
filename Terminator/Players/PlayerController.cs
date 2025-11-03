@@ -68,8 +68,10 @@ public class PlayerController : MonoBehaviour
 
                 if(value > 0)
                     __SetStatus(0);
+
+                int max = __attributeEventReceiver[(int)EffectAttributeID.HPMax];
+                LevelManager.instance.hpPercentage = max > 0 ? value * 100 / max : 100;
                 
-                LevelManager.instance.hpPercentage = value * 100 / __attributeEventReceiver[(int)EffectAttributeID.HPMax];
                 break;
             case EffectAttributeID.Rage:
                 LevelManager.instance.rage = value;
