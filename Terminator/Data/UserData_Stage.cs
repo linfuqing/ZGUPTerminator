@@ -338,14 +338,6 @@ public partial class UserData
         return result;
     }
 
-    private static void __SetStageTime(string levelName, int stage, int value)
-    {
-        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_TIME, levelName, stage);
-        int origin = PlayerPrefs.GetInt(key);
-        if (origin > value)
-            PlayerPrefs.SetInt(key, value);
-    }
-    
     private static void __SetStageValue(string key, string levelName, int stage, int value)
     {
         key = GetStageNameSpace(key, levelName, stage);
@@ -354,6 +346,11 @@ public partial class UserData
             PlayerPrefs.SetInt(key, value);
     }
     
+    private static void __SetStageTime(string levelName, int stage, int value)
+    {
+        __SetStageValue(NAME_SPACE_USER_STAGE_TIME, levelName, stage, value);
+    }
+
     private static void __SetStageHPPercentage(string levelName, int stage, int value)
     {
         __SetStageValue(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage, value);

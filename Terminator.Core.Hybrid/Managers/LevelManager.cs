@@ -92,6 +92,8 @@ public partial class LevelManager : MonoBehaviour
     
     private float __startTime;
     
+    private float __stageTime;
+
     private Coroutine __coroutine;
 
     private Queue<IEnumerator> __coroutineEnumerators;
@@ -143,8 +145,6 @@ public partial class LevelManager : MonoBehaviour
         set;
     }
 
-    public float time => Time.time - __startTime;
-
     public void Set(
         int value, 
         int max, 
@@ -163,12 +163,16 @@ public partial class LevelManager : MonoBehaviour
 
             if (_onStage != null)
                 _onStage.Invoke(stage.ToString());
+            
+            int time = __GetStageTime(out float now);
 
             if (!isRestart && stage > __stage)
-                __Submit(stage, gold, exp, maxExp);
+                __Submit(stage, gold, exp, maxExp, time);
+
+            __stageTime = now;
 
             //__dataFlag = 0;
-
+            
             __stage = stage;
         }
 
@@ -361,6 +365,8 @@ public partial class LevelManager : MonoBehaviour
         isRestart = true;
 
         __startTime = Time.time;
+
+        __stageTime = __startTime;
     }
 
     [UnityEngine.Scripting.Preserve]
@@ -379,7 +385,7 @@ public partial class LevelManager : MonoBehaviour
             __StartCoroutine(levelData.SubmitLevel(
                 //__dataFlag, 
                 __stage,
-                Mathf.RoundToInt(time), 
+                Mathf.RoundToInt(__GetStageTime(out _)), 
                 hpPercentage, 
                 __killCount,
                 __killBossCount, 
@@ -462,12 +468,18 @@ public partial class LevelManager : MonoBehaviour
     {
         if (_onGameTime != null)
         {
-            var timeSpan = new TimeSpan((long)(time * TimeSpan.TicksPerSecond));
+            var timeSpan = new TimeSpan((long)((Time.time - __startTime) * TimeSpan.TicksPerSecond));
             _onGameTime.Invoke($"{timeSpan.Minutes} : {timeSpan.Seconds}");
         }
     }
 
-    private void __Submit(int stage, int gold, int exp, int maxExp)
+    private int __GetStageTime(out float now)
+    {
+        now = Time.time;
+        return Mathf.RoundToInt(now - __stageTime);
+    }
+
+    private void __Submit(int stage, int gold, int exp, int maxExp, int time)
     {
         var levelData = ILevelData.instance;
         if (levelData == null)
@@ -485,7 +497,7 @@ public partial class LevelManager : MonoBehaviour
         __StartCoroutine(levelData.SubmitStage(
             //__dataFlag, 
             stage,
-            Mathf.RoundToInt(time), 
+            time, 
             hpPercentage, 
             __killCount, 
             __killBossCount, 
@@ -501,12 +513,14 @@ public partial class LevelManager : MonoBehaviour
     {
         __startTime = Time.time;
         
+        __stageTime = __startTime;
+        
         instance = this;
     }
 
     void OnApplicationFocus(bool focus)
     {
         if(!focus)
-            __Submit(__stage, __gold, __exp, __maxExp);
+            __Submit(__stage, __gold, __exp, __maxExp, __GetStageTime(out _));
     }
 }
