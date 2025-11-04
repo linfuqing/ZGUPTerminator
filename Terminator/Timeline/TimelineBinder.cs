@@ -139,6 +139,12 @@ public class TimelineBinder : MonoBehaviour
         }
     }
 
+    [Preserve]
+    public void Play(string timelineName)
+    {
+        StartCoroutine(__Play(timelineName));
+    }
+
     public bool Play(string timelineName, out PlayableDirector playableDirector)
     {
         var bindingStreams = __Bind(timelineName);
@@ -259,12 +265,17 @@ public class TimelineBinder : MonoBehaviour
         }
     }
 
+    IEnumerator __Play(string timelineName)
+    {
+        while (!Play(timelineName, out _))
+            yield return null;
+    }
+
     IEnumerator Start()
     {
         if (!string.IsNullOrEmpty(timelineOnStart))
         {
-            while (!Play(timelineOnStart, out _))
-                yield return null;
+            yield return __Play(timelineOnStart);
         }
     }
 }

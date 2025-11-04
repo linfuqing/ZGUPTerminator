@@ -167,10 +167,16 @@ public partial class UserDataMain
         //客户端（服务器返回时）
         if (IUserData.PurchaseItems.Status.Invalid == result.status && IPurchaseAPI.instance != null)
         {
+            bool isWaiting = true;
             IPurchaseAPI.instance.Query(userID, type, level, x =>
             {
                 result.metadata = x;
+
+                isWaiting = false;
             });
+            
+            while(isWaiting)
+                yield return null;
         }
 
         onComplete(result);
