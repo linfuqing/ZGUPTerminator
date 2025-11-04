@@ -231,7 +231,7 @@ public partial class UserDataMain
         if (time == 0)
         {
             time = (int)DateTimeUtility.GetSeconds();
-            PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
+            PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time - (int)_tip.maxTime);
         }
 
         onComplete(_tip.instance);
