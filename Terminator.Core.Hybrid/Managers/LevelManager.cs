@@ -354,6 +354,8 @@ public partial class LevelManager : MonoBehaviour
     {
         IAnalytics.instance?.Pause();
 
+        TimeScale(0.0f);
+
         __ShowTime();
     }
     
