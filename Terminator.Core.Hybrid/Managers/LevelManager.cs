@@ -349,14 +349,27 @@ public partial class LevelManager : MonoBehaviour
         __timeScaleIndices.Add(TimeScaleUtility.Add(value));
     }
 
+    private int __pauseTimeScaleIndex = -1;
+
     [UnityEngine.Scripting.Preserve]
     public void Pause()
     {
         IAnalytics.instance?.Pause();
 
-        TimeScale(0.0f);
+        //TimeScale(0.0f);
+        __pauseTimeScaleIndex = TimeScaleUtility.Add(0.0f);
 
         __ShowTime();
+        
+        Debug.Log("Pause");
+    }
+
+    [UnityEngine.Scripting.Preserve]
+    public void Resume()
+    {
+        TimeScaleUtility.Remove(__pauseTimeScaleIndex);
+
+        __pauseTimeScaleIndex = -1;
     }
     
     [UnityEngine.Scripting.Preserve]
