@@ -523,6 +523,13 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             set
             {
+                if (string.IsNullOrEmpty(value))
+                {
+                    randomAngles = Vector3.zero;
+                    
+                    return;
+                }
+                
                 var parameters = value.Split('/');
 
                 randomAngles = new Vector3(float.Parse(parameters[0]), float.Parse(parameters[1]), float.Parse(parameters[2]));
