@@ -355,17 +355,17 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         }
         else
         {
-            bool result = false;
+            bool? result = null;
             api.Buy(userID, type, level, x =>
             {
-                result = true;
-                
-                //这里实现服务器的时候要注意，平台回调或者确认订单（在服务端，该数据结构要有订单号）完成后，Buy才会被执行（而不是在这里执行）。
-                onComplete(x ? Buy(type, level) : null);
+                result = x;
             });
             
-            while(!result)
+            while(result == null || api.isPending)
                 yield return null;
+            
+            //这里实现服务器的时候要注意，平台回调或者确认订单（在服务端，该数据结构要有订单号）完成后，Buy才会被执行（而不是在这里执行）。所以当实现服务器时，这里直接返回结果就行。
+            onComplete(result.Value ? Buy(type, level) : null);
         }
     }
 

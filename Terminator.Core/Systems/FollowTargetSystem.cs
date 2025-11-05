@@ -270,6 +270,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<LocalToWorld> localToWorlds;
 
+        [ReadOnly] 
+        public BufferAccessor<FollowTargetDistance> distances;
+
         [ReadOnly]
         public NativeArray<Parent> parents;
 
@@ -288,10 +291,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         [ReadOnly] 
         public NativeArray<FollowTargetSpeed> speeds;
 
-        [ReadOnly] 
-        public BufferAccessor<FollowTargetDistance> distances;
-
         public NativeArray<FollowTargetVelocity> velocities;
+
+        public BufferAccessor<Message> messages;
 
         public bool Execute(int index)
         {
@@ -362,13 +364,33 @@ public partial struct FollowTargetTransformSystem : ISystem
                     FollowTargetDistance temp;
                     temp.value = math.sqrt(lengthSQ);
                     temp.speed = 0.0f;
+                    temp.messageName = default;
+                    temp.messageValue = default;
 
-                    int followTargetSpeedIndex = distances.BinarySearch(
+                    int distanceIndex = distances.BinarySearch(
                         temp,
                         new NativeSortExtension.DefaultComparer<FollowTargetDistance>(),
                         new Wrapper());
 
-                    speed = distances[math.max(followTargetSpeedIndex, 0)].speed;
+                    distanceIndex = math.max(distanceIndex, 0);
+                    temp = distances[distanceIndex];
+                    if (distanceIndex != velocity.distanceIndex)
+                    {
+                        velocity.distanceIndex = distanceIndex;
+
+                        if (!temp.messageName.IsEmpty && index < messages.Length)
+                        {
+                            var messages = this.messages[index];
+
+                            Message message;
+                            message.key = 0;
+                            message.name = temp.messageName;
+                            message.value = temp.messageValue;
+                            messages.Add(message);
+                        }
+                    }
+
+                    speed = temp.speed;
                 }
             }
 
@@ -401,6 +423,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         public quaternion cameraRotation;
 
         [ReadOnly] 
+        public BufferTypeHandle<FollowTargetDistance> distanceType;
+
+        [ReadOnly] 
         public ComponentLookup<LocalToWorld> localToWorlds;
 
         [ReadOnly]
@@ -408,9 +433,6 @@ public partial struct FollowTargetTransformSystem : ISystem
 
         [ReadOnly]
         public ComponentTypeHandle<LocalTransform> localTransformType;
-
-        [ReadOnly] 
-        public BufferTypeHandle<FollowTargetDistance> distanceType;
 
         [ReadOnly] 
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
@@ -425,19 +447,22 @@ public partial struct FollowTargetTransformSystem : ISystem
 
         public ComponentTypeHandle<FollowTarget> instanceType;
 
+        public BufferTypeHandle<Message> messageType;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             ComputeVelocities computeVelocities;
             computeVelocities.cameraRotation = cameraRotation;
             computeVelocities.localToWorlds = localToWorlds;
+            computeVelocities.distances = chunk.GetBufferAccessor(ref distanceType);
             computeVelocities.parents = chunk.GetNativeArray(ref parentType);
             computeVelocities.localTransforms = chunk.GetNativeArray(ref localTransformType);
             computeVelocities.characterBodies = chunk.GetNativeArray(ref characterBodyType);
-            computeVelocities.distances = chunk.GetBufferAccessor(ref distanceType);
             computeVelocities.instances = chunk.GetNativeArray(ref instanceType);
             computeVelocities.ups = chunk.GetNativeArray(ref upType);
             computeVelocities.speeds = chunk.GetNativeArray(ref speedType);
             computeVelocities.velocities = chunk.GetNativeArray(ref velocityType);
+            computeVelocities.messages = chunk.GetBufferAccessor(ref messageType);
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -456,6 +481,8 @@ public partial struct FollowTargetTransformSystem : ISystem
 
     private BufferTypeHandle<FollowTargetDistance> __distanceType;
 
+    private BufferTypeHandle<Message> __messageType;
+
     private FollowTargetSharedData __sharedData;
     
     private EntityQuery __instanceGroup;
@@ -469,6 +496,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         __upType = state.GetComponentTypeHandle<FollowTargetUp>(true);
         __speedType = state.GetComponentTypeHandle<FollowTargetSpeed>(true);
         __distanceType = state.GetBufferTypeHandle<FollowTargetDistance>(true);
+        __messageType = state.GetBufferTypeHandle<Message>();
 
         __sharedData = new FollowTargetSharedData(true, ref state);
         
@@ -518,6 +546,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         __upType.Update(ref state);
         __speedType.Update(ref state);
         __distanceType.Update(ref state);
+        __messageType.Update(ref state);
         
         ComputeVelocitiesEx computeVelocities;
         computeVelocities.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
@@ -530,6 +559,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         computeVelocities.speedType = __speedType;
         computeVelocities.velocityType = velocityType;
         computeVelocities.distanceType = __distanceType;
+        computeVelocities.messageType = __messageType;
         state.Dependency = computeVelocities.ScheduleParallelByRef(__velocityGroup, jobHandle);
     }
 }

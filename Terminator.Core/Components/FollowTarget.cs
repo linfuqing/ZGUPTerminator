@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -45,6 +46,8 @@ public struct FollowTargetUp : IComponentData
 public struct FollowTargetVelocity : IComponentData
 {
     public int version;
+
+    public int distanceIndex;
     
     public float value;
 
@@ -57,10 +60,24 @@ public struct FollowTargetVelocity : IComponentData
     //public float4x4 targetTransform;
 }
 
+public struct FollowTargetParent : IComponentData
+{
+    public Entity entity;
+}
+
+public struct FollowTargetParentMotion : IComponentData
+{
+    public int version;
+    public float4x4 matrix;
+}
+
 public struct FollowTargetDistance : IBufferElementData, IComparable<FollowTargetDistance>
 {
     public float value;
     public float speed;
+
+    public FixedString32Bytes messageName;
+    public UnityObjectRef<UnityEngine.Object> messageValue;
 
     public int CompareTo(FollowTargetDistance other)
     {
@@ -72,13 +89,8 @@ public struct FollowTargetDistance : IBufferElementData, IComparable<FollowTarge
     }
 }
 
-public struct FollowTargetParent : IComponentData
+public struct FollowTargetDistanceMessage : IBufferElementData
 {
-    public Entity entity;
-}
-
-public struct FollowTargetParentMotion : IComponentData
-{
-    public int version;
-    public float4x4 matrix;
+    public FixedString32Bytes name;
+    public UnityObjectRef<UnityEngine.Object> value;
 }

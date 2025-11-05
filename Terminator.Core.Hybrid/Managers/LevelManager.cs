@@ -472,6 +472,13 @@ public partial class LevelManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(time);
         
         __ClearTimeScales();
+
+        if (-1 != __pauseTimeScaleIndex)
+        {
+            TimeScaleUtility.Remove(__pauseTimeScaleIndex);
+            
+            __pauseTimeScaleIndex = -1;
+        }
         
         if (_onQuit != null)
             _onQuit.Invoke();

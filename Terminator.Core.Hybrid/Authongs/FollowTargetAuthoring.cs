@@ -15,6 +15,9 @@ public class FollowTargetAuthoring : MonoBehaviour
         
         [UnityEngine.Serialization.FormerlySerializedAs("value")]
         public float speed;
+
+        public string messageName;
+        public UnityEngine.Object messageValue;
     }
 
     class Baker : Baker<FollowTargetAuthoring>
@@ -55,6 +58,8 @@ public class FollowTargetAuthoring : MonoBehaviour
                     ref var destination = ref distances.ElementAt(i);
                     destination.value = source.value;
                     destination.speed = source.speed;
+                    destination.messageName = source.messageName;
+                    destination.messageValue = source.messageValue;
                 }
                 
                 distances.AsNativeArray().Sort();
