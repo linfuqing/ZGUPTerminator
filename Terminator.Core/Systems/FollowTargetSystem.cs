@@ -265,6 +265,8 @@ public partial struct FollowTargetTransformSystem : ISystem
 
     private struct ComputeVelocities
     {
+        public double time;
+        
         public quaternion cameraRotation;
 
         [ReadOnly] 
@@ -295,11 +297,23 @@ public partial struct FollowTargetTransformSystem : ISystem
 
         public BufferAccessor<Message> messages;
 
-        public bool Execute(int index)
+        public void Execute(int index)
         {
+            var velocity = velocities[index];
             var instance = instances[index];
             if (!localToWorlds.TryGetComponent(instance.entity, out var localToWorld))
-                return false;
+            {
+                if (velocity.time > math.FLT_MIN_NORMAL)
+                {
+                    velocity.target += velocity.value * (float)(time - velocity.time) * velocity.direction;
+                    
+                    velocity.time = time;
+                    ++velocity.version;
+                    velocities[index] = velocity;
+                }
+                
+                return;
+            }
 
             float4x4 parentLocalToWorld, targetLocalToWorld = localToWorld.Value;
             var transform = localTransforms[index];
@@ -319,7 +333,6 @@ public partial struct FollowTargetTransformSystem : ISystem
                 hasParent = false;
             }
 
-            var velocity = velocities[index];
             switch (instance.space)
             {
                 case FollowTargetSpace.Camera:
@@ -410,16 +423,17 @@ public partial struct FollowTargetTransformSystem : ISystem
             //velocity.target = target;
             //velocity.lookAt = default;
 
+            velocity.time = time;
             ++velocity.version;
             velocities[index] = velocity;
-
-            return true;
         }
     }
 
     [BurstCompile]
     private struct ComputeVelocitiesEx : IJobChunk
     {
+        public double time;
+
         public quaternion cameraRotation;
 
         [ReadOnly] 
@@ -438,6 +452,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
 
         [ReadOnly] 
+        public ComponentTypeHandle<FollowTarget> instanceType;
+
+        [ReadOnly] 
         public ComponentTypeHandle<FollowTargetUp> upType;
 
         [ReadOnly] 
@@ -445,13 +462,12 @@ public partial struct FollowTargetTransformSystem : ISystem
 
         public ComponentTypeHandle<FollowTargetVelocity> velocityType;
 
-        public ComponentTypeHandle<FollowTarget> instanceType;
-
         public BufferTypeHandle<Message> messageType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             ComputeVelocities computeVelocities;
+            computeVelocities.time = time;
             computeVelocities.cameraRotation = cameraRotation;
             computeVelocities.localToWorlds = localToWorlds;
             computeVelocities.distances = chunk.GetBufferAccessor(ref distanceType);
@@ -466,10 +482,7 @@ public partial struct FollowTargetTransformSystem : ISystem
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
-            {
-                if(!computeVelocities.Execute(i))
-                    chunk.SetComponentEnabled(ref instanceType, i, false);
-            }
+                computeVelocities.Execute(i);
         }
     }
 
@@ -549,6 +562,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         __messageType.Update(ref state);
         
         ComputeVelocitiesEx computeVelocities;
+        computeVelocities.time = SystemAPI.Time.ElapsedTime;
         computeVelocities.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         computeVelocities.localToWorlds = localToWorlds;
         computeVelocities.localTransformType = localTransformType;
@@ -907,7 +921,7 @@ public struct FollowTargetSharedData
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __physicsVelocityType = state.GetComponentTypeHandle<PhysicsVelocity>(isPhysicsVelocityTypeReadOnly);
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>(true);
-        __instanceType = state.GetComponentTypeHandle<FollowTarget>();
+        __instanceType = state.GetComponentTypeHandle<FollowTarget>(true);
         __velocityType = state.GetComponentTypeHandle<FollowTargetVelocity>();
         __parentType = state.GetComponentTypeHandle<FollowTargetParent>();
         __parentMotionType = state.GetComponentTypeHandle<FollowTargetParentMotion>();

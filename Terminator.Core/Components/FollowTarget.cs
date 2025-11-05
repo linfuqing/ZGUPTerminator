@@ -48,6 +48,8 @@ public struct FollowTargetVelocity : IComponentData
     public int version;
 
     public int distanceIndex;
+
+    public double time;
     
     public float value;
 
