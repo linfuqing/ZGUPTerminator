@@ -41,7 +41,10 @@ public partial class LevelManager : MonoBehaviour
     internal UnityEvent _onQuit;
     
     [SerializeField]
-    internal ActiveEvent _onNextStageActive;
+    internal UnityEvent _onNextStageEnable;
+
+    [SerializeField]
+    internal UnityEvent _onNextStageDisable;
 
     [SerializeField]
     internal StringEvent _onNextStageEnergy;
@@ -454,9 +457,14 @@ public partial class LevelManager : MonoBehaviour
 
             if(_onNextStageEnergy != null)
                 _onNextStageEnergy.Invoke(result.energyStage.ToString());
-            
-            if(_onNextStageActive != null)
-                _onNextStageActive.Invoke(result.energyStage < result.energyMax);
+
+            if (result.energyStage < result.energyMax)
+            {
+                if(_onNextStageEnable != null)
+                    _onNextStageEnable.Invoke();
+            }
+            else if(_onNextStageDisable != null)
+                _onNextStageDisable.Invoke();
         }
         
         //__coroutine = null;
