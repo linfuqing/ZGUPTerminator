@@ -223,6 +223,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         public void Execute(int index)
         {
             var velocity = velocities[index];
+            if (velocity.version < 1)
+                return;
+            
             var localTransform = localTransforms[index];
 
             bool isRotation = math.lengthsq(velocity.lookAt) > math.FLT_MIN_NORMAL;
