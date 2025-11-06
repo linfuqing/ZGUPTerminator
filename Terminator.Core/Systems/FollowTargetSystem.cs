@@ -300,7 +300,7 @@ public partial struct FollowTargetTransformSystem : ISystem
 
         public BufferAccessor<Message> messages;
 
-        public void Execute(int index)
+        public bool Execute(int index)
         {
             var velocity = velocities[index];
             var instance = instances[index];
@@ -315,7 +315,7 @@ public partial struct FollowTargetTransformSystem : ISystem
                     velocities[index] = velocity;
                 }
                 
-                return;
+                return false;
             }
 
             float4x4 parentLocalToWorld, targetLocalToWorld = localToWorld.Value;
@@ -370,6 +370,7 @@ public partial struct FollowTargetTransformSystem : ISystem
                     distance -= math.projectsafe(distance, up.value);
             }
 
+            bool result = false;
             float lengthSQ = math.lengthsq(distance), speed = 0.0f;
             if (index < distances.Length)
             {
@@ -396,13 +397,15 @@ public partial struct FollowTargetTransformSystem : ISystem
 
                         if (!temp.messageName.IsEmpty && index < messages.Length)
                         {
-                            var messages = this.messages[index];
+                            DynamicBuffer<Message> messages = this.messages[index];
 
                             Message message;
                             message.key = 0;
                             message.name = temp.messageName;
                             message.value = temp.messageValue;
                             messages.Add(message);
+
+                            result = true;
                         }
                     }
 
@@ -429,6 +432,8 @@ public partial struct FollowTargetTransformSystem : ISystem
             velocity.time = time;
             ++velocity.version;
             velocities[index] = velocity;
+
+            return result;
         }
     }
 
@@ -485,7 +490,10 @@ public partial struct FollowTargetTransformSystem : ISystem
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
-                computeVelocities.Execute(i);
+            {
+                if(computeVelocities.Execute(i))
+                    chunk.SetComponentEnabled(ref messageType, i, true);
+            }
         }
     }
 
