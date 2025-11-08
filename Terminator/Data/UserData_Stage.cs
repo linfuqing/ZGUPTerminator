@@ -341,8 +341,8 @@ public partial class UserData
     private static void __SetStageValue(string key, string levelName, int stage, int value, bool isGreaterOrLess)
     {
         key = GetStageNameSpace(key, levelName, stage);
-        int origin = PlayerPrefs.GetInt(key);
-        if (isGreaterOrLess ? origin < value : origin > value)
+        int origin = PlayerPrefs.GetInt(key, isGreaterOrLess ? 0 : value);
+        if (isGreaterOrLess ? origin < value : origin >= value)
             PlayerPrefs.SetInt(key, value);
     }
     
