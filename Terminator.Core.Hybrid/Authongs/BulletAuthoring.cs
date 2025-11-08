@@ -778,7 +778,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                         destination.colliderIndex = -1;
                         
                         if(source.maxDistance > source.minDistance)
-                            Debug.LogError($"The bullet target {source.name} need a collider!");
+                            Debug.LogError($"The bullet target {source.name} need a collider!", authoring.gameObject);
                     }
                     else
                     {
@@ -883,7 +883,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                         
                         if (destination.damageIndex == -1)
                             Debug.LogError(
-                                $"Damage {source.damageName} of bullet {source.name} can not been found!");
+                                $"Damage {source.damageName} of bullet {source.name} can not been found!", authoring.gameObject);
                     }
 
                     count = source.targetNames == null ? 0 : source.targetNames.Length;
@@ -906,7 +906,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 
                         if (indices[j] == -1)
                             Debug.LogError(
-                                $"Bullet target {targetName} of bullet {source.name} can not been found!");
+                                $"Bullet target {targetName} of bullet {source.name} can not been found!", authoring.gameObject);
                     }
 
                     count = source.messageNames == null ? 0 : source.messageNames.Length;
@@ -934,7 +934,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
 
                         if (indices[j] == -1)
                             Debug.LogError(
-                                $"Message {messageName} of bullet {source.name} can not been found!");
+                                $"Message {messageName} of bullet {source.name} can not been found!", authoring.gameObject);
                     }
                     
                     count = source.standTimes == null ? 0 : source.standTimes.Length;
@@ -1018,7 +1018,7 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                 }
                 
                 if(destination.value == -1)
-                    Debug.LogError($"Bullet active name {source.name} can not been found!");
+                    Debug.LogError($"Bullet active name {source.name} can not been found!", authoring.gameObject);
             }
             
             AddBuffer<EffectDamageStatistic>(entity).Resize(numBullets, NativeArrayOptions.ClearMemory);

@@ -687,7 +687,7 @@ public class SpawnerAuthoring : MonoBehaviour
 
                         if (areaIndex.value == -1)
                             Debug.LogError(
-                                $"Area {area.name} of spawner {source.name} can not been found!", authoring);
+                                $"Area {area.name} of spawner {source.name} can not been found!", authoring.gameObject);
 
                         areaIndex.attributeIndex = -1;
                         if (!string.IsNullOrEmpty(area.attributeName))
@@ -704,7 +704,7 @@ public class SpawnerAuthoring : MonoBehaviour
 
                             if (areaIndex.attributeIndex == -1)
                                 Debug.LogError(
-                                    $"Attribute {area.attributeName} of spawner {source.name} can not been found!", authoring);
+                                    $"Attribute {area.attributeName} of spawner {source.name} can not been found!", authoring.gameObject);
                         }
 
                         areaIndex.layerMaskAndTags = area.layerMaskAndTags;
