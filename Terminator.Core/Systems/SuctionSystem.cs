@@ -5,8 +5,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
-using Unity.Physics.GraphicsIntegration;
-using Unity.Physics.Systems;
 using Unity.Transforms;
 using Math = ZG.Mathematics.Math;
 

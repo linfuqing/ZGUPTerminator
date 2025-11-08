@@ -338,31 +338,31 @@ public partial class UserData
         return result;
     }
 
-    private static void __SetStageValue(string key, string levelName, int stage, int value)
+    private static void __SetStageValue(string key, string levelName, int stage, int value, bool isGreaterOrLess)
     {
         key = GetStageNameSpace(key, levelName, stage);
         int origin = PlayerPrefs.GetInt(key);
-        if (origin < value)
+        if (isGreaterOrLess ? origin < value : origin > value)
             PlayerPrefs.SetInt(key, value);
     }
     
     private static void __SetStageTime(string levelName, int stage, int value)
     {
-        __SetStageValue(NAME_SPACE_USER_STAGE_TIME, levelName, stage, value);
+        __SetStageValue(NAME_SPACE_USER_STAGE_TIME, levelName, stage, value, false);
     }
 
     private static void __SetStageHPPercentage(string levelName, int stage, int value)
     {
-        __SetStageValue(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage, value);
+        __SetStageValue(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage, value, true);
     }
     
     private static void __SetStageKillCount(string levelName, int stage, int value)
     {
-        __SetStageValue(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage, value);
+        __SetStageValue(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage, value, true);
     }
 
     private static void __SetStageKillBossCount(string levelName, int stage, int value)
     {
-        __SetStageValue(NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT, levelName, stage, value);
+        __SetStageValue(NAME_SPACE_USER_STAGE_KILL_BOSS_COUNT, levelName, stage, value, true);
     }
 }

@@ -228,10 +228,14 @@ public partial class UserData
         
         yield return null;
         
-        __SetStageTime(temp.name, temp.stage, time);
-        __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
         __SetStageKillCount(temp.name, temp.stage, killCount);
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+
+        if (temp.stage < stage)
+        {
+            __SetStageTime(temp.name, temp.stage, time);
+            __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+        }
 
         __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
         

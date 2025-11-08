@@ -484,14 +484,14 @@ public partial class UserDataMain
                     if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
-                case UserStageReward.Condition.HPPercentage:
-                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
                 case UserStageReward.Condition.KillCount:
                     if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
                         UserData.GetStageKillCount(levelName, stage) >= conditionValue)
+                        flag |= UserStageReward.Flag.Unlocked;
+                    break;
+                case UserStageReward.Condition.HPPercentage:
+                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                        UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
                 case UserStageReward.Condition.Time:
@@ -655,19 +655,19 @@ public partial class UserData
             }
         }
 
-        __SetStageTime(temp.name, temp.stage, time);
-
-        __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+        __SubmitStageFlag(temp.name, stage, out _);
 
         __SetStageKillCount(temp.name, temp.stage, killCount);
 
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
 
-        __SubmitStageFlag(temp.name, stage, out _);
-
         result.flag = 0;
         if (temp.stage < stage)
         {
+            __SetStageTime(temp.name, temp.stage, time);
+
+            __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+            
             result.flag = __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
 
             IUserData.StageCache stageCache;

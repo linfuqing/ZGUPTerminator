@@ -241,6 +241,36 @@ public struct SpawnerAttribute
 
 public struct SpawnerDefinition
 {
+    private struct Collector : ICollector<DistanceHit>
+    {
+        public bool EarlyOutOnFirstHit => true;
+
+        public float MaxFraction
+        {
+            get;
+
+            private set;
+        }
+
+        public int NumHits
+        {
+            get;
+
+            private set;
+        }
+
+        public bool AddHit(DistanceHit hit)
+        {
+            if (hit.Material.CollisionResponse == CollisionResponsePolicy.RaiseTriggerEvents)
+                return false;
+
+            MaxFraction = hit.Fraction;
+            ++NumHits;
+
+            return true;
+        }
+    }
+    
     public struct Area
     {
         public SpawnerSpace space;
@@ -537,13 +567,15 @@ public struct SpawnerDefinition
 
         if (data.tryTimesPerArea >= 0 && colliders.TryGetComponent(prefab, out var physicsCollider) && physicsCollider.IsValid)
         {
+            Collector collector = default;
             int tryTimes = math.max(1, data.tryTimesPerArea);
             for (i = 0; i < tryTimes; ++i)
             {
                 if (!collisionWorld.CalculateDistance(new ColliderDistanceInput(
                         physicsCollider.Value,
                         collisionWorld.CollisionTolerance,
-                        math.RigidTransform(localTransform.Rotation, localTransform.Position))))
+                        math.RigidTransform(localTransform.Rotation, localTransform.Position)), 
+                        ref collector))
                     break;
                 
                 localTransform.Rotation = math.slerp(area.from, area.to, random.NextFloat(0.0f, 1.0f));
