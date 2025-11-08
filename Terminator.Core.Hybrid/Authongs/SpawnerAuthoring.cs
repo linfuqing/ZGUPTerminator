@@ -687,7 +687,7 @@ public class SpawnerAuthoring : MonoBehaviour
 
                         if (areaIndex.value == -1)
                             Debug.LogError(
-                                $"Area {area.name} of spawner {source.name} can not been found!", authoring.gameObject);
+                                $"Area {area.name} of spawner {source.name} in {authoring.name} can not been found!", authoring.gameObject);
 
                         areaIndex.attributeIndex = -1;
                         if (!string.IsNullOrEmpty(area.attributeName))
@@ -704,7 +704,7 @@ public class SpawnerAuthoring : MonoBehaviour
 
                             if (areaIndex.attributeIndex == -1)
                                 Debug.LogError(
-                                    $"Attribute {area.attributeName} of spawner {source.name} can not been found!", authoring.gameObject);
+                                    $"Attribute {area.attributeName} of spawner {source.name} in {authoring.name} can not been found!", authoring.gameObject);
                         }
 
                         areaIndex.layerMaskAndTags = area.layerMaskAndTags;
@@ -737,7 +737,7 @@ public class SpawnerAuthoring : MonoBehaviour
                     }
 
                     if (numPrefabLoaderIndices < 1)
-                        Debug.LogError($"Spawner {source.name} can not been found!", authoring);
+                        Debug.LogError($"Spawner {source.name} in {authoring.name} can not been found!", authoring.gameObject);
 
                     destination.layerMaskAndTags = source.layerMaskAndTags;
                 }
