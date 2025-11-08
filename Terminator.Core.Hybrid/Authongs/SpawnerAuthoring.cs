@@ -687,7 +687,7 @@ public class SpawnerAuthoring : MonoBehaviour
 
                         if (areaIndex.value == -1)
                             Debug.LogError(
-                                $"Area {area.name} of spawner {source.name} can not been found!");
+                                $"Area {area.name} of spawner {source.name} can not been found!", authoring);
 
                         areaIndex.attributeIndex = -1;
                         if (!string.IsNullOrEmpty(area.attributeName))
@@ -704,7 +704,7 @@ public class SpawnerAuthoring : MonoBehaviour
 
                             if (areaIndex.attributeIndex == -1)
                                 Debug.LogError(
-                                    $"Attribute {area.attributeName} of spawner {source.name} can not been found!");
+                                    $"Attribute {area.attributeName} of spawner {source.name} can not been found!", authoring);
                         }
 
                         areaIndex.layerMaskAndTags = area.layerMaskAndTags;
@@ -737,7 +737,7 @@ public class SpawnerAuthoring : MonoBehaviour
                     }
 
                     if (numPrefabLoaderIndices < 1)
-                        Debug.LogError($"Spawner {source.name} can not been found!");
+                        Debug.LogError($"Spawner {source.name} can not been found!", authoring);
 
                     destination.layerMaskAndTags = source.layerMaskAndTags;
                 }
