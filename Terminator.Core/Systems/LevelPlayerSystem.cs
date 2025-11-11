@@ -22,8 +22,8 @@ public partial struct LevelPlayerSystem : ISystem
 
         public FixedString32Bytes instanceName;
 
-        public FixedList512Bytes<LevelPlayerActiveSkill> activeSkills;
-        public FixedList512Bytes<LevelPlayerSkillGroup> skillGroups;
+        public FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills;
+        public FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups;
 
         [ReadOnly, DeallocateOnJobCompletion] 
         public NativeArray<Entity> entityArray;
