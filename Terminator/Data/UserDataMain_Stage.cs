@@ -489,6 +489,11 @@ public partial class UserDataMain
                         UserData.GetStageKillCount(levelName, stage) >= conditionValue)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
+                case UserStageReward.Condition.Gold:
+                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                        UserData.GetStageGold(levelName, stage) <= conditionValue)
+                        flag |= UserStageReward.Flag.Unlocked;
+                    break;
                 case UserStageReward.Condition.HPPercentage:
                     if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
                         UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
@@ -677,6 +682,8 @@ public partial class UserData
         __SetStageKillCount(temp.name, temp.stage, killCount);
 
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+
+        __SetStageGold(temp.name, temp.stage, gold);
 
         result.flag = 0;
         if (temp.stage < stage)

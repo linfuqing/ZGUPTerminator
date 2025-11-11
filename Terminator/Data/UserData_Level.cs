@@ -230,11 +230,12 @@ public partial class UserData
         
         __SetStageKillCount(temp.name, temp.stage, killCount);
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+        __SetStageGold(temp.name, temp.stage, gold);
 
         if (temp.stage < stage)
         {
-            __SetStageTime(temp.name, temp.stage, time);
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+            __SetStageTime(temp.name, temp.stage, time);
         }
 
         __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);

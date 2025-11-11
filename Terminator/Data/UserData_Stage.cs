@@ -36,7 +36,8 @@ public struct UserStageReward
         Once, 
         HPPercentage, 
         KillCount, 
-        Time
+        Time, 
+        Gold
     }
     
     public string name;
@@ -233,6 +234,13 @@ public partial class UserData
         return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage));
     }
 
+    private const string NAME_SPACE_USER_STAGE_GOLD = "UserStageGold";
+
+    public static int GetStageGold(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_GOLD, levelName, stage));
+    }
+
     private const string NAME_SPACE_USER_STAGE_KILL_COUNT = "UserStageKillCount";
     
     public static int GetStageKillCount(string levelName, int stage)
@@ -356,6 +364,11 @@ public partial class UserData
         __SetStageValue(NAME_SPACE_USER_STAGE_HP_PERCENTAGE, levelName, stage, value, true);
     }
     
+    private static void __SetStageGold(string levelName, int stage, int value)
+    {
+        __SetStageValue(NAME_SPACE_USER_STAGE_GOLD, levelName, stage, value, true);
+    }
+
     private static void __SetStageKillCount(string levelName, int stage, int value)
     {
         __SetStageValue(NAME_SPACE_USER_STAGE_KILL_COUNT, levelName, stage, value, true);
