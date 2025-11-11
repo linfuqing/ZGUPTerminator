@@ -94,12 +94,20 @@ public sealed partial class UserDataMain : MonoBehaviour
     public static int goldBank => __GetQuest(UserQuest.Type.GoldsToGet, ActiveType.Day, out _);
 
     private const string NAME_SPACE_USER_ENERGY = "UserEnergy";
-    private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
-    private const string NAME_SPACE_USER_ENERGY_MAX = "UserEnergyMax";
 
     [Header("Main")]
     [SerializeField]
     internal Energy _energy;
+
+    public int energy
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
+        
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, value);
+    }
+
+    private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
+    private const string NAME_SPACE_USER_ENERGY_MAX = "UserEnergyMax";
 
     public UserEnergy userEnergy
     {
@@ -113,7 +121,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
 
             UserEnergy userEnergy;
-            userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
+            userEnergy.value = energy;
             userEnergy.max = _energy.max + PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_MAX);
             userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
             userEnergy.tick = DateTimeUtility.GetTicks((uint)time);
@@ -140,7 +148,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     private bool __ApplyEnergy(int value, out int energy)
     {
         uint now = DateTimeUtility.GetSeconds(), time = now;
-        energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
+        energy = this.energy;
         if (_energy.uintTime > Mathf.Epsilon)
         {
             float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) /
@@ -165,8 +173,8 @@ public sealed partial class UserDataMain : MonoBehaviour
             __AppendQuest(UserQuest.Type.EnergiesToBuy, 1);
         else if(value > 0)
             __AppendQuest(UserQuest.Type.EnergiesToUse, value);
-        
-        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
+
+        this.energy = energy;
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));
 
         return true;

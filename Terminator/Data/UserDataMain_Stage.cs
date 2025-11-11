@@ -635,23 +635,40 @@ public partial class UserData
             int previousStage = stage - 1;
             if (previousStage > temp.stage)
             {
-                if (!main.ApplyStage(temp.id, previousStage, out result.totalEnergy))
+                result.totalEnergy = 0;
+                if (main.IsLevelChapter(temp.name))
+                    result.nextStageEnergy = 0;
+                else
                 {
-                    Debug.LogError("WTF?");
+                    for (int i = temp.stage + 1; i < stage; ++i)
+                    {
+                        if (!main.ApplyStage(temp.id, i, out result.totalEnergy))
+                        {
+                            Debug.LogError("WTF?");
 
-                    result.flag = 0;
+                            if (i == temp.stage + 1)
+                            {
+                                result.flag = 0;
 
-                    onComplete(default);
+                                onComplete(default);
 
-                    yield break;
+                                yield break;
+                            }
+
+                            stage = i;
+
+                            break;
+                        }
+                    }
+
+                    result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
                 }
-                
-                result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
             }
             else
             {
-                result.nextStageEnergy = 0;
-                result.totalEnergy = 0;
+                result.totalEnergy = main.energy;
+
+                result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
             }
         }
 

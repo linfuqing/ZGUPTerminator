@@ -202,6 +202,11 @@ public partial class UserDataMain
     internal string _levelTicketsPath;
 #endif
 
+    public bool IsLevelChapter(string name)
+    {
+        return __GetLevelChapterIndex(name) != -1;
+    }
+
     public IEnumerator ApplyLevel(
         uint userID,
         uint levelID, 
@@ -276,7 +281,12 @@ public partial class UserDataMain
         if (stageCount <= levelCache.stage)
         {
             if (__GetLevelTicketIndex(level.name, out _, out _))
-                PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
+            {
+                if (ApplyStage(levelCache.id, levelCache.stage, out _))
+                    PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
+                else
+                    Debug.LogError("WTF??????");
+            }
             else
             {
                 selectedStage = stageCount - 1;
@@ -724,7 +734,6 @@ public partial class UserDataMain
         return true;
     }
 }
-
 
 public partial class UserData
 {
