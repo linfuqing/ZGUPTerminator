@@ -625,7 +625,7 @@ public partial class UserData
         
         IUserData.StageResult result;
         var main = UserDataMain.instance;
-        if (main == null || stage <= temp.stage)
+        if (null == (object)main || stage <= temp.stage)
         {
             result.totalEnergy = 0;
             result.nextStageEnergy = 0;

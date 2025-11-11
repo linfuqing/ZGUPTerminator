@@ -65,18 +65,18 @@ public static class LevelPlayerShared
     
     private struct ActiveSkills
     {
-        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>> Values =
-            SharedStatic<FixedList512Bytes<LevelPlayerActiveSkill>>.GetOrCreate<ActiveSkills>();
+        private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerActiveSkill>> Values =
+            SharedStatic<FixedList4096Bytes<LevelPlayerActiveSkill>>.GetOrCreate<ActiveSkills>();
 
-        public static ref FixedList512Bytes<LevelPlayerActiveSkill> values => ref Values.Data;
+        public static ref FixedList4096Bytes<LevelPlayerActiveSkill> values => ref Values.Data;
     }
     
     private struct SkillGroup
     {
-        private static readonly SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>> Values =
-            SharedStatic<FixedList512Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
+        private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerSkillGroup>> Values =
+            SharedStatic<FixedList4096Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
 
-        public static ref FixedList512Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
+        public static ref FixedList4096Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
     }
 
     public static int effectRage
@@ -128,7 +128,7 @@ public static class LevelPlayerShared
         set => InstanceName.value = value;
     }
 
-    public static ref FixedList512Bytes<LevelPlayerActiveSkill> activeSkills => ref ActiveSkills.values;
+    public static ref FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills => ref ActiveSkills.values;
     
-    public static ref FixedList512Bytes<LevelPlayerSkillGroup> skillGroups => ref SkillGroup.names;
+    public static ref FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups => ref SkillGroup.names;
 }
