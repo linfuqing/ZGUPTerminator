@@ -220,6 +220,7 @@ public struct LevelStageOption
         Max = 6, 
         ExpMax = 8, 
         Exp = 9, 
+        Gold = 14, 
         Stage = 10
     }
 
@@ -272,6 +273,8 @@ public struct LevelStageOption
                     return value <= status.expMax;
                 case Type.Exp:
                     return value == 0 ? status.expMax <= status.exp : value <= status.exp;
+                case Type.Gold:
+                    return value <= status.gold;
                 case Type.Stage:
                     return value <= status.stage;
                 case Type.SpawnerTime:
@@ -457,6 +460,9 @@ public struct LevelStageOption
                     break;
                 case Type.Exp:
                     System.Threading.Interlocked.Add(ref status.exp, value);
+                    break;
+                case Type.Gold:
+                    System.Threading.Interlocked.Add(ref status.gold, value);
                     break;
                 case Type.Stage:
                     //status.killCount = 0;
