@@ -314,7 +314,7 @@ public partial class UserDataMain
         {
             card = _cards[i];
 
-            userCard.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1);
+            userCard.level = __GetCardLevel(card.name, out _);
             if (userCard.level == -1)
                 continue;
             
@@ -371,7 +371,7 @@ public partial class UserDataMain
         var card = _cards[__ToIndex(cardID)];
         
         UserCard result;
-        result.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1);
+        result.level = __GetCardLevel(card.name, out _);
         if (result.level == -1)
             yield break;
             
@@ -440,8 +440,7 @@ public partial class UserDataMain
 
         var card = _cards[__ToIndex(cardID)];
         var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(card.styleName));
-        string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{card.name}";
-        int level = PlayerPrefs.GetInt(levelKey);
+        int level = __GetCardLevel(card.name, out string levelKey);
         if (level >= levelIndices.Count)
         {
             onComplete(false);
@@ -477,6 +476,92 @@ public partial class UserDataMain
         onComplete(true);
     }
 
+    [Serializable]
+    internal struct CardBonds
+    {
+        public string name;
+
+        public string[] cardNames;
+        
+        public UserCardBond.Level[] levels;
+    }
+
+    [Header("CardBonds")]
+    
+    [SerializeField]
+    internal CardBonds[] _cardBounds;
+
+#if UNITY_EDITOR
+    [SerializeField, CSV("_cardBounds", guidIndex = -1, nameIndex = 0)] 
+    internal string _cardBoundsPath;
+#endif
+    
+    private const string NAME_SPACE_USER_CARDS_BONDS_LEVEL = "UserCardsBondsLevel";
+
+    public IEnumerator QueryCardBonds(uint userID, Action<Memory<UserCardBond>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        int i, j, numCardBondsCards, numCardBonds = _cardBounds.Length;
+        CardBonds cardBonds;
+        UserCardBond userCardBond;
+        UserCardBond.Card userCardBondCard;
+        var results = new UserCardBond[numCardBonds];
+        for (i = 0; i < numCardBonds; ++i)
+        {
+            cardBonds = _cardBounds[i];
+            userCardBond.name = cardBonds.name;
+            userCardBond.id = __ToID(i);
+            userCardBond.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBonds.name}");
+            userCardBond.levels = cardBonds.levels;
+
+            numCardBondsCards = cardBonds.cardNames.Length;
+            userCardBond.cards = new UserCardBond.Card[numCardBondsCards];
+            for (j = 0; j < numCardBondsCards; ++j)
+            {
+                userCardBondCard.name = cardBonds.cardNames[j];
+                
+                userCardBondCard.level = __GetCardLevel(userCardBondCard.name, out _);
+                
+                userCardBond.cards[j] = userCardBondCard;
+            }
+            
+            results[i] = userCardBond;
+        }
+
+        onComplete(results);
+    }
+
+    public IEnumerator UpgradeCardBonds(uint userID, uint cardBondID, Action<int?> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        var cardBond = _cardBounds[__ToIndex(cardBondID)];
+        string key = $"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBond.name}";
+        int level = PlayerPrefs.GetInt(key), 
+            cardLevels = cardBond.levels[level].cardLevels, totalCardLevels = 0;
+
+        bool result = false;
+        foreach (var cardName in cardBond.cardNames)
+        {
+            totalCardLevels += __GetCardLevel(cardName, out _);
+            if (totalCardLevels >= cardLevels)
+            {
+                result = true;
+
+                break;
+            }
+        }
+
+        if (result)
+        {
+            PlayerPrefs.SetInt(key, ++level);
+
+            onComplete(level);
+        }
+        else
+            onComplete(null);
+    }
     
     private Dictionary<string, int> __cardGroupNameToIndices;
     
@@ -493,7 +578,6 @@ public partial class UserDataMain
         return __cardGroupNameToIndices[name];
     }
 
-    
     private Dictionary<string, int> __cardNameToIndices;
     
     private int __GetCardIndex(string name)
@@ -553,6 +637,12 @@ public partial class UserDataMain
         
         return __cardLevelIndices[index];
     }
+
+    private static int __GetCardLevel(string name, out string key)
+    {
+        key = $"{NAME_SPACE_USER_CARD_LEVEL}{name}";
+        return PlayerPrefs.GetInt(key, -1);
+    }
 }
 
 public partial class UserData
@@ -585,5 +675,15 @@ public partial class UserData
     public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
     {
         return UserDataMain.instance.UpgradeCard(userID, cardID, onComplete);
+    }
+
+    public IEnumerator QueryCardBonds(uint userID, Action<Memory<UserCardBond>> onComplete)
+    {
+        return UserDataMain.instance.QueryCardBonds(userID, onComplete);
+    }
+    
+    public IEnumerator UpgradeCardBonds(uint userID, uint cardBondID, Action<int?> onComplete)
+    {
+        return UserDataMain.instance.UpgradeCardBonds(userID, cardBondID, onComplete);
     }
 }

@@ -297,6 +297,8 @@ public partial class UserDataMain
     {
         public string name;
         public string roleName;
+        public int roleRank;
+        public int roleCount;
         public int gold;
         public int exp;
         public float skillGroupDamage;
@@ -318,6 +320,24 @@ public partial class UserDataMain
             set
             {
                 roleName = value;
+            }
+        }
+        
+        [CSVField]
+        public int 能力角色星级
+        {
+            set
+            {
+                roleRank = value;
+            }
+        }
+
+        [CSVField]
+        public int 能力角色碎片
+        {
+            set
+            {
+                roleCount = value;
             }
         }
         

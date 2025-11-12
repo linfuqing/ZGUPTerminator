@@ -597,15 +597,19 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int numTalents = _talents.Length;
         string roleName = _roles[__ToIndex(roleID)].name;
+        int numTalents = _talents.Length, 
+            roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{roleName}"), 
+            roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{roleName}");
         Talent talent;
         UserTalent userTalent;
         var userTalents = new List<UserTalent>();
         for (int i = 0; i < numTalents; ++i)
         {
             talent = _talents[i];
-            if(talent.roleName != roleName)
+            if(talent.roleName != roleName || 
+               talent.roleRank != roleRank ||
+               talent.roleCount > roleCount)
                 continue;
             
             userTalent.name = talent.name;

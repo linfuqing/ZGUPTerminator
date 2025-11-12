@@ -547,13 +547,13 @@ public partial class UserDataMain
                 int maxCardLevel = 0;
                 foreach (var card in _cards)
                     maxCardLevel = Mathf.Max(maxCardLevel,
-                        PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}"));
+                        __GetCardLevel(card.name, out _));
                 return maxCardLevel - 1;
             case UserQuest.Type.AchievementCardStyles:
                 int cardCount = 0;
                 foreach (var card in _cards)
                 {
-                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1) != -1)
+                    if (__GetCardLevel(card.name, out _) != -1)
                         ++cardCount;
                 }
                 return cardCount;

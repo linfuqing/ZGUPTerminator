@@ -84,8 +84,7 @@ public partial class UserDataMain
                 
                 int cardCount = PlayerPrefs.GetInt(key) + reward.count;
 
-                string levelKey = $"{NAME_SPACE_USER_CARD_LEVEL}{reward.name}";
-                int level = PlayerPrefs.GetInt(levelKey, -1);
+                int level = __GetCardLevel(reward.name, out string levelKey);
                 if (level == -1)
                 {
                     if ((flag & Flag.CardReplace) == 0 && UserData.chapter > 0)
@@ -93,7 +92,7 @@ public partial class UserDataMain
                         int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
                         foreach (var card in _cards)
                         {
-                            if(PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}", -1) == -1)
+                            if(__GetCardLevel(card.name, out _) == -1)
                                 continue;
 
                             if (++length >= capacity)
@@ -679,7 +678,7 @@ public partial class UserDataMain
             if (PlayerPrefs.GetInt($"{keyPrefix}{card.name}", -1) == -1)
                 continue;
 
-            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
+            level = __GetCardLevel(card.name, out _);
             if (level > 0)
             {
                 styleIndex = __GetCardStyleIndex(card.styleName);
@@ -992,7 +991,7 @@ public partial class UserDataMain
                     case SkillInfo.BelongTo.Card:
                         ref var card = ref _cards[skillInfo.index];
 
-                        level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_LEVEL}{card.name}");
+                        level = __GetCardLevel(card.name, out _);
                         if (level > 0)
                         {
                             styleIndex = __GetCardStyleIndex(card.styleName);

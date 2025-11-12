@@ -84,6 +84,43 @@ public struct UserCard
     public Group[] groups;
 }
 
+public struct UserCardBond
+{
+    public struct Card
+    {
+        public string name;
+
+        /// <summary>
+        /// 卡牌当前等级
+        /// </summary>
+        public int level;
+    }
+
+    [Serializable]
+    public struct Level
+    {
+        /// <summary>
+        /// 需要达到卡牌总等级才能升级
+        /// </summary>
+        public int cardLevels;
+
+        public UserPropertyData property;
+    }
+
+    public string name;
+
+    public uint id;
+
+    /// <summary>
+    /// 羁绊等级，0为未激活，2代表<see cref="levels"/>索引0和1的羁绊等级属性已经被激活，以此类推
+    /// </summary>
+    public int level;
+    
+    public Level[] levels;
+
+    public Card[] cards;
+}
+
 public partial interface IUserData
 {
     public struct Cards
@@ -156,4 +193,21 @@ public partial interface IUserData
     /// 升级卡牌
     /// </summary>
     IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete);
+    
+    /// <summary>
+    /// 查询卡牌羁绊
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator QueryCardBonds(uint userID, Action<Memory<UserCardBond>> onComplete);
+    
+    /// <summary>
+    /// 升级卡牌羁绊，并返回当前卡牌羁绊等级
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="cardBondID"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator UpgradeCardBonds(uint userID, uint cardBondID, Action<int?> onComplete);
 }
