@@ -1294,6 +1294,9 @@ public sealed class LoginManager : MonoBehaviour
                 ref var reward = ref _rewards[rewardIndex];
                 rewardStyle = Instantiate(style, style.transform.parent);
 
+                if (rewardStyle.onCount != null)
+                    rewardStyle.onCount.Invoke(value.count.ToString());
+
                 if (rewardStyle.onSprite != null)
                     rewardStyle.onSprite.Invoke(reward.sprite);
 
