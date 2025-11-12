@@ -782,7 +782,7 @@ public partial class UserDataMain
             int numCardBondLevels = _cardBondLevels.Length;
             for(int i = 0; i < numCardBondLevels; ++i)
             {
-                cardBondName = _cardBondLevels[i].name;
+                cardBondName = _cardBondLevels[i].cardBondName;
                 if (!__cardBondLevelIndices.TryGetValue(cardBondName, out cardBondLevelIndices))
                 {
                     cardBondLevelIndices = new List<int>();
