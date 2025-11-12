@@ -477,23 +477,149 @@ public partial class UserDataMain
     }
 
     [Serializable]
-    internal struct CardBonds
+    internal struct CardBoundLevel
+    {
+        public string name;
+
+        public string cardBondName;
+        
+        public UserCardBond.Level value;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 卡牌连携等级名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌连携等级对应连携名
+        {
+            set
+            {
+                cardBondName = value;
+            }
+        }
+        
+        [CSVField]
+        public int 卡牌连携等级卡牌总等级
+        {
+            set
+            {
+                this.value.cardLevels = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌连携等级技能
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    this.value.property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserPropertyData.Skill skill;
+                this.value.property.skills = new UserPropertyData.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserPropertyData.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    this.value.property.skills[i] = skill;
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌连携等级属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    this.value.property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserPropertyData.Attribute attribute;
+                this.value.property.attributes = new UserPropertyData.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserPropertyData.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    this.value.property.attributes[i] = attribute;
+                }
+            }
+        }
+#endif
+    }
+
+    [Serializable]
+    internal struct CardBond
     {
         public string name;
 
         public string[] cardNames;
         
-        public UserCardBond.Level[] levels;
+#if UNITY_EDITOR
+        [CSVField]
+        public string 卡牌连携名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌连携卡牌名字
+        {
+            set
+            {
+                cardNames = value.Split('/');
+            }
+        }
+#endif
     }
 
-    [Header("CardBonds")]
+    [Header("CardBonds")] 
+    [SerializeField] 
+    internal CardBoundLevel[] _cardBondLevels;
     
+#if UNITY_EDITOR
+    [SerializeField, CSV("_cardBondLevels", guidIndex = -1, nameIndex = 0)] 
+    internal string _cardBondLevelsPath;
+#endif
+
     [SerializeField]
-    internal CardBonds[] _cardBounds;
+    internal CardBond[] _cardBonds;
 
 #if UNITY_EDITOR
-    [SerializeField, CSV("_cardBounds", guidIndex = -1, nameIndex = 0)] 
-    internal string _cardBoundsPath;
+    [SerializeField, CSV("_cardBonds", guidIndex = -1, nameIndex = 0)] 
+    internal string _cardBondsPath;
 #endif
     
     private const string NAME_SPACE_USER_CARDS_BONDS_LEVEL = "UserCardsBondsLevel";
@@ -502,24 +628,30 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int i, j, numCardBondsCards, numCardBonds = _cardBounds.Length;
-        CardBonds cardBonds;
+        int i, j, numCardBondLevels, numCardBondCards, numCardBonds = _cardBonds.Length;
+        CardBond cardBond;
         UserCardBond userCardBond;
         UserCardBond.Card userCardBondCard;
+        List<int> cardBondLevelIndices;
         var results = new UserCardBond[numCardBonds];
         for (i = 0; i < numCardBonds; ++i)
         {
-            cardBonds = _cardBounds[i];
-            userCardBond.name = cardBonds.name;
+            cardBond = _cardBonds[i];
+            userCardBond.name = cardBond.name;
             userCardBond.id = __ToID(i);
-            userCardBond.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBonds.name}");
-            userCardBond.levels = cardBonds.levels;
+            userCardBond.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBond.name}");
+            
+            cardBondLevelIndices = __GetCardBondLevelIndices(userCardBond.name);
+            numCardBondLevels = cardBondLevelIndices.Count;
+            userCardBond.levels = new UserCardBond.Level[numCardBondLevels];
+            for (j = 0; j < numCardBondLevels; ++j)
+                userCardBond.levels[j] = _cardBondLevels[cardBondLevelIndices[j]].value;
 
-            numCardBondsCards = cardBonds.cardNames.Length;
-            userCardBond.cards = new UserCardBond.Card[numCardBondsCards];
-            for (j = 0; j < numCardBondsCards; ++j)
+            numCardBondCards = cardBond.cardNames.Length;
+            userCardBond.cards = new UserCardBond.Card[numCardBondCards];
+            for (j = 0; j < numCardBondCards; ++j)
             {
-                userCardBondCard.name = cardBonds.cardNames[j];
+                userCardBondCard.name = cardBond.cardNames[j];
                 
                 userCardBondCard.level = __GetCardLevel(userCardBondCard.name, out _);
                 
@@ -536,10 +668,10 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        var cardBond = _cardBounds[__ToIndex(cardBondID)];
+        var cardBond = _cardBonds[__ToIndex(cardBondID)];
         string key = $"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBond.name}";
         int level = PlayerPrefs.GetInt(key), 
-            cardLevels = cardBond.levels[level].cardLevels, totalCardLevels = 0;
+            cardLevels = _cardBondLevels[__GetCardBondLevelIndices(cardBond.name)[level]].value.cardLevels, totalCardLevels = 0;
 
         bool result = false;
         foreach (var cardName in cardBond.cardNames)
@@ -636,6 +768,33 @@ public partial class UserDataMain
         }
         
         return __cardLevelIndices[index];
+    }
+
+    private Dictionary<string, List<int>> __cardBondLevelIndices;
+
+    private List<int> __GetCardBondLevelIndices(string name)
+    {
+        if (__cardBondLevelIndices == null)
+        {
+            __cardBondLevelIndices = new Dictionary<string, List<int>>();
+            List<int> cardBondLevelIndices;
+            string cardBondName;
+            int numCardBondLevels = _cardBondLevels.Length;
+            for(int i = 0; i < numCardBondLevels; ++i)
+            {
+                cardBondName = _cardBondLevels[i].name;
+                if (!__cardBondLevelIndices.TryGetValue(cardBondName, out cardBondLevelIndices))
+                {
+                    cardBondLevelIndices = new List<int>();
+                    
+                    __cardBondLevelIndices[cardBondName] = cardBondLevelIndices;
+                }
+
+                cardBondLevelIndices.Add(i);
+            }
+        }
+        
+        return __cardBondLevelIndices[name];
     }
 
     private static int __GetCardLevel(string name, out string key)
