@@ -198,7 +198,7 @@ public interface IPurchaseData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator Buy(uint userID, PurchaseType type, int level, Action<long?> onComplete);
+    IEnumerator Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete);
 }
 
 public class PurchaseData : MonoBehaviour, IPurchaseData
@@ -212,7 +212,6 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
     public static IPurchaseData.Output Query(in IPurchaseData.Input input)
     {
         IPurchaseData.Output result;
-        //在服务器，该数据结构要有订单号及状态，如果订单未完成，需要查询平台端有没有完成，完成了执行Buy逻辑
         result.times = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_TIMES));
         result.deadline = PlayerPrefs.GetInt(input.ToString(NAME_SPACE_DEADLINE));
         result.ticks = DateTimeUtility.GetTicks((uint)PlayerPrefs.GetInt(input.ToString(NAME_SPACE_PAY_TIME)));
@@ -343,15 +342,15 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         onComplete(outputs);
     }
 
-    public IEnumerator Buy(uint userID, PurchaseType type, int level, Action<long?> onComplete)
+    public IEnumerator Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete)
     {
         yield return null;
 
         var api = IPurchaseAPI.instance;
         if (api == null)
         {
-            long result = Buy(type, level);
-            onComplete(result);
+            Buy(type, level);
+            onComplete(true);
         }
         else
         {
@@ -364,8 +363,15 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             while(result == null || api.isPending)
                 yield return null;
             
-            //这里实现服务器的时候要注意，平台回调或者确认订单（在服务端，该数据结构要有订单号）完成后，Buy才会被执行（而不是在这里执行）。所以当实现服务器时，这里直接返回结果就行。
-            onComplete(result.Value ? Buy(type, level) : null);
+            if (result.Value)
+            {
+                //这里实现服务器的时候要注意，平台回调或者确认订单（在服务端，该数据结构要有订单号）完成后，Buy才会被执行（而不是在这里执行）。所以当实现服务器时，这里直接返回结果就行。
+                Buy(type, level);
+                
+                onComplete(true);
+            }
+            else
+                onComplete(false);
         }
     }
 
