@@ -354,7 +354,7 @@ public partial class UserDataMain
                             attribute.value += propertyAttribute.value;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            attribute.value = (1.0f + attribute.value) * (1.0f + propertyAttribute.value) - 1.0f;
+                            attribute.value = (1.0f + attribute.value) * propertyAttribute.value - 1.0f;
                             break;
                     }
 
@@ -449,7 +449,7 @@ public partial class UserDataMain
                             skill.damage += propertySkill.damage;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            skill.damage = (1.0f + skill.damage) * (1.0f + propertySkill.damage) - 1.0f;
+                            skill.damage = (1.0f + skill.damage) * propertySkill.damage - 1.0f;
                             break;
                     }
 
