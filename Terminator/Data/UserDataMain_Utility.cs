@@ -335,26 +335,26 @@ public partial class UserDataMain
 
     private void __ApplyAttributes(
         List<UserAttributeData> attributes, 
-        List<UserPropertyData.Attribute> accessoryStageAttributes)
+        List<UserPropertyData.Attribute> propertyAttributes)
     {
-        accessoryStageAttributes.Sort();
+        propertyAttributes.Sort();
 
         UserAttributeData attribute;
         int i, numAttributes = attributes.Count;
-        foreach (var accessoryStageAttribute in accessoryStageAttributes)
+        foreach (var propertyAttribute in propertyAttributes)
         {
             for (i = 0; i < numAttributes; ++i)
             {
                 attribute = attributes[i];
-                if (attribute.type == accessoryStageAttribute.type)
+                if (attribute.type == propertyAttribute.type)
                 {
-                    switch (accessoryStageAttribute.opcode)
+                    switch (propertyAttribute.opcode)
                     {
                         case UserPropertyData.Opcode.Add:
-                            attribute.value += accessoryStageAttribute.value;
+                            attribute.value += propertyAttribute.value;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            attribute.value *= accessoryStageAttribute.value;
+                            attribute.value = (1.0f + attribute.value) * (1.0f + propertyAttribute.value) - 1.0f;
                             break;
                     }
 
@@ -364,10 +364,10 @@ public partial class UserDataMain
                 }
             }
 
-            if (i == numAttributes)
+            if (i == numAttributes && propertyAttribute.opcode == UserPropertyData.Opcode.Add)
             {
-                attribute.type = accessoryStageAttribute.type;
-                attribute.value = accessoryStageAttribute.value;
+                attribute.type = propertyAttribute.type;
+                attribute.value = propertyAttribute.value;
                             
                 attributes.Add(attribute);
                             
@@ -379,27 +379,27 @@ public partial class UserDataMain
     private void __ApplySkills(
         string[] roleSkillNames,
         List<IUserData.Skill> skills, 
-        List<UserPropertyData.Skill> accessoryStageSkills)
+        List<UserPropertyData.Skill> propertySkills)
     {
-        accessoryStageSkills.Sort();
+        propertySkills.Sort();
 
         string skillGroupName;
         IUserData.Skill skill;
         int i, numSkills = skills.Count;
         bool result;
-        foreach (var accessoryStageSkill in accessoryStageSkills)
+        foreach (var propertySkill in propertySkills)
         {
             for (i = 0; i < numSkills; ++i)
             {
                 skill = skills[i];
-                switch (accessoryStageSkill.type)
+                switch (propertySkill.type)
                 {
                     case UserSkillType.Individual:
                         result = UserSkillType.Individual == skill.type;
                         if (result)
-                            result = string.IsNullOrEmpty(accessoryStageSkill.name)
+                            result = string.IsNullOrEmpty(propertySkill.name)
                                 ? Array.IndexOf(roleSkillNames, skill.name) != -1
-                                : skill.name == accessoryStageSkill.name;
+                                : skill.name == propertySkill.name;
                         break;
                     case UserSkillType.Group:
                         switch (skill.type)
@@ -418,7 +418,7 @@ public partial class UserDataMain
                         result = !string.IsNullOrEmpty(skillGroupName);
                         if (result)
                         {
-                            if (string.IsNullOrEmpty(accessoryStageSkill.name))
+                            if (string.IsNullOrEmpty(propertySkill.name))
                             {
                                 result = false;
                                 foreach (var roleSkillName in roleSkillNames)
@@ -432,7 +432,7 @@ public partial class UserDataMain
                                 }
                             }
                             else
-                                result = accessoryStageSkill.name == skillGroupName;
+                                result = propertySkill.name == skillGroupName;
                         }
                         
                         break;
@@ -443,29 +443,29 @@ public partial class UserDataMain
                 
                 if (result)
                 {
-                    switch (accessoryStageSkill.opcode)
+                    switch (propertySkill.opcode)
                     {
                         case UserPropertyData.Opcode.Add:
-                            skill.damage += accessoryStageSkill.damage;
+                            skill.damage += propertySkill.damage;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            skill.damage *= accessoryStageSkill.damage;
+                            skill.damage = (1.0f + skill.damage) * (1.0f + propertySkill.damage) - 1.0f;
                             break;
                     }
 
                     skills[i] = skill;
 
-                    break;
+                    //break;
                 }
             }
 
-            if (i == numSkills)
+            if (i == numSkills && propertySkill.opcode == UserPropertyData.Opcode.Add)
             {
-                skill.type = accessoryStageSkill.type;
-                skill.damage = accessoryStageSkill.damage;
-                if (string.IsNullOrEmpty(accessoryStageSkill.name))
+                skill.type = propertySkill.type;
+                skill.damage = propertySkill.damage;
+                if (string.IsNullOrEmpty(propertySkill.name))
                 {
-                    switch (accessoryStageSkill.type)
+                    switch (propertySkill.type)
                     {
                         case UserSkillType.Individual:
                             foreach (var roleSkillName in roleSkillNames)
@@ -490,7 +490,7 @@ public partial class UserDataMain
                 }
                 else
                 {
-                    skill.name = accessoryStageSkill.name;
+                    skill.name = propertySkill.name;
 
                     skills.Add(skill);
                 }
