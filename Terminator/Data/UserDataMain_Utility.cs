@@ -538,8 +538,6 @@ public partial class UserDataMain
         
         List<UserPropertyData.Skill> skillResults = null;
         List<UserPropertyData.Attribute> attributeResults = null;
-        __ApplyCardBonds(ref attributeResults, ref skillResults);
-
         UserPropertyData property;
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
         int rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
@@ -668,9 +666,6 @@ public partial class UserDataMain
             }
         }
         
-        if(attributeResults != null)
-            __ApplyAttributes(attributes, attributeResults);
-        
         groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
         if(string.IsNullOrEmpty(groupName))
             groupName = _cardGroups[0].name;
@@ -702,6 +697,11 @@ public partial class UserDataMain
             skill.name = __GetSkillGroupName(card.skillName);
             skills.Add(skill);
         }
+
+        __ApplyCardBonds(ref attributeResults, ref skillResults);
+
+        if(attributeResults != null)
+            __ApplyAttributes(attributes, attributeResults);
 
         if(skillResults != null)
             __ApplySkills(role.skillNames, skills, skillResults);
