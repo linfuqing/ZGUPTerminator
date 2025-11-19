@@ -802,6 +802,34 @@ public partial class UserDataMain
         key = $"{NAME_SPACE_USER_CARD_LEVEL}{name}";
         return PlayerPrefs.GetInt(key, -1);
     }
+
+    private void __ApplyCardBonds(ref List<UserPropertyData.Attribute> attributeResults, ref List<UserPropertyData.Skill> skillResults)
+    {
+        int level;
+        foreach (var cardBond in _cardBonds)
+        {
+            level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBond.name}");
+            if(level < 1)
+                continue;
+
+            ref var property = ref _cardBondLevels[__GetCardBondLevelIndices(cardBond.name)[level - 1]].value.property;
+            if (property.attributes != null && property.attributes.Length > 0)
+            {
+                if(attributeResults == null)
+                    attributeResults = new List<UserPropertyData.Attribute>();
+                
+                attributeResults.AddRange(property.attributes);
+            }
+
+            if (property.skills != null && property.skills.Length > 0)
+            {
+                if(skillResults == null)
+                    skillResults = new List<UserPropertyData.Skill>();
+
+                skillResults.AddRange(property.skills);
+            }
+        }
+    }
 }
 
 public partial class UserData

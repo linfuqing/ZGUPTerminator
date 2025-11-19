@@ -534,6 +534,8 @@ public partial class UserDataMain
         
         List<UserPropertyData.Skill> skillResults = null;
         List<UserPropertyData.Attribute> attributeResults = null;
+        __ApplyCardBonds(ref attributeResults, ref skillResults);
+
         UserPropertyData property;
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
         int rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
@@ -1159,6 +1161,8 @@ public partial class UserDataMain
                 }
             }
 
+            __ApplyCardBonds(ref attributeResults, ref skillResults);
+            
             if (attributeResults != null)
                 __ApplyAttributes(attributes, attributeResults);
 
