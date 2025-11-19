@@ -123,6 +123,8 @@ public partial interface IUserData
 
         public uint selectedGroupID;
 
+        public int exp;
+
         /// <summary>
         /// 套装
         /// </summary>

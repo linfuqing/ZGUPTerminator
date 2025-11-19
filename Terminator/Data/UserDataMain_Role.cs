@@ -168,6 +168,18 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_ROLE_RANK = "UserRoleRank";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
     
+    private const string NAME_SPACE_USER_ROLE_EXP = "UserRoleExp";
+
+    public static int roleExp
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_ROLE_EXP);
+
+        set
+        {
+            PlayerPrefs.SetInt(NAME_SPACE_USER_ROLE_EXP, value);
+        }
+    }
+
     public IEnumerator QueryRoles(
         uint userID,
         Action<IUserData.Roles> onComplete)
@@ -182,6 +194,8 @@ public partial class UserDataMain
             result.flag |= IUserData.Roles.Flag.UnlockFirst;
         else if ((flag & Flag.RolesUnlock) != 0)
             result.flag |= IUserData.Roles.Flag.Unlock;
+
+        result.exp = roleExp;
         
         /*if((flag & Flag.RoleUnlockFirst) == Flag.RoleUnlockFirst)
             result.flag |= IUserData.Roles.Flag.RoleUnlockFirst;
@@ -572,7 +586,7 @@ public partial class UserDataMain
             yield break;
         }
 
-        int gold = UserDataMain.gold, exp = UserDataMain.exp;
+        int gold = UserDataMain.gold, exp = roleExp;
         
         if (talent.gold > gold || talent.exp > exp)
         {
@@ -582,7 +596,7 @@ public partial class UserDataMain
         }
 
         UserDataMain.gold = gold - talent.gold;
-        UserDataMain.exp = exp - talent.exp;
+        roleExp = exp - talent.exp;
 
         flag |= UserTalent.Flag.Collected;
         PlayerPrefs.SetInt(key, (int)flag);

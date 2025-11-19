@@ -209,6 +209,10 @@ public partial class UserDataMain
                 exp += reward.count;
                 key = null;
                 break;
+            case UserRewardType.RoleExp:
+                roleExp += reward.count;
+                key = null;
+                break;
             default:
                 return false;
         }
