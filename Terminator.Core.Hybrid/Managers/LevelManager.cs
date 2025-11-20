@@ -134,143 +134,11 @@ public partial class LevelManager : MonoBehaviour
         set => __dataFlag = (ILevelData.Flag)value;
     }*/
     
-    public int hpPercentage
-    {
-        get;
-
-        set;
-    }
-    
     public int rage
     {
         get;
 
         set;
-    }
-
-    public void Set(
-        int value, 
-        int max, 
-        int maxExp, 
-        int exp, 
-        int killCount, 
-        int killBossCount, 
-        int gold, 
-        int stage)
-    {
-        bool isDirty = false;
-        if (stage != __stage)
-        {
-            print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
-            isDirty = true;
-
-            if (_onStage != null)
-                _onStage.Invoke(stage.ToString());
-            
-            int time = __GetStageTime(out float now);
-
-            if (!isRestart && stage > __stage)
-                __Submit(stage, gold, exp, maxExp, time);
-
-            __stageTime = now;
-
-            //__dataFlag = 0;
-            
-            __stage = stage;
-        }
-
-        if (value != __value)
-        {
-            isDirty = true;
-            
-            if (__stages != null)
-            {
-                foreach (var stageIndex in __stages)
-                {
-                    ref var temp = ref _stages[stageIndex];
-                    if (temp.max > 0 && temp.onCount != null)
-                        temp.onCount.Invoke(Mathf.Max(0, temp.max - value).ToString());
-                }
-            }
-
-            if (_progressbar != null)
-                _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
-
-            __value = value;
-        }
-        else if (max != __max)
-        {
-            isDirty = true;
-
-            if (_progressbar != null)
-                _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
-
-            __max = max;
-        }
-
-        if (exp != __exp || maxExp != __maxExp)
-        {
-            isDirty = true;
-
-            if (_expProgressbar != null)
-                _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp); 
-            else if(exp != __exp && _onExp != null)
-                _onExp.Invoke(exp.ToString());
-
-            __exp = exp;
-            __maxExp = maxExp;
-        }
-
-        if (killCount != __killCount)
-        {
-            if (killCount > 0)
-            {
-                isDirty = true;
-
-                if (_onKillCount != null)
-                    _onKillCount.Invoke(killCount.ToString());
-
-                __killCount = killCount;
-            }
-            //else
-            //    __ShowTime();
-        }
-        
-        if (killBossCount != __killBossCount)
-        {
-            if (killBossCount > 0)
-            {
-                isDirty = true;
-
-                if (_onKillBossCount != null)
-                    _onKillBossCount.Invoke(killBossCount.ToString());
-
-                __killBossCount = killBossCount;
-            }
-            //else
-            //    __ShowTime();
-        }
-
-        if (gold != __gold)
-        {
-            isDirty = true;
-
-            if (_onGoldCount != null)
-                _onGoldCount.Invoke(gold.ToString());
-            
-            __gold = gold;
-        }
-
-        if (isRestart)
-        {
-            //__dataFlag = 0;
-            
-            if(__skillSelectionGuideNames != null)
-                __skillSelectionGuideNames.Clear();
-        }
-        
-        if(isDirty)
-            IAnalytics.instance?.Set(value, max, maxExp, exp, killCount, killBossCount, gold, stage);
     }
 
     public bool EnableStage(string name)
@@ -404,7 +272,7 @@ public partial class LevelManager : MonoBehaviour
                 //__dataFlag, 
                 __stage,
                 Mathf.RoundToInt(__GetStageTime(out _)), 
-                hpPercentage, 
+                __hpPercentage, 
                 __killCount,
                 __killBossCount, 
                 __gold,
@@ -528,7 +396,7 @@ public partial class LevelManager : MonoBehaviour
             //__dataFlag, 
             stage,
             time, 
-            hpPercentage, 
+            __hpPercentage, 
             __killCount, 
             __killBossCount, 
             gold,

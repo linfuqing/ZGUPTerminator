@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -8,9 +9,29 @@ using Unity.Entities.Serialization;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Profiling;
-using Unity.Scenes;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
+
+public enum LevelQuestType : byte
+{
+    Unknown,
+    
+    Once, 
+    HPPercentage, 
+    KillCount, 
+    Gold, 
+    Time
+}
+
+[StructLayout(LayoutKind.Explicit), Serializable]
+public struct LevelQuest
+{
+    [FieldOffset(0)]
+    public LevelQuestType type;
+
+    [FieldOffset(1)]
+    public byte value;
+}
 
 public struct LevelSpawners
 {
@@ -738,11 +759,21 @@ public struct LevelObject : IComponentData
 
 public static class LevelShared
 {
-    private struct Stage
+    public struct Stage
     {
+        public SpawnerAttribute.Scale spawnerAttributeScale;
+        public FixedList32Bytes<LevelQuest> quests;
+
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Stage>();
     }
     
+    private struct Stages
+    {
+        private static readonly SharedStatic<FixedList512Bytes<Stage>> Value = SharedStatic<FixedList512Bytes<Stage>>.GetOrCreate<Stages>();
+        
+        public static ref FixedList512Bytes<Stage> values => ref Value.Data;
+    }
+
     private struct Exp
     {
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Exp>();
@@ -753,13 +784,13 @@ public static class LevelShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ExpMax>();
     }
     
-    private struct SpawnerAttributeScale
+    /*private struct SpawnerAttributeScale
     {
         private static readonly SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>> Value =
             SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>>.GetOrCreate<SpawnerAttributeScale>();
 
         public static ref FixedList512Bytes<SpawnerAttribute.Scale> values => ref Value.Data;
-    }
+    }*/
 
     public static int stage
     {
@@ -782,5 +813,5 @@ public static class LevelShared
         set => ExpMax.Value.Data = value;
     }
 
-    public static ref FixedList512Bytes<SpawnerAttribute.Scale> spawnerAttributeScales => ref SpawnerAttributeScale.values;
+    public static ref FixedList512Bytes<Stage> stages => ref Stages.values;
 }

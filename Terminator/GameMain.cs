@@ -622,12 +622,17 @@ public class GameMain : GameUser
 
             IRewardData.instance = new GameRewardData(userID);
             
-            LevelShared.spawnerAttributeScales.Clear();
+            LevelShared.stages.Clear();
 
             if (_defaultSpawnerAttributes != null)
             {
-                foreach (var spawnerAttribute in _defaultSpawnerAttributes)
-                    LevelShared.spawnerAttributeScales.Add(spawnerAttribute);
+                LevelShared.Stage stage;
+                foreach (var defaultSpawnerAttribute in _defaultSpawnerAttributes)
+                {
+                    stage.spawnerAttributeScale = defaultSpawnerAttribute;
+                    stage.quests = default;
+                    LevelShared.stages.Add(stage);
+                }
             }
         }
 

@@ -26,6 +26,60 @@ public partial class UserDataMain
         public UserRewardData[] directRewards;
         
         public StageReward[] indirectRewards;
+
+        public UserLevelStageData ToLevel(string levelName, int stage)
+        {
+            UserLevelStageData result;
+            result.spawnerAttributeScale = spawnerAttribute;
+            int numQuests = indirectRewards == null ? 0 : indirectRewards.Length, i;
+            for (i = 0; i < numQuests; ++i)
+            {
+                ref var indirectReward = ref indirectRewards[i];
+
+                if ((__GetStageRewardFlag(indirectRewards[i].name, levelName, stage, indirectReward.conditionValue,
+                        indirectReward.condition, out _) & UserStageReward.Flag.Unlocked) ==
+                    UserStageReward.Flag.Unlocked)
+                    break;
+            }
+
+            if (i < numQuests)
+            {
+                result.quests = numQuests > 0 ? new LevelQuest[numQuests] : null;
+                for (i = 0; i < numQuests; ++i)
+                {
+                    ref var source = ref indirectRewards[i];
+                    ref var destination = ref result.quests[i];
+
+                    switch (source.condition)
+                    {
+                        case UserStageReward.Condition.Once:
+                            destination.type = LevelQuestType.Once;
+                            break;
+                        case UserStageReward.Condition.HPPercentage:
+                            destination.type = LevelQuestType.HPPercentage;
+                            break;
+                        case UserStageReward.Condition.KillCount:
+                            destination.type = LevelQuestType.KillCount;
+                            break;
+                        case UserStageReward.Condition.Gold:
+                            destination.type = LevelQuestType.Gold;
+                            break;
+                        case UserStageReward.Condition.Time:
+                            destination.type = LevelQuestType.Time;
+                            break;
+                        default:
+                            destination.type = LevelQuestType.Unknown;
+                            break;
+                    }
+
+                    destination.value = (byte)source.conditionValue;
+                }
+            }
+            else
+                result.quests = null;
+            
+            return result;
+        }
         
 #if UNITY_EDITOR
         [CSVField]
@@ -298,9 +352,9 @@ public partial class UserDataMain
             userID, 
             stageProperty.cache.skills);
 
-        stageProperty.spawnerAttributes = new SpawnerAttribute.Scale[numStages];
+        stageProperty.levelStages = new UserLevelStageData[numStages];
         for (int i = 0; i < numStages; ++i)
-            stageProperty.spawnerAttributes[i] = __GetStage(level, i).spawnerAttribute;
+            stageProperty.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i);
         
         onComplete(stageProperty);
     }
@@ -459,7 +513,77 @@ public partial class UserDataMain
         return __stageNameToIndices.TryGetValue(name, out int index) ? index : -1;
     }
 
-    private UserStageReward.Flag __GetStageRewardFlag(
+    private bool __ApplyStageRewards(
+        string levelName, 
+        int stage, 
+        in StageReward stageReward, 
+        List<UserReward> outRewards)
+    {
+        var flag = __GetStageRewardFlag(
+            stageReward.name,
+            levelName,
+            stage,
+            stageReward.conditionValue, 
+            stageReward.condition,
+            out var key);
+        if ((flag & UserStageReward.Flag.Unlocked) != UserStageReward.Flag.Unlocked ||
+            (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
+            return false;
+                    
+        flag |= UserStageReward.Flag.Collected;
+
+        PlayerPrefs.SetInt(key, (int)flag);
+
+        __ApplyRewards(stageReward.values, outRewards);
+
+        return true;
+    }
+    
+    private int __GetDontCacheStage(Level level, int closestStage)
+    {
+        int stage;
+        for (stage = closestStage; stage > 0; --stage)
+        {
+            if ((__GetStage(level, stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
+                break;
+        }
+
+        return stage;
+    }
+    
+    private static void __SubmitStageFlag()
+    {
+        var flag = UserDataMain.flag;
+        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
+        if(isDirty)
+            flag &= ~Flag.PurchasesUnlockFirst;
+        
+        if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
+        {
+            flag &= ~Flag.CardsUnlockFirst;
+
+            isDirty = true;
+        }
+
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
+        {
+            flag |= Flag.TalentsUnlock;
+
+            isDirty = true;
+        }
+
+        /*if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
+        {
+            flag |= Flag.RoleUnlock;
+
+            isDirty = true;
+        }*/
+        
+        if(isDirty)
+            UserDataMain.flag = flag;
+    }
+
+    private static UserStageReward.Flag __GetStageRewardFlag(
         string stageRewardName,
         string levelName, 
         int stage, 
@@ -510,75 +634,6 @@ public partial class UserDataMain
         return flag;
     }
 
-    private bool __ApplyStageRewards(
-        string levelName, 
-        int stage, 
-        in StageReward stageReward, 
-        List<UserReward> outRewards)
-    {
-        var flag = __GetStageRewardFlag(
-            stageReward.name,
-            levelName,
-            stage,
-            stageReward.conditionValue, 
-            stageReward.condition,
-            out var key);
-        if ((flag & UserStageReward.Flag.Unlocked) != UserStageReward.Flag.Unlocked ||
-            (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
-            return false;
-                    
-        flag |= UserStageReward.Flag.Collected;
-
-        PlayerPrefs.SetInt(key, (int)flag);
-
-        __ApplyRewards(stageReward.values, outRewards);
-
-        return true;
-    }
-    
-    private void __SubmitStageFlag()
-    {
-        var flag = UserDataMain.flag;
-        bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
-        if(isDirty)
-            flag &= ~Flag.PurchasesUnlockFirst;
-        
-        if ((flag & Flag.CardsUnlockFirst) == Flag.CardsUnlockFirst)
-        {
-            flag &= ~Flag.CardsUnlockFirst;
-
-            isDirty = true;
-        }
-
-        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
-        {
-            flag |= Flag.TalentsUnlock;
-
-            isDirty = true;
-        }
-
-        /*if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
-        {
-            flag |= Flag.RoleUnlock;
-
-            isDirty = true;
-        }*/
-        
-        if(isDirty)
-            UserDataMain.flag = flag;
-    }
-
-    private int __GetDontCacheStage(Level level, int closestStage)
-    {
-        int stage;
-        for (stage = closestStage; stage > 0; --stage)
-        {
-            if ((__GetStage(level, stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
-                break;
-        }
-
-        return stage;
-    }
 }
 
 public partial class UserData

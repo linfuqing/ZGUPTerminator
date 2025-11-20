@@ -299,7 +299,7 @@ public partial class LevelSystemManaged
 
         public void Reset(LevelSystemManaged system)
         {
-            SpawnerShared.attributeScale = __stage < LevelShared.spawnerAttributeScales.Length ? LevelShared.spawnerAttributeScales[__stage] : default;
+            SpawnerShared.attributeScale = __stage < LevelShared.stages.Length ? LevelShared.stages[__stage].spawnerAttributeScale : default;
 
             version = default;
             
@@ -352,7 +352,7 @@ public partial class LevelSystemManaged
             
             __stage = value;
 
-            SpawnerShared.attributeScale = value < LevelShared.spawnerAttributeScales.Length ? LevelShared.spawnerAttributeScales[value] : default;
+            SpawnerShared.attributeScale = value < LevelShared.stages.Length ? LevelShared.stages[value].spawnerAttributeScale : default;
             
             __bulletEntityType.Update(system);
             __bulletDefinitions.Update(system);

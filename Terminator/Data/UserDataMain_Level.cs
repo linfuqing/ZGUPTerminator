@@ -248,9 +248,9 @@ public partial class UserDataMain
         result.value = __ApplyProperty(userID);
 
         int numStages = __GetStageCount(level);
-        result.spawnerAttributes = new SpawnerAttribute.Scale[numStages];
+        result.levelStages = new UserLevelStageData[numStages];
         for (int i = 0; i < numStages; ++i)
-            result.spawnerAttributes[i] = __GetStage(level, i).spawnerAttribute;
+            result.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i);
 
         onComplete(result);
     }

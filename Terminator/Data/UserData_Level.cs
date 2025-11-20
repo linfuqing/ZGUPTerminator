@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Unity.Collections;
 using UnityEngine;
 using ZG;
 
@@ -9,6 +10,24 @@ public struct UserLevel
     public uint id;
     //public int energy;
     public UserStage[] stages;
+}
+
+[Serializable]
+public struct UserLevelStageData
+{
+    public SpawnerAttribute.Scale spawnerAttributeScale;
+    public LevelQuest[] quests;
+
+    public LevelShared.Stage ToShared()
+    {
+        LevelShared.Stage result;
+        result.spawnerAttributeScale = spawnerAttributeScale;
+        result.quests = default;
+        foreach (var quest in quests)
+            result.quests.Add(quest);
+
+        return result;
+    }
 }
 
 public partial interface IUserData
@@ -85,12 +104,12 @@ public partial interface IUserData
         public Skill[] skills;
         public UserAttributeData[] attributes;
     }
-
+    
     public struct LevelProperty
     {
         public int stage;
         public Property value;
-        public SpawnerAttribute.Scale[] spawnerAttributes;
+        public UserLevelStageData[] levelStages;
     }
 
     IEnumerator ApplyLevel(

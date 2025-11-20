@@ -1,7 +1,7 @@
 {
   "name": "cn.com.zerogame.unitypackages.terminator",
   "displayName": "ZGUP Terminator",
-  "version": "0.23.121",
+  "version": "0.23.122",
   "unity": "2022.3",
   "unityRelease": "0f1",
   "dependencies": {

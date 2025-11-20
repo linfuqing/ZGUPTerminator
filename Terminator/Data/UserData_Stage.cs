@@ -150,7 +150,7 @@ public partial interface IUserData
 
         public StageCache cache;
         
-        public SpawnerAttribute.Scale[] spawnerAttributes;
+        public UserLevelStageData[] levelStages;
     }
 
     public struct StageResult

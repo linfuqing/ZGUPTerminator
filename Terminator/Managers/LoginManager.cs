@@ -1084,7 +1084,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __ApplyLevel(IUserData.LevelProperty property)
     {
-        if (property.spawnerAttributes == null)
+        if (property.levelStages == null)
         {
             __isStart = false;
 
@@ -1095,10 +1095,10 @@ public sealed class LoginManager : MonoBehaviour
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
 
-        LevelShared.spawnerAttributeScales.Clear();
+        LevelShared.stages.Clear();
 
-        foreach (var spawnerAttribute in property.spawnerAttributes)
-            LevelShared.spawnerAttributeScales.Add(spawnerAttribute);
+        foreach (var levelStage in property.levelStages)
+            LevelShared.stages.Add(levelStage.ToShared());
 
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
@@ -1126,10 +1126,10 @@ public sealed class LoginManager : MonoBehaviour
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
         
-        LevelShared.spawnerAttributeScales.Clear();
+        LevelShared.stages.Clear();
 
-        foreach (var spawnerAttribute in property.spawnerAttributes)
-            LevelShared.spawnerAttributeScales.Add(spawnerAttribute);
+        foreach (var levelStage in property.levelStages)
+            LevelShared.stages.Add(levelStage.ToShared());
         
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
