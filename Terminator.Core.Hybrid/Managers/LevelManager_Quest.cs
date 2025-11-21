@@ -213,11 +213,7 @@ public partial class LevelManager
             foreach (var questStatus in __questStates)
             {
                 if (questStatus.Value.type == type)
-                {
                     questStatus.SetCount(value);
-
-                    break;
-                }
             }
         }
     }
