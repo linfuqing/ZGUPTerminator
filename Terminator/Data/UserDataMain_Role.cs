@@ -577,6 +577,22 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         var talent = _talents[__ToIndex(talentID)];
+        if (string.IsNullOrEmpty(talent.roleName))
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+        int roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{talent.roleName}"), 
+            roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{talent.roleName}");
+        if(talent.roleRank > roleRank ||
+               talent.roleCount > roleCount)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+        
         string key = $"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}";
         var flag = (UserTalent.Flag)PlayerPrefs.GetInt(key);
         if ((flag & UserTalent.Flag.Collected) == UserTalent.Flag.Collected)
@@ -612,9 +628,9 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         string roleName = _roles[__ToIndex(roleID)].name;
-        int numTalents = _talents.Length, 
-            roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{roleName}"), 
-            roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{roleName}");
+        int numTalents = _talents.Length;
+            //roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{roleName}"), 
+            //roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{roleName}");
         Talent talent;
         UserTalent userTalent;
         var userTalents = new List<UserTalent>();
