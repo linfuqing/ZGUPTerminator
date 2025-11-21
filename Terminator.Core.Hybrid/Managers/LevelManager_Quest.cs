@@ -266,7 +266,7 @@ public partial class LevelManager
         }
 
         ref var stages = ref LevelShared.stages;
-        if (stages.Length > 0)
+        if (stages.Length > value)
         {
             var stage = stages[value];
 
