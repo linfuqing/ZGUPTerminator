@@ -55,7 +55,12 @@ public partial class UserDataMain
                 for (i = 0; i < numQuests; ++i)
                 {
                     ref var source = ref indirectRewards[i];
-
+                    
+                    if ((__GetStageRewardFlag(indirectRewards[i].name, levelName, stage, source.conditionValue,
+                            source.condition, out _) & UserStageReward.Flag.Unlocked) ==
+                        UserStageReward.Flag.Unlocked)
+                        continue;
+                    
                     switch (source.condition)
                     {
                         case UserStageReward.Condition.Once:
