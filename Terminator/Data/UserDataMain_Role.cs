@@ -621,9 +621,9 @@ public partial class UserDataMain
         for (int i = 0; i < numTalents; ++i)
         {
             talent = _talents[i];
-            if(talent.roleName != roleName || 
+            if(talent.roleName != roleName/* || 
                talent.roleRank != roleRank ||
-               talent.roleCount > roleCount)
+               talent.roleCount > roleCount*/)
                 continue;
             
             userTalent.name = talent.name;
