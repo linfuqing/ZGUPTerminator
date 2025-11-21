@@ -250,7 +250,7 @@ public partial class UserDataMain
         int numStages = __GetStageCount(level);
         result.levelStages = new UserLevelStageData[numStages];
         for (int i = 0; i < numStages; ++i)
-            result.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i);
+            result.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i, !IsLevelChapter(level.name));
 
         onComplete(result);
     }

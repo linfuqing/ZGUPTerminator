@@ -27,28 +27,34 @@ public partial class UserDataMain
         
         public StageReward[] indirectRewards;
 
-        public UserLevelStageData ToLevel(string levelName, int stage)
+        public UserLevelStageData ToLevel(string levelName, int stage, bool isForce)
         {
             UserLevelStageData result;
             result.spawnerAttributeScale = spawnerAttribute;
             int numQuests = indirectRewards == null ? 0 : indirectRewards.Length, i;
-            for (i = 0; i < numQuests; ++i)
+            if (!isForce)
             {
-                ref var indirectReward = ref indirectRewards[i];
+                for (i = 0; i < numQuests; ++i)
+                {
+                    ref var indirectReward = ref indirectRewards[i];
 
-                if ((__GetStageRewardFlag(indirectRewards[i].name, levelName, stage, indirectReward.conditionValue,
-                        indirectReward.condition, out _) & UserStageReward.Flag.Unlocked) ==
-                    UserStageReward.Flag.Unlocked)
-                    break;
+                    if ((__GetStageRewardFlag(indirectRewards[i].name, levelName, stage, indirectReward.conditionValue,
+                            indirectReward.condition, out _) & UserStageReward.Flag.Unlocked) ==
+                        UserStageReward.Flag.Unlocked)
+                    {
+                        isForce = true;
+                        break;
+                    }
+                }
             }
 
-            if (i < numQuests)
+            if (isForce)
             {
-                result.quests = numQuests > 0 ? new LevelQuest[numQuests] : null;
+                List<LevelQuest> results = null;
+                LevelQuest destination;
                 for (i = 0; i < numQuests; ++i)
                 {
                     ref var source = ref indirectRewards[i];
-                    ref var destination = ref result.quests[i];
 
                     switch (source.condition)
                     {
@@ -68,12 +74,18 @@ public partial class UserDataMain
                             destination.type = LevelQuestType.Time;
                             break;
                         default:
-                            destination.type = LevelQuestType.Unknown;
-                            break;
+                            continue;
                     }
 
                     destination.value = (byte)source.conditionValue;
+                    
+                    if(results == null)
+                        results = new  List<LevelQuest>();
+                    
+                    results.Add(destination);
                 }
+                
+                result.quests = results?.ToArray();
             }
             else
                 result.quests = null;
@@ -354,7 +366,7 @@ public partial class UserDataMain
 
         stageProperty.levelStages = new UserLevelStageData[numStages];
         for (int i = 0; i < numStages; ++i)
-            stageProperty.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i);
+            stageProperty.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i, !IsLevelChapter(level.name));
         
         onComplete(stageProperty);
     }
