@@ -250,22 +250,23 @@ public partial class UserData
         
         yield return null;
         
-        __SetStageKillCount(temp.name, temp.stage, killCount);
-        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+        __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
+
+        __SetStageKillCount(temp.name, temp.stage, killCount - temp.killCount);
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount - temp.killBossCount);
         __SetStageGold(temp.name, temp.stage, gold);
 
         if (temp.stage < stage)
         {
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
             __SetStageTime(temp.name, temp.stage, time);
+            
+            temp.stage = stage;
+            temp.killCount = killCount;
+            temp.killBossCount = killBossCount;
         }
 
-        __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
-        
-        temp.stage = stage;
         temp.gold = gold;
-        temp.killCount = killCount;
-        temp.killBossCount = killBossCount;
         UserData.levelCache = temp;
         
         onComplete(true);

@@ -751,9 +751,9 @@ public partial class UserData
 
         __SubmitStageFlag(temp.name, stage, out _);
 
-        __SetStageKillCount(temp.name, temp.stage, killCount);
+        __SetStageKillCount(temp.name, temp.stage, killCount - temp.killCount);
 
-        __SetStageKillBossCount(temp.name, temp.stage, killBossCount);
+        __SetStageKillBossCount(temp.name, temp.stage, killBossCount - temp.killBossCount);
 
         __SetStageGold(temp.name, temp.stage, gold);
 
@@ -775,13 +775,13 @@ public partial class UserData
                 stageCache.ToString());
             
             temp.stage = stage;
+            temp.killCount = Mathf.Max(temp.killCount, killCount);
+            temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
         }
         else
             result.flag = (int)GetStageFlag(temp.name, temp.stage - 1);
 
         temp.gold = Mathf.Max(temp.gold, gold);
-        temp.killCount = Mathf.Max(temp.killCount, killCount);
-        temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
         UserData.levelCache = temp;
         
         onComplete(result);

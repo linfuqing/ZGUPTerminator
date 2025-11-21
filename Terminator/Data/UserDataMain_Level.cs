@@ -498,7 +498,7 @@ public partial class UserDataMain
                 __levelChapterToIndices.Add(_levelChapters[i].name, i);
         }
 
-        return __levelChapterToIndices[name];
+        return __levelChapterToIndices.GetValueOrDefault(name, -1);
     }
 
     private Dictionary<string, int> __levelTicketIndices;

@@ -35,6 +35,7 @@ public partial class LevelManager
 
         public void Dispose()
         {
+            Style.onDestroy.Invoke();
             Destroy(Style.gameObject, DestroyTime);
         }
 
@@ -68,6 +69,8 @@ public partial class LevelManager
     
     private List<QuestStatus> __questStates;
 
+    private int __stageKillCount;
+    private int __stageGold;
     private int __hpPercentage;
 
     public int hpPercentage
@@ -79,6 +82,10 @@ public partial class LevelManager
             __hpPercentage = value;
         }
     }
+
+    public int stageKillCount => __killCount - __stageKillCount;
+    
+    public int stageGold => __gold - __stageGold;
 
     public void Set(
         int value, 
@@ -96,9 +103,12 @@ public partial class LevelManager
         {
             print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
             isDirty = true;
-            
+
             __CreateStageQuests(stage);
             
+            __stageKillCount = __killCount;
+            __stageGold = __gold;
+
             if (_onStage != null)
                 _onStage.Invoke(stage.ToString());
             
@@ -158,7 +168,7 @@ public partial class LevelManager
         {
             isDirty = true;
 
-            __SetStageQuestValue(killCount, __killCount, LevelQuestType.KillCount);
+            __SetStageQuestValue(killCount - __stageKillCount, stageKillCount, LevelQuestType.KillCount);
 
             if (_onKillCount != null)
                 _onKillCount.Invoke(killCount.ToString());
@@ -185,7 +195,7 @@ public partial class LevelManager
         {
             isDirty = true;
 
-            __SetStageQuestValue(gold, __gold, LevelQuestType.Gold);
+            __SetStageQuestValue(gold - __stageGold, stageGold, LevelQuestType.Gold);
 
             if (_onGoldCount != null)
                 _onGoldCount.Invoke(gold.ToString());
@@ -239,10 +249,10 @@ public partial class LevelManager
                         questStatus.SetResult(__hpPercentage >= questStatus.Value.value);
                         break;
                     case LevelQuestType.KillCount:
-                        questStatus.SetResult(__killCount >= questStatus.Value.value);
+                        questStatus.SetResult(stageKillCount >= questStatus.Value.value);
                         break;
                     case LevelQuestType.Gold:
-                        questStatus.SetResult(__gold > questStatus.Value.value);
+                        questStatus.SetResult(stageGold >= questStatus.Value.value);
                         break;
                     case LevelQuestType.Time:
                         questStatus.SetResult(__GetStageTime(out _) <= questStatus.Value.value);
@@ -277,13 +287,13 @@ public partial class LevelManager
                                 questStatus.SetResult(false);
                             break;
                         case LevelQuestType.HPPercentage:
-                            questStatus.SetCount(__hpPercentage, 0);
+                            questStatus.SetCount(0, 0);
                             break;
                         case LevelQuestType.KillCount:
-                            questStatus.SetCount(__killCount, 0);
+                            questStatus.SetCount(0, stageKillCount);
                             break;
                         case LevelQuestType.Gold:
-                            questStatus.SetCount(__gold, 0);
+                            questStatus.SetCount(0, stageGold);
                             break;
                         /*case LevelManagerShared.QuestType.Time:
                             questStatus.SetCount(__GetStageTime(out _) <= questStatus.Value.count);

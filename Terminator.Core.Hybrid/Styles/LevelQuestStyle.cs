@@ -5,6 +5,7 @@ using UnityEngine.Events;
 
 public class LevelQuestStyle : MonoBehaviour
 {
+    public UnityEvent onDestroy;
     public UnityEvent onSuccess;
     public UnityEvent onFail;
     public UnityEvent onEnable;
