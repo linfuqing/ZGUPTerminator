@@ -77,7 +77,7 @@ public partial class UserDataMain
                             continue;
                     }
 
-                    destination.value = (byte)source.conditionValue;
+                    destination.value = source.conditionValue;
                     
                     if(results == null)
                         results = new  List<LevelQuest>();

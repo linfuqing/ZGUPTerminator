@@ -23,8 +23,11 @@ public struct UserLevelStageData
         LevelShared.Stage result;
         result.spawnerAttributeScale = spawnerAttributeScale;
         result.quests = default;
-        foreach (var quest in quests)
-            result.quests.Add(quest);
+        if (quests != null)
+        {
+            foreach (var quest in quests)
+                result.quests.Add(quest);
+        }
 
         return result;
     }

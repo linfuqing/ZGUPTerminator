@@ -14,8 +14,6 @@ using Random = Unity.Mathematics.Random;
 
 public enum LevelQuestType : byte
 {
-    Unknown,
-    
     Once, 
     HPPercentage, 
     KillCount, 
@@ -30,7 +28,7 @@ public struct LevelQuest
     public LevelQuestType type;
 
     [FieldOffset(1)]
-    public byte value;
+    public int value;
 }
 
 public struct LevelSpawners
