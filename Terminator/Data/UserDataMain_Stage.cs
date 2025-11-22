@@ -632,7 +632,7 @@ public partial class UserDataMain
                     break;
                 case UserStageReward.Condition.Gold:
                     if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageGold(levelName, stage) <= conditionValue)
+                        UserData.GetStageGold(levelName, stage) >= conditionValue)
                         flag |= UserStageReward.Flag.Unlocked;
                     break;
                 case UserStageReward.Condition.HPPercentage:
