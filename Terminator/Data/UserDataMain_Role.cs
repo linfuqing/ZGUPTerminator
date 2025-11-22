@@ -539,7 +539,7 @@ public partial class UserDataMain
             yield break;
         }
 
-        var roleRank = _roleRanks[rank];
+        var roleRank = _roleRanks[roleRankIndices[rank]];
         string countKey = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
         int count = PlayerPrefs.GetInt(countKey);
         if(count < roleRank.count)
