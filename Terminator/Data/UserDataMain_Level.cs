@@ -557,18 +557,32 @@ public partial class UserDataMain
         public int stageIndex;
         public int levelIndex;
         public uint rewardID;
+
+        public uint GetRewardID(int index)
+        {
+            return rewardID + (uint)index;
+        }
+    }
+
+    private struct LevelStageRewardInfo
+    {
+        public uint stageID;
+        public int index;
     }
     
     private Dictionary<uint, LevelStageInfo> __levelStageInfos;
+    private Dictionary<uint, LevelStageRewardInfo> __levelStageRewardInfos;
 
     private void __BuildLevelStages()
     {
         __levelStageIDs = new Dictionary<(int, int), uint>();
         __levelStageInfos = new Dictionary<uint, LevelStageInfo>();
+        __levelStageRewardInfos = new Dictionary<uint, LevelStageRewardInfo>();
             
-        int rewardIndex = 0, stageIndex = 0, numLevels = _levels.Length, numStages, i, j;
+        int rewardIndex = 0, stageIndex = 0, numLevels = _levels.Length, numStages, numStageRewards, i, j, k;
         uint id;
         LevelStageInfo stageInfo;
+        LevelStageRewardInfo rewardInfo;
         for (i = 0; i < numLevels; ++i)
         {
             ref var level = ref _levels[i];
@@ -584,9 +598,18 @@ public partial class UserDataMain
                 stageInfo.stageIndex = j;
                 stageInfo.rewardID = __ToID(rewardIndex);
 
+                rewardInfo.stageID = id;
+                numStageRewards = __GetStage(level, j).indirectRewards.Length;
+                for (k = 0; k < numStageRewards; ++k)
+                {
+                    rewardInfo.index = k;
+                    
+                    __levelStageRewardInfos[stageInfo.GetRewardID(k)] = rewardInfo;
+                }
+
                 __levelStageInfos[id] = stageInfo;
 
-                rewardIndex += __GetStage(level, j).indirectRewards.Length;
+                rewardIndex += numStageRewards;
             }
         }
     }
@@ -605,6 +628,14 @@ public partial class UserDataMain
             __BuildLevelStages();
         
         return __levelStageInfos[stageID];
+    }
+
+    private LevelStageRewardInfo __GetLevelStageRewardInfo(uint rewardID)
+    {
+        if (__levelStageRewardInfos == null)
+            __BuildLevelStages();
+        
+        return __levelStageRewardInfos[rewardID];
     }
 
     private int __GetChapterStageRewardCount()

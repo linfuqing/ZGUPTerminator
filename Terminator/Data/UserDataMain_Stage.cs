@@ -281,7 +281,7 @@ public partial class UserDataMain
         {
             stageReward = stage.indirectRewards[i];
             userStageReward.name = stageReward.name;
-            userStageReward.id = levelStage.rewardID;
+            userStageReward.id = levelStage.rewardID + (uint)i;
             userStageReward.flag = __GetStageRewardFlag(
                 stageReward.name,
                 level.name,
@@ -382,43 +382,20 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int i, j, 
-            stageRewardIndex = __ToIndex(stageRewardID), 
-            numStages, 
-            numStageRewards, 
-            numChapters = Mathf.Min(_levelChapters.Length, UserData.chapter + 1);
-        Level level;
-        Stage stage;
-        List<UserReward> rewards = null;
-        for (i = 0; i < numChapters; ++i)
+        var rewardInfo = __GetLevelStageRewardInfo(stageRewardID);
+        var stageInfo = __GetLevelStageInfo(rewardInfo.stageID);
+        var level = _levels[stageInfo.levelIndex];
+        
+        var rewards = new List<UserReward>();
+        if (__ApplyStageRewards(
+                level.name, 
+                stageInfo.stageIndex, 
+                __GetStage(level, stageInfo.stageIndex).indirectRewards[rewardInfo.index], 
+                rewards))
         {
-            level = _levels[__GetLevelIndex(_levelChapters[i].name)];
-            numStages = __GetStageCount(level);
-            for (j = 0; j < numStages; ++j)
-            {
-                stage = __GetStage(level, j);
+            onComplete(rewards.ToArray());
 
-                numStageRewards = stage.indirectRewards.Length;
-                if (stageRewardIndex < numStageRewards)
-                {
-                    if (rewards == null)
-                        rewards = new List<UserReward>();
-                    
-                    if (__ApplyStageRewards(level.name, 
-                            j, 
-                            stage.indirectRewards[stageRewardIndex], 
-                            rewards))
-                    {
-                        onComplete(rewards.ToArray());
-
-                        yield break;
-                    }
-
-                    break;
-                }
-
-                stageRewardIndex -= numStageRewards;
-            }
+            yield break;
         }
         
         onComplete(null);
