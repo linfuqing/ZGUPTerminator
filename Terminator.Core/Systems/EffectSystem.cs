@@ -1088,12 +1088,27 @@ public partial struct EffectSystem : ISystem
                                             Math.FromToRotation(math.up(), closestHit.SurfaceNormal),
                                             closestHit.Position);
 
-                                        LocalToWorld localToWorld;
-                                        localToWorld.Value = math.float4x4(transform);
-                                        localToWorlds[entity] = localToWorld;
+                                        source.Value = math.float4x4(transform);
+
+                                        localToWorlds[entity] = source;
                                     }
                                 }
 
+                                __Drop(
+                                    damageLayerMask, 
+                                    cameraRotation,
+                                    transform,
+                                    entity, 
+                                    instanceDamage,
+                                    instanceDamageParent,
+                                    prefabs,
+                                    ref damageInstances,
+                                    //ref entityManager,
+                                    //ref prefabLoader,
+                                    ref definition.buffs,
+                                    ref definition.prefabs,
+                                    ref random);
+                                
                                 DestroyEntity(false, entity, children, ref instanceIDs, ref entityManager);
 
                                 enabledFlags |= EnabledFlags.Destroyed;
