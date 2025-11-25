@@ -2,6 +2,7 @@ using System;
 using Unity.Burst;
 using Unity.CharacterController;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Transforms;
@@ -9,6 +10,7 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Physics.GraphicsIntegration;
 using ZG;
+using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
 
 public enum SpawnerSpace
@@ -295,28 +297,179 @@ public struct SpawnerDefinition
 
     public struct Spawner
     {
-        public float startTime;
-        public float endTime;
-        public float interval;
-        public float cooldown;
-        
         public int maxCount;
         public int maxCountToNextTime;
         public int minCountToNextTime;
         public int countPerTime;
         public int times;
         public int tryTimesPerArea;
+        
+        public float startTime;
+        public float endTime;
+        public float interval;
+        public float cooldown;
+        
         public LayerMaskAndTags layerMaskAndTags;
 
         public BlobArray<LoaderIndex> loaderIndices;
         public BlobArray<AreaIndex> areaIndices;
     }
 
+    public struct SpawnerNode
+    {
+        public const int DEPTH = 8;
+        public const int MAX_DEPTH = 32;
+
+        public int tagMask;
+        
+        public BlobArray<int> spawnerIndices;
+        
+        public static int GetCount(int depth = DEPTH)
+        {
+            //++depth;
+
+            return (((1 << (depth + depth)) - 1) & 0x15555);
+        }
+
+        public static int GetStartIndexFromLevel(int level)
+        {
+            return ((1 << (level + level)) - 1) & 0x5555;
+        }
+        
+        public static int GetIndex(int level, int layer)
+        {
+            return GetStartIndexFromLevel(level) + layer;
+        }
+        
+        public static void FindInfo(
+            int minLayer, 
+            int maxLayer,
+            int depth, 
+            out int level, 
+            out int layer)
+        {
+            int pattern = minLayer ^ maxLayer,
+                highBit = Math.GetHighestBit(pattern);
+
+            level = math.min(MAX_DEPTH - highBit, depth);
+            
+            int shift = MAX_DEPTH - level;
+
+            layer = maxLayer >> shift;
+        }
+
+        public static void Convert(
+            in LayerMaskAndTags layerMaskAndTags, 
+            ref FixedList512Bytes<FixedString32Bytes> tags, 
+            out int minLayer, 
+            out int maxLayer, 
+            out int tagMask)
+        {
+            if (layerMaskAndTags.layerMask == 0)
+            {
+                minLayer = 0;
+                maxLayer = 31;
+            }
+            else
+            {
+                minLayer = Math.GetLowestBit(layerMaskAndTags.layerMask) - 1;
+                maxLayer = Math.GetHighestBit(layerMaskAndTags.layerMask) - 1;
+            }
+
+            tagMask = 0;
+            int tagIndex;
+            foreach (var tag in layerMaskAndTags.tags)
+            {
+                tagIndex = tags.IndexOf(tag);
+                if(tagIndex == -1)
+                    continue;
+
+                tagMask |= 1 << tagIndex;
+            }
+
+            if (tagMask == 0)
+                tagMask = -1;
+        }
+
+        public static void Build(
+            out FixedList512Bytes<FixedString32Bytes> tags, 
+            ref BlobBuilderArray<Spawner> spawners, 
+            ref BlobBuilderArray<SpawnerNode> nodes, 
+            BlobBuilder builder)
+        {
+            tags = default;
+            int i, numSpawners = spawners.Length;
+            using (var tagIndices = new UnsafeHashMap<FixedString32Bytes, int>(numSpawners, Allocator.Temp))
+            {
+                for (i = 0; i < numSpawners; ++i)
+                {
+                    foreach (var tag in spawners[i].layerMaskAndTags.tags)
+                        tagIndices.TryAdd(tag, tagIndices.Count);
+                }
+
+                tags.Length = tagIndices.Count;
+                foreach (var pair in tagIndices)
+                    tags[pair.Value] = pair.Key;
+            }
+
+            using (var nodeSpawnerIndices = new UnsafeParallelMultiHashMap<int, int>(numSpawners, Allocator.Temp))
+            {
+                int minLayer, maxLayer, tagMask, level, layer, nodeIndex;
+                for (i = 0; i < numSpawners; ++i)
+                {
+                    ref var spawner = ref spawners[i];
+                    Convert(spawner.layerMaskAndTags, ref tags, out minLayer, out maxLayer, out tagMask);
+
+                    FindInfo(
+                        minLayer,
+                        maxLayer,
+                        DEPTH,
+                        out level,
+                        out layer);
+
+                    nodeIndex = GetIndex(level, layer);
+                    
+                    nodeSpawnerIndices.Add(nodeIndex, i);
+
+                    ref var node = ref nodes[nodeIndex];
+
+                    node.tagMask |= tagMask;
+
+                    while (level > 0)
+                    {
+                        nodeIndex = GetIndex(--level, layer >>= 1);
+
+                        nodes[nodeIndex].tagMask |= tagMask;
+                    }
+                }
+
+                int count;
+                BlobBuilderArray<int> spawnerIndices;
+                foreach (var pair in nodeSpawnerIndices)
+                {
+                    nodeIndex = pair.Key;
+                    
+                    count = nodeSpawnerIndices.CountValuesForKey(nodeIndex);
+                    
+                    spawnerIndices = builder.Allocate(ref nodes[nodeIndex].spawnerIndices, count);
+
+                    i = 0;
+                    foreach (var spawnerIndex in nodeSpawnerIndices.GetValuesForKey(nodeIndex))
+                        spawnerIndices[i++] = spawnerIndex;
+                }
+            }
+        }
+    }
+
+    public FixedList512Bytes<FixedString32Bytes> tags;
+
     public BlobArray<Area> areas;
     
     public BlobArray<SpawnerAttribute> attributes;
 
     public BlobArray<Spawner> spawners;
+
+    public BlobArray<SpawnerNode> nodes;
 
     public void Update(
         double time, 
@@ -342,8 +495,66 @@ public struct SpawnerDefinition
         int numSpawners = this.spawners.Length;
         states.Resize(numSpawners, NativeArrayOptions.ClearMemory);
         entityCounts.Resize(numSpawners, NativeArrayOptions.ClearMemory);
+        
+        SpawnerNode.Convert(layerMaskAndTags, ref tags, out int minLayer, out int maxLayer, out int tagMask);
+        
+        bool isNextLevel;
+        int level = 0, shift, currentMinLayer, currentMaxLayer, nodeIndex, numSpawnerIndices, i, j;
+        ChunkEntityEnumerator enumerator;
+        do
+        {
+            isNextLevel = false;
 
-        for (int i = 0; i < numSpawners; ++i)
+            shift = SpawnerNode.MAX_DEPTH - level;
+            currentMinLayer = minLayer >> shift;
+            currentMaxLayer = maxLayer >> shift;
+            for (i = currentMinLayer; i <= currentMaxLayer; ++i)
+            {
+                nodeIndex = SpawnerNode.GetIndex(level, i);
+
+                ref var node = ref nodes[nodeIndex];
+
+                if ((node.tagMask & tagMask) == 0)
+                    continue;
+                    
+                isNextLevel = true;
+
+                numSpawnerIndices = node.spawnerIndices.Length;
+                for (j = 0; j < numSpawnerIndices; ++j)
+                {
+                    ref int spawnerIndex = ref node.spawnerIndices[j];
+                    ref var spawner = ref this.spawners[spawnerIndex];
+
+                    Update(
+                        spawnerIndex, 
+                        time,
+                        playerPosition,
+                        entity,
+                        layerMaskAndTags, 
+                        spawnerTime, 
+                        collisionWorld,
+                        colliders, 
+                        physicsGraphicalInterpolationBuffers, 
+                        characterInterpolations, 
+                        targetLevels, 
+                        messageParameters, 
+                        entities, 
+                        prefabs,
+                        ref spawner, 
+                        ref states.ElementAt(i), 
+                        ref entityCounts.ElementAt(i), 
+                        ref entityManager, 
+                        ref prefabLoader, 
+                        ref random, 
+                        ref instanceCount);
+                }
+            }
+
+            ++level;
+        }
+        while (isNextLevel && level < SpawnerNode.DEPTH);
+
+        /*for (int i = 0; i < numSpawners; ++i)
         {
             ref var spawner = ref this.spawners[i];
 
@@ -369,7 +580,7 @@ public struct SpawnerDefinition
                 ref prefabLoader, 
                 ref random, 
                 ref instanceCount);
-        }
+        }*/
     }
     
     public bool Update(

@@ -647,7 +647,7 @@ public class SpawnerAuthoring : MonoBehaviour
                 var prefabLoaders = AddBuffer<SpawnerPrefab>(entity);
                 //prefabLoaders.ResizeUninitialized(numPrefabs);
                 
-                var prefabs = builder.Allocate(ref root.spawners, numSpawners);
+                var spawners = builder.Allocate(ref root.spawners, numSpawners);
                 BlobBuilderArray<SpawnerDefinition.AreaIndex> areaIndices;
                 BlobBuilderArray<SpawnerDefinition.LoaderIndex> loaderIndices;
                 var prefabEntities = new Dictionary<GameObject, int>();
@@ -655,7 +655,7 @@ public class SpawnerAuthoring : MonoBehaviour
                 int numPrefabLoaderIndices, numAreaIndices, j, k;
                 for (i = 0; i < numSpawners; ++i)
                 {
-                    ref var destination = ref prefabs[i];
+                    ref var destination = ref spawners[i];
                     ref var source = ref authoring._spawners[i];
                     destination.startTime = source.startTime;
                     destination.endTime = source.endTime > math.FLT_MIN_NORMAL ? source.endTime : float.MaxValue;
@@ -741,6 +741,9 @@ public class SpawnerAuthoring : MonoBehaviour
 
                     destination.layerMaskAndTags = source.layerMaskAndTags;
                 }
+                
+                var nodes = builder.Allocate(ref root.nodes, SpawnerDefinition.SpawnerNode.GetCount());
+                SpawnerDefinition.SpawnerNode.Build(out root.tags, ref spawners, ref nodes, builder);
 
                 instance.definition = builder.CreateBlobAssetReference<SpawnerDefinition>(Allocator.Persistent);
             }
