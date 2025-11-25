@@ -355,7 +355,7 @@ public struct SpawnerDefinition
             
             int shift = MAX_DEPTH - level;
 
-            layer = shift == MAX_DEPTH ? 0 : maxLayer >> shift;
+            layer = maxLayer >> shift;
         }
 
         public static void Convert(
