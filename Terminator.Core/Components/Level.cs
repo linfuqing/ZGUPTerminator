@@ -226,6 +226,13 @@ public struct LevelStageOption
     
     public enum Type
     {
+        Value = 0, 
+        Max = 6, 
+        ExpMax = 8, 
+        Exp = 9, 
+        Gold = 14, 
+        Stage = 10,
+        Level = 15, 
         SpawnerTime = 11, 
         SpawnerLayerMask = 12,
         SpawnerLayerMaskInclude = 1,
@@ -234,13 +241,7 @@ public struct LevelStageOption
         PrefabRemaining = 3, 
         PlayerArea = 4, 
         Item = 13, 
-        Millisecond = 5,
-        Value = 0, 
-        Max = 6, 
-        ExpMax = 8, 
-        Exp = 9, 
-        Gold = 14, 
-        Stage = 10
+        Millisecond = 5
     }
 
     [Tooltip("SpawnerLayerMaskOverride:激活对应标签的刷怪圈。SpawnerEntityRemaining：对应刷怪圈标签的怪都被消灭。PrefabRemaining：对应预制体索引的怪都被消灭。Value：关卡进度")]
@@ -268,6 +269,7 @@ public struct LevelStageOption
         in SpawnerLayerMaskAndTagsOverride spawnerLayerMaskAndTagsOverride, 
         in SpawnerSingleton spawnerSingleton, 
         in LevelSpawners.ReadOnly spawners,
+        in DynamicBuffer<LevelStage> levelStages,
         in DynamicBuffer<LevelItem> levelItems, 
         in NativeArray<LevelPrefab> levelPrefabs, 
         in BufferLookup<SpawnerPrefab> spawnerPrefabs, 
@@ -296,6 +298,14 @@ public struct LevelStageOption
                     return value <= status.gold;
                 case Type.Stage:
                     return value <= status.stage;
+                case Type.Level:
+                    foreach (var levelStage in levelStages)
+                    {
+                        if (levelStage.value == value)
+                            return true;
+                    }
+
+                    break;
                 case Type.SpawnerTime:
                     return value <= spawnerTime;
                 case Type.SpawnerLayerMask:
@@ -450,6 +460,7 @@ public struct LevelStageOption
         ref BlobArray<LevelDefinition.Area> areas, 
         ref BlobArray<LevelDefinition.Item> items, 
         ref DynamicBuffer<LevelItem> levelItems, 
+        ref DynamicBuffer<LevelStage> levelStages, 
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
@@ -488,6 +499,11 @@ public struct LevelStageOption
                     //status.killBossCount = 0;
                     //status.stage = value;
                     System.Threading.Interlocked.Add(ref status.stage, value);
+                    break;
+                case Type.Level:
+                    LevelStage levelStage;
+                    levelStage.value = value;
+                    levelStages.Add(levelStage);
                     break;
                 case Type.SpawnerTime:
                     //++spawnerTime.version;
