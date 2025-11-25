@@ -742,8 +742,8 @@ public class SpawnerAuthoring : MonoBehaviour
                     destination.layerMaskAndTags = source.layerMaskAndTags;
                 }
                 
-                var nodes = builder.Allocate(ref root.nodes, SpawnerDefinition.SpawnerNode.GetCount());
-                SpawnerDefinition.SpawnerNode.Build(out root.tags, ref spawners, ref nodes, builder);
+                //var nodes = builder.Allocate(ref root.nodes, SpawnerDefinition.SpawnerNode.GetCount());
+                SpawnerDefinition.SpawnerNode.Build(out root.tags, ref root.nodes, ref spawners, builder);
 
                 instance.definition = builder.CreateBlobAssetReference<SpawnerDefinition>(Allocator.Persistent);
             }

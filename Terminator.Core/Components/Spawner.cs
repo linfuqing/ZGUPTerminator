@@ -360,7 +360,7 @@ public struct SpawnerDefinition
 
         public static void Convert(
             in LayerMaskAndTags layerMaskAndTags, 
-            ref FixedList512Bytes<FixedString32Bytes> tags, 
+            ref FixedList4096Bytes<FixedString32Bytes> tags, 
             out int minLayer, 
             out int maxLayer, 
             out int tagMask)
@@ -392,9 +392,9 @@ public struct SpawnerDefinition
         }
 
         public static void Build(
-            out FixedList512Bytes<FixedString32Bytes> tags, 
+            out FixedList4096Bytes<FixedString32Bytes> tags, 
+            ref BlobArray<SpawnerNode> nodes, 
             ref BlobBuilderArray<Spawner> spawners, 
-            ref BlobBuilderArray<SpawnerNode> nodes, 
             BlobBuilder builder)
         {
             tags = default;
@@ -407,13 +407,16 @@ public struct SpawnerDefinition
                         tagIndices.TryAdd(tag, tagIndices.Count);
                 }
 
-                tags.Length = tagIndices.Count;
+				tags.Length = tagIndices.Count;
+				//builder.Allocate(ref tags, tagIndices.Count);
                 foreach (var pair in tagIndices)
                     tags[pair.Value] = pair.Key;
             }
 
             using (var nodeSpawnerIndices = new UnsafeParallelMultiHashMap<int, int>(numSpawners, Allocator.Temp))
             {
+				var nodeResult = builder.Allocate(ref nodes, GetCount());
+				
                 int minLayer, maxLayer, tagMask, level, layer, nodeIndex;
                 for (i = 0; i < numSpawners; ++i)
                 {
@@ -431,7 +434,7 @@ public struct SpawnerDefinition
                     
                     nodeSpawnerIndices.Add(nodeIndex, i);
 
-                    ref var node = ref nodes[nodeIndex];
+                    ref var node = ref nodeResult[nodeIndex];
 
                     node.tagMask |= tagMask;
 
@@ -439,7 +442,7 @@ public struct SpawnerDefinition
                     {
                         nodeIndex = GetIndex(--level, layer >>= 1);
 
-                        nodes[nodeIndex].tagMask |= tagMask;
+                        nodeResult[nodeIndex].tagMask |= tagMask;
                     }
                 }
 
@@ -451,7 +454,7 @@ public struct SpawnerDefinition
                     
                     count = nodeSpawnerIndices.CountValuesForKey(nodeIndex);
                     
-                    spawnerIndices = builder.Allocate(ref nodes[nodeIndex].spawnerIndices, count);
+                    spawnerIndices = builder.Allocate(ref nodeResult[nodeIndex].spawnerIndices, count);
 
                     i = 0;
                     foreach (var spawnerIndex in nodeSpawnerIndices.GetValuesForKey(nodeIndex))
@@ -461,7 +464,7 @@ public struct SpawnerDefinition
         }
     }
 
-    public FixedList512Bytes<FixedString32Bytes> tags;
+    public FixedList4096Bytes<FixedString32Bytes> tags;
 
     public BlobArray<Area> areas;
     
