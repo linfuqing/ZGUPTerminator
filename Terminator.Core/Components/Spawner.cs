@@ -318,7 +318,7 @@ public struct SpawnerDefinition
     public struct SpawnerNode
     {
         public const int DEPTH = 8;
-        public const int MAX_DEPTH = 32;
+        public const int MAX_DEPTH = 8;
 
         public int tagMask;
         
@@ -328,12 +328,12 @@ public struct SpawnerDefinition
         {
             //++depth;
 
-            return (((1 << (depth + depth)) - 1) & 0x15555);
+            return (1 << depth) - 1;
         }
 
         public static int GetStartIndexFromLevel(int level)
         {
-            return ((1 << (level + level)) - 1) & 0x5555;
+            return (1 << level) - 1;
         }
         
         public static int GetIndex(int level, int layer)
@@ -355,7 +355,7 @@ public struct SpawnerDefinition
             
             int shift = MAX_DEPTH - level;
 
-            layer = maxLayer >> shift;
+            layer = shift == MAX_DEPTH ? 0 : maxLayer >> shift;
         }
 
         public static void Convert(
