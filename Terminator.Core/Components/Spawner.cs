@@ -317,8 +317,8 @@ public struct SpawnerDefinition
 
     public struct SpawnerNode
     {
-        public const int DEPTH = 8;
-        public const int MAX_DEPTH = 8;
+        public const int MAX_DEPTH = 6;
+        public const int DEPTH = MAX_DEPTH;
 
         public int tagMask;
         
@@ -540,8 +540,8 @@ public struct SpawnerDefinition
                         entities, 
                         prefabs,
                         ref spawner, 
-                        ref states.ElementAt(i), 
-                        ref entityCounts.ElementAt(i), 
+                        ref states.ElementAt(spawnerIndex), 
+                        ref entityCounts.ElementAt(spawnerIndex), 
                         ref entityManager, 
                         ref prefabLoader, 
                         ref random, 
