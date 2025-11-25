@@ -317,7 +317,7 @@ public struct SpawnerDefinition
 
     public struct SpawnerNode
     {
-        public const int MAX_DEPTH = 6;
+        public const int MAX_DEPTH = 5;
         public const int DEPTH = MAX_DEPTH;
 
         public int tagMask;
