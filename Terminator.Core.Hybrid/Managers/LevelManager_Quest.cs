@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public partial class LevelManager
 {
@@ -63,6 +64,9 @@ public partial class LevelManager
                 Style.onFail?.Invoke();
         }
     }
+
+    [SerializeField] 
+    internal UnityEvent _onQuestActive;
 
     [SerializeField] 
     internal QuestStyle[] _questStyles;

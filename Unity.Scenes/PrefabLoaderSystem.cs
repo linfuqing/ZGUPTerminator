@@ -65,7 +65,7 @@ public struct PrefabLoader
 
         public bool TryGetOrLoadPrefabRoot(in EntityPrefabReference entityPrefabReference, out Entity entity)
         {
-            UnityEngine.Assertions.Assert.AreNotEqual(default, entityPrefabReference);
+            UnityEngine.Assertions.Assert.IsTrue(entityPrefabReference.Id.IsValid);
             
             PrefabLoaderSingleton.Result result;
             result.entityPrefabReference = entityPrefabReference;

@@ -169,7 +169,7 @@ public class LocatorAuthoring : MonoBehaviour
                         destination.startTime -= previous.startTime + previous.time;
                         
                         if(destination.startTime < 0.0f)
-                            Debug.LogError($"The error startTime of action {source.name}!");
+                            Debug.LogError($"The error startTime of action {source.name} in {authoring.name}!", authoring);
                     }
                     
                     destination.up = source.up;
@@ -193,7 +193,7 @@ public class LocatorAuthoring : MonoBehaviour
                         }
                         
                         if(areaIndices[j] == -1)
-                            Debug.LogError($"Area {areaName} of action {source.name} can not been found!");
+                            Debug.LogError($"Area {areaName} of action {source.name} in {authoring.name} can not been found!", authoring);
                     }
 
                     numMessageNames = source.messageNames == null ? 0 : source.messageNames.Length;
@@ -217,7 +217,7 @@ public class LocatorAuthoring : MonoBehaviour
                         }
                         
                         if(messageIndices[messageOffset + j] == -1)
-                            Debug.LogError($"Message {messageName} of action {source.name} can not been found!");
+                            Debug.LogError($"Message {messageName} of action {source.name} in {authoring.name} can not been found!", authoring);
                     }
                 }
 
