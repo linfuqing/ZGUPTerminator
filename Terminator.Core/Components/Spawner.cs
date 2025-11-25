@@ -351,7 +351,7 @@ public struct SpawnerDefinition
             int pattern = minLayer ^ maxLayer,
                 highBit = Math.GetHighestBit(pattern);
 
-            level = math.min(MAX_DEPTH - highBit, depth);
+            level = math.min(MAX_DEPTH - highBit, depth - 1);
             
             int shift = MAX_DEPTH - level;
 
@@ -500,7 +500,6 @@ public struct SpawnerDefinition
         
         bool isNextLevel;
         int level = 0, shift, currentMinLayer, currentMaxLayer, nodeIndex, numSpawnerIndices, i, j;
-        ChunkEntityEnumerator enumerator;
         do
         {
             isNextLevel = false;
