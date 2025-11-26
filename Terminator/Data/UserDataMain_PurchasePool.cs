@@ -6,6 +6,27 @@ using ZG;
 
 public partial class UserDataMain
 {
+    [SerializeField]
+    internal UserStage.RewardPool[] _rewardPools;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_rewardPools", guidIndex = -1, nameIndex = 0)] 
+    internal string _rewardPoolsPath;
+#endif
+
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        UserData.ApplyReward(poolName, _rewardPools);
+
+        var rewards = new List<UserReward>();
+        
+        __ApplyRewards(rewards);
+        
+        onComplete(rewards.Count > 0 ? rewards.ToArray() : null);
+    }
+
     [Serializable]
     internal struct PurchasePool
     {
@@ -504,5 +525,10 @@ public partial class UserData
         Action<IUserData.PurchaseResult> onComplete)
     {
         return UserDataMain.instance.Purchase(userID, purchasePoolID, times, onComplete);
+    }
+    
+    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.ApplyReward(userID, poolName, onComplete);
     }
 }

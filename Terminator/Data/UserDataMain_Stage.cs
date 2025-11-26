@@ -440,25 +440,25 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
-    [SerializeField]
-    internal UserStage.RewardPool[] _rewardPools;
-    
-#if UNITY_EDITOR
-    [SerializeField, CSV("_rewardPools", guidIndex = -1, nameIndex = 0)] 
-    internal string _rewardPoolsPath;
-#endif
-
-    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
+    public int GetStageFlag(uint levelID, int stage)
     {
-        yield return __CreateEnumerator();
+        var level = _levels[__ToIndex(levelID)];
+        var indirectRewards = __GetStage(level, stage).indirectRewards;
+        int numStageRewards = indirectRewards.Length, result = 0;
+        for (int i = 0; i < numStageRewards; ++i)
+        {
+            ref var stageReward = ref indirectRewards[i];
+            if ((__GetStageRewardFlag(
+                    stageReward.name,
+                    level.name,
+                    stage,
+                    stageReward.conditionValue,
+                    stageReward.condition,
+                    out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                result |= 1 << i;
+        }
 
-        UserData.ApplyReward(poolName, _rewardPools);
-
-        var rewards = new List<UserReward>();
-        
-        __ApplyRewards(rewards);
-        
-        onComplete(rewards.Count > 0 ? rewards.ToArray() : null);
+        return result;
     }
 
     public int GetStageEnergy(uint levelID,int stage)
@@ -734,14 +734,14 @@ public partial class UserData
 
         __SetStageGold(temp.name, temp.stage, gold);
 
-        result.flag = 0;
+        //result.flag = 0;
         if (temp.stage < stage)
         {
             __SetStageTime(temp.name, temp.stage, time);
 
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
             
-            result.flag = __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
+            __SubmitStageFlag(hpPercentage == 100, /*flag, */temp.name, temp.stage, stage);
 
             IUserData.StageCache stageCache;
             stageCache.rage = rage;
@@ -751,14 +751,14 @@ public partial class UserData
             PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage),
                 stageCache.ToString());
             
-            temp.stage = stage;
             temp.killCount = Mathf.Max(temp.killCount, killCount);
             temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
         }
-        else
-            result.flag = (int)GetStageFlag(temp.name, temp.stage - 1);
+        
+        result.flag = (object)main == null ? (int)GetStageFlag(temp.name, temp.stage) : main.GetStageFlag(temp.id, temp.stage);
 
         temp.gold = Mathf.Max(temp.gold, gold);
+        temp.stage = stage;
         UserData.levelCache = temp;
         
         onComplete(result);
@@ -774,51 +774,5 @@ public partial class UserData
     public IEnumerator CollectStageRewards(uint userID, Action<Memory<UserReward>> onComplete)
     {
         return UserDataMain.instance.CollectStageRewards(userID, onComplete);
-    }
-
-    [SerializeField]
-    internal UserStage.RewardPool[] _rewardPools;
-
-    public IEnumerator ApplyReward(uint userID, string poolName, Action<Memory<UserReward>> onComplete)
-    {
-        var main = UserDataMain.instance;
-        if (null == (object)main)
-        {
-            yield return null;
-            
-            int startRewardIndex = Rewards.Count;
-            
-            ApplyReward(poolName, _rewardPools);
-
-            int numRewards = Rewards.Count;
-
-            if (numRewards > startRewardIndex)
-            {
-                int index;
-                UserRewardData source;
-                UserReward destination;
-                var rewards = new UserReward[numRewards - startRewardIndex];
-                for (int i = startRewardIndex; i < numRewards; ++i)
-                {
-                    source = Rewards[i];
-
-                    index = i - startRewardIndex;
-
-                    destination = rewards[index];
-                    destination.name = source.name;
-                    destination.id = 0;
-                    destination.type = source.type;
-                    destination.count = source.count;
-
-                    rewards[index] = destination;
-                }
-
-                onComplete(rewards);
-            }
-            else
-                onComplete(null);
-        }
-        else
-            yield return main.ApplyReward(userID, poolName, onComplete);
     }
 }

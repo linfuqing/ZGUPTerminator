@@ -40,7 +40,7 @@ public partial interface IUserData
     {
         Normal = 0x01, 
         Once = 0x02 | Normal, 
-        //HPPercentage = 0x04 | Normal
+        Perfect = 0x04 | Normal
     }
 
     public struct LevelStage
@@ -250,8 +250,6 @@ public partial class UserData
         
         yield return null;
         
-        __SubmitStageFlag(/*flag, */temp.name, temp.stage, stage);
-
         __SetStageKillCount(temp.name, temp.stage, killCount - temp.killCount);
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount - temp.killBossCount);
         __SetStageGold(temp.name, temp.stage, gold);
@@ -261,11 +259,13 @@ public partial class UserData
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
             __SetStageTime(temp.name, temp.stage, time);
             
+            __SubmitStageFlag(hpPercentage == 100, /*flag, */temp.name, temp.stage, stage);
+
             temp.stage = stage;
-            temp.killCount = killCount;
-            temp.killBossCount = killBossCount;
         }
 
+        temp.killCount = killCount;
+        temp.killBossCount = killBossCount;
         temp.gold = gold;
         UserData.levelCache = temp;
         

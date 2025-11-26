@@ -327,11 +327,12 @@ public partial class UserData
 
     private static int __SubmitStageFlag(
         //IUserData.StageFlag value, 
+        bool isPerfect, 
         string levelName, 
         int fromStage, 
         int toStage)
     {
-        var value = IUserData.StageFlag.Normal;
+        var value = isPerfect ? IUserData.StageFlag.Perfect : IUserData.StageFlag.Normal;
 
         int result = (int)value;
         
