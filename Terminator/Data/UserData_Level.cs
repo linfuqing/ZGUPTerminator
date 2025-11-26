@@ -88,6 +88,13 @@ public partial interface IUserData
 
     public struct LevelTickets
     {
+        public enum Flag
+        {
+            Unlock = 0x01, 
+            UnlockFirst = 0x02 | Unlock
+        }
+
+        public Flag flag;
         public LevelTicket[] tickets;
         public UserLevel[] levels;
     }

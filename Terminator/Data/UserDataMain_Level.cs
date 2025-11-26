@@ -465,7 +465,22 @@ public partial class UserDataMain
         IUserData.LevelTickets result;
         result.tickets = tickets == null ? null : tickets.ToArray();
         result.levels = levels == null ? null : levels.ToArray();
-        
+
+        var flag = UserDataMain.flag;
+        if ((flag & Flag.TicketsUnlock) == 0 && (tickets != null || levels != null))
+        {
+            flag |= Flag.TicketsUnlockFirst;
+
+            UserDataMain.flag = flag;
+        }
+
+        if ((flag & Flag.TalentsUnlockFirst) == Flag.TalentsUnlockFirst)
+            result.flag = IUserData.LevelTickets.Flag.UnlockFirst;
+        else if ((flag & Flag.TicketsUnlock) != 0)
+            result.flag = IUserData.LevelTickets.Flag.Unlock;
+        else
+            result.flag = 0;
+
         onComplete(result);
     }
 

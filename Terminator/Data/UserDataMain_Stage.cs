@@ -566,6 +566,13 @@ public partial class UserDataMain
             isDirty = true;
         }
 
+        if ((flag & Flag.TicketsUnlockFirst) == Flag.TicketsUnlockFirst)
+        {
+            flag &= ~Flag.TicketsUnlockFirst;
+
+            isDirty = true;
+        }
+
         /*if ((flag & Flag.RolesUnlock) != 0 && (flag & Flag.RoleUnlock) == 0)
         {
             flag |= Flag.RoleUnlock;
