@@ -474,7 +474,7 @@ public partial class UserDataMain
             UserDataMain.flag = flag;
         }
 
-        if ((flag & Flag.TalentsUnlockFirst) == Flag.TalentsUnlockFirst)
+        if ((flag & Flag.TicketsUnlockFirst) == Flag.TicketsUnlockFirst)
             result.flag = IUserData.LevelTickets.Flag.UnlockFirst;
         else if ((flag & Flag.TicketsUnlock) != 0)
             result.flag = IUserData.LevelTickets.Flag.Unlock;
