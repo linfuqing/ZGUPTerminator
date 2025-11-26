@@ -1025,7 +1025,7 @@ public sealed class LoginManager : MonoBehaviour
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if (scrollRect != null)
-            scrollRect.MoveTo(selectedLevelIndex);
+            scrollRect.MoveTo(Mathf.Max(0, selectedLevelIndex));
 
         if (isHot)
         {

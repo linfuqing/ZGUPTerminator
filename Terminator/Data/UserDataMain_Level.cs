@@ -467,7 +467,7 @@ public partial class UserDataMain
         result.levels = levels == null ? null : levels.ToArray();
 
         var flag = UserDataMain.flag;
-        if ((flag & Flag.TicketsUnlock) == 0 && (tickets != null || levels != null))
+        if ((flag & Flag.TicketsUnlock) == 0 && levels != null)
         {
             flag |= Flag.TicketsUnlockFirst;
 
