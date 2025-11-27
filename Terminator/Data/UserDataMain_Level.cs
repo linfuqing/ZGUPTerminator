@@ -302,6 +302,17 @@ public partial class UserDataMain
 
                         selectedStage = 0;
                     }
+                    
+                    var flag = UserDataMain.flag;
+                    if ((flag & Flag.TicketsUnlock) == 0 && 
+                        _levelTickets != null && 
+                        _levelTickets.Length > 0 && 
+                        _levelTickets[0].levels[0].chapter <= chapter)
+                    {
+                        flag |= Flag.TicketsUnlock;
+
+                        UserDataMain.flag = flag;
+                    }
                 }
             }
         }
@@ -467,13 +478,6 @@ public partial class UserDataMain
         result.levels = levels == null ? null : levels.ToArray();
 
         var flag = UserDataMain.flag;
-        if ((flag & Flag.TicketsUnlock) == 0 && levels != null)
-        {
-            flag |= Flag.TicketsUnlockFirst;
-
-            UserDataMain.flag = flag;
-        }
-
         if ((flag & Flag.TicketsUnlockFirst) == Flag.TicketsUnlockFirst)
             result.flag = IUserData.LevelTickets.Flag.UnlockFirst;
         else if ((flag & Flag.TicketsUnlock) != 0)
