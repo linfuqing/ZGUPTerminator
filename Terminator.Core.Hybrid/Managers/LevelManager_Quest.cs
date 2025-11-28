@@ -304,6 +304,9 @@ public partial class LevelManager
                             break;*/
                     }
                 }
+                
+                if(_onQuestActive != null)
+                    _onQuestActive.Invoke();
             }
         }
     }
