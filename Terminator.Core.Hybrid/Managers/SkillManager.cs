@@ -8,6 +8,7 @@ public struct SkillAsset
 {
     public string name;
     public string detail;
+    public string info;
     
     public Sprite sprite;
     public Sprite icon;
@@ -67,6 +68,7 @@ public class SkillManager : MonoBehaviour
 
         public string title;
         public string detail;
+        public string info;
 
         public Sprite sprite;
         public Sprite icon;
@@ -84,6 +86,7 @@ public class SkillManager : MonoBehaviour
             SkillAsset asset;
             asset.name = title;
             asset.detail = detail;
+            asset.info = info;
             asset.sprite = sprite;
             asset.icon = icon;
             asset.level = level;
@@ -110,6 +113,12 @@ public class SkillManager : MonoBehaviour
         public string 关卡技能描述详情
         {
             set { detail = value; }
+        }
+
+        [CSVField]
+        public string 关卡技能描述简介
+        {
+            set { info = value; }
         }
 
         [CSVField]

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -108,7 +109,8 @@ public partial class LevelManager
             print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
             isDirty = true;
 
-            __CreateStageQuests(stage);
+            //__CreateStageQuests(stage);
+            StartCoroutine(__DestroyAndCreateStageQuests(stage));
             
             __stageKillCount = __killCount;
             __stageGold = __gold;
@@ -237,8 +239,9 @@ public partial class LevelManager
         }
     }
 
-    private void __CreateStageQuests(int value)
+    private float __DestroyStageQuests()
     {
+        float destroyTime = 0.0f;
         if (__questStates != null)
         {
             foreach (var questStatus in __questStates)
@@ -263,12 +266,18 @@ public partial class LevelManager
                         break;
                 }
                 
+                destroyTime = Mathf.Max(destroyTime, questStatus.DestroyTime);
                 questStatus.Dispose();
             }
             
             __questStates.Clear();
         }
 
+        return destroyTime;
+    }
+
+    private void __CreateStageQuests(int value)
+    {
         ref var stages = ref LevelShared.stages;
         if (stages.Length > value)
         {
@@ -309,6 +318,15 @@ public partial class LevelManager
                     _onQuestActive.Invoke();
             }
         }
+    }
+
+    private IEnumerator __DestroyAndCreateStageQuests(int value)
+    {
+        float time = __DestroyStageQuests();
+        
+        yield return new WaitForSeconds(time);
+        
+        __CreateStageQuests(value);
     }
 
     void Awake()

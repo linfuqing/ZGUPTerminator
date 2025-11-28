@@ -22,6 +22,7 @@ public class SkillStyle : MonoBehaviour
 
     public StringEvent onName;
     public StringEvent onDetail;
+    public StringEvent onInfo;
 
     public SpriteEvent onSprite;
     
@@ -69,6 +70,9 @@ public class SkillStyle : MonoBehaviour
         if(onDetail != null)
             onDetail.Invoke(value.detail);
             
+        if(onInfo != null)
+            onInfo.Invoke(value.info);
+
         if(onSprite != null)
             onSprite.Invoke(value.sprite);
 
