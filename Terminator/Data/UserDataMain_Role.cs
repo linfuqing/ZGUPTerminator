@@ -583,10 +583,25 @@ public partial class UserDataMain
             
             yield break;
         }
-        int roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{talent.roleName}"), 
-            roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{talent.roleName}");
-        if(talent.roleRank > roleRank ||
-               talent.roleCount > roleCount)
+
+        int roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{talent.roleName}");
+        if(roleRank < talent.roleRank)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+        
+        int roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{talent.roleName}");
+        var roleRankIndices = __GetRoleRankIndices(__GetRoleIndex(talent.roleName));
+        for(int i = 0; i < roleRank; ++i)
+            roleCount += _roleRanks[roleRankIndices[i]].count;
+
+        int talentRoleCount = talent.roleCount;
+        for(int i = 0; i < talent.roleRank; ++i)
+            talentRoleCount += _roleRanks[roleRankIndices[i]].count;
+        
+        if(talentRoleCount > roleCount)
         {
             onComplete(false);
             

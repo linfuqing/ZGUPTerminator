@@ -204,11 +204,25 @@ public partial struct SimulationEventSystem : ISystem
     [BurstCompile]
     private struct CollectTriggers : ITriggerEventsJob
     {
+        [ReadOnly]
+        public ComponentLookup<Parent> parents;
+
         public BufferLookup<SimulationEvent> instances;
+
+        public bool TryGetBuffer(in Entity entity, out DynamicBuffer<SimulationEvent> instances)
+        {
+            if (this.instances.TryGetBuffer(entity, out instances))
+                return true;
+            
+            if(parents.TryGetComponent(entity, out var parent))
+                return TryGetBuffer(parent.Value, out instances);
+
+            return false;
+        }
 
         public void Execute(TriggerEvent triggerEvent)
         {
-            if (this.instances.TryGetBuffer(triggerEvent.EntityA, out var instances))
+            if (TryGetBuffer(triggerEvent.EntityA, out var instances))
             {
                 SimulationEvent simulationEvent;
                 simulationEvent.entity = triggerEvent.EntityB;
@@ -219,7 +233,7 @@ public partial struct SimulationEventSystem : ISystem
                 this.instances.SetBufferEnabled(triggerEvent.EntityA, true);
             }
             
-            if (this.instances.TryGetBuffer(triggerEvent.EntityB, out instances))
+            if (TryGetBuffer(triggerEvent.EntityB, out instances))
             {
                 SimulationEvent simulationEvent;
                 simulationEvent.entity = triggerEvent.EntityA;
@@ -326,6 +340,7 @@ public partial struct SimulationEventSystem : ISystem
         var simulation = SystemAPI.GetSingleton<SimulationSingleton>();
 
         CollectTriggers collectTriggers;
+        collectTriggers.parents = __fixedLocalToWorld.parents;
         collectTriggers.instances = __instances;
         jobHandle = collectTriggers.Schedule(simulation, jobHandle);
 
