@@ -1703,7 +1703,7 @@ public partial struct EffectSystem : ISystem
                         
                         entityManager.RemoveComponent<PhysicsCollider>(0, entity);
                         
-                        DestroyEntity(true, entityArray[index], children, ref instanceIDs, ref entityManager);
+                        DestroyEntity(true, entity, children, ref instanceIDs, ref entityManager);
                     }
                     else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
                     {

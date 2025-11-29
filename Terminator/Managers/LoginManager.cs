@@ -248,6 +248,7 @@ public sealed class LoginManager : MonoBehaviour
     
     private bool __isStart;
     private bool __isEnergyActive = true;
+    private bool __levelActivated;
     private bool? __isLevelActive;
 
     public static uint? userID
@@ -863,11 +864,15 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
 
-                                                if (__sceneActiveDepth == 0 && 
-                                                    finalLevelIndex == userLevelIndex && 
+                                                if (!__levelActivated &&
+                                                    __sceneActiveDepth == 0 &&
+                                                    finalLevelIndex == userLevelIndex &&
                                                     onLevelActivated != null)
-                                                    //isLevelActive = true;
+                                                {
                                                     onLevelActivated();
+                                                    
+                                                    __levelActivated = true;
+                                                }
                                             }
                                             else
                                             {
