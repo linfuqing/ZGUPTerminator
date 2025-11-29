@@ -881,8 +881,13 @@ public sealed class LoginManager : MonoBehaviour
                                                 __sceneActiveDepth = -1;
                                                 //__sceneActiveStatus = SceneActiveStatus.None;
                                                 //isLevelActive = true;
-                                                if (/*isEndOfLevels && */onLevelActivatedFirst != null)
+                                                if ( /*isEndOfLevels && */
+                                                    !__levelActivated && onLevelActivatedFirst != null)
+                                                {
                                                     onLevelActivatedFirst();
+                                                    
+                                                    __levelActivated = true;
+                                                }
                                             }
 
                                             /*if (isLevelActive)
