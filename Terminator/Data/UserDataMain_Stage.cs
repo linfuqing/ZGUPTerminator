@@ -440,6 +440,11 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
+    public int GetMaxStage(uint levelID)
+    {
+        return __GetStageCount(_levels[__ToIndex(levelID)]) - 1;
+    }
+
     public int GetStageFlag(uint levelID, int stage)
     {
         var level = _levels[__ToIndex(levelID)];
@@ -683,31 +688,36 @@ public partial class UserData
         }
 
         var temp = levelCache.Value;
+        int oldStage = temp.stage;
         
         IUserData.StageResult result;
         var main = UserDataMain.instance;
-        if (null == (object)main || stage <= temp.stage)
+        bool isNullMain = null == (object)main;
+        if (isNullMain || stage <= oldStage)
         {
             result.totalEnergy = 0;
             result.nextStageEnergy = 0;
+
+            if (!isNullMain)
+                oldStage = Mathf.Min(oldStage, main.GetMaxStage(temp.id));
         }
         else
         {
             int previousStage = stage - 1;
-            if (previousStage > temp.stage)
+            if (previousStage > oldStage)
             {
                 result.totalEnergy = 0;
                 if (main.IsLevelChapter(temp.name))
                     result.nextStageEnergy = 0;
                 else
                 {
-                    for (int i = temp.stage + 1; i < stage; ++i)
+                    for (int i = oldStage + 1; i < stage; ++i)
                     {
                         if (!main.ApplyStage(temp.id, i, out result.totalEnergy))
                         {
                             Debug.LogError("WTF?");
 
-                            if (i == temp.stage + 1)
+                            if (i == oldStage + 1)
                             {
                                 result.flag = 0;
 
@@ -735,11 +745,11 @@ public partial class UserData
 
         __SubmitStageFlag(temp.name, stage, out _);
 
-        __SetStageKillCount(temp.name, temp.stage, killCount - temp.killCount);
+        __SetStageKillCount(temp.name, oldStage, killCount - temp.killCount);
 
-        __SetStageKillBossCount(temp.name, temp.stage, killBossCount - temp.killBossCount);
+        __SetStageKillBossCount(temp.name, oldStage, killBossCount - temp.killBossCount);
 
-        __SetStageGold(temp.name, temp.stage, gold);
+        __SetStageGold(temp.name, oldStage, gold);
 
         //result.flag = 0;
         if (temp.stage < stage)
@@ -762,7 +772,7 @@ public partial class UserData
             temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
         }
         
-        result.flag = (object)main == null ? (int)GetStageFlag(temp.name, temp.stage) : main.GetStageFlag(temp.id, temp.stage);
+        result.flag = (object)main == null ? (int)GetStageFlag(temp.name, oldStage) : main.GetStageFlag(temp.id, oldStage);
 
         temp.gold = Mathf.Max(temp.gold, gold);
         temp.stage = stage;

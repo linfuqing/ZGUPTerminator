@@ -26,14 +26,14 @@ public enum PurchaseType
     //章节礼包，章节为对应数字挡位，只能购买已打通的章节
     Level,
     
-    //存钱罐
+    //存钱罐，分为0，1，2
     GoldBank, 
     
     //钻石，分为0，1，2，3，4，5这6个首充挡位以及6，7，8，9，10，11这6个普通挡位
     Diamond, 
     
     //买体力
-    Energy, 
+    //Energy, 
     
     //活动预留
     Other

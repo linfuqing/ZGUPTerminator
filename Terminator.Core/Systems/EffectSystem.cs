@@ -604,14 +604,17 @@ public partial struct EffectSystem : ISystem
         [ReadOnly]
         public ComponentLookup<EffectTarget> targets;
 
-        [ReadOnly] 
-        public ComponentLookup<EffectRage> rages;
+        [ReadOnly]
+        public ComponentLookup<EffectTargetDamageScale> targetDamageScales;
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParentMap;
 
         [ReadOnly] 
         public ComponentLookup<EffectDamage> damages;
 
-        [ReadOnly]
-        public ComponentLookup<EffectDamageParent> damageParentMap;
+        [ReadOnly] 
+        public ComponentLookup<EffectRage> rages;
 
         [ReadOnly]
         public NativeArray<Entity> entityArray;
@@ -749,6 +752,7 @@ public partial struct EffectSystem : ISystem
                         ? default
                         : this.outputMessages[messageEntity];
                     var simulationEvents = this.simulationEvents[index];
+                    EffectTargetDamageScale targetDamageScale;
                     EffectStatusTarget statusTarget;
                     PhysicsCollider physicsCollider;
                     RefRW<KinematicCharacterBody> characterBody;
@@ -830,7 +834,11 @@ public partial struct EffectSystem : ISystem
                             damageValueImmunized = ComputeDamage(damage.valueImmunized, damageScale, ref random);
 
                             damageValueSum = damageValue + damageValueImmunized;
-                            totalDamageValue += damageValueSum;
+                            
+                            if (!targetDamageScales.TryGetComponent(simulationEvent.entity, out targetDamageScale))
+                                targetDamageScale.value = 1.0f;
+                            
+                            totalDamageValue += (int)math.round(damageValueSum * targetDamageScale.value);
 
                             isResult = damageValue != 0 || damageValueImmunized != 0;
 
@@ -860,7 +868,7 @@ public partial struct EffectSystem : ISystem
                                 {
                                     isResult = true;
 
-                                    totalDamageValue += dropDamageValue;
+                                    totalDamageValue += (int)math.round(dropDamageValue * targetDamageScale.value);
                                     
                                     if (math.abs(damage.hpMultiplier) > math.FLT_MIN_NORMAL &&
                                         targetHP.IsValid)
@@ -1168,14 +1176,17 @@ public partial struct EffectSystem : ISystem
         [ReadOnly]
         public ComponentLookup<EffectTarget> targets;
 
-        [ReadOnly] 
-        public ComponentLookup<EffectRage> rages;
+        [ReadOnly]
+        public ComponentLookup<EffectTargetDamageScale> targetDamageScales;
+
+        [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParents;
 
         [ReadOnly] 
         public ComponentLookup<EffectDamage> damages;
 
-        [ReadOnly]
-        public ComponentLookup<EffectDamageParent> damageParents;
+        [ReadOnly] 
+        public ComponentLookup<EffectRage> rages;
 
         [ReadOnly] 
         public EntityTypeHandle entityType;
@@ -1251,9 +1262,10 @@ public partial struct EffectSystem : ISystem
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
             collect.targets = targets;
-            collect.rages = rages;
-            collect.damages = damages;
+            collect.targetDamageScales = targetDamageScales;
             collect.damageParentMap = damageParents;
+            collect.damages = damages;
+            collect.rages = rages;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.damageParents = chunk.GetNativeArray(ref damageParentType);
             collect.instances = chunk.GetNativeArray(ref instanceType);
@@ -1995,6 +2007,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<EffectDamageParent> __damageParents;
 
+    private ComponentLookup<EffectTargetDamageScale> __targetDamageScales;
+
     private EntityTypeHandle __entityType;
     
     private ComponentTypeHandle<Parent> __parentType;
@@ -2101,6 +2115,7 @@ public partial struct EffectSystem : ISystem
         __rages = state.GetComponentLookup<EffectRage>(true);
         __damages = state.GetComponentLookup<EffectDamage>();
         __damageParents = state.GetComponentLookup<EffectDamageParent>(true);
+        __targetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>(true);
         __entityType = state.GetEntityTypeHandle();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
@@ -2276,6 +2291,7 @@ public partial struct EffectSystem : ISystem
         __physicsColliders.Update(ref state);
         __characterProperties.Update(ref state);
         __rages.Update(ref state);
+        __targetDamageScales.Update(ref state);
         __damageParents.Update(ref state);
         __damageParentType.Update(ref state);
         __simulationCollisionType.Update(ref state);
@@ -2306,9 +2322,10 @@ public partial struct EffectSystem : ISystem
         collect.physicsColliders = __physicsColliders;
         collect.characterProperties = __characterProperties;
         collect.targets = __targets;
-        collect.rages = __rages;
-        collect.damages = __damages;
+        collect.targetDamageScales = __targetDamageScales;
         collect.damageParents = __damageParents;
+        collect.damages = __damages;
+        collect.rages = __rages;
         collect.entityType = __entityType;
         collect.damageParentType = __damageParentType;
         collect.instanceType = __instanceType;

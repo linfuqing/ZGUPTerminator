@@ -300,7 +300,7 @@ public partial class LevelManager
                                 questStatus.SetResult(false);
                             break;
                         case LevelQuestType.HPPercentage:
-                            questStatus.SetCount(0, 0);
+                            questStatus.SetCount(__hpPercentage, 0);
                             break;
                         case LevelQuestType.KillCount:
                             questStatus.SetCount(0, stageKillCount);
