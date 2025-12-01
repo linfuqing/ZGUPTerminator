@@ -67,6 +67,9 @@ public partial class LevelManager
     }
 
     [SerializeField] 
+    internal float _questDestroyTime = 3.0f;
+
+    [SerializeField] 
     internal UnityEvent _onQuestActive;
 
     [SerializeField] 
@@ -273,7 +276,7 @@ public partial class LevelManager
             __questStates.Clear();
         }
 
-        return destroyTime;
+        return Mathf.Max(_questDestroyTime, destroyTime);
     }
 
     private void __CreateStageQuests(int value)
