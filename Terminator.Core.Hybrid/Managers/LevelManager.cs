@@ -327,13 +327,13 @@ public partial class LevelManager : MonoBehaviour
             if(_onNextStageEnergy != null)
                 _onNextStageEnergy.Invoke(result.energyStage.ToString());
 
-            if (result.energyStage < result.energyMax)
+            if (result.energyStage > result.energyMax)
             {
-                if(_onNextStageEnable != null)
-                    _onNextStageEnable.Invoke();
+                if (_onNextStageDisable != null)
+                    _onNextStageDisable.Invoke();
             }
-            else if(_onNextStageDisable != null)
-                _onNextStageDisable.Invoke();
+            else if(_onNextStageEnable != null)
+                _onNextStageEnable.Invoke();
         }
         
         //__coroutine = null;
