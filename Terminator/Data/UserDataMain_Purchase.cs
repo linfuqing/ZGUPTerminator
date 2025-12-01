@@ -379,11 +379,17 @@ public partial class UserDataMain
                             if (numOptions > 0)
                             {
                                 if(name.value == token.name)
-                                    result.days = DateTimeUtility.GetTotalDays(name.seconds, out _, out _);
-                                Array.Resize(ref value.options, result.days * numOptions);
+                                    result.days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _));
 
-                                for (j = 0; j < result.days; ++j)
-                                    Array.Copy(token.options, 0, value.options, j * numOptions, numOptions);
+                                if (result.days > 0)
+                                {
+                                    Array.Resize(ref value.options, result.days * numOptions);
+
+                                    for (j = 0; j < result.days; ++j)
+                                        Array.Copy(token.options, 0, value.options, j * numOptions, numOptions);
+                                }
+                                else
+                                    value.options = null;
                             }
                         }
                     }
@@ -480,7 +486,7 @@ public partial class UserDataMain
                             }
                             else
                             {
-                                days = DateTimeUtility.GetTotalDays(name.seconds, out _, out now);
+                                days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now));
                                 
                                 name.seconds = DateTimeUtility.GetSeconds(now.ToUniversalTime().Ticks);
                             }
