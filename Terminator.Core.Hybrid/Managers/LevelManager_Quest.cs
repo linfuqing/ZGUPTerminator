@@ -332,8 +332,8 @@ public partial class LevelManager
         __CreateStageQuests(value);
     }
 
-    void Awake()
+    /*void Awake()
     {
         __CreateStageQuests(0);
-    }
+    }*/
 }

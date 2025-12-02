@@ -86,7 +86,7 @@ public partial class LevelManager : MonoBehaviour
     private int __killCount;
     private int __killBossCount;
     private int __gold;
-    private int __stage;
+    private int __stage = -1;
 
     //private int __stageExp;
     //private int __stageExpMax;
