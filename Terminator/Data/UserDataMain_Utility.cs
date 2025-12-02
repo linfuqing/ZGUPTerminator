@@ -354,7 +354,7 @@ public partial class UserDataMain
                             attribute.value += propertyAttribute.value;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            attribute.value = (1.0f + attribute.value) * propertyAttribute.value - 1.0f;
+                            attribute.value *= propertyAttribute.value;
                             break;
                     }
 
@@ -449,7 +449,7 @@ public partial class UserDataMain
                             skill.damage += propertySkill.damage;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            skill.damage = (1.0f + skill.damage) * propertySkill.damage - 1.0f;
+                            skill.damage *= propertySkill.damage;
                             break;
                     }
 
@@ -696,6 +696,14 @@ public partial class UserDataMain
             skill.type = UserSkillType.Group;
             skill.name = __GetSkillGroupName(card.skillName);
             skills.Add(skill);
+        }
+
+        //先计算装备增益
+        if (skillResults != null)
+        {
+            __ApplySkills(role.skillNames, skills, skillResults);
+            
+            skillResults.Clear();
         }
 
         __ApplyCardBonds(ref attributeResults, ref skillResults);
@@ -1163,6 +1171,14 @@ public partial class UserDataMain
 
                         break;
                 }
+            }
+
+            //先计算装备增益
+            if (skillResults != null)
+            {
+                __ApplySkills(roleSkillNames, skills, skillResults);
+                
+                skillResults.Clear();
             }
 
             __ApplyCardBonds(ref attributeResults, ref skillResults);
