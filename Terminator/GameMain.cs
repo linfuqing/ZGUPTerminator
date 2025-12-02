@@ -91,8 +91,19 @@ public class GameLevelData : ILevelData
         int exp, 
         int expMax, 
         string[] skills,
+        ILevelData.Item[] inputs,
         Action<ILevelData.StageResult> onComplete)
     {
+        int numItems = inputs == null ? 0 : inputs.Length;
+        IUserData.Item[] outputs = numItems > 0 ? new IUserData.Item[numItems] : null;
+        for (int i = 0; i < numItems; ++i)
+        {
+            ref var input = ref inputs[i];
+            ref var output = ref outputs[i];
+            output.name = input.name;
+            output.count = input.count;
+        }
+        
         return IUserData.instance.SubmitStage(
             __userID, 
             //ToStageFlag(flag),
@@ -106,6 +117,7 @@ public class GameLevelData : ILevelData
             exp, 
             expMax,
             skills,
+            outputs, 
             x =>
             {
                 ILevelData.StageResult result;

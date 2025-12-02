@@ -696,6 +696,7 @@ public partial class UserData
         int exp, 
         int expMax, 
         string[] skills,
+        IUserData.Item[] items,
         Action<IUserData.StageResult> onComplete)
     {
         yield return null;
@@ -789,6 +790,7 @@ public partial class UserData
             stageCache.exp = exp;
             stageCache.expMax = expMax;
             stageCache.skills = skills;
+            stageCache.items = items;
             PlayerPrefs.SetString(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, temp.name, stage),
                 stageCache.ToString());
             

@@ -787,6 +787,20 @@ public static class LevelShared
         
         public static ref FixedList4096Bytes<Stage> values => ref Value.Data;
     }
+    
+    public struct Item
+    {
+        public FixedString32Bytes name;
+        
+        public int count;
+    }
+
+    private struct Items
+    {
+        private static readonly SharedStatic<FixedList512Bytes<Item>> Value = SharedStatic<FixedList512Bytes<Item>>.GetOrCreate<Items>();
+        
+        public static ref FixedList512Bytes<Item> values => ref Value.Data;
+    }
 
     private struct Exp
     {
@@ -827,5 +841,7 @@ public static class LevelShared
         set => ExpMax.Value.Data = value;
     }
 
+    public static ref FixedList512Bytes<Item> items => ref Items.values;
+    
     public static ref FixedList4096Bytes<Stage> stages => ref Stages.values;
 }

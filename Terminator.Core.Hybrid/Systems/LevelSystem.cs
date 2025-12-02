@@ -97,6 +97,7 @@ public partial class LevelSystemManaged : SystemBase
     //private ComponentLookup<CopyMatrixToTransformInstanceID> __copyMatrixToTransformInstanceIDs;
 
     private EntityQuery __group;
+    private EntityQuery __itemGroup;
     
     protected override void OnCreate()
     {
@@ -111,6 +112,11 @@ public partial class LevelSystemManaged : SystemBase
             __group = builder
                 .WithAll<LevelObject>()
                 .WithOptions(EntityQueryOptions.IncludeDisabledEntities)
+                .Build(this);
+        
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __itemGroup = builder
+                .WithAllRW<LevelItem>()
                 .Build(this);
 
         //RequireForUpdate<LevelStatus>();
@@ -149,7 +155,7 @@ public partial class LevelSystemManaged : SystemBase
 
             return;
         }
-
+        
         Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
@@ -186,6 +192,23 @@ public partial class LevelSystemManaged : SystemBase
                 __DestroyEntities(__group);
             }
         }
+        
+        __itemGroup.TryGetSingletonBuffer<LevelItem>(out var levelItems);
+
+        if (manager.isRestart && levelItems.IsCreated)
+        {
+            levelItems.Clear();
+
+            LevelItem levelItem;
+            foreach (var item in LevelShared.items)
+            {
+                levelItem.name = item.name;
+                levelItem.count = item.count;
+
+                levelItems.Add(levelItem);
+            }
+        }
+
         /*else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))
         {
             EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
@@ -204,7 +227,8 @@ public partial class LevelSystemManaged : SystemBase
                 status.killCount, 
                 status.killBossCount, 
                 status.gold, 
-                status.stage);
+                status.stage, 
+                levelItems);
         
 #if ENABLE_PROFILER
         using(UpdateStageProfilerMarker.Auto())

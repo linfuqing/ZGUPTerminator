@@ -90,6 +90,35 @@ public struct UserStage
 
 public partial interface IUserData
 {
+    public struct Item
+    {
+        public string name;
+        public int count;
+
+        public static Item[] Parse(string[] values, int startIndex, int length)
+        {
+            int count = length >> 1;
+            if(0 == count)
+                return Array.Empty<Item>();
+
+            int index = startIndex;
+            var items = new Item[count];
+            for (int i = 0; i < count; ++i)
+            {
+                ref var item = ref items[i];
+                item.name = values[index++];
+                item.count = int.Parse(values[index++]);
+            }
+
+            return items;
+        }
+
+        public override string ToString()
+        {
+            return $"{name}{UserData.SEPARATOR}{count}";
+        }
+    }
+
     public struct StageCache
     {
         public uint seconds;
@@ -97,6 +126,7 @@ public partial interface IUserData
         public int exp;
         public int expMax;
         public string[] skills;
+        public Item[] items;
 
         public static readonly StageCache Empty = new StageCache(string.Empty);
         
@@ -112,26 +142,53 @@ public partial interface IUserData
                 expMax = 0;
 
                 skills = Array.Empty<string>();
+                items = Array.Empty<Item>();
 
                 return;
             }
             
-            skills = value.Split(UserData.SEPARATOR);
+            var values = value.Split(UserData.SEPARATOR);
             
-            int length = skills.Length;
-            seconds = uint.Parse(skills[--length]);
-            rage = int.Parse(skills[--length]);
-            exp = int.Parse(skills[--length]);
-            expMax = int.Parse(skills[--length]);
+            int length = values.Length;
+            seconds = uint.Parse(values[--length]);
+            rage = int.Parse(values[--length]);
+            exp = int.Parse(values[--length]);
+            expMax = int.Parse(values[--length]);
 
-            Array.Resize(ref skills, length);
+            if (length > 0)
+            {
+                if (int.TryParse(values[length], out int skillCount))
+                {
+                    skills = skillCount > 0 ? new string[skillCount] : null;
+                    length -= skillCount;
+                    Array.Copy(values, length,  skills, 0, skillCount);
+                    items = Item.Parse(values, 0, length);
+                    Array.Resize(ref skills, skillCount);
+                }
+                else
+                {
+                    Array.Resize(ref values, length);
+                    skills = values;
+                    items = Array.Empty<Item>();
+                }
+            }
+            else
+            {
+                skills = Array.Empty<string>();
+                items = Array.Empty<Item>();
+            }
         }
 
         public override string ToString()
         {
-            string result = $"{seconds}{UserData.SEPARATOR}{expMax}{UserData.SEPARATOR}{exp}{UserData.SEPARATOR}{rage}";
-            if(skills != null && skills.Length > 0)
+            int numSkills = skills == null ? 0 : skills.Length;
+            string result = $"{numSkills}{UserData.SEPARATOR}{expMax}{UserData.SEPARATOR}{exp}{UserData.SEPARATOR}{rage}{UserData.SEPARATOR}{seconds}";
+            if(numSkills > 0)
                 result = $"{string.Join(UserData.SEPARATOR, skills)}{UserData.SEPARATOR}{result}";
+            
+            int numItems = items == null ? 0 : items.Length;
+            if(numItems > 0)
+                result = $"{string.Join(UserData.SEPARATOR, items)}{UserData.SEPARATOR}{result}";
             
             return result;
         }
@@ -193,6 +250,7 @@ public partial interface IUserData
         int exp,
         int expMax,
         string[] skills,
+        Item[] items,
         Action<StageResult> onComplete);
 
     /// <summary>
@@ -317,9 +375,9 @@ public partial class UserData
         int startStage = PlayerPrefs.GetInt(levelStartStageKey, -1);
         if (startStage == -1)
             return;
-        
+         
         string stageFlagKey;
-        for (int i = startStage; i < stage; ++i)
+        for (int i = startStage; i< stage; ++i)
         {
             stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
 

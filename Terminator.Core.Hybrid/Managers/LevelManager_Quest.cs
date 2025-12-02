@@ -103,7 +103,8 @@ public partial class LevelManager
         int killCount, 
         int killBossCount, 
         int gold, 
-        int stage)
+        int stage, 
+        in Unity.Entities.DynamicBuffer<LevelItem> levelItems)
     {
         bool isDirty = false;
         int time = __GetStageTime(out float now);
@@ -122,7 +123,7 @@ public partial class LevelManager
                 _onStage.Invoke(stage.ToString());
             
             if (!isRestart && stage > __stage)
-                __Submit(stage, gold, exp, maxExp, time);
+                __Submit(stage, gold, exp, maxExp, time, levelItems);
 
             __stageTime = now;
 

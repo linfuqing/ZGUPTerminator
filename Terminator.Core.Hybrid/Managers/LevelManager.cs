@@ -378,7 +378,7 @@ public partial class LevelManager : MonoBehaviour
         return Mathf.RoundToInt(now - __stageTime);
     }
 
-    private void __Submit(int stage, int gold, int exp, int maxExp, int time)
+    private void __Submit(int stage, int gold, int exp, int maxExp, int time, Unity.Entities.DynamicBuffer<LevelItem> levelItems)
     {
         var levelData = ILevelData.instance;
         if (levelData == null)
@@ -393,6 +393,22 @@ public partial class LevelManager : MonoBehaviour
         foreach (var skillActiveName in __skillActiveNames.Values)
             skillActiveNames[numSkillActiveNames++] = skillActiveName.ToString();
 
+        ILevelData.Item[] items = null;
+        int numItems = levelItems.IsCreated ? levelItems.Length : 0;
+        if (numItems > 0)
+        {
+            LevelItem levelItem;
+            ILevelData.Item item;
+            items = new ILevelData.Item[numItems];
+            for (int i = 0; i < numItems; ++i)
+            {
+                levelItem = levelItems[i];
+                item.name = levelItem.name.ToString();
+                item.count = levelItem.count;
+                items[i] = item;
+            }
+        }
+
         __StartCoroutine(levelData.SubmitStage(
             //__dataFlag, 
             stage,
@@ -405,6 +421,7 @@ public partial class LevelManager : MonoBehaviour
             exp,
             maxExp,
             skillActiveNames,
+            items, 
             __OnStageChanged));
     }
 
@@ -420,6 +437,6 @@ public partial class LevelManager : MonoBehaviour
     void OnApplicationFocus(bool focus)
     {
         if(!focus)
-            __Submit(__stage, __gold, __exp, __maxExp, __GetStageTime(out _));
+            __Submit(__stage, __gold, __exp, __maxExp, __GetStageTime(out _), default);
     }
 }

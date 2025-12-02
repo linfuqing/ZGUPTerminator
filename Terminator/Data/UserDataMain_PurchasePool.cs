@@ -6,6 +6,7 @@ using ZG;
 
 public partial class UserDataMain
 {
+    [Header("PurchasePool")]
     [SerializeField]
     internal UserStage.RewardPool[] _rewardPools;
     
