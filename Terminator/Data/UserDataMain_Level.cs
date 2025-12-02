@@ -25,6 +25,12 @@ public partial class UserDataMain
             set => name = value;
         }
         
+        [CSVField]
+        public int 关卡存档类型
+        {
+            set => cacheType = (UserLevel.CacheType)value;
+        }
+
         /*[CSVField]
         public int 关卡体力
         {
