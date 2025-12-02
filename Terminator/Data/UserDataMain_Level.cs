@@ -11,6 +11,8 @@ public partial class UserDataMain
     {
         public string name;
         //public int energy;
+        
+        public UserLevel.CacheType cacheType;
 
         public string[] stageNames;
         
@@ -239,6 +241,7 @@ public partial class UserDataMain
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = levelID;
+        levelCache.seconds = DateTimeUtility.GetSeconds();
         levelCache.stage = stage;
         levelCache.gold = 0;
         levelCache.killCount = 0;
@@ -705,6 +708,7 @@ public partial class UserDataMain
         UserLevel userLevel;
         userLevel.name = level.name;
         userLevel.id = __ToID(levelIndex);
+        userLevel.cacheType = level.cacheType;
         //userLevel.energy = level.energy;
             
         int i, j, numStageRewards, numStages = __GetStageCount(level);
@@ -803,6 +807,7 @@ public partial class UserData
             LevelCache levelCache;
             levelCache.name = _defaultSceneName;
             levelCache.id = levelID;
+            levelCache.seconds = DateTimeUtility.GetSeconds();
             levelCache.stage = closestStage;
             levelCache.gold = 0;
             levelCache.killCount = 0;

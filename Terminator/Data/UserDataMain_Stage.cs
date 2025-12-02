@@ -263,7 +263,7 @@ public partial class UserDataMain
         result.levelEnergy = __GetStage(level, __GetDontCacheStage(level, levelStage.stageIndex)).energy;
         result.cache = (stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache
             ? IUserData.StageCache.Empty
-            : UserData.GetStageCache(level.name, levelStage.stageIndex);
+            : __GetStageCache(level.name, levelStage.stageIndex, level.cacheType);
 
         /*int i, numSkillNames = result.cache.skills == null ? 0 : result.cache.skills.Length;
         result.skillGroupNames = numSkillNames > 0 ? new string[numSkillNames] : null;
@@ -331,7 +331,7 @@ public partial class UserDataMain
 
             energy = temp.energy;
             
-            stageCache = UserData.GetStageCache(level.name, stage);
+            stageCache = __GetStageCache(level.name, stage, level.cacheType);
         }
         else
         {
@@ -356,6 +356,7 @@ public partial class UserDataMain
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
         levelCache.id = __ToID(levelIndex);
+        levelCache.seconds = stageCache.seconds == 0 ? DateTimeUtility.GetSeconds() : stageCache.seconds;
         levelCache.stage = stage;
         levelCache.gold = 0;
         levelCache.killCount = 0;
@@ -476,6 +477,28 @@ public partial class UserDataMain
     public bool ApplyStage(uint levelID, int stage, out int energy)
     {
         return __ApplyEnergy(GetStageEnergy(levelID, stage), out energy);
+    }
+
+    private static IUserData.StageCache __GetStageCache(string levelName, int stage, UserLevel.CacheType cacheType)
+    {
+        var result = UserData.GetStageCache(levelName, stage);
+        switch (cacheType)
+        {
+            case UserLevel.CacheType.Day:
+                if (!DateTimeUtility.IsToday(result.seconds))
+                    return IUserData.StageCache.Empty;
+                break;
+            case UserLevel.CacheType.Week:
+                if (!DateTimeUtility.IsThisWeek(result.seconds))
+                    return IUserData.StageCache.Empty;
+                break;
+            case UserLevel.CacheType.Month:
+                if (!DateTimeUtility.IsThisMonth(result.seconds))
+                    return IUserData.StageCache.Empty;
+                break;
+        }
+
+        return result;
     }
 
     private static int __GetStageCount(in Level level)
@@ -761,6 +784,7 @@ public partial class UserData
             __SubmitStageFlag(hpPercentage == 100, /*flag, */temp.name, temp.stage, stage);
 
             IUserData.StageCache stageCache;
+            stageCache.seconds = temp.seconds;
             stageCache.rage = rage;
             stageCache.exp = exp;
             stageCache.expMax = expMax;

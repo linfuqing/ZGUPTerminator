@@ -6,9 +6,19 @@ using ZG;
 
 public struct UserLevel
 {
+    public enum CacheType
+    {
+        Normal, 
+            
+        Day, 
+        Week, 
+        Month
+    }
+    
     public string name;
     public uint id;
     //public int energy;
+    public CacheType cacheType;
     public UserStage[] stages;
 }
 
@@ -170,6 +180,7 @@ public partial class UserData
     {
         public string name;
         public uint id;
+        public uint seconds;
         public int stage;
         public int gold;
         public int killCount;
@@ -180,15 +191,16 @@ public partial class UserData
             var values = value.Split(SEPARATOR);
             name = values[0];
             id = uint.Parse(values[1]);
-            stage = int.Parse(values[2]);
-            gold = int.Parse(values[3]);
-            killCount = int.Parse(values[4]);
-            killBossCount = int.Parse(values[5]);
+            seconds = uint.Parse(values[2]);
+            stage = int.Parse(values[3]);
+            gold = int.Parse(values[4]);
+            killCount = int.Parse(values[5]);
+            killBossCount = int.Parse(values[6]);
         }
 
         public override string ToString()
         {
-            return $"{name}{SEPARATOR}{id}{SEPARATOR}{stage}{SEPARATOR}{gold}{SEPARATOR}{killCount}{SEPARATOR}{killBossCount}";
+            return $"{name}{SEPARATOR}{id}{SEPARATOR}{seconds}{SEPARATOR}{stage}{SEPARATOR}{gold}{SEPARATOR}{killCount}{SEPARATOR}{killBossCount}";
         }
     }
 
