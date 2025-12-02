@@ -629,17 +629,16 @@ public partial class UserDataMain
                 skills.Add(skill);
                 
                 //++numSkills;
+                skill.name = __GetSkillGroupName(accessory.skillName);
+                if (!string.IsNullOrEmpty(skill.name))
+                {
+                    skill.type = UserSkillType.Group;
+                    skills.Add(skill);
+                
+                    //++numSkills;
+                }
             }
             
-            skill.name = __GetSkillGroupName(accessory.skillName);
-            if (!string.IsNullOrEmpty(skill.name))
-            {
-                skill.type = UserSkillType.Group;
-                skills.Add(skill);
-                
-                //++numSkills;
-            }
-
             if (accessoryInfo.stage > 0)
             {
                 indices = __GetAccessoryStageIndices(accessoryInfo.index);
