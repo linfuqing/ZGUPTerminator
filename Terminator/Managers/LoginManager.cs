@@ -1104,6 +1104,8 @@ public sealed class LoginManager : MonoBehaviour
         LevelPlayerShared.effectRage = 0;
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
+        
+        LevelShared.items.Clear();
 
         LevelShared.stages.Clear();
 
@@ -1136,6 +1138,19 @@ public sealed class LoginManager : MonoBehaviour
 
         SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
         
+        LevelShared.items.Clear();
+        if (property.cache.items != null)
+        {
+            LevelShared.Item levelItem;
+            foreach (var item in property.cache.items)
+            {
+                levelItem.name = item.name;
+                levelItem.count = item.count;
+                
+                LevelShared.items.Add(levelItem);
+            }
+        }
+
         LevelShared.stages.Clear();
 
         foreach (var levelStage in property.levelStages)
