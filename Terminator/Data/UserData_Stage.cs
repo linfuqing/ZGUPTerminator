@@ -157,10 +157,10 @@ public partial interface IUserData
 
             if (length > 0)
             {
-                if (int.TryParse(values[length], out int skillCount))
+                if (int.TryParse(values[length - 1], out int skillCount))
                 {
                     skills = skillCount > 0 ? new string[skillCount] : null;
-                    length -= skillCount;
+                    length -= skillCount + 1;
                     Array.Copy(values, length,  skills, 0, skillCount);
                     items = Item.Parse(values, 0, length);
                     Array.Resize(ref skills, skillCount);
