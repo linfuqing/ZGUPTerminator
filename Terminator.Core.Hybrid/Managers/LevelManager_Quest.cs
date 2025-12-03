@@ -67,6 +67,9 @@ public partial class LevelManager
     }
 
     [SerializeField] 
+    internal float _questInterval = 0.5f;
+
+    [SerializeField] 
     internal float _questDestroyTime = 3.0f;
 
     [SerializeField] 
@@ -280,23 +283,24 @@ public partial class LevelManager
         return Mathf.Max(_questDestroyTime, destroyTime);
     }
 
-    private void __CreateStageQuests(int value)
+    private IEnumerator __CreateStageQuests(int value)
     {
-        ref var stages = ref LevelShared.stages;
-        if (stages.Length > value)
+        if (LevelShared.stages.Length > value)
         {
-            var stage = stages[value];
+            var stage = LevelShared.stages[value];
 
             if (stage.quests.Length > 0)
             {
+                if(_onQuestActive != null)
+                    _onQuestActive.Invoke();
+                
                 if (__questStates == null)
                     __questStates = new List<QuestStatus>();
-                
+
+                QuestStatus questStatus;
                 foreach (var quest in stage.quests)
-                    __questStates.Add(new QuestStatus(quest, _questStyles));
-                
-                foreach (var questStatus in __questStates)
                 {
+                    questStatus = new QuestStatus(quest, _questStyles);
                     switch (questStatus.Value.type)
                     {
                         case LevelQuestType.Once:
@@ -316,10 +320,12 @@ public partial class LevelManager
                             questStatus.SetCount(__GetStageTime(out _) <= questStatus.Value.count);
                             break;*/
                     }
+                    
+                    __questStates.Add(questStatus);
+
+                    if(_questInterval > Mathf.Epsilon)
+                        yield return new WaitForSeconds(_questInterval);
                 }
-                
-                if(_onQuestActive != null)
-                    _onQuestActive.Invoke();
             }
         }
     }
@@ -330,7 +336,7 @@ public partial class LevelManager
         
         yield return new WaitForSeconds(time);
         
-        __CreateStageQuests(value);
+        yield return __CreateStageQuests(value);
     }
 
     /*void Awake()
