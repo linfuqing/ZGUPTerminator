@@ -72,8 +72,11 @@ public partial class LevelManager
     [SerializeField] 
     internal float _questDestroyTime = 3.0f;
 
-    [SerializeField] 
-    internal UnityEvent _onQuestActive;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_onQuestActive")] 
+    internal UnityEvent _onQuestEnable;
+    
+    [SerializeField]
+    internal UnityEvent _onQuestDisable;
 
     [SerializeField] 
     internal QuestStyle[] _questStyles;
@@ -289,6 +292,7 @@ public partial class LevelManager
 
     private void __CreateStageQuests(int value)
     {
+        bool isActive = false;
         ref var stages = ref LevelShared.stages;
         if (stages.Length > value)
         {
@@ -324,11 +328,15 @@ public partial class LevelManager
                             break;*/
                     }
                 }
+
+                _onQuestEnable?.Invoke();
                 
-                if(_onQuestActive != null)
-                    _onQuestActive.Invoke();
+                isActive = true;
             }
         }
+
+        if (!isActive)
+            _onQuestDisable?.Invoke();
     }
 
     private IEnumerator __DestroyAndCreateStageQuests(int value)
