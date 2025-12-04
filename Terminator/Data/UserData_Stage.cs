@@ -151,7 +151,15 @@ public partial interface IUserData
             
             int length = values.Length;
             seconds = uint.Parse(values[--length]);
-            rage = int.Parse(values[--length]);
+            //兼容老版本
+            if (seconds == 0)
+            {
+                seconds = DateTimeUtility.GetSeconds();
+                rage = 0;
+            }
+            else
+                rage = int.Parse(values[--length]);
+            
             exp = int.Parse(values[--length]);
             expMax = int.Parse(values[--length]);
 

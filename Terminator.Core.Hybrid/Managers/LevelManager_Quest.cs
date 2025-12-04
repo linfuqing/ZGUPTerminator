@@ -246,7 +246,7 @@ public partial class LevelManager
         }
     }
 
-    private float __DestroyStageQuests()
+    private IEnumerator __DestroyStageQuests()
     {
         float destroyTime = 0.0f;
         if (__questStates != null)
@@ -275,32 +275,35 @@ public partial class LevelManager
                 
                 destroyTime = Mathf.Max(destroyTime, questStatus.DestroyTime);
                 questStatus.Dispose();
+
+                if(_questInterval > Mathf.Epsilon)
+                    yield return new WaitForSeconds(_questInterval);
             }
             
             __questStates.Clear();
         }
-
-        return Mathf.Max(_questDestroyTime, destroyTime);
+        
+        if(_questDestroyTime > Mathf.Epsilon)
+            yield return new WaitForSeconds(_questDestroyTime);
     }
 
-    private IEnumerator __CreateStageQuests(int value)
+    private void __CreateStageQuests(int value)
     {
-        if (LevelShared.stages.Length > value)
+        ref var stages = ref LevelShared.stages;
+        if (stages.Length > value)
         {
-            var stage = LevelShared.stages[value];
+            var stage = stages[value];
 
             if (stage.quests.Length > 0)
             {
-                if(_onQuestActive != null)
-                    _onQuestActive.Invoke();
-                
                 if (__questStates == null)
                     __questStates = new List<QuestStatus>();
-
-                QuestStatus questStatus;
+                
                 foreach (var quest in stage.quests)
+                    __questStates.Add(new QuestStatus(quest, _questStyles));
+                
+                foreach (var questStatus in __questStates)
                 {
-                    questStatus = new QuestStatus(quest, _questStyles);
                     switch (questStatus.Value.type)
                     {
                         case LevelQuestType.Once:
@@ -320,23 +323,19 @@ public partial class LevelManager
                             questStatus.SetCount(__GetStageTime(out _) <= questStatus.Value.count);
                             break;*/
                     }
-                    
-                    __questStates.Add(questStatus);
-
-                    if(_questInterval > Mathf.Epsilon)
-                        yield return new WaitForSeconds(_questInterval);
                 }
+                
+                if(_onQuestActive != null)
+                    _onQuestActive.Invoke();
             }
         }
     }
 
     private IEnumerator __DestroyAndCreateStageQuests(int value)
     {
-        float time = __DestroyStageQuests();
+        yield return __DestroyStageQuests();
         
-        yield return new WaitForSeconds(time);
-        
-        yield return __CreateStageQuests(value);
+        __CreateStageQuests(value);
     }
 
     /*void Awake()
