@@ -8,14 +8,8 @@ public enum AdvertisementType
     //游荡
     Tip, 
     
-    //宝箱
-    PurchasedPool, 
-    
     //每日商品
     Product, 
-    
-    //免费金币
-    Gold, 
     
     //买体力
     Energy, 

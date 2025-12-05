@@ -115,7 +115,7 @@ public partial class LevelManager
     private List<int> __selectedSkillIndices;
 
     private List<ResultSkillStyle> __resultSkillStyles;
-    private Queue<Coroutine> __skillSelectionCoroutines;
+    private Dictionary<string, Queue<Coroutine>> __skillSelectionCoroutines;
     
     private Dictionary<string, LevelSkillStyle> __skillStyles;
 
@@ -214,7 +214,7 @@ public partial class LevelManager
                 if(skill.selectIndex == -1)
                     continue;
                 
-                yield return __SelectSkill(i == endIndex, 0.0f, skill);
+                yield return __SelectSkill(i == endIndex, 0.0f, skill, null);
 
                 result = true;
             }
@@ -232,7 +232,7 @@ public partial class LevelManager
                     if (skill.selectIndex == -1)
                         continue;
 
-                    yield return __SelectSkill(i == endIndex, destination.destroyTime, skill);
+                    yield return __SelectSkill(i == endIndex, destination.destroyTime, skill, destination.name);
 
                     result = true;
                 }
@@ -391,7 +391,7 @@ public partial class LevelManager
                     while (skill == null)
                         yield return null;
                     
-                    yield return __SelectSkill(true, destination.destroyTime, skill.Value);
+                    yield return __SelectSkill(true, destination.destroyTime, skill.Value, destination.name);
 
                     if (__onSkillSelectionComplete != null)
                     {
@@ -456,7 +456,7 @@ public partial class LevelManager
         //    yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
     }
 
-    private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value)
+    private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value, string selectionName)
     {
         if (__skillStyles != null)
         {
@@ -497,10 +497,8 @@ public partial class LevelManager
                 }while((__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End);
                 
                 yield return null;
-                
-                while (__skillSelectionCoroutines != null &&
-                       __skillSelectionCoroutines.TryDequeue(out var coroutine))
-                    yield return coroutine;
+
+                yield return __WaitForSelectionCoroutines(selectionName);
 
                 __CloseSkillSelectionRightNow();
             }
@@ -511,9 +509,8 @@ public partial class LevelManager
 
         __DestroyGameObjects();
 
-        while (__skillSelectionCoroutines != null && __skillSelectionCoroutines.TryDequeue(out var coroutine))
-            yield return coroutine;
-        
+        yield return __WaitForSelectionCoroutines(selectionName);
+
         if (selectedSkillSelectionIndex != -1 && 
             SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keyIcons))
         {
@@ -542,6 +539,26 @@ public partial class LevelManager
 
             //if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
             //    yield return __FinishSkillSelection(selection);
+        }
+    }
+
+    private IEnumerator __WaitForSelectionCoroutines(string selectionName)
+    {
+        if (__skillSelectionCoroutines != null)
+        {
+            if(__skillSelectionCoroutines.TryGetValue(selectionName, out var skillSelectionCoroutines))
+            {
+                while (skillSelectionCoroutines.TryDequeue(out var skillSelectionCoroutine))
+                    yield return skillSelectionCoroutine;
+            }
+            else
+            {
+                foreach (var coroutines in __skillSelectionCoroutines.Values)
+                {
+                    while (coroutines.TryDequeue(out var skillSelectionCoroutine))
+                        yield return skillSelectionCoroutine;
+                }
+            }
         }
     }
 

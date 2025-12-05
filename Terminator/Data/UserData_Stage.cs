@@ -151,15 +151,7 @@ public partial interface IUserData
             
             int length = values.Length;
             seconds = uint.Parse(values[--length]);
-            //兼容老版本
-            if (seconds == 0)
-            {
-                seconds = DateTimeUtility.GetSeconds();
-                rage = 0;
-            }
-            else
-                rage = int.Parse(values[--length]);
-            
+            rage = seconds == 0 ? (int)seconds : int.Parse(values[--length]);
             exp = int.Parse(values[--length]);
             expMax = int.Parse(values[--length]);
 
@@ -167,11 +159,16 @@ public partial interface IUserData
             {
                 if (int.TryParse(values[length - 1], out int skillCount))
                 {
-                    skills = skillCount > 0 ? new string[skillCount] : null;
                     length -= skillCount + 1;
-                    Array.Copy(values, length,  skills, 0, skillCount);
+                    if (skillCount > 0)
+                    {
+                        skills = new string[skillCount];
+                        Array.Copy(values, length, skills, 0, skillCount);
+                    }
+                    else
+                        skills = null;
+
                     items = Item.Parse(values, 0, length);
-                    Array.Resize(ref skills, skillCount);
                 }
                 else
                 {

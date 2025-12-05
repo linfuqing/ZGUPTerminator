@@ -391,7 +391,6 @@ public partial class LevelManager
         return true;
     }
     
-    
     private void __AddActiveSkillKey(string name)
     {
         if (__skillActiveKeys == null)
@@ -438,6 +437,7 @@ public partial class LevelManager
                 }
                 
                 Coroutine coroutine;
+                Queue<Coroutine> skillSelectionCoroutines;
                 for (int i = 0; i < numStyles; ++i)
                 {
                     ref var skillActiveData = ref _skillActiveDatas[i];
@@ -449,11 +449,18 @@ public partial class LevelManager
                         asset, 
                         result.count,
                         skillActiveData.resultKeyStyleDestroyTime));
-                    
+
                     if (__skillSelectionCoroutines == null)
-                        __skillSelectionCoroutines = new Queue<Coroutine>();
-        
-                    __skillSelectionCoroutines.Enqueue(coroutine);
+                        __skillSelectionCoroutines = new Dictionary<string, Queue<Coroutine>>();
+
+                    if (!__skillSelectionCoroutines.TryGetValue(skillActiveData.name, out skillSelectionCoroutines))
+                    {
+                        skillSelectionCoroutines = new Queue<Coroutine>();
+                        
+                        __skillSelectionCoroutines[skillActiveData.name] = skillSelectionCoroutines;
+                    }
+
+                    skillSelectionCoroutines.Enqueue(coroutine);
                 }
             }
 
@@ -494,7 +501,8 @@ public partial class LevelManager
             while (!isConform)
                 yield return null;
 
-            yield return new WaitForSecondsRealtime(destroyTime);
+            if(destroyTime > Mathf.Epsilon)
+                yield return new WaitForSecondsRealtime(destroyTime);
 
             Destroy(gameObject);
         }
