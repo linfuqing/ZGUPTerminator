@@ -151,7 +151,7 @@ public partial interface IUserData
             
             int length = values.Length;
             seconds = uint.Parse(values[--length]);
-            rage = seconds == 0 ? (int)seconds : int.Parse(values[--length]);
+            rage = int.Parse(values[--length]);
             exp = int.Parse(values[--length]);
             expMax = int.Parse(values[--length]);
 

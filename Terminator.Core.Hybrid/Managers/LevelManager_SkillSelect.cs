@@ -180,7 +180,7 @@ public partial class LevelManager
                 int step = 0;
                 onClick.AddListener(() =>
                 {
-                    if (0 == ++step)
+                    if (0 == step++)
                         StartCoroutine(__StartSkillSelection(
                             selectionIndex, 
                             selection.startTime, 
