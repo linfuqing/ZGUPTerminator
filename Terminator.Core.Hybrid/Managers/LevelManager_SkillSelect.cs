@@ -155,7 +155,7 @@ public partial class LevelManager
         IAnalytics.instance?.SelectSkillBegin(selectionIndex);
 
         if (selectionIndex == -1)
-            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f, timeScale));
+            StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f, timeScale, null));
         else
         {
             var selection = _skillSelections[selectionIndex];
@@ -167,7 +167,8 @@ public partial class LevelManager
                 StartCoroutine(__StartSkillSelection(
                     selectionIndex,
                     selection.startTime, 
-                    timeScale));
+                    timeScale, 
+                    null));
             else
             {
                 //放在这里无害，最后会被清理掉
@@ -175,7 +176,17 @@ public partial class LevelManager
                 
                 var onClick = selection.start.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() => StartCoroutine(__StartSkillSelection(selectionIndex, selection.startTime, timeScale)));
+
+                int step = 0;
+                onClick.AddListener(() =>
+                {
+                    if (0 == ++step)
+                        StartCoroutine(__StartSkillSelection(
+                            selectionIndex, 
+                            selection.startTime, 
+                            timeScale, 
+                            () => step > 1));
+                });
             }
         }
     }
@@ -616,10 +627,19 @@ public partial class LevelManager
         __DestroyGameObjects();
     }
 
-    private IEnumerator __StartSkillSelection(int selectionIndex, float time, float timeScale)
+    private IEnumerator __StartSkillSelection(int selectionIndex, float time, float timeScale, Func<bool> skip)
     {
-        if(time > 0.0f)
-            yield return new WaitForSecondsRealtime(time);
+        if (time > 0.0f)
+        {
+            if(skip == null)
+                yield return new WaitForSecondsRealtime(time);
+            else
+            {
+                float startTime = Time.unscaledTime;
+                while(Time.unscaledTime - startTime < time && !skip())
+                    yield return null;
+            }
+        }
 
         //不行
         //if (__coroutine != null)
