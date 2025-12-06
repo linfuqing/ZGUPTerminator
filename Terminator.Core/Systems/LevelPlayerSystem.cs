@@ -58,8 +58,8 @@ public partial struct LevelPlayerSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTargetDamageScale> effectTargetDamageScales;
 
-        [NativeDisableParallelForRestriction]
-        public ComponentLookup<EffectDamage> effectDamages;
+        //[NativeDisableParallelForRestriction]
+        //public ComponentLookup<EffectDamage> effectDamages;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectRage> effectRages;
@@ -105,9 +105,11 @@ public partial struct LevelPlayerSystem : ISystem
                             }
 
                             skillActiveIndex.value = i;
-                            skillActiveIndex.damageScale = 1.0f + activeSkill.damageScale;
+                            skillActiveIndex.damageScale = 1.0f + activeSkill.damageScale + effectDamageScale;
                             skillActiveIndices.Add(skillActiveIndex);
                         }
+                        else
+                            UnityEngine.Debug.LogError($"Skill {activeSkill.name} can not been found!");
                     }
                 }
 
@@ -135,9 +137,11 @@ public partial struct LevelPlayerSystem : ISystem
                             }
 
                             levelSkillGroup.value = i;
-                            levelSkillGroup.damageScale = 1.0f + skillGroup.damageScale;
+                            levelSkillGroup.damageScale = 1.0f + skillGroup.damageScale + effectDamageScale;
                             levelSkillGroups.Add(levelSkillGroup);
                         }
+                        else
+                            UnityEngine.Debug.LogError($"Skill group {skillGroup.name} can not been found!");
                     }
                 }
             }
@@ -190,13 +194,13 @@ public partial struct LevelPlayerSystem : ISystem
                 effectTargetDamageScales[player] = effectTargetDamageScale;
             }
             
-            EffectDamage effectDamage;
+            /*EffectDamage effectDamage;
             //if (!bulletLayerMasks.TryGetComponent(player, out effectDamage.bulletLayerMask))
                 effectDamage.layerMaskAndTags = default;//BulletLayerMask.AllLayers;
             
             effectDamage.scale = 1.0f + this.effectDamageScale;
 
-            effectDamages[player] = effectDamage;
+            effectDamages[player] = effectDamage;*/
 
             if (effectRages.HasComponent(player))
             {
@@ -230,7 +234,7 @@ public partial struct LevelPlayerSystem : ISystem
 
     private ComponentLookup<EffectTargetDamageScale> __effectTargetDamageScales;
 
-    private ComponentLookup<EffectDamage> __effectDamages;
+    //private ComponentLookup<EffectDamage> __effectDamages;
 
     private ComponentLookup<EffectRage> __effectRages;
 
@@ -250,7 +254,7 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargetDatas = state.GetComponentLookup<EffectTargetData>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
-        __effectDamages = state.GetComponentLookup<EffectDamage>();
+        //__effectDamages = state.GetComponentLookup<EffectDamage>();
         __effectRages = state.GetComponentLookup<EffectRage>();
         __thirdPersonPlayers = state.GetComponentLookup<ThirdPersonPlayer>();
         
@@ -291,7 +295,7 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargetDatas.Update(ref state);
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
-        __effectDamages.Update(ref state);
+        //__effectDamages.Update(ref state);
         __effectRages.Update(ref state);
         __thirdPersonPlayers.Update(ref state);
             
@@ -316,7 +320,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.effectTargetDatas = __effectTargetDatas;
         apply.effectTargets = __effectTargets;
         apply.effectTargetDamageScales = __effectTargetDamageScales;
-        apply.effectDamages = __effectDamages;
+        //apply.effectDamages = __effectDamages;
         apply.effectRages = __effectRages;
         apply.thirdPersonPlayers = __thirdPersonPlayers;
         state.Dependency = apply.ScheduleByRef(entityArray.Length, 1, state.Dependency);

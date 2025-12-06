@@ -50,6 +50,13 @@ public struct UserStageReward
 
 public struct UserStage
 {
+    [Flags]
+    public enum Flag
+    {
+        Unlocked = 0x01,
+        Cached = 0x02
+    }
+    
     [Serializable]
     public struct RewardPool
     {
@@ -83,6 +90,7 @@ public struct UserStage
     public string name;
     public uint id;
     public int energy;
+    public Flag flag;
     public UserRewardData[] rewards;
     public UserStageReward.Flag[] rewardFlags;
     //public RewardPool[] rewardPools;

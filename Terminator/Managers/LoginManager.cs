@@ -1203,7 +1203,7 @@ public sealed class LoginManager : MonoBehaviour
         LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
         LevelPlayerShared.effectTargetRecovery = effectTargetRecovery;
         LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
-        //LevelPlayerShared.effectDamageScale = effectDamageScale;
+        LevelPlayerShared.effectDamageScale = effectDamageScale;
         
         LevelPlayerShared.instanceName = property.name;
 
@@ -1223,12 +1223,12 @@ public sealed class LoginManager : MonoBehaviour
                 {
                     case UserSkillType.Individual:
                         activeSkill.name = skill.name;
-                        activeSkill.damageScale = skill.damage + effectDamageScale;
+                        activeSkill.damageScale = skill.damage;// + effectDamageScale;
                         activeSkills.Add(activeSkill);
                         break;
                     case UserSkillType.Group:
                         skillGroup.name = skill.name;
-                        skillGroup.damageScale = skill.damage + effectDamageScale;
+                        skillGroup.damageScale = skill.damage;// + effectDamageScale;
                         skillGroups.Add(skillGroup);
                         break;
                 }

@@ -386,7 +386,7 @@ public partial class UserDataMain
         string skillGroupName;
         IUserData.Skill skill;
         int i, numSkills = skills.Count;
-        bool result;
+        bool result, isContains = false;
         foreach (var propertySkill in propertySkills)
         {
             for (i = 0; i < numSkills; ++i)
@@ -443,6 +443,8 @@ public partial class UserDataMain
                 
                 if (result)
                 {
+                    isContains = true;
+                    
                     switch (propertySkill.opcode)
                     {
                         case UserPropertyData.Opcode.Add:
@@ -459,7 +461,7 @@ public partial class UserDataMain
                 }
             }
 
-            if (i == numSkills && propertySkill.opcode == UserPropertyData.Opcode.Add)
+            if (!isContains && propertySkill.opcode == UserPropertyData.Opcode.Add)
             {
                 skill.type = propertySkill.type;
                 skill.damage = propertySkill.damage;

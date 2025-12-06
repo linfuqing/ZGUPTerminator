@@ -728,6 +728,7 @@ public partial class UserDataMain
             userStage.name = stage.name;
             userStage.id = __GetLevelStageID(levelIndex, i);
             userStage.energy = stage.energy;
+            userStage.flag = 0;
                 
             if (isUnlock)
             {
@@ -747,6 +748,13 @@ public partial class UserDataMain
                 }
                     
                 isUnlock = (UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;
+                if (isUnlock)
+                {
+                    userStage.flag |= UserStage.Flag.Unlocked;
+                    
+                    if(!__GetStageCache(level.name, i, level.cacheType).isEmpty)
+                        userStage.flag |= UserStage.Flag.Unlocked;
+                }
             }
             else
             {
