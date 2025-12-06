@@ -621,6 +621,9 @@ public sealed class LoginManager : MonoBehaviour
                     //__selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
 
+                    if (selectedLevelIndex == userLevelIndex)
+                        selectedLevelIndex = -1;
+
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
                     {
@@ -853,6 +856,7 @@ public sealed class LoginManager : MonoBehaviour
                                         {
                                             //bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 || 
+                                                selectedLevelIndex != -1 && selectedLevelIndex != userLevelIndex || 
                                                 sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp)
                                                 //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                             {
@@ -866,7 +870,8 @@ public sealed class LoginManager : MonoBehaviour
 
                                                 if (!__levelActivated &&
                                                     __sceneActiveDepth == 0 &&
-                                                    finalLevelIndex == userLevelIndex &&
+                                                    selectedLevelIndex == -1 &&
+                                                    //finalLevelIndex == userLevelIndex &&
                                                     onLevelActivated != null)
                                                 {
                                                     onLevelActivated();
@@ -1035,7 +1040,12 @@ public sealed class LoginManager : MonoBehaviour
 
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if (scrollRect != null)
-            scrollRect.MoveTo(Mathf.Max(0, selectedLevelIndex));
+        {
+            selectedLevelIndex = Mathf.Max(0, selectedLevelIndex);
+            scrollRect.MoveTo(selectedLevelIndex);
+        }
+        else
+            selectedLevelIndex = -1;
 
         if (isHot)
         {

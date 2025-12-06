@@ -283,7 +283,7 @@ public partial struct LevelPlayerSystem : ISystem
             for(int i = 0; i < count; ++i)
                 players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
 
-            entityManager.AddComponent<EffectDamage>(players);
+            //entityManager.AddComponent<EffectDamage>(players);
         }
         
         __levelSkillNameDefinitions.Update(ref state);
