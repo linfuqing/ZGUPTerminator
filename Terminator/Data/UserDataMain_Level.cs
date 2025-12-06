@@ -747,14 +747,12 @@ public partial class UserDataMain
                         out _);
                 }
                     
+                if(!__GetStageCache(level.name, i, level.cacheType).isEmpty)
+                    userStage.flag |= UserStage.Flag.Cached;
+                
                 isUnlock = (UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;
                 if (isUnlock)
-                {
                     userStage.flag |= UserStage.Flag.Unlocked;
-                    
-                    if(!__GetStageCache(level.name, i, level.cacheType).isEmpty)
-                        userStage.flag |= UserStage.Flag.Unlocked;
-                }
             }
             else
             {
