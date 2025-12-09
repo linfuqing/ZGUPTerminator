@@ -354,9 +354,11 @@ public partial class UserDataMain
 
             userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
 
+            userAccessory.attributeValue = accessory.attributeValue;
+
             userAccessory.skillDamage = accessory.skillDamage;
 
-            userAccessory.attributeValue = accessory.attributeValue;
+            userAccessory.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
 
             userAccessory.property = accessory.property;
             
@@ -458,6 +460,8 @@ public partial class UserDataMain
                 userAccessoryStyleLevel.itemName = accessoryLevel.itemName;
                 userAccessoryStyleLevel.itemCount = accessoryLevel.itemCount;
                 userAccessoryStyleLevel.attributeValue = accessoryLevel.attributeValue;
+                userAccessoryStyleLevel.skillDamage = accessoryLevel.skillDamage;
+                userAccessoryStyleLevel.roleSkillGroupDamage = accessoryLevel.roleSkillGroupDamage;
                 
                 userAccessoryStyle.levels[j] = userAccessoryStyleLevel;
             }

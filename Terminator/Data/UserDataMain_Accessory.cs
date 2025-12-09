@@ -485,6 +485,7 @@ public partial class UserDataMain
 
         result.stage = info.stage;
 
+        result.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
         result.skillDamage = accessory.skillDamage;
         result.attributeValue = accessory.attributeValue;
         result.property = accessory.property;

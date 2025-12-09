@@ -86,6 +86,8 @@ public struct UserAccessory
     /// </summary>
     public int stage;
 
+    public float roleSkillGroupDamage;
+
     public float skillDamage;
 
     public float attributeValue;
@@ -136,6 +138,8 @@ public struct UserAccessoryStyle
         public int itemCount;
         
         public float attributeValue;
+        public float skillDamage;
+        public float roleSkillGroupDamage;
     }
 
     public string name;
