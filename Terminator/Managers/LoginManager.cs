@@ -251,12 +251,7 @@ public sealed class LoginManager : MonoBehaviour
     private bool __levelActivated;
     private bool? __isLevelActive;
 
-    public static uint? userID
-    {
-        get;
-
-        private set;
-    }
+    public static uint? userID => GameMain.userID == 0 ? null : GameMain.userID;
 
     public static LoginManager instance
     {
@@ -1254,7 +1249,6 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyEnergy(User user, UserEnergy userEnergy)
     {
-        userID = user.id;
         gold = user.gold;
 
         energyMax = userEnergy.max;
@@ -1285,6 +1279,8 @@ public sealed class LoginManager : MonoBehaviour
             __energyUnitTime);
         
         (IAnalytics.instance as IAnalyticsEx)?.Login(user.id);
+        
+        GameMain.Login(user.id);
     }
 
     private void __IncreaseEnergy()
@@ -1356,6 +1352,12 @@ public sealed class LoginManager : MonoBehaviour
                         
             __rewardStyles.Clear();
         }
+    }
+
+    private void __OnLoginStatusChanged(bool status)
+    {
+        if (status)
+            StartCoroutine(Start());
     }
 
     private IEnumerator __LoadScene(float time, string levelName, string sceneName)
@@ -1436,6 +1438,16 @@ public sealed class LoginManager : MonoBehaviour
         return __Start(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
     }*/
 
+    void OnDestroy()
+    {
+        GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
+    }
+
+    void Awake()
+    {
+        GameUser.Shared.onLoginStatusChanged += __OnLoginStatusChanged;
+    }
+
     IEnumerator Start()
     {
         instance = this;
@@ -1447,7 +1459,7 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
         yield return __CollectAndQueryLevels();
     }
-
+    
     void Update()
     {
         if (energy < energyMax)

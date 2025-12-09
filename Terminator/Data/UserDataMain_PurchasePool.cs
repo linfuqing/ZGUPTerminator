@@ -484,7 +484,12 @@ public partial class UserDataMain
             if (guaranteedTimes > 0)
                 --guaranteedTimes;
             else
+            {
+                if(purchasePool.timesToGuarantee > 0)
+                    __AppendQuest(UserQuest.Type.Purchases, 1);
+
                 guaranteedTimes = purchasePool.timesToGuarantee;
+            }
         }
         
         PlayerPrefs.SetInt(timesKey, purchasePoolTimes);

@@ -412,8 +412,19 @@ public class GameMain : GameUser
     
     [SerializeField] 
     internal int _playerPrefVersion = 1;
+
+    private bool __isInit;
     
-    private bool __isActivated;
+    private static bool __isActivated;
+
+    public static uint userID
+    {
+        get;
+
+        private set;
+    }
+
+    public static event Action<uint, bool> onUserLogin;
 
     public IAssetBundleFactory factory
     {
@@ -453,6 +464,16 @@ public class GameMain : GameUser
     {
         return NAME_SPACE_SCENE + sceneName;
     }*/
+    public static void Login(uint userID)
+    {
+        if (userID == GameMain.userID)
+            return;
+        
+        if(onUserLogin != null)
+            onUserLogin(userID, __isActivated);
+
+        GameMain.userID = userID;
+    }
 
     IEnumerator Start()
     {
@@ -582,10 +603,17 @@ public class GameMain : GameUser
 
     private void __OnLogin()
     {
-        var assetManager = GameAssetManager.instance;
-        assetManager.onConfirmCancel += __OnConfirmCancel;
+        if(__isInit)
+            GameAssetManager.instance.LoadScene(GameConstantManager.Get(DefaultSceneName), null);
+        else
+        {
+            __isInit = true;
+            
+            var assetManager = GameAssetManager.instance;
+            assetManager.onConfirmCancel += __OnConfirmCancel;
 
-        assetManager.StartCoroutine(__Init());
+            assetManager.StartCoroutine(__Init());
+        }
     }
 
     private IEnumerator __Init()
@@ -623,6 +651,8 @@ public class GameMain : GameUser
                 }
 
                 ILevelData.instance = new GameLevelData(y);
+                
+                Login(y);
             });
 
         if (userID != 0)

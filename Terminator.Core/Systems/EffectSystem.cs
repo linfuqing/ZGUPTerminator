@@ -752,6 +752,7 @@ public partial struct EffectSystem : ISystem
                         ? default
                         : this.outputMessages[messageEntity];
                     var simulationEvents = this.simulationEvents[index];
+                    EffectTarget targetInstance;
                     EffectTargetDamageScale targetDamageScale;
                     EffectStatusTarget statusTarget;
                     PhysicsCollider physicsCollider;
@@ -768,10 +769,12 @@ public partial struct EffectSystem : ISystem
                         lengthSQ;
                     int totalCount = 0, 
                         totalDamageValue = 0, 
+                        totalDamageValueClamp = 0, 
                         damageValue,
                         damageValueImmunized, 
-                        dropDamageValue, 
                         damageValueSum, 
+                        damageValueResult, 
+                        //dropDamageValue, 
                         belongsTo,
                         numMessageIndices,
                         numDamageIndices,
@@ -834,57 +837,70 @@ public partial struct EffectSystem : ISystem
                             damageValueImmunized = ComputeDamage(damage.valueImmunized, damageScale, ref random);
 
                             damageValueSum = damageValue + damageValueImmunized;
-                            
+
+                            if (targets.TryGetComponent(simulationEvent.entity, out targetInstance))
+                                targetInstance.Update(time, 0.0f);
+
                             if (!targetDamageScales.TryGetComponent(simulationEvent.entity, out targetDamageScale))
                                 targetDamageScale.value = 1.0f;
                             
-                            totalDamageValue += (int)math.round(damageValueSum * targetDamageScale.value);
-
-                            isResult = damageValue != 0 || damageValueImmunized != 0;
-
                             ref var targetDamage = ref targetDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
+                            isResult = damageValue != 0 || damageValueImmunized != 0;
                             if (isResult)
                             {
+                                damageValueResult = damageValueSum;//(int)math.round(damageValueSum * targetDamageScale.value);
+                                
                                 if (math.abs(damage.hpMultiplier) > math.FLT_MIN_NORMAL &&
                                     targetHP.IsValid)
                                 {
                                     damageValueSum = ComputeDamage(damageValueSum, damage.hpMultiplier, ref random);
-                                    
+
                                     targetHP.ValueRW.Add(damageValueSum, belongsTo, damage.messageLayerMask);
                                 }
 
-                                targetDamage.Add(damageValue,  damageValueImmunized, belongsTo, damage.messageLayerMask);
+                                targetDamage.Add(damageValue, damageValueImmunized, belongsTo, damage.messageLayerMask);
                                 targetDamages.SetComponentEnabled(simulationEvent.entity, true);
 
-                                damageValue += damageValueImmunized;
+                                totalDamageValue += (int)math.round(damageValueResult * targetDamageScale.value);
+                                damageValue =
+                                    (int)math.round(
+                                        ((targetInstance.immunizedTime > 0.0f ? 0.0f : damageValue) +
+                                         damageValueImmunized) * targetDamageScale.value);
+                                damageValue = math.min(damageValue, targetInstance.hp);
+                                totalDamageValueClamp += damageValue;
+                                targetInstance.hp -= damageValue;
                             }
+                            else
+                                damageValueResult = 0;
 
                             if (characterBody.IsValid)
                             {
-                                dropDamageValue = ComputeDamage(damage.valueToDrop, damageScale, ref random);
+                                damageValue = ComputeDamage(damage.valueToDrop, damageScale, ref random);
 
-                                if (dropDamageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
+                                if (damageValue != 0 && dropToDamages.HasComponent(simulationEvent.entity))
                                 {
                                     isResult = true;
 
-                                    totalDamageValue += (int)math.round(dropDamageValue * targetDamageScale.value);
-                                    
                                     if (math.abs(damage.hpMultiplier) > math.FLT_MIN_NORMAL &&
                                         targetHP.IsValid)
                                     {
-                                        damageValueSum = ComputeDamage(dropDamageValue, damage.hpMultiplier, ref random);
+                                        damageValueSum = ComputeDamage(damageValue, damage.hpMultiplier, ref random);
                                     
                                         targetHP.ValueRW.Add(damageValueSum, belongsTo, damage.messageLayerMask);
                                     }
                                     
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
 
-                                    dropToDamage.Add(dropDamageValue, 0, belongsTo, damage.messageLayerMask);
+                                    dropToDamage.Add(damageValue, 0, belongsTo, damage.messageLayerMask);
 
                                     dropToDamage.isGrounded = characterBody.ValueRO.IsGrounded;
 
                                     dropToDamages.SetComponentEnabled(simulationEvent.entity, true);
+                                    
+                                    damageValue = (int)math.round(damageValue * targetDamageScale.value);
+                                    totalDamageValue += damageValue;
+                                    totalDamageValueClamp += math.min(damageValue, targetInstance.hp);
                                 }
                             }
 
@@ -892,7 +908,7 @@ public partial struct EffectSystem : ISystem
                                 ++totalCount;
                         }
                         else
-                            damageValue = 0;
+                            damageValueResult = 0;
 
                         if (characterBody.IsValid)
                         {
@@ -1025,7 +1041,7 @@ public partial struct EffectSystem : ISystem
                                     entityManager.SetComponentEnabled<Message>(1, instance, true);
 
                                     messageParameter.messageKey = outputMessage.key;
-                                    messageParameter.value = -damageValue;
+                                    messageParameter.value = -damageValueResult;
                                     messageParameter.id = (int)EffectAttributeID.Damage;
                                     entityManager.SetBuffer<MessageParameter>(1, instance)
                                         .Add(messageParameter);
@@ -1042,6 +1058,7 @@ public partial struct EffectSystem : ISystem
                         EffectDamageStatistic.Add(
                             totalCount,
                             totalDamageValue,
+                            totalDamageValueClamp, 
                             instanceDamageParent,
                             damageParentMap,
                             ref damageStatistics);

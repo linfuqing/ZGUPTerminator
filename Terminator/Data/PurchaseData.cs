@@ -179,6 +179,13 @@ public interface IPurchaseData
             return seconds < deadline ? deadline - seconds : 0;
         }
     }
+
+    public struct Result
+    {
+        public Output output;
+
+        public IPurchaseAPI.Metadata? metadata;
+    }
     
     /// <summary>
     ///  查询付费状态，不需要查询奖励的时候使用，需要查询奖励时用<see cref="IUserData.QueryPurchaseItems"/>替代。
@@ -188,7 +195,7 @@ public interface IPurchaseData
     /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator Query(uint userID, Input[] inputs, Action<Output[]> onComplete);
+    IEnumerator Query(uint userID, Input[] inputs, Action<Memory<Result>> onComplete);
     
     /// <summary>
     /// 购买商品
@@ -330,16 +337,43 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
     public IEnumerator Query(
         uint userID, 
         IPurchaseData.Input[] inputs, 
-        Action<IPurchaseData.Output[]> onComplete)
+        Action<Memory<IPurchaseData.Result>> onComplete)
     {
+        //客户端
+        while (IPurchaseAPI.instance != null && IPurchaseAPI.instance.isPending)
+            yield return null;
+
         yield return null;
 
         int length = inputs.Length;
-        var outputs = new IPurchaseData.Output[length];
+        IPurchaseData.Input input;
+        IPurchaseData.Result result;
+        var results = new IPurchaseData.Result[length];
         for (int i = 0; i < length; ++i)
-            outputs[i] = Query(inputs[i]);
-        
-        onComplete(outputs);
+        {
+            input = inputs[i];
+            result.output = Query(input);
+            result.metadata = null;
+            
+            //客户端（服务器返回时）
+            if (IPurchaseAPI.instance != null)
+            {
+                bool isWaiting = true;
+                IPurchaseAPI.instance.Query(userID, input.type, input.level, x =>
+                {
+                    result.metadata = x;
+
+                    isWaiting = false;
+                });
+            
+                while(isWaiting)
+                    yield return null;
+            }
+
+            results[i] = result;
+        }
+
+        onComplete(results);
     }
 
     public IEnumerator Buy(uint userID, PurchaseType type, int level, Action<bool> onComplete)

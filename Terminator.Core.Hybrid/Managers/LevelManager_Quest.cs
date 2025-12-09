@@ -120,7 +120,11 @@ public partial class LevelManager
             isDirty = true;
 
             //__CreateStageQuests(stage);
-            StartCoroutine(__DestroyAndCreateStageQuests(stage));
+            StartCoroutine(__DestroyAndCreateStageQuests(
+                stage, 
+                killCount - __stageKillCount, 
+                gold - __stageGold, 
+                time));
             
             __stageKillCount = __killCount;
             __stageGold = __gold;
@@ -249,7 +253,7 @@ public partial class LevelManager
         }
     }
 
-    private IEnumerator __DestroyStageQuests()
+    private IEnumerator __DestroyStageQuests(int stageKillCount, int stageGold, int stageTime)
     {
         float destroyTime = 0.0f;
         if (__questStates != null)
@@ -272,7 +276,7 @@ public partial class LevelManager
                         questStatus.SetResult(stageGold >= questStatus.Value.value);
                         break;
                     case LevelQuestType.Time:
-                        questStatus.SetResult(__GetStageTime(out _) <= questStatus.Value.value);
+                        questStatus.SetResult(stageTime <= questStatus.Value.value);
                         break;
                 }
                 
@@ -339,9 +343,9 @@ public partial class LevelManager
             _onQuestDisable?.Invoke();
     }
 
-    private IEnumerator __DestroyAndCreateStageQuests(int value)
+    private IEnumerator __DestroyAndCreateStageQuests(int value, int stageKillCount, int stageGold, int stageTime)
     {
-        yield return __DestroyStageQuests();
+        yield return __DestroyStageQuests(stageKillCount, stageGold, stageTime);
         
         __CreateStageQuests(value);
     }
