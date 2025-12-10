@@ -839,7 +839,11 @@ public partial struct EffectSystem : ISystem
                             damageValueSum = damageValue + damageValueImmunized;
 
                             if (targets.TryGetComponent(simulationEvent.entity, out targetInstance))
+                            {
                                 targetInstance.Update(time, 0.0f);
+
+                                targetInstance.hp = math.max(targetInstance.hp, 0);
+                            }
 
                             if (!targetDamageScales.TryGetComponent(simulationEvent.entity, out targetDamageScale))
                                 targetDamageScale.value = 1.0f;
