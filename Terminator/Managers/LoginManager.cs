@@ -425,7 +425,7 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevelChapters(IUserData.LevelChapters levelChapters)
     {
-        __isLevelActive = false;
+        __levelActivated = false;
         
         if ((levelChapters.flag & IUserData.LevelChapters.Flag.UnlockFirst) != 0)
             __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
@@ -470,7 +470,7 @@ public sealed class LoginManager : MonoBehaviour
         numLevels = levelChapters.levels.Length;
         bool isHot = false;
         int selectedLevelIndex = -1, 
-            finalLevelIndex = -1, 
+            //finalLevelIndex = -1, 
             endLevelIndex = -1, 
             numStageRewards = 0, 
             numStageRewardsTotal = 0, 
@@ -544,10 +544,10 @@ public sealed class LoginManager : MonoBehaviour
             {
                 selectedLevelIndex = userLevelIndex;
 
-                finalLevelIndex = userLevelIndex;
+                //finalLevelIndex = userLevelIndex;
             }
-            else if(__sceneActiveDepth != 0)
-                finalLevelIndex = userLevelIndex;
+            //else if(__sceneActiveDepth != 0)
+            //    finalLevelIndex = userLevelIndex;
 
             endLevelIndex = userLevelIndex;
 
