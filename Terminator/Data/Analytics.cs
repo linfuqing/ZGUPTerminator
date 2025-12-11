@@ -26,6 +26,12 @@ public interface IAnalyticsEx : IAnalytics
     void EndPage(string name);
     
     void PageAction(string name);
+    
+    void Purchase(string name, string currency, int amount);
+
+    void BeginAd(string name);
+    
+    void EndAd(string name);
 }
 
 public class Analytics : MonoBehaviour, IAnalyticsEx
@@ -207,6 +213,30 @@ public class Analytics : MonoBehaviour, IAnalyticsEx
             instance.Quit();
         }
     }
+
+    public void Purchase(string name, string currency, int amount)
+    {
+        foreach (var instance in instances)
+        {
+            instance.Purchase(name, currency, amount);
+        }
+    }
+
+    public void BeginAd(string name)
+    {
+        foreach (var instance in instances)
+        {
+            instance.BeginAd(name);
+        }
+    }
+
+    public void EndAd(string name)
+    {
+        foreach (var instance in instances)
+        {
+            instance.EndAd(name);
+        }
+    }
     
     protected void OnEnable()
     {
@@ -266,6 +296,18 @@ public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
     }
     
     public virtual void PageAction(string name)
+    {
+    }
+
+    public virtual void Purchase(string name, string currency, int amount)
+    {
+    }
+
+    public virtual void BeginAd(string name)
+    {
+    }
+
+    public virtual void EndAd(string name)
     {
     }
 
