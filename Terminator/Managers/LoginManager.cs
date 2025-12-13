@@ -1452,6 +1452,13 @@ public sealed class LoginManager : MonoBehaviour
 
     IEnumerator Start()
     {
+        var progressbase = GameProgressbar.instance;
+        if (progressbase != null)
+        {
+            progressbase.ShowProgressBar();
+            progressbase.UpdateProgressBar(1.0f);
+        }
+
         instance = this;
 
         while (IUserData.instance == null)
@@ -1460,6 +1467,8 @@ public sealed class LoginManager : MonoBehaviour
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
         yield return __CollectAndQueryLevels();
+
+        progressbase?.ClearProgressBar();
     }
     
     void Update()
