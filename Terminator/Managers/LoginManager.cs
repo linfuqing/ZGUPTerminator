@@ -1444,7 +1444,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
     }
-
+    
     void Awake()
     {
         GameUser.Shared.onLoginStatusChanged += __OnLoginStatusChanged;
@@ -1452,11 +1452,11 @@ public sealed class LoginManager : MonoBehaviour
 
     IEnumerator Start()
     {
-        var progressbase = GameProgressbar.instance;
-        if (progressbase != null)
+        var progressBar = GameProgressbar.instance;
+        if (progressBar != null)
         {
-            progressbase.ShowProgressBar();
-            progressbase.UpdateProgressBar(1.0f);
+            progressBar.ShowProgressBar();
+            progressBar.UpdateProgressBar(1.0f);
         }
 
         instance = this;
@@ -1468,7 +1468,7 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
         yield return __CollectAndQueryLevels();
 
-        progressbase?.ClearProgressBar();
+        progressBar?.ClearProgressBar();
     }
     
     void Update()
@@ -1498,4 +1498,5 @@ public sealed class LoginManager : MonoBehaviour
                 loader.Update();
         }
     }
+    
 }

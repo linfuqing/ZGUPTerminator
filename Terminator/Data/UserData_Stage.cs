@@ -287,6 +287,11 @@ public partial class UserData
     }
 
     private const string NAME_SPACE_USER_STAGE_CACHE = "UserStageCache";
+
+    public static void DeleteStageCache(string levelName, int stage)
+    {
+        PlayerPrefs.DeleteKey(GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE, levelName, stage));
+    }
     
     public static IUserData.StageCache GetStageCache(string levelName, int stage)
     {

@@ -292,7 +292,12 @@ public partial class UserDataMain
             if (__GetLevelTicketIndex(level.name, out _, out _))
             {
                 if (ApplyStage(levelCache.id, levelCache.stage, out _))
+                {
                     PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
+
+                    for (int i = 1; i <= levelCache.stage; ++i)
+                        UserData.DeleteStageCache(level.name, i);
+                }
                 else
                     Debug.LogError("WTF??????");
             }
@@ -786,6 +791,10 @@ public partial class UserDataMain
             if (count < 1 || energy > 0 && !__ApplyEnergy(energy))
                 return false;
 
+            int stageCount = __GetStageCount(_levels[__GetLevelIndex(levelName)]);
+            for (int i = 1; i <= stageCount; ++i)
+                UserData.DeleteStageCache(levelName, i);
+            
             levelTicket.count = count - 1;
         }
         else
