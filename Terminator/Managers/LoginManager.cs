@@ -415,6 +415,8 @@ public sealed class LoginManager : MonoBehaviour
         string levelName, 
         string sceneName)
     {
+        _onStart.Invoke();
+
         StartCoroutine(__Start(isRestart, userLevelID,  stageIndex, levelName, sceneName));
     }
 
@@ -1427,8 +1429,6 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
-        _onStart.Invoke();
-        
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.StartLevel(sceneName/*_levels[__selectedLevelIndex].name*/);
 
