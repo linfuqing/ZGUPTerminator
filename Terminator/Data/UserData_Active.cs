@@ -43,163 +43,148 @@ public struct UserQuest
         /// <summary>
         /// 登录
         /// </summary>
-        Login, 
+        Login = 0, 
         
         /// <summary>
         /// 天赋升级次数
         /// </summary>
-        Talents, 
+        Talents = 1, 
         
         /// <summary>
         /// 升级卡片
         /// </summary>
-        CardToUpgrade, 
+        CardToUpgrade = 2, 
         
         /// <summary>
         /// 获得技能卡数
         /// </summary>
-        Cards, 
+        Cards = 3, 
         
         /// <summary>
         /// 获得稀有技能卡数
         /// </summary>
-        Cards1, 
+        Cards1 = 4, 
         /// <summary>
         /// 获得史诗技能卡数
         /// </summary>
-        Cards2,
+        Cards2 = 5,
         /// <summary>
         /// 获得传说技能卡数
         /// </summary>
-        Cards3,
+        Cards3 = 6,
 
         /// <summary>
         /// 获得装备数量
         /// </summary>
-        Accessories,
+        Accessories = 7,
         
-        /// <summary>
-        /// 获得稀有装备数量
-        /// </summary>
-        Accessories1, 
-        
-        /// <summary>
-        /// 获得史诗装备数量
-        /// </summary>
-        Accessories2, 
-        
-        /// <summary>
-        /// 获得传说装备数量
-        /// </summary>
-        Accessories3, 
-
         /// <summary>
         /// 升级装备槽
         /// </summary>
-        AccessorySlotToUpgrade,
+        AccessorySlotToUpgrade = 23,
         
         /// <summary>
         /// 合成装备
         /// </summary>
-        AccessoryToUprank, 
+        AccessoryToUprank = 24, 
         
         /// <summary>
         /// 开宝箱次数
         /// </summary>
-        Purchase, 
+        Purchase = 25, 
         
         /// <summary>
         /// 触发保底次数
         /// </summary>
-        Purchases, 
+        Purchases = 26, 
 
         /// <summary>
         /// 游荡
         /// </summary>
-        Tip, 
+        Tip = 27, 
         
         /// <summary>
         /// 挑战主线关卡次数
         /// </summary>
-        Stage, 
+        Stage = 28, 
         
         /// <summary>
         /// 击杀怪物数
         /// </summary>
-        KillCount, 
+        KillCount = 29, 
         /// <summary>
         /// 击杀BOSS数
         /// </summary>
-        KillBoss, 
+        KillBoss = 30, 
         
         /// <summary>
         /// 获得金币
         /// </summary>
-        GoldsToGet, 
+        GoldsToGet = 31, 
 
         /// <summary>
         /// 消耗金币
         /// </summary>
-        GoldsToUse, 
+        GoldsToUse = 32, 
 
         /// <summary>
         /// 获得钻石
         /// </summary>
-        DiamondsToGet, 
+        DiamondsToGet = 33, 
 
         /// <summary>
         /// 消耗钻石
         /// </summary>
-        DiamondsToUse, 
+        DiamondsToUse = 34, 
         
         /// <summary>
         /// 消耗体力
         /// </summary>
-        EnergiesToUse, 
+        EnergiesToUse = 35, 
         /// <summary>
         /// 购买体力
         /// </summary>
-        EnergiesToBuy, 
+        EnergiesToBuy = 36, 
         
         /// <summary>
         /// 充值次数
         /// </summary>
-        Buy, 
+        Buy = 37, 
         
         /// <summary>
         /// 达到主线章节
         /// </summary>
-        AchievementChapters, 
+        AchievementChapters = 38, 
         
         /// <summary>
         /// 技能卡升级最高次数
         /// </summary>
-        AchievementCard,
+        AchievementCard = 39,
         
         /// <summary>
         /// 技能卡种类
         /// </summary>
-        AchievementCardStyles,
+        AchievementCardStyles = 40,
 
         /// <summary>
         /// 获得装备种类
         /// </summary>
-        AchievementAccessoryStyles,
+        AchievementAccessoryStyles = 41,
         
         /// <summary>
         /// 装备槽位最高级
         /// </summary>
-        AchievementAccessorySlot,
+        AchievementAccessorySlot = 42,
         
         /// <summary>
         /// 全身装备槽位最低级
         /// </summary>
-        AchievementAccessorySlots,
+        AchievementAccessorySlots = 43,
         
         /// <summary>
         /// 获得角色数量
         /// </summary>
-        AchievementRoles, 
+        AchievementRoles = 44, 
 
         Unknown
     }

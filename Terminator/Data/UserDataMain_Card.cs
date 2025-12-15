@@ -297,10 +297,9 @@ public partial class UserDataMain
                 reward.count = cardDefault.count;
                         
                 __ApplyReward(reward);
-                
+
                 for (j = 0; j < numCardGroups; ++j)
-                    PlayerPrefs.SetInt(
-                        $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{cardDefault.name}", i);
+                    __SetCard(cardDefault.name, _cardGroups[j].name, i);
             }
         }
 
@@ -421,8 +420,9 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        string cardName = _cards[__ToIndex(cardID)].name, cardGroupName = _cardGroups[__ToIndex(groupID)].name;
-        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
+        string cardName = _cards[__ToIndex(cardID)].name,
+            cardGroupName = _cardGroups[__ToIndex(groupID)].name;
+        __SetCard(cardName, cardGroupName, position);
 
         var flag = UserDataMain.flag;
         flag &= ~Flag.CardsUnlockFirst;
@@ -801,6 +801,17 @@ public partial class UserDataMain
     {
         key = $"{NAME_SPACE_USER_CARD_LEVEL}{name}";
         return PlayerPrefs.GetInt(key, -1);
+    }
+
+    private static void __SetCard(string cardName, string cardGroupName, int position)
+    {
+        string positionKey = $"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{position}", 
+            oldCardName = PlayerPrefs.GetString(positionKey);
+        if(!string.IsNullOrEmpty(oldCardName))
+            PlayerPrefs.DeleteKey($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{oldCardName}");
+        
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
+        PlayerPrefs.SetString(positionKey, cardName);
     }
 
     private void __ApplyCardBonds(ref List<UserPropertyData.Attribute> attributeResults, ref List<UserPropertyData.Skill> skillResults)
