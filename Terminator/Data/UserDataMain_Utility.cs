@@ -157,7 +157,7 @@ public partial class UserDataMain
             case UserRewardType.Accessory:
                 __AppendQuest(UserQuest.Type.Accessories, 1);
                 if(reward.count > 1)
-                    __AppendQuest(UserQuest.Type.Accessories + reward.count - 1, 1);
+                    __AppendQuest(UserQuest.Type.Accessories + reward.count + 1, 1);
                 
                 if ((flag & Flag.RolesUnlock) == 0 && UserData.chapter > 0)//(flag & Flag.RolesCreated) == 0)
                     UserDataMain.flag |= Flag.RolesUnlock;

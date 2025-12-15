@@ -733,7 +733,7 @@ public partial class UserDataMain
         
         __AppendQuest(UserQuest.Type.Accessories, 1);
             
-        __AppendQuest(UserQuest.Type.Accessories + stage - 1, 1);
+        __AppendQuest(UserQuest.Type.Accessories + stage + 1, 1);
         
         __AppendQuest(UserQuest.Type.AccessoryToUprank, 1);
 
