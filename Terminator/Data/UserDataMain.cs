@@ -101,12 +101,7 @@ public sealed partial class UserDataMain : MonoBehaviour
     [SerializeField]
     internal Energy _energy;
 
-    public int energy
-    {
-        get => PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
-        
-        set => PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, value);
-    }
+    public int energy => __GetEnergy(out _, out _);
 
     private const string NAME_SPACE_USER_ENERGY_TIME = "UserEnergyTime";
     private const string NAME_SPACE_USER_ENERGY_MAX = "UserEnergyMax";
@@ -123,7 +118,7 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
 
             UserEnergy userEnergy;
-            userEnergy.value = energy;
+            userEnergy.value = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
             userEnergy.max = _energy.max + PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_MAX);
             userEnergy.unitTime = (uint)Mathf.RoundToInt(_energy.uintTime * 1000);
             userEnergy.tick = DateTimeUtility.GetTicks((uint)time);
@@ -147,10 +142,11 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(user, userEnergy);
     }
 
-    private bool __ApplyEnergy(int value, out int energy)
+    private int __GetEnergy(out uint now, out uint time)
     {
-        uint now = DateTimeUtility.GetSeconds(), time = now;
-        energy = this.energy;
+        now = DateTimeUtility.GetSeconds();
+        time = now;
+        int energy = PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY, _energy.max);
         if (_energy.uintTime > Mathf.Epsilon)
         {
             float energyFloat = (time - (uint)PlayerPrefs.GetInt(NAME_SPACE_USER_ENERGY_TIME, (int)time)) /
@@ -166,6 +162,13 @@ public sealed partial class UserDataMain : MonoBehaviour
             }
         }
 
+        return energy;
+    }
+
+    private bool __ApplyEnergy(int value, out int energy)
+    {
+        energy = __GetEnergy(out uint now, out uint time);
+        
         if (energy < value)
             return false;
         
@@ -176,7 +179,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         else if(value > 0)
             __AppendQuest(UserQuest.Type.EnergiesToUse, value);
 
-        this.energy = energy;
+        PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY, energy);
         PlayerPrefs.SetInt(NAME_SPACE_USER_ENERGY_TIME, (int)(energy < _energy.max ? time : now));
 
         return true;
