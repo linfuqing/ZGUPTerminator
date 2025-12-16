@@ -805,13 +805,23 @@ public partial class UserDataMain
 
     private static void __SetCard(string cardName, string cardGroupName, int position)
     {
-        string positionKey = $"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{position}", 
-            oldCardName = PlayerPrefs.GetString(positionKey);
-        if(!string.IsNullOrEmpty(oldCardName))
-            PlayerPrefs.DeleteKey($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{oldCardName}");
+        string cardKey = $"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}";
+        int oldPosition = PlayerPrefs.GetInt(cardKey, -1);
+        if (oldPosition != -1)
+            PlayerPrefs.DeleteKey($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{oldPosition}");
         
-        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{cardName}", position);
-        PlayerPrefs.SetString(positionKey, cardName);
+        if (position == -1)
+            PlayerPrefs.DeleteKey(cardKey);
+        else
+        {
+            string positionKey = $"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{position}",
+                oldCardName = PlayerPrefs.GetString(positionKey);
+            if (!string.IsNullOrEmpty(oldCardName))
+                PlayerPrefs.DeleteKey($"{NAME_SPACE_USER_CARD_GROUP}{cardGroupName}{UserData.SEPARATOR}{oldCardName}");
+
+            PlayerPrefs.SetInt(cardKey, position);
+            PlayerPrefs.SetString(positionKey, cardName);
+        }
     }
 
     private void __ApplyCardBonds(ref List<UserPropertyData.Attribute> attributeResults, ref List<UserPropertyData.Skill> skillResults)

@@ -775,7 +775,11 @@ public partial struct EffectSystem : ISystem
                         damageValueSum, 
                         damageValueResult, 
                         //dropDamageValue, 
-                        belongsTo,
+                        belongsTo = physicsColliders.TryGetComponent(entity, out physicsCollider) &&
+                                    physicsCollider.Value.IsCreated
+                            ? (int)physicsCollider.Value.Value.GetCollisionFilter().BelongsTo
+                            : -1,
+                        targetBelongsTo,
                         numMessageIndices,
                         numDamageIndices,
                         damageIndex,
@@ -797,8 +801,8 @@ public partial struct EffectSystem : ISystem
                         if (isContains)
                             continue;
 
-                        belongsTo = physicsColliders.TryGetComponent(simulationEvent.entity, out physicsCollider) &&
-                                    physicsCollider.Value.IsCreated
+                        targetBelongsTo = physicsColliders.TryGetComponent(simulationEvent.entity, out physicsCollider) &&
+                                          physicsCollider.Value.IsCreated
                             ? (int)physicsCollider.Value.Value.GetCollisionFilter(simulationEvent.colliderKey).BelongsTo
                             : -1;
                         damageIndex = -1;
@@ -808,7 +812,7 @@ public partial struct EffectSystem : ISystem
                             damageIndex = effect.damageIndices[i];
                             ref var damageTemp = ref definition.damages[damageIndex];
                             //layerMask = definition.damages[damageIndex].layerMask;
-                            if ((damageTemp.layerMask == 0 || (damageTemp.layerMask & belongsTo) != 0) &&
+                            if ((damageTemp.layerMask == 0 || (damageTemp.layerMask & targetBelongsTo) != 0) &&
                                 damageTemp.layerMaskAndTags.BelongsTo(instanceDamage.layerMaskAndTags))
                                 break;
                         }
@@ -860,7 +864,7 @@ public partial struct EffectSystem : ISystem
                                 {
                                     damageValueSum = ComputeDamage(damageValueSum, damage.hpMultiplier, ref random);
 
-                                    targetHP.ValueRW.Add(damageValueSum, belongsTo, damage.messageLayerMask);
+                                    targetHP.ValueRW.Add(damageValueSum, 0, damage.messageLayerMask);
                                 }
 
                                 targetDamage.Add(damageValue, damageValueImmunized, belongsTo, damage.messageLayerMask);
@@ -891,7 +895,7 @@ public partial struct EffectSystem : ISystem
                                     {
                                         damageValueSum = ComputeDamage(damageValue, damage.hpMultiplier, ref random);
                                     
-                                        targetHP.ValueRW.Add(damageValueSum, belongsTo, damage.messageLayerMask);
+                                        targetHP.ValueRW.Add(damageValueSum, 0, damage.messageLayerMask);
                                     }
                                     
                                     ref var dropToDamage = ref dropToDamages.GetRefRW(simulationEvent.entity).ValueRW;
@@ -920,7 +924,7 @@ public partial struct EffectSystem : ISystem
                             if (!characterBodyRW.IsGrounded)
                             {
                                 //弹板
-                                if (!isResult && (damage.entityLayerMask != 0 && (damage.entityLayerMask & belongsTo) != 0))
+                                if (!isResult && (damage.entityLayerMask != 0 && (damage.entityLayerMask & targetBelongsTo) != 0))
                                     continue;
                             }
                             else if (damage.explosion > math.FLT_MIN_NORMAL ||
@@ -965,10 +969,10 @@ public partial struct EffectSystem : ISystem
                             }
                         }
 
-                        damageLayerMask |= belongsTo;
+                        damageLayerMask |= targetBelongsTo;
 
                         __Drop(
-                            belongsTo, 
+                            targetBelongsTo, 
                             cameraRotation, 
                             math.RigidTransform(destination.Value),
                             simulationEvent.entity,
@@ -982,7 +986,7 @@ public partial struct EffectSystem : ISystem
                             ref damage.prefabs, 
                             ref random);
 
-                        if (damage.entityLayerMask == 0 || (damage.entityLayerMask & belongsTo) != 0)
+                        if (damage.entityLayerMask == 0 || (damage.entityLayerMask & targetBelongsTo) != 0)
                             ++entityCount;
 
                         statusTarget.entity = simulationEvent.entity;
