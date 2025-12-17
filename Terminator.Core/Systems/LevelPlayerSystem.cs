@@ -185,11 +185,12 @@ public partial struct LevelPlayerSystem : ISystem
                 }
             }
             
-            float effectTargetDamageScaleValue = 1.0f + this.effectTargetDamageScale;
-            if (math.abs(effectTargetDamageScaleValue) > math.FLT_MIN_NORMAL && 
+            //float effectTargetDamageScaleValue = 1.0f + this.effectTargetDamageScale;
+            if (math.abs(this.effectTargetDamageScale) > math.FLT_MIN_NORMAL && 
                 effectTargetDamageScales.TryGetComponent(player, out var effectTargetDamageScale))
             {
-                effectTargetDamageScale.value = 1.0f / effectTargetDamageScaleValue;
+                float hpScale = 1.0f + effectTargetHPScale;
+                effectTargetDamageScale.value = hpScale / (hpScale + this.effectTargetDamageScale);//1.0f / effectTargetDamageScaleValue;
 
                 effectTargetDamageScales[player] = effectTargetDamageScale;
             }
