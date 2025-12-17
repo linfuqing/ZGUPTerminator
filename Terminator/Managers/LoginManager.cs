@@ -190,6 +190,9 @@ public sealed class LoginManager : MonoBehaviour
     internal StringEvent _onLevelDisable;
 
     [SerializeField]
+    internal StringEvent _onLogin;
+
+    [SerializeField]
     internal StringEvent _onStageReward;
 
     [SerializeField]
@@ -1282,9 +1285,11 @@ public sealed class LoginManager : MonoBehaviour
             __energyNextTime,
             __energyUnitTime);
         
+        GameMain.Login(user.id);
+        
         (IAnalytics.instance as IAnalyticsEx)?.Login(user.id);
         
-        GameMain.Login(user.id);
+        _onLogin?.Invoke(user.id.ToString());
     }
 
     private void __IncreaseEnergy()
