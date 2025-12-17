@@ -151,9 +151,9 @@ public partial class UserData : MonoBehaviour, IUserData
         get
         {
             int id = PlayerPrefs.GetInt(NAME_SPACE_USER_ID);
-            if (id == 0)
+            if (id < 1)
             {
-                id = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+                id = UnityEngine.Random.Range(1, int.MaxValue);
                 
                 PlayerPrefs.SetInt(NAME_SPACE_USER_ID, id);
             }

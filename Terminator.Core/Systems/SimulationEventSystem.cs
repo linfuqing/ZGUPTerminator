@@ -209,20 +209,24 @@ public partial struct SimulationEventSystem : ISystem
 
         public BufferLookup<SimulationEvent> instances;
 
-        public bool TryGetBuffer(in Entity entity, out DynamicBuffer<SimulationEvent> instances)
+        public bool TryGetBuffer(ref Entity entity, out DynamicBuffer<SimulationEvent> instances)
         {
             if (this.instances.TryGetBuffer(entity, out instances))
                 return true;
-            
-            if(parents.TryGetComponent(entity, out var parent))
-                return TryGetBuffer(parent.Value, out instances);
+
+            if (parents.TryGetComponent(entity, out var parent))
+            {
+                entity = parent.Value;
+                return TryGetBuffer(ref entity, out instances);
+            }
 
             return false;
         }
 
         public void Execute(TriggerEvent triggerEvent)
         {
-            if (TryGetBuffer(triggerEvent.EntityA, out var instances))
+            Entity entity = triggerEvent.EntityA;
+            if (TryGetBuffer(ref entity, out var instances))
             {
                 SimulationEvent simulationEvent;
                 simulationEvent.entity = triggerEvent.EntityB;
@@ -230,10 +234,11 @@ public partial struct SimulationEventSystem : ISystem
                 simulationEvent.colliderKey = triggerEvent.ColliderKeyB;
 
                 SimulationEvent.Append(instances, simulationEvent);
-                this.instances.SetBufferEnabled(triggerEvent.EntityA, true);
+                this.instances.SetBufferEnabled(entity, true);
             }
             
-            if (TryGetBuffer(triggerEvent.EntityB, out instances))
+            entity = triggerEvent.EntityB;
+            if (TryGetBuffer(ref entity, out instances))
             {
                 SimulationEvent simulationEvent;
                 simulationEvent.entity = triggerEvent.EntityA;
@@ -241,7 +246,7 @@ public partial struct SimulationEventSystem : ISystem
                 simulationEvent.colliderKey = triggerEvent.ColliderKeyA;
                 
                 SimulationEvent.Append(instances, simulationEvent);
-                this.instances.SetBufferEnabled(triggerEvent.EntityB, true);
+                this.instances.SetBufferEnabled(entity, true);
             }
         }
     }
