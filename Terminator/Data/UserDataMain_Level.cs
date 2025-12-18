@@ -285,17 +285,17 @@ public partial class UserDataMain
 
         var levelCache = temp.Value;
         var level = _levels[__ToIndex(levelCache.id)];
-        bool isLevelTicket = __GetLevelTicketIndex(level.name, out _, out _);
+        /*bool isLevelTicket = __GetLevelTicketIndex(level.name, out _, out _);
         if (isLevelTicket && 
             UserData.GetStartStage(level.name, out _) < levelCache.stage && 
             !ApplyStage(levelCache.id, levelCache.stage - 1, out _))
-            Debug.LogError("WTF??????");
+            Debug.LogError("WTF??????");*/
 
         uint selectedLevelID = levelCache.id;
         int selectedStage = levelCache.stage, stageCount = __GetStageCount(level);
         if (stageCount <= levelCache.stage)
         {
-            if (isLevelTicket)
+            if (__GetLevelTicketIndex(level.name, out _, out _))
             {
                 PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
 
@@ -789,7 +789,7 @@ public partial class UserDataMain
                 return false;
 
             int count = levelTicket.count;
-            if (count < 1/* || energy > 0 && !__ApplyEnergy(energy)*/)
+            if (count < 1 || energy > 0 && !__ApplyEnergy(energy))
                 return false;
 
             int stageCount = __GetStageCount(_levels[__GetLevelIndex(levelName)]);

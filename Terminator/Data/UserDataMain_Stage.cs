@@ -742,7 +742,7 @@ public partial class UserData
                     result.nextStageEnergy = 0;
                 else
                 {
-                    if (!main.ApplyStage(temp.id, oldStage - 1, out result.totalEnergy))
+                    if (!main.ApplyStage(temp.id, oldStage, out result.totalEnergy))
                     {
                         Debug.LogError("WTF?");
 
