@@ -321,6 +321,13 @@ public partial class UserDataMain
         int numStages = __GetStageCount(level), energy;
         if (numStages > stage)
         {
+            if (stage == 0)
+            {
+                onComplete(default);
+            
+                yield break;
+            }
+            
             var temp = __GetStage(level, stage);
             if((temp.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
             {
@@ -340,7 +347,7 @@ public partial class UserDataMain
             stageCache = IUserData.StageCache.Empty;
         }
 
-        if (!(0 == stage ? __ApplyLevel(level.name, energy) : __ApplyEnergy(energy)))
+        if (!__ApplyEnergy(energy))//(!(0 == stage ? __ApplyLevel(level.name, energy) : __ApplyEnergy(energy)))
         {
             onComplete(default);
             
