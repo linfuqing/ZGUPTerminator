@@ -227,6 +227,8 @@ public sealed class LoginManager : MonoBehaviour
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
     private LinkedList<Loaders> __loaders;
+    
+    private UnityEvent __onLevelActivatedFirst;
 
     private string __levelName;
     private string __sceneName;
@@ -251,7 +253,7 @@ public sealed class LoginManager : MonoBehaviour
     
     private bool __isStart;
     private bool __isEnergyActive = true;
-    private bool __levelActivated;
+    private bool? __levelActivatedFirst;
     private bool? __isLevelActive;
 
     public static uint? userID => GameMain.userID == 0 ? null : GameMain.userID;
@@ -430,7 +432,9 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevelChapters(IUserData.LevelChapters levelChapters)
     {
-        __levelActivated = false;
+        __onLevelActivatedFirst = null;
+        __levelActivatedFirst = null;
+        //__levelActivated = false;
         
         if ((levelChapters.flag & IUserData.LevelChapters.Flag.UnlockFirst) != 0)
             __sceneActiveDepth = Mathf.Max(__sceneActiveDepth + 1, 1);
@@ -870,30 +874,51 @@ public sealed class LoginManager : MonoBehaviour
                                                         style.scenes[currentSceneIndex].onActiveDiff.Invoke();
                                                 }
 
-                                                if (!__levelActivated &&
+                                                if (__levelActivatedFirst == null &&
                                                     __sceneActiveDepth == 0 &&
                                                     //selectedLevelIndex == -1 &&
-                                                    finalLevelIndex == userLevelIndex &&
-                                                    onLevelActivated != null)
+                                                    finalLevelIndex == userLevelIndex)
                                                 {
-                                                    onLevelActivated();
+                                                    __levelActivatedFirst = false;
                                                     
-                                                    __levelActivated = true;
+                                                    var progressbar = GameProgressbar.instance;
+                                                    if (progressbar == null || !progressbar.isProgressing)
+                                                    {
+                                                        if(onLevelActivated != null)
+                                                            onLevelActivated();
+                                                    }
+                                                    //if(onLevelActivated != null)
+                                                    //    onLevelActivated();
+
+                                                    //__levelActivated = true;
                                                 }
                                             }
                                             else
                                             {
-                                                style.scenes[currentSceneIndex].onActiveFirst.Invoke();
-
                                                 __sceneActiveDepth = -1;
-                                                //__sceneActiveStatus = SceneActiveStatus.None;
-                                                //isLevelActive = true;
-                                                if ( /*isEndOfLevels && */
-                                                    !__levelActivated && onLevelActivatedFirst != null)
+                                                
+                                                var progressbar = GameProgressbar.instance;
+                                                bool isProgressing = progressbar != null && progressbar.isProgressing;
+
+                                                if (isProgressing)
                                                 {
-                                                    onLevelActivatedFirst();
+                                                    __onLevelActivatedFirst =
+                                                        style.scenes[currentSceneIndex].onActiveFirst;
                                                     
-                                                    __levelActivated = true;
+                                                    if (__levelActivatedFirst == null)
+                                                        __levelActivatedFirst = true;
+                                                }
+                                                else
+                                                {
+                                                    style.scenes[currentSceneIndex].onActiveFirst.Invoke();
+                                                    
+                                                    if (__levelActivatedFirst == null)
+                                                    {
+                                                        __levelActivatedFirst = true;
+
+                                                        if(onLevelActivatedFirst != null)
+                                                            onLevelActivatedFirst();
+                                                    }
                                                 }
                                             }
 
@@ -1473,7 +1498,27 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
         yield return __CollectAndQueryLevels();
 
-        progressBar?.ClearProgressBar();
+        if (progressBar != null)
+        {
+            progressBar.ClearProgressBar();
+            
+            while(progressBar.isProgressing)
+                yield return null;
+        }
+        
+        __onLevelActivatedFirst?.Invoke();
+
+        if (__levelActivatedFirst != null)
+        {
+            if (__levelActivatedFirst.Value)
+            {
+                if(onLevelActivatedFirst != null)
+                    onLevelActivatedFirst();
+            }
+            else if(onLevelActivated != null)
+                onLevelActivated();
+        }
+
     }
     
     void Update()
