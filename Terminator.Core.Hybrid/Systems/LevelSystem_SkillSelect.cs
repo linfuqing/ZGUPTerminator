@@ -431,7 +431,7 @@ public partial class LevelSystemManaged
 
                         if (definition.IsCreated)
                         {
-                            int numSelectedSkillIndices = selectedSkillIndices.Length;
+                            int numSelectedSkillIndices = selectedSkillIndices == null ? 0 : selectedSkillIndices.Length;
                             if (numSelectedSkillIndices > 0)
                             {
                                 var skillIndices = new NativeList<int>(
