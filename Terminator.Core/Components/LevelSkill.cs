@@ -460,7 +460,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         double time, 
         ref DynamicBuffer<SkillActiveIndex> activeIndices, 
         ref DynamicBuffer<BulletStatus> bulletStates,
-        ref BulletDefinition bulletDefinition, 
+        //ref BulletDefinition bulletDefinition, 
         ref SkillDefinition skillDefinition)
     {
         if (activeIndex == -1)
@@ -502,7 +502,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         in DynamicBuffer<LevelSkill> instances, 
         ref DynamicBuffer<SkillActiveIndex> activeIndices, 
         ref DynamicBuffer<BulletStatus> bulletStates,
-        ref BulletDefinition bulletDefinition, 
+        //ref BulletDefinition bulletDefinition, 
         ref SkillDefinition skillDefinition, 
         ref NativeList<int> originSkillIndices)
     {
@@ -514,7 +514,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
             if (instance.activeIndex != -1)
                 originSkillIndices.Add(activeIndices[instance.activeIndex].value);
 
-            instance.Apply(time, ref activeIndices, ref bulletStates, ref bulletDefinition, ref skillDefinition);
+            instance.Apply(time, ref activeIndices, ref bulletStates, /*ref bulletDefinition, */ref skillDefinition);
         }
 
     }

@@ -291,7 +291,7 @@ public partial class UserDataMain
         {
             if (__GetLevelTicketIndex(level.name, out _, out _))
             {
-                if (ApplyStage(levelCache.id, levelCache.stage, out _))
+                if (ApplyStage(levelCache.id, stageCount - 1, out _))
                 {
                     PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
 
@@ -788,7 +788,7 @@ public partial class UserDataMain
                 return false;
 
             int count = levelTicket.count;
-            if (count < 1 || energy > 0 && !__ApplyEnergy(energy))
+            if (count < 1/* || energy > 0 && !__ApplyEnergy(energy)*/)
                 return false;
 
             int stageCount = __GetStageCount(_levels[__GetLevelIndex(levelName)]);

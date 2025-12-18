@@ -142,7 +142,9 @@ public partial struct LevelPickableSystem : ISystem
         }
     }
 
+#if !DEBUG
     [BurstCompile]
+#endif
     private struct Select : IJob
     {
         public double time;

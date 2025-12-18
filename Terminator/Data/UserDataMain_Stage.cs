@@ -727,33 +727,23 @@ public partial class UserData
         }
         else
         {
-            int previousStage = stage - 1;
-            if (previousStage > oldStage)
+            int startStage = GetStartStage(temp.name, out _);
+            if (startStage < oldStage)
             {
                 result.totalEnergy = 0;
                 if (main.IsLevelChapter(temp.name))
                     result.nextStageEnergy = 0;
                 else
                 {
-                    for (int i = oldStage + 1; i < stage; ++i)
+                    if (!main.ApplyStage(temp.id, oldStage - 1, out result.totalEnergy))
                     {
-                        if (!main.ApplyStage(temp.id, i, out result.totalEnergy))
-                        {
-                            Debug.LogError("WTF?");
+                        Debug.LogError("WTF?");
 
-                            if (i == oldStage + 1)
-                            {
-                                result.flag = 0;
+                        result.flag = 0;
 
-                                onComplete(default);
+                        onComplete(default);
 
-                                yield break;
-                            }
-
-                            stage = i;
-
-                            break;
-                        }
+                        yield break;
                     }
 
                     result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);

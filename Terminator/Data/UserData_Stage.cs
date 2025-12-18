@@ -371,6 +371,12 @@ public partial class UserData
         return (IUserData.StageFlag)PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, stage));
     }
 
+    public static int GetStartStage(string levelName, out string levelStartStageKey)
+    {
+        levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
+        return PlayerPrefs.GetInt(levelStartStageKey, -1);
+    }
+
     public static void StartStage(string levelName, int stage)
     {
         //string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE_TIMES, levelName, stage);
@@ -389,8 +395,7 @@ public partial class UserData
 
     private static void __SubmitStageFlag(string levelName, int stage, out string levelStartStageKey)
     {
-        levelStartStageKey = $"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}";
-        int startStage = PlayerPrefs.GetInt(levelStartStageKey, -1);
+        int startStage = GetStartStage(levelName, out levelStartStageKey);
         if (startStage == -1)
             return;
          

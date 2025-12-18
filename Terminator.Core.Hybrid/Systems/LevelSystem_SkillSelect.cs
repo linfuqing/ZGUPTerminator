@@ -422,8 +422,9 @@ public partial class LevelSystemManaged
             {
                 if (SystemAPI.IsBufferEnabled<LevelSkill>(entity))
                 {
+                    var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
                     var selectedSkillIndices = manager.CollectSelectedSkillIndices();
-                    if (selectedSkillIndices != null)
+                    if (skills.IsEmpty || selectedSkillIndices != null)
                     {
                         if (__skillSelection.status == SkillSelectionStatus.End)
                             __skillSelection.status = SkillSelectionStatus.Finish;
@@ -438,7 +439,6 @@ public partial class LevelSystemManaged
                                     Allocator.TempJob);
                                 skillIndices.CopyFromNBC(selectedSkillIndices);
 
-                                var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
                                 var bulletStates = SystemAPI.GetBuffer<BulletStatus>(player);
                                 LevelSkill.Apply(
                                     SystemAPI.Time.ElapsedTime,
@@ -446,7 +446,7 @@ public partial class LevelSystemManaged
                                     skills,
                                     ref activeIndices,
                                     ref bulletStates,
-                                    ref SystemAPI.GetComponent<BulletDefinitionData>(player).definition.Value,
+                                    //ref SystemAPI.GetComponent<BulletDefinitionData>(player).definition.Value,
                                     ref definition.Value,
                                     ref skillIndices);
 
@@ -472,7 +472,7 @@ public partial class LevelSystemManaged
                 ref var skillAssetNames = ref nameDefinition.Value.skills;
                 var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
                 //LevelSkillDesc desc, activeDesc;
-                SkillAsset asset;
+                //SkillAsset asset;
                 int numSkills = skills.Length;
                 bool isAllDone = true;
                 for (int i = 0; i < numSkills; ++i)
@@ -482,7 +482,7 @@ public partial class LevelSystemManaged
                     {
                         //activeDesc = descs[skill.originIndex];
                         //if (!activeDesc.WaitForCompletion())
-                        if(!SkillManager.TryGetAsset(skillAssetNames[skill.originIndex].ToString(), out asset))
+                        if(!SkillManager.TryGetAsset(skillAssetNames[skill.originIndex].ToString(), out _))
                         {
                             isAllDone = false;
 
@@ -493,7 +493,7 @@ public partial class LevelSystemManaged
 
                     //desc = descs[skill.index];
                     //if (!desc.WaitForCompletion())
-                    if(!SkillManager.TryGetAsset(skillAssetNames[skill.index].ToString(), out asset))
+                    if(!SkillManager.TryGetAsset(skillAssetNames[skill.index].ToString(), out _))
                     {
                         isAllDone = false;
 
@@ -504,38 +504,6 @@ public partial class LevelSystemManaged
 
                 if (isAllDone)
                 {
-                    LevelSkillData result;
-                    var skillNames = new Dictionary<int, string>(numSkills);
-                    var results = new List<LevelSkillData>(numSkills);
-                    for (int i = 0; i < numSkills; ++i)
-                    {
-                        ref var skill = ref skills.ElementAt(i);
-                        result.parentName = null;
-                        if (skill.originIndex != -1)
-                        {
-                            if (!skillNames.TryGetValue(skill.originIndex, out result./*value.*/name))
-                            {
-                                result.selectIndex = -1;
-                                result.name = skillAssetNames[skill.originIndex].ToString();
-                                //SkillManager.TryGetAsset(result.name, out result.value);
-
-                                results.Add(result);
-
-                                skillNames.Add(skill.originIndex, result./*value.*/name);
-                            }
-
-                            result.parentName = result./*value.*/name;
-                        }
-
-                        result.selectIndex = i;
-                        result.name = skillAssetNames[skill.index].ToString();
-                        //SkillManager.TryGetAsset(result.name, out result.value);
-
-                        results.Add(result);
-
-                        skillNames.Add(skill.index, result./*value.*/name);
-                    }
-
                     if (skillVersion.index == 0)
                     {
                         __skillSelection.status = SkillSelectionStatus.Begin;
@@ -543,8 +511,43 @@ public partial class LevelSystemManaged
                         manager.SelectSkillBegin(skillVersion.selection, skillVersion.timeScale);
                     }
 
-                    manager.SelectSkills(skillVersion.priority, results.ToArray());
+                    if (numSkills > 0)
+                    {
+                        LevelSkillData result;
+                        var results = new List<LevelSkillData>(numSkills);
+                        var skillNames = new Dictionary<int, string>(numSkills);
+                        for (int i = 0; i < numSkills; ++i)
+                        {
+                            ref var skill = ref skills.ElementAt(i);
+                            result.parentName = null;
+                            if (skill.originIndex != -1)
+                            {
+                                if (!skillNames.TryGetValue(skill.originIndex, out result. /*value.*/name))
+                                {
+                                    result.selectIndex = -1;
+                                    result.name = skillAssetNames[skill.originIndex].ToString();
+                                    //SkillManager.TryGetAsset(result.name, out result.value);
 
+                                    results.Add(result);
+
+                                    skillNames.Add(skill.originIndex, result. /*value.*/name);
+                                }
+
+                                result.parentName = result. /*value.*/name;
+                            }
+
+                            result.selectIndex = i;
+                            result.name = skillAssetNames[skill.index].ToString();
+                            //SkillManager.TryGetAsset(result.name, out result.value);
+
+                            results.Add(result);
+
+                            skillNames.Add(skill.index, result. /*value.*/name);
+                        }
+                        
+                        manager.SelectSkills(skillVersion.priority, results.ToArray());
+                    }
+                    
                     if (skillVersion.index + 1 == skillVersion.count)
                     {
                         manager.SelectSkillEnd();
