@@ -751,14 +751,14 @@ public partial class UserDataMain
             else
                 userAccessoryStage = default;
 
-            __AppendQuest(UserQuest.Type.Accessories, 1);
-
             __AppendQuest(UserQuest.Type.Accessories + stage + 1, 1);
-
-            __AppendQuest(UserQuest.Type.AccessoryToUprank, 1);
 
             userAccessoryStages[i] = userAccessoryStage;
         }
+
+        __AppendQuest(UserQuest.Type.Accessories, numInputs);
+
+        __AppendQuest(UserQuest.Type.AccessoryToUprank, numInputs);
 
         onComplete(userAccessoryStages);
     }
