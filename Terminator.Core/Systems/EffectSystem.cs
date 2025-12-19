@@ -1631,10 +1631,14 @@ public partial struct EffectSystem : ISystem
                             if(!randomSelector.Select(ref random, targetMessage.chance))
                                 continue;
 
-                            if (targetMessage.deadTime > math.FLT_MIN_NORMAL && target.hp > 0)
-                                continue;
+                            if (targetMessage.deadTime > math.FLT_MIN_NORMAL)
+                            {
+                                if(target.hp > 0)
+                                    continue;
+                                
+                                deadTime = targetMessage.deadTime;////math.max(deadTime, targetMessage.deadTime);
+                            }
 
-                            deadTime = targetMessage.deadTime;////math.max(deadTime, targetMessage.deadTime);
                             delayTime = math.max(delayTime, targetMessage.delayTime);
 
                             message.key = random.NextInt();
@@ -1701,8 +1705,7 @@ public partial struct EffectSystem : ISystem
                     }
                 }
 
-                targetHP.value = 0;
-                targetHP.shield = 0;
+                targetHP = default;
                 if (target.hp > 0 && !isFallToDestroy)
                 {
                     if (delayTime > math.FLT_MIN_NORMAL)
