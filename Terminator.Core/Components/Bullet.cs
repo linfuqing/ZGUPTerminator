@@ -1127,6 +1127,12 @@ public struct BulletInstance : IBufferElementData
                     followTarget.space = FollowTargetSpace.World;
                     entityManager.SetComponent(1, entity, followTarget);
                     entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
+                    
+                    FollowTargetVelocity followTargetVelocity;
+                    followTargetVelocity.version = 0;
+                    followTargetVelocity.distanceIndex = -1;
+                    followTargetVelocity.time = 0.0;
+                    followTargetVelocity.value = 0.0f;
                 }
 
                 break;

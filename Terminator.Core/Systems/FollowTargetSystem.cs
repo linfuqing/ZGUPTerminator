@@ -848,12 +848,18 @@ public struct FollowTargetSharedData
         public bool isInFixedFrame;
         public float deltaTime;
         
+        [ReadOnly] 
+        public ComponentLookup<LocalToWorld> localToWorlds;
+
         [ReadOnly]
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
         
         [ReadOnly]
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
-
+        
+        [ReadOnly]
+        public ComponentTypeHandle<FollowTarget> followTargetType;
+        
         [ReadOnly] 
         public BufferTypeHandle<BezierControlPoint> bezierControlPointType;
 
@@ -873,6 +879,8 @@ public struct FollowTargetSharedData
             if (!mask.Check(isInFixedFrame))
                 return;
 
+            var followTargets = chunk.GetNativeArray(ref followTargetType);
+            
             ApplyBeziers applyBeziers;
             applyBeziers.deltaTime = deltaTime;
             applyBeziers.bezierControlPoints = chunk.GetBufferAccessor(ref bezierControlPointType);
@@ -885,6 +893,11 @@ public struct FollowTargetSharedData
             while (iterator.NextEntityIndex(out int i))
             {
                 if (!mask.Check(isInFixedFrame, i))
+                    continue;
+                
+                if(i < followTargets.Length && 
+                   chunk.IsComponentEnabled(ref followTargetType, i) && 
+                   !localToWorlds.HasComponent(followTargets[i].entity))
                     continue;
 
                 applyBeziers.Execute(i);
@@ -1018,8 +1031,10 @@ public struct FollowTargetSharedData
             ApplyBeziersEx applyBeziers;
             applyBeziers.isInFixedFrame = isInFixedFrame;
             applyBeziers.deltaTime = deltaTime;
+            applyBeziers.localToWorlds = __localToWorlds;
             applyBeziers.physicsVelocityType = __physicsVelocityType;
             applyBeziers.characterBodyType = __characterBodyType;
+            applyBeziers.followTargetType = __instanceType;
             applyBeziers.bezierControlPointType = __bezierControlPointType;
             applyBeziers.speedType = __bezierSpeedType;
             applyBeziers.localTransformType = __localTransformType;
