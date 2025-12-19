@@ -472,6 +472,8 @@ public class GameMain : GameUser
         if(onUserLogin != null)
             onUserLogin(userID, __isActivated);
 
+        __isActivated = false;
+        
         GameMain.userID = userID;
     }
 

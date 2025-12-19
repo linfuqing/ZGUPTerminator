@@ -85,7 +85,7 @@ public struct UserRole
 
     public float skillGroupDamage;
     
-    public Rank rankDesc;
+    public Rank[] ranks;
 
     /// <summary>
     /// 角色总属性

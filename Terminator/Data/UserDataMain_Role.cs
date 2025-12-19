@@ -751,7 +751,18 @@ public partial class UserDataMain
         userRole.rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
 
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
-        if (userRole.rank < (roleRankIndices == null ? 0 : roleRankIndices.Count))
+        int numRoleRankIndices = roleRankIndices.Count;
+        userRole.ranks = new UserRole.Rank[numRoleRankIndices];
+        for (int i = 0; i < numRoleRankIndices; ++i)
+        {
+            ref var roleRank = ref _roleRanks[roleRankIndices[i]];
+            ref var userRoleRank = ref userRole.ranks[i];
+            userRoleRank.name = roleRank.name;
+            userRoleRank.count = roleRank.count;
+            userRoleRank.property = roleRank.property;
+        }
+        
+        /*if (userRole.rank < (roleRankIndices == null ? 0 : roleRankIndices.Count))
         {
             var roleRank = _roleRanks[roleRankIndices[userRole.rank]];
             userRole.rankDesc.name = roleRank.name;
@@ -759,7 +770,7 @@ public partial class UserDataMain
             userRole.rankDesc.property = roleRank.property;
         }
         else
-            userRole.rankDesc = default;
+            userRole.rankDesc = default;*/
             
         userRole.attributes = __CollectRoleAttributes(role.name, groupName, null, out userRole.skillGroupDamage)?.ToArray();
 
