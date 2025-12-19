@@ -599,22 +599,24 @@ public partial class UserDataMain
     public IEnumerator UpgradeAccessory(
         uint userID, 
         uint accessorySlotID,
-        Action<bool> onComplete)
+        int maxTimes, 
+        Action<int?> onComplete)
     {
         yield return __CreateEnumerator();
 
         var accessorySlot = _accessorySlots[__ToIndex(accessorySlotID)];
         var levelIndices = __GetAccessoryStyleLevelIndices(__GetAccessoryStyleIndex(accessorySlot.styleName));
 
-        string accessoryLevelKey = $"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}";
-        int level = PlayerPrefs.GetInt(accessoryLevelKey);
-
-        if (level < levelIndices.Count)
+        AccessoryLevel accessoryLevel;
+        string itemName, itemCountKey, accessoryLevelKey = $"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}";
+        int? result = null;
+        int itemCount, numLevelIndices = levelIndices.Count, level = PlayerPrefs.GetInt(accessoryLevelKey), times = 0;
+        while (level < numLevelIndices && (maxTimes < 1 || maxTimes > times++))
         {
-            var accessoryLevel = _accessoryLevels[levelIndices[level]];
-            string itemName = _items[__GetItemIndex(accessoryLevel.itemName)].name, 
-                itemCountKey = $"{NAME_SPACE_USER_ITEM_COUNT}{itemName}";
-            int itemCount = PlayerPrefs.GetInt(itemCountKey);
+            accessoryLevel = _accessoryLevels[levelIndices[level]];
+            itemName = _items[__GetItemIndex(accessoryLevel.itemName)].name;
+            itemCountKey = $"{NAME_SPACE_USER_ITEM_COUNT}{itemName}";
+            itemCount = PlayerPrefs.GetInt(itemCountKey);
             if (itemCount >= accessoryLevel.itemCount)
             {
                 PlayerPrefs.SetInt(itemCountKey, itemCount - accessoryLevel.itemCount);
@@ -623,121 +625,142 @@ public partial class UserDataMain
 
                 __AppendQuest(UserQuest.Type.AccessorySlotToUpgrade, 1);
 
-                onComplete(true);
-                
-                yield break;
+                result = level;
             }
         }
 
-        onComplete(false);
+        onComplete(result);
     }
 
     public IEnumerator UprankAccessory(
         uint userID, 
-        uint destinationAccessoryID, 
-        uint[] sourceAccessoryIDs, 
-        Action<UserAccessory.Stage?> onComplete)
+        IUserData.AccessoryUprankInput[] inputs, 
+        Action<Memory<UserAccessory.Stage>> onComplete)
     {
         yield return __CreateEnumerator();
 
-        if (!__TryGetAccessory(destinationAccessoryID, out var info))
-        {
-            onComplete(null);
-
-            yield break;
-        }
-        
-        var stageIndices = __GetAccessoryStageIndices(info.index);
-        int numStages = stageIndices.Count;
-        if (numStages <= info.stage)
-        {
-            onComplete(null);
-
-            yield break;
-        }
-
-        int numAccessoryIDs = sourceAccessoryIDs.Length;
-        var materials = _accessoryStages[stageIndices[info.stage]].materials;
-        if((materials == null ? 0 : materials.Length) != numAccessoryIDs)
-        {
-            onComplete(null);
-
-            yield break;
-        }
-
         bool result;
-        int i, index = info.index, stage = info.stage;
-        string styleName = _accessories[index].styleName;
+        int numStages;
+        int i, index;
+        string styleName;
         UserAccessory.StageMaterial material;
+        AccessoryInfo info;
         var materialIndices = new HashSet<int>();
-        foreach (var accessoryID in sourceAccessoryIDs)
+        List<int> stageIndices;
+        foreach (var input in inputs)
         {
-            if (!__TryGetAccessory(accessoryID, out info) || 
-                //stage != -1 && stage != info.stage || 
-                info.stage >= numStages ||
-                styleName != null && styleName != _accessories[info.index].styleName)
+            if (!__TryGetAccessory(input.destinationAccessoryID, out info))
             {
                 onComplete(null);
-                
+
                 yield break;
             }
 
-            for (i = 0; i < numAccessoryIDs; ++i)
+            stageIndices = __GetAccessoryStageIndices(info.index);
+            numStages = stageIndices.Count;
+            if (numStages <= info.stage)
             {
-                material = materials[i];
-                result = material.stage == info.stage;
-                if (result)
+                onComplete(null);
+
+                yield break;
+            }
+
+            int numAccessoryIDs = input.sourceAccessoryIDs.Length;
+            var materials = _accessoryStages[stageIndices[info.stage]].materials;
+            if ((materials == null ? 0 : materials.Length) != numAccessoryIDs)
+            {
+                onComplete(null);
+
+                yield break;
+            }
+
+            index = info.index;
+            //stage = info.stage;
+            styleName = _accessories[index].styleName;
+            foreach (var accessoryID in input.sourceAccessoryIDs)
+            {
+                if (!__TryGetAccessory(accessoryID, out info) ||
+                    //stage != -1 && stage != info.stage || 
+                    info.stage >= numStages ||
+                    styleName != null && styleName != _accessories[info.index].styleName)
                 {
-                    switch (material.type)
-                    {
-                        case UserAccessory.StageMaterialType.Normal:
-                            result = info.index == index;
-                            break;
-                        default:
-                            //result = true;
-                            break;
-                    }
+                    onComplete(null);
+
+                    yield break;
                 }
 
-                if (result && materialIndices.Add(i))
-                    break;
-            }
-            
-            if(i == numAccessoryIDs)
-            {
-                onComplete(null);
-                
-                yield break;
+                for (i = 0; i < numAccessoryIDs; ++i)
+                {
+                    material = materials[i];
+                    result = material.stage == info.stage;
+                    if (result)
+                    {
+                        switch (material.type)
+                        {
+                            case UserAccessory.StageMaterialType.Normal:
+                                result = info.index == index;
+                                break;
+                            default:
+                                //result = true;
+                                break;
+                        }
+                    }
+
+                    if (result && materialIndices.Add(i))
+                        break;
+                }
+
+                if (i == numAccessoryIDs)
+                {
+                    onComplete(null);
+
+                    yield break;
+                }
             }
         }
 
-        foreach (var accessoryID in sourceAccessoryIDs)
-            __DeleteAccessory(accessoryID);
-        
-        __DeleteAccessory(destinationAccessoryID);
-        
-        __CreateAccessory(destinationAccessoryID, index, ++stage);
-
+        int stage, numInputs = inputs.Length;
+        IUserData.AccessoryUprankInput accessoryUprankInput;
         UserAccessory.Stage userAccessoryStage;
-        if (stage < numStages)
+        UserAccessory.Stage[] userAccessoryStages = new  UserAccessory.Stage[numInputs];
+        for (i = 0; i < numInputs; ++i)
         {
-            var accessoryStage = _accessoryStages[stageIndices[stage]];
+            accessoryUprankInput = inputs[i];
+            foreach (var accessoryID in accessoryUprankInput.sourceAccessoryIDs)
+                __DeleteAccessory(accessoryID);
 
-            userAccessoryStage.name = accessoryStage.name;
-            //userAccessoryStage.count = accessoryStage.count;
-            userAccessoryStage.property = accessoryStage.property;
-            userAccessoryStage.materials = accessoryStage.materials;
-        }
-        else
-            userAccessoryStage = default;
-        
-        __AppendQuest(UserQuest.Type.Accessories, 1);
+            __DeleteAccessory(accessoryUprankInput.destinationAccessoryID);
+
+            __TryGetAccessory(accessoryUprankInput.destinationAccessoryID, out info);
             
-        __AppendQuest(UserQuest.Type.Accessories + stage + 1, 1);
-        
-        __AppendQuest(UserQuest.Type.AccessoryToUprank, 1);
+            index = info.index;
+            stage = info.stage;
+            __CreateAccessory(accessoryUprankInput.destinationAccessoryID, index, ++stage);
+            
+            stageIndices = __GetAccessoryStageIndices(info.index);
+            numStages = stageIndices.Count;
+            if (stage < numStages)
+            {
+                var accessoryStage = _accessoryStages[stageIndices[stage]];
 
-        onComplete(userAccessoryStage);
+                userAccessoryStage.name = accessoryStage.name;
+                //userAccessoryStage.count = accessoryStage.count;
+                userAccessoryStage.property = accessoryStage.property;
+                userAccessoryStage.materials = accessoryStage.materials;
+            }
+            else
+                userAccessoryStage = default;
+
+            __AppendQuest(UserQuest.Type.Accessories, 1);
+
+            __AppendQuest(UserQuest.Type.Accessories + stage + 1, 1);
+
+            __AppendQuest(UserQuest.Type.AccessoryToUprank, 1);
+
+            userAccessoryStages[i] = userAccessoryStage;
+        }
+
+        onComplete(userAccessoryStages);
     }
     
     private Dictionary<string, int> __itemNameToIndices;
@@ -968,17 +991,16 @@ public partial class UserData
         return UserDataMain.instance.SetAccessory(userID, accessoryID, groupID, slotID, onComplete);
     }
 
-    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, Action<bool> onComplete)
+    public IEnumerator UpgradeAccessory(uint userID, uint accessoryslotID, int maxTimes, Action<int?> onComplete)
     {
-        return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, onComplete);
+        return UserDataMain.instance.UpgradeAccessory(userID, accessoryslotID, maxTimes, onComplete);
     }
 
     public IEnumerator UprankAccessory(
         uint userID, 
-        uint destinationAccessoryID, 
-        uint[] sourceAccessoryIDs, 
-        Action<UserAccessory.Stage?> onComplete)
+        IUserData.AccessoryUprankInput[] inputs, 
+        Action<Memory<UserAccessory.Stage>> onComplete)
     {
-        return UserDataMain.instance.UprankAccessory(userID, destinationAccessoryID, sourceAccessoryIDs, onComplete);
+        return UserDataMain.instance.UprankAccessory(userID, inputs, onComplete);
     }
 }

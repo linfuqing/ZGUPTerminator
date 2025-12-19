@@ -153,6 +153,12 @@ public struct UserAccessoryStyle
 
 public partial interface IUserData
 {
+    public struct AccessoryUprankInput
+    {
+        public uint destinationAccessoryID;
+        public uint[] sourceAccessoryIDs;
+    }
+    
     IEnumerator QueryAccessory(
         uint userID,
         uint accessoryID, 
@@ -174,14 +180,17 @@ public partial interface IUserData
     /// <summary>
     /// 升级装备，返回下一级描述
     /// </summary>
-    IEnumerator UpgradeAccessory(uint userID, uint accessorySlotID, Action<bool> onComplete);
+    IEnumerator UpgradeAccessory(
+        uint userID, 
+        uint accessorySlotID, 
+        int maxTimes, 
+        Action<int?> onComplete);
 
     /// <summary>
     /// 升阶装备
     /// </summary>
     IEnumerator UprankAccessory(
         uint userID, 
-        uint destinationAccessoryID, 
-        uint[] sourceAccessoryIDs, 
-        Action<UserAccessory.Stage?> onComplete);
+        AccessoryUprankInput[] inputs, 
+        Action<Memory<UserAccessory.Stage>> onComplete);
 }
