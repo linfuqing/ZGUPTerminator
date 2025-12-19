@@ -1634,7 +1634,7 @@ public partial struct EffectSystem : ISystem
                             if (targetMessage.deadTime > math.FLT_MIN_NORMAL && target.hp > 0)
                                 continue;
 
-                            deadTime = math.max(deadTime, targetMessage.deadTime);
+                            deadTime = targetMessage.deadTime;////math.max(deadTime, targetMessage.deadTime);
                             delayTime = math.max(delayTime, targetMessage.delayTime);
 
                             message.key = random.NextInt();
