@@ -413,7 +413,7 @@ public class GameMain : GameUser
     [SerializeField] 
     internal int _playerPrefVersion = 1;
 
-    private bool __isInit;
+    private Coroutine __coroutine;
     
     private static bool __isActivated;
 
@@ -604,21 +604,17 @@ public class GameMain : GameUser
 
     private void __OnLogin()
     {
-        if(__isInit)
-            GameAssetManager.instance.LoadScene(GameConstantManager.Get(DefaultSceneName), null);
-        else
-        {
-            __isInit = true;
-            
-            var assetManager = GameAssetManager.instance;
-            assetManager.onConfirmCancel += __OnConfirmCancel;
+        //var assetManager = GameAssetManager.instance;
+        //assetManager.onConfirmCancel += __OnConfirmCancel;
 
-            assetManager.StartCoroutine(__Init());
-        }
+        __coroutine = GameAssetManager.instance?.StartCoroutine(__Init(__coroutine));
     }
 
-    private IEnumerator __Init()
+    private IEnumerator __Init(Coroutine coroutine)
     {
+        if(coroutine != null)
+            yield return coroutine;
+        
         uint userID = 0;
         string defaultSceneName = null;
         GameSceneActivation activation = null;
@@ -694,10 +690,12 @@ public class GameMain : GameUser
             activation, 
             new IGameAssetUnzipper[] {new AssetUnzipper()}, 
             assetPaths);
+
+        __coroutine = null;
     }
 
-    private void __OnConfirmCancel()
+    /*private void __OnConfirmCancel()
     {
         Application.Quit();
-    }
+    }*/
 }
