@@ -752,8 +752,9 @@ public partial class UserDataMain
                         stageReward.condition,
                         out _);
                 }
-                    
-                if(!__GetStageCache(level.name, i, level.cacheType).isEmpty)
+                
+                if((stage.flag & Stage.Flag.DontCache) != Stage.Flag.DontCache && 
+                   !__GetStageCache(level.name, i, level.cacheType).isEmpty)
                     userStage.flag |= UserStage.Flag.Cached;
                 
                 isUnlock = (UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;

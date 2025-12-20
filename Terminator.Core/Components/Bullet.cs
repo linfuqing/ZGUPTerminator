@@ -1133,6 +1133,10 @@ public struct BulletInstance : IBufferElementData
                     followTargetVelocity.distanceIndex = -1;
                     followTargetVelocity.time = 0.0;
                     followTargetVelocity.value = 0.0f;
+                    followTargetVelocity.direction = math.forward(transformResult.rot);
+                    followTargetVelocity.target = this.targetPosition;
+                    followTargetVelocity.lookAt = transformResult.rot;
+                    entityManager.SetComponent(1, entity, followTargetVelocity);
                 }
 
                 break;
