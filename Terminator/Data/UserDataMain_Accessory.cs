@@ -732,11 +732,11 @@ public partial class UserDataMain
         {
             accessoryUprankInput = inputs[i];
             foreach (var accessoryID in accessoryUprankInput.sourceAccessoryIDs)
-                __DeleteAccessory(accessoryID);
+                __DeleteAccessory(accessoryID, out _);
 
-            __DeleteAccessory(accessoryUprankInput.destinationAccessoryID);
+            __DeleteAccessory(accessoryUprankInput.destinationAccessoryID, out info);
 
-            __TryGetAccessory(accessoryUprankInput.destinationAccessoryID, out info);
+            //__TryGetAccessory(accessoryUprankInput.destinationAccessoryID, out info);
             
             index = info.index;
             stage = info.stage;
@@ -924,9 +924,9 @@ public partial class UserDataMain
         return __accessoryIDToInfos.TryGetValue(id, out info);
     }
 
-    private bool __DeleteAccessory(uint id)
+    private bool __DeleteAccessory(uint id, out AccessoryInfo info)
     {
-        if(!__TryGetAccessory(id, out AccessoryInfo info))
+        if(!__TryGetAccessory(id, out info))
             return false;
 
         __accessoryIDToInfos.Remove(id);
