@@ -362,49 +362,57 @@ public partial class UserDataMain
 
     public IEnumerator QueryCard(
         uint userID,
-        uint cardID,
-        Action<UserCard> onComplete)
+        uint[] cardIDs, 
+        Action<Memory<UserCard>> onComplete)
     {
         yield return __CreateEnumerator();
 
-        var card = _cards[__ToIndex(cardID)];
-        
-        UserCard result;
-        result.level = __GetCardLevel(card.name, out _);
-        if (result.level == -1)
-            yield break;
-            
-        result.name = card.name;
-        result.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
-            
-        result.id = cardID;
-        result.styleID = __ToID(__GetCardStyleIndex(card.styleName));
-            
-        result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
-
-        result.skillGroupDamage = card.skillGroupDamage;
-        
-        int numCardGroups = _cardGroups.Length;
+        int i, j, numCardGroups = _cardGroups.Length, numCardIDs = cardIDs.Length;
+        uint cardID;
+        Card card;
         UserCard.Group userCardGroup;
-        var userCardGroups = new List<UserCard.Group>();
-        for (int i = 0; i < numCardGroups; ++i)
+        UserCard result;
+        var results = new UserCard[numCardIDs];
+        for (i = 0; i < numCardIDs; ++i)
         {
-            userCardGroup.position =
-                PlayerPrefs.GetInt(
-                    $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[i].name}{UserData.SEPARATOR}{card.name}",
-                    -1);
-                
-            if(userCardGroup.position == -1)
-                continue;
+            cardID = cardIDs[i];
+            card = _cards[__ToIndex(cardID)];
+            result.level = __GetCardLevel(card.name, out _);
+            if (result.level == -1)
+                yield break;
 
-            userCardGroup.groupID = __ToID(i);
-                
-            userCardGroups.Add(userCardGroup);
+            result.name = card.name;
+            result.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
+
+            result.id = cardID;
+            result.styleID = __ToID(__GetCardStyleIndex(card.styleName));
+
+            result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+
+            result.skillGroupDamage = card.skillGroupDamage;
+
+            var userCardGroups = new List<UserCard.Group>();
+            for (j = 0; j < numCardGroups; ++j)
+            {
+                userCardGroup.position =
+                    PlayerPrefs.GetInt(
+                        $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{card.name}",
+                        -1);
+
+                if (userCardGroup.position == -1)
+                    continue;
+
+                userCardGroup.groupID = __ToID(j);
+
+                userCardGroups.Add(userCardGroup);
+            }
+
+            result.groups = userCardGroups.Count > 0 ? userCardGroups.ToArray() : null;
+
+            results[i] = result;
         }
-            
-        result.groups = userCardGroups.Count > 0 ? userCardGroups.ToArray() : null;
 
-        onComplete(result);
+        onComplete(results);
     }
     
     public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
@@ -864,10 +872,10 @@ public partial class UserData
 
     public IEnumerator QueryCard(
         uint userID,
-        uint cardID,
-        Action<UserCard> onComplete)
+        uint[] cardIDs,
+        Action<Memory<UserCard>> onComplete)
     {
-        return UserDataMain.instance.QueryCard(userID, cardID, onComplete);
+        return UserDataMain.instance.QueryCard(userID, cardIDs, onComplete);
     }
     
     public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)

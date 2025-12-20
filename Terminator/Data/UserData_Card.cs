@@ -176,8 +176,8 @@ public partial interface IUserData
     /// </summary>
     IEnumerator QueryCard(
         uint userID,
-        uint cardID, 
-        Action<UserCard> onComplete);
+        uint[] cardIDs, 
+        Action<Memory<UserCard>> onComplete);
 
     /// <summary>
     /// 设置卡组
