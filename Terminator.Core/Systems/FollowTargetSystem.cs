@@ -895,10 +895,10 @@ public struct FollowTargetSharedData
                 if (!mask.Check(isInFixedFrame, i))
                     continue;
                 
-                if(i < followTargets.Length && 
+                /*if(i < followTargets.Length && 
                    chunk.IsComponentEnabled(ref followTargetType, i) && 
                    !localToWorlds.HasComponent(followTargets[i].entity))
-                    continue;
+                    continue;*/
 
                 applyBeziers.Execute(i);
             }

@@ -645,7 +645,7 @@ public partial class UserDataMain
         string styleName;
         UserAccessory.StageMaterial material;
         AccessoryInfo info;
-        var materialIndices = new HashSet<int>();
+        HashSet<int> materialIndices = null;
         List<int> stageIndices;
         foreach (var input in inputs)
         {
@@ -673,6 +673,11 @@ public partial class UserDataMain
 
                 yield break;
             }
+
+            if (materialIndices == null)
+                materialIndices = new HashSet<int>();
+            else
+                materialIndices.Clear();
 
             index = info.index;
             //stage = info.stage;
