@@ -448,9 +448,17 @@ public partial class UserDataMain
         onComplete(result ? rewards.ToArray() : null);
     }
 
-    public int GetMaxStage(uint levelID)
+    public int GetMaxStage(uint levelID, int stage)
     {
-        return __GetStageCount(_levels[__ToIndex(levelID)]) - 1;
+        var level = _levels[__ToIndex(levelID)];
+        int numStages = __GetStageCount(level), i;
+        for (i = stage; i < numStages; ++i)
+        {
+            if ((__GetStage(level, i).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
+                break;
+        }
+
+        return i - 1;
     }
 
     public int GetStageFlag(uint levelID, int stage)
@@ -730,7 +738,7 @@ public partial class UserData
             result.nextStageEnergy = 0;
 
             if (!isNullMain)
-                oldStage = Mathf.Min(oldStage, main.GetMaxStage(temp.id));
+                oldStage = Mathf.Min(oldStage, main.GetMaxStage(temp.id, stage));
         }
         else
         {
