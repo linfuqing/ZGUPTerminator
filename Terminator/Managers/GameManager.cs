@@ -165,10 +165,14 @@ public class GameManager : MonoBehaviour
     
     public void ApplyCode(params string[] codes)
     {
+        var gameData = IGameData.instance;
+        if (gameData == null)
+            return;
+        
         __RetainLoading();
         
         string version = GameConstantManager.Get(CONSTANT_KEY_VERSION_CODE);
-        StartCoroutine(IGameData.instance.ApplyCode(
+        StartCoroutine(gameData.ApplyCode(
             GameMain.userID,
             string.IsNullOrEmpty(version) || !uint.TryParse(version, out uint versionValue) ? 0 : versionValue,
             codes,
@@ -376,11 +380,15 @@ public class GameManager : MonoBehaviour
             __RetainLoading();
 
             string version = GameConstantManager.Get(CONSTANT_KEY_VERSION_NOTICE);
-            yield return IGameData.instance.QueryNotices(
-                userID,
-                string.IsNullOrEmpty(version) || !uint.TryParse(version, out uint versionValue) ? 0 : versionValue,
-                GameLanguage.overrideLanguage,
-                __OnQueryNotices);
+            var gameData = IGameData.instance;
+            if (gameData == null)
+                __OnQueryNotices(default);
+            else
+                yield return gameData.QueryNotices(
+                    userID,
+                    string.IsNullOrEmpty(version) || !uint.TryParse(version, out uint versionValue) ? 0 : versionValue,
+                    GameLanguage.overrideLanguage,
+                    __OnQueryNotices);
 
             __ReleaseLoading();
         }
