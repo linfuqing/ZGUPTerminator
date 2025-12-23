@@ -500,6 +500,9 @@ public sealed class LoginManager : MonoBehaviour
         {
             __selectedUserLevelID = 0;
             __selectedStageIndex = -1;
+            
+            if(__sceneActiveDepth == 0)
+                __sceneActiveDepth = 1;
         }
         
         int i, numLevels = _levels.Length;

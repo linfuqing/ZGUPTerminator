@@ -1042,6 +1042,7 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        in ComponentLookup<FollowTargetVelocity> followTargetVelocities,
         ref BulletDefinition definition, 
         ref PrefabLoader.ParallelWriter prefabLoader,
         ref EntityCommandBuffer.ParallelWriter entityManager)
@@ -1062,6 +1063,7 @@ public struct BulletInstance : IBufferElementData
             characterInterpolations, 
             characterControls, 
             animationCurveDeltas, 
+            followTargetVelocities, 
             ref definition.bullets[index], 
             ref entityManager);
         
@@ -1076,6 +1078,7 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        in ComponentLookup<FollowTargetVelocity> followTargetVelocities,
         ref BulletDefinition.Bullet data, 
         ref EntityCommandBuffer.ParallelWriter entityManager)
     {
@@ -1127,16 +1130,19 @@ public struct BulletInstance : IBufferElementData
                     followTarget.space = FollowTargetSpace.World;
                     entityManager.SetComponent(1, entity, followTarget);
                     entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
-                    
-                    FollowTargetVelocity followTargetVelocity;
-                    followTargetVelocity.version = 0;
-                    followTargetVelocity.distanceIndex = -1;
-                    followTargetVelocity.time = 0.0;
-                    followTargetVelocity.value = 0.0f;
-                    followTargetVelocity.direction = math.forward(transformResult.rot);
-                    followTargetVelocity.target = this.targetPosition;
-                    followTargetVelocity.lookAt = transformResult.rot;
-                    entityManager.SetComponent(1, entity, followTargetVelocity);
+
+                    if (followTargetVelocities.HasComponent(prefabRoot))
+                    {
+                        FollowTargetVelocity followTargetVelocity;
+                        followTargetVelocity.version = 0;
+                        followTargetVelocity.distanceIndex = -1;
+                        followTargetVelocity.time = 0.0;
+                        followTargetVelocity.value = 0.0f;
+                        followTargetVelocity.direction = math.forward(transformResult.rot);
+                        followTargetVelocity.target = this.targetPosition;
+                        followTargetVelocity.lookAt = transformResult.rot;
+                        entityManager.SetComponent(1, entity, followTargetVelocity);
+                    }
                 }
 
                 break;

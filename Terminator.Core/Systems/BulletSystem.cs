@@ -158,6 +158,9 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
         [ReadOnly] 
+        public ComponentLookup<FollowTargetVelocity> followTargetVelocities;
+        
+        [ReadOnly] 
         public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
@@ -331,6 +334,7 @@ public partial struct BulletSystem : ISystem
                         characterInterpolations, 
                         characterControls,
                         animationCurveDeltas,
+                        followTargetVelocities, 
                         ref definition,
                         ref prefabLoader, 
                         ref entityManager))
@@ -380,6 +384,9 @@ public partial struct BulletSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
+
+        [ReadOnly] 
+        public ComponentLookup<FollowTargetVelocity> followTargetVelocities;
 
         [ReadOnly] 
         public ComponentLookup<EffectDamage> effectDamages;
@@ -452,6 +459,7 @@ public partial struct BulletSystem : ISystem
             collect.characterBodies = characterBodies;
             collect.characterControls = characterControls;
             collect.animationCurveDeltas = animationCurveDeltas;
+            collect.followTargetVelocities = followTargetVelocities;
             collect.effectDamages = effectDamages;
             collect.effectDamageParents = effectDamageParents;
             collect.bulletLayerMaskAndTags = bulletLayerMaskAndTags;
@@ -492,6 +500,8 @@ public partial struct BulletSystem : ISystem
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
 
     private ComponentLookup<AnimationCurveDelta> __animationCurveDeltas;
+
+    private ComponentLookup<FollowTargetVelocity> __followTargetVelocities;
 
     private ComponentLookup<EffectDamage> __effectDamages;
 
@@ -543,6 +553,7 @@ public partial struct BulletSystem : ISystem
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
+        __followTargetVelocities = state.GetComponentLookup<FollowTargetVelocity>(true);
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
@@ -597,6 +608,7 @@ public partial struct BulletSystem : ISystem
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
         __animationCurveDeltas.Update(ref state);
+        __followTargetVelocities.Update(ref state);
         __effectDamages.Update(ref state);
         __effectDamageParents.Update(ref state);
         __bulletLayerMaskAndTags.Update(ref state);
@@ -633,6 +645,7 @@ public partial struct BulletSystem : ISystem
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
         collect.animationCurveDeltas = __animationCurveDeltas;
+        collect.followTargetVelocities = __followTargetVelocities;
         collect.effectDamages = __effectDamages;
         collect.effectDamageParents = __effectDamageParents;
         collect.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
