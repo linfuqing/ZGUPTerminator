@@ -178,16 +178,16 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onHotDisable;
 
     [SerializeField]
-    internal UnityEvent _onNoticeHotEnable;
-
-    [SerializeField]
-    internal UnityEvent _onNoticeHotDisable;
-
-    [SerializeField]
     internal UnityEvent _onNoticeNewEnable;
 
     [SerializeField]
     internal UnityEvent _onNoticeNewDisable;
+
+    [SerializeField]
+    internal UnityEvent _onNoticeHotEnable;
+
+    [SerializeField]
+    internal UnityEvent _onNoticeHotDisable;
 
     [SerializeField]
     internal UnityEvent _onEnergyEnable;
@@ -364,6 +364,13 @@ public sealed class LoginManager : MonoBehaviour
                 _onEnergyMax.Invoke(value.ToString());
         }
     }
+
+    public string code
+    {
+        get;
+
+        set;
+    }
     
     public IReadOnlyCollection<int> levelIndices => __levelStyles.Keys;
 
@@ -374,7 +381,7 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     [Preserve]
-    public void ApplyCode(string code)
+    public void ApplyCode()
     {
         GameManager.instance?.ApplyCode(code);
     }
