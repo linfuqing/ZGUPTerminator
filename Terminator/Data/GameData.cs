@@ -11,24 +11,35 @@ public interface IGameData
         public enum Flag
         {
             Used = 0x01, 
-            Important = 0x02,
-            NotBeClosed = 0x04
+            Important = 0x02
         }
         
+        public uint id;
         public string name;
         public string text;
         public string code;
         public Flag flag;
-        public uint index;
         public long ticks;
         public UserRewardData[] rewards;
     }
 
+    public struct Notices
+    {
+        [Flags]
+        public enum Flag
+        {
+            NotBeClosed = 0x01
+        }
+
+        public Flag flag;
+        public Notice[] notices;
+    }
+
     public static IGameData instance;
     
-    IEnumerator QueryNotice(uint userID, uint version, string language, Action<Memory<Notice>> callback);
+    IEnumerator QueryNotices(uint userID, uint version, string language, Action<Notices> callback);
     
-    IEnumerator ApplyCode(uint userID, uint version, string code, Action<Memory<UserReward>> callback);
+    IEnumerator ApplyCode(uint userID, uint version, string[] codes, Action<Memory<UserReward>> callback);
 }
 
 public class GameData : IGameData
@@ -36,7 +47,7 @@ public class GameData : IGameData
     [SerializeField] 
     internal string _url;
     
-    public IEnumerator QueryNotice(uint userID, uint version, string language, Action<Memory<IGameData.Notice>> callback)
+    public IEnumerator QueryNotices(uint userID, uint version, string language, Action<IGameData.Notices> callback)
     {
         var form = new WWWForm();
         form.AddField("user_id", (int)userID);
@@ -45,11 +56,15 @@ public class GameData : IGameData
 
         yield return WWWUtility.MD5Request(x =>
         {
+            IGameData.Notices notices;
+            notices.flag = (IGameData.Notices.Flag)x.ReadByte();
+            
             int numNotices = (int)x.ReadUInt32(), numRewards, i, j;
+            uint seconds;
             string text;
             UserRewardData reward;
             IGameData.Notice notice;
-            var notices = new IGameData.Notice[numNotices];
+            notices.notices = new IGameData.Notice[numNotices];
             StringBuilder sb = new StringBuilder();
             for (i = 0; i < numNotices; ++i)
             {
@@ -65,8 +80,9 @@ public class GameData : IGameData
                 
                 notice.text = sb.ToString();
                 notice.code = x.ReadString();
-                notice.index = x.ReadUInt32();
-                notice.ticks = ZG.DateTimeUtility.GetTicks(x.ReadUInt32());
+                notice.id = x.ReadUInt32();
+                seconds = x.ReadUInt32();
+                notice.ticks = seconds == 0 ? 0 : ZG.DateTimeUtility.GetTicks(seconds);
                 notice.flag = (IGameData.Notice.Flag)x.ReadByte();
                 numRewards = x.ReadByte();
                 notice.rewards = new UserRewardData[numRewards];
@@ -79,7 +95,7 @@ public class GameData : IGameData
                     notice.rewards[j] = reward;
                 }
 
-                notices[i] = notice;
+                notices.notices[i] = notice;
             }
 
             callback(notices);
@@ -88,13 +104,15 @@ public class GameData : IGameData
         }, form, _url);
     }
 
-    public IEnumerator ApplyCode(uint userID, uint version, string code, Action<Memory<UserReward>> callback)
+    public IEnumerator ApplyCode(uint userID, uint version, string[] codes, Action<Memory<UserReward>> callback)
     {
         var form = new WWWForm();
         form.AddField("user_id", (int)userID);
         form.AddField("version", (int)version);
-        form.AddField("code", code);
-        
+
+        foreach (var code in codes)
+            form.AddField("codes[]", code);
+
         yield return WWWUtility.MD5Request(x =>
         {
             int numRewards = (int)x.ReadUInt32();

@@ -458,7 +458,7 @@ public partial class UserDataMain
                 break;
         }
 
-        return i - 1;
+        return i > 0 ? i - 1 : 0;
     }
 
     public int GetStageFlag(uint levelID, int stage)
