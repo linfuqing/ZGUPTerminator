@@ -55,6 +55,9 @@ public partial interface IUserData
 
     public struct LevelStage
     {
+        /// <summary>
+        /// 0代表上场战斗已结束
+        /// </summary>
         public uint levelID;
         public int stage;
 

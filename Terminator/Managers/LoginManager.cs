@@ -498,11 +498,15 @@ public sealed class LoginManager : MonoBehaviour
 
         if (!isSelected)
         {
-            __selectedUserLevelID = 0;
-            __selectedStageIndex = -1;
+            if (__selectedUserLevelID != 0)
+            {
+                __selectedUserLevelID = 0;
             
-            if(__sceneActiveDepth == 0)
-                __sceneActiveDepth = 1;
+                if(__sceneActiveDepth == 0)
+                    __sceneActiveDepth = 1;
+            }
+
+            __selectedStageIndex = -1;
         }
         
         int i, numLevels = _levels.Length;
