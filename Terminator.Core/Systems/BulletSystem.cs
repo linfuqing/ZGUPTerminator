@@ -166,6 +166,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<EffectDamage> effectDamages;
 
+        [ReadOnly] 
+        public ComponentLookup<EffectTarget> effectTargets;
+        
         [ReadOnly]
         public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
 
@@ -212,6 +215,16 @@ public partial struct BulletSystem : ISystem
         public bool Execute(int index)
         {
             Entity entity = entityArray[index];
+            EffectDamageParent.TryGetComponent(
+                entity,
+                effectDamageParents,
+                effectTargets,
+                out var _,
+                out var effectTarget);
+            
+            if (effectTarget != Entity.Null && !effectTargets.IsComponentEnabled(effectTarget))
+                return false;
+            
             EffectDamageParent.TryGetComponent(
                 entity,
                 effectDamageParents,
@@ -395,6 +408,9 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
+        public ComponentLookup<EffectTarget> effectTargets;
+
+        [ReadOnly] 
         public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
 
         [ReadOnly] 
@@ -462,6 +478,7 @@ public partial struct BulletSystem : ISystem
             collect.followTargetVelocities = followTargetVelocities;
             collect.effectDamages = effectDamages;
             collect.effectDamageParents = effectDamageParents;
+            collect.effectTargets = effectTargets;
             collect.bulletLayerMaskAndTags = bulletLayerMaskAndTags;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
@@ -506,6 +523,8 @@ public partial struct BulletSystem : ISystem
     private ComponentLookup<EffectDamage> __effectDamages;
 
     private ComponentLookup<EffectDamageParent> __effectDamageParents;
+
+    private ComponentLookup<EffectTarget> __effectTargets;
 
     private ComponentLookup<BulletLayerMaskAndTags> __bulletLayerMaskAndTags;
 
@@ -556,6 +575,7 @@ public partial struct BulletSystem : ISystem
         __followTargetVelocities = state.GetComponentLookup<FollowTargetVelocity>(true);
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
+        __effectTargets = state.GetComponentLookup<EffectTarget>(true);
         __bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>(true);
         __entityType = state.GetEntityTypeHandle();
@@ -611,6 +631,7 @@ public partial struct BulletSystem : ISystem
         __followTargetVelocities.Update(ref state);
         __effectDamages.Update(ref state);
         __effectDamageParents.Update(ref state);
+        __effectTargets.Update(ref state);
         __bulletLayerMaskAndTags.Update(ref state);
         __levelStates.Update(ref state);
         __entityType.Update(ref state);
@@ -648,6 +669,7 @@ public partial struct BulletSystem : ISystem
         collect.followTargetVelocities = __followTargetVelocities;
         collect.effectDamages = __effectDamages;
         collect.effectDamageParents = __effectDamageParents;
+        collect.effectTargets = __effectTargets;
         collect.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         collect.levelStates = __levelStates;
         collect.entityType = __entityType;
