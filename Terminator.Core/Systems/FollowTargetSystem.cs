@@ -306,14 +306,14 @@ public partial struct FollowTargetTransformSystem : ISystem
             var instance = instances[index];
             if (!localToWorlds.TryGetComponent(instance.entity, out var localToWorld))
             {
-                if (velocity.time > math.FLT_MIN_NORMAL)
+                /*if (velocity.time > math.FLT_MIN_NORMAL)
                 {
                     velocity.target += velocity.value * (float)(time - velocity.time) * velocity.direction;
                     
                     velocity.time = time;
                     ++velocity.version;
                     velocities[index] = velocity;
-                }
+                }*/
                 
                 return false;
             }
@@ -813,8 +813,8 @@ public struct FollowTargetSharedData
                 bezierDistance.motion.pos = localTransform.Position;
             }
 
-            bezierDistance.value =
-                math.saturate(bezierDistance.value + speeds[index].value * deltaTime);
+            bezierDistance.value += speeds[index].value * deltaTime;
+                //math.saturate(bezierDistance.value + speeds[index].value * deltaTime);
             var velocity = velocities[index];
             float3 targetPosition = math.transform(math.inverse(bezierDistance.motion), velocity.target);
             var bezierControlPoints = this.bezierControlPoints[index].Reinterpret<float3>().AsNativeArray();
@@ -848,17 +848,11 @@ public struct FollowTargetSharedData
         public bool isInFixedFrame;
         public float deltaTime;
         
-        [ReadOnly] 
-        public ComponentLookup<LocalToWorld> localToWorlds;
-
         [ReadOnly]
         public ComponentTypeHandle<PhysicsVelocity> physicsVelocityType;
         
         [ReadOnly]
         public ComponentTypeHandle<KinematicCharacterBody> characterBodyType;
-        
-        [ReadOnly]
-        public ComponentTypeHandle<FollowTarget> followTargetType;
         
         [ReadOnly] 
         public BufferTypeHandle<BezierControlPoint> bezierControlPointType;
@@ -879,8 +873,6 @@ public struct FollowTargetSharedData
             if (!mask.Check(isInFixedFrame))
                 return;
 
-            var followTargets = chunk.GetNativeArray(ref followTargetType);
-            
             ApplyBeziers applyBeziers;
             applyBeziers.deltaTime = deltaTime;
             applyBeziers.bezierControlPoints = chunk.GetBufferAccessor(ref bezierControlPointType);
@@ -895,11 +887,6 @@ public struct FollowTargetSharedData
                 if (!mask.Check(isInFixedFrame, i))
                     continue;
                 
-                /*if(i < followTargets.Length && 
-                   chunk.IsComponentEnabled(ref followTargetType, i) && 
-                   !localToWorlds.HasComponent(followTargets[i].entity))
-                    continue;*/
-
                 applyBeziers.Execute(i);
             }
         }
@@ -1031,10 +1018,8 @@ public struct FollowTargetSharedData
             ApplyBeziersEx applyBeziers;
             applyBeziers.isInFixedFrame = isInFixedFrame;
             applyBeziers.deltaTime = deltaTime;
-            applyBeziers.localToWorlds = __localToWorlds;
             applyBeziers.physicsVelocityType = __physicsVelocityType;
             applyBeziers.characterBodyType = __characterBodyType;
-            applyBeziers.followTargetType = __instanceType;
             applyBeziers.bezierControlPointType = __bezierControlPointType;
             applyBeziers.speedType = __bezierSpeedType;
             applyBeziers.localTransformType = __localTransformType;
