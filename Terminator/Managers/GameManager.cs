@@ -20,9 +20,9 @@ public class GameManager : MonoBehaviour
         public NoticeStyle style;
     }
     
-    public static Action<bool> onNew;
+    public static Action<bool> onNoticeNew;
 
-    public static Action<bool> onHot;
+    public static Action<bool> onNoticeHot;
 
     /// <summary>
     /// 显示菊花
@@ -61,16 +61,13 @@ public class GameManager : MonoBehaviour
     [Tooltip("弹出维护公告，不可关闭")]
     internal UnityEvent _onShowNoticeCanNotBeClosed;
 
-    public bool isNew => (__flag & Flag.New) == Flag.New;
-    
-    public bool isHot => (__flag & Flag.Hot) == Flag.Hot;
-    
     private Flag __flag;
     private uint __userID;
     private int __newCount;
+    private int __loadingCount;
     private int __queryNoticeCoroutineIndex = -1;
     private float __queryNoticeTime;
-    private Coroutine __coroutine;
+    private Coroutine __noticeCoroutine;
     private List<Notice> __notices;
     
     private const string CONSTANT_KEY_VERSION_NOTICE = "NoticeVersion";
@@ -78,9 +75,30 @@ public class GameManager : MonoBehaviour
     
     private const string NAME_SPACE_TIMES = "GameManagerNoticeTimes";
 
-    public void QueryNotices(bool isForceShow)
+    public bool isNoticeShow => (__flag & Flag.Show) == Flag.Show;
+
+    public bool isNoticeNew => (__flag & Flag.New) == Flag.New;
+    
+    public bool isNoticeHot => (__flag & Flag.Hot) == Flag.Hot;
+
+    public bool isLoading => __loadingCount != 0;
+
+    public static GameManager instance
+    {
+        get;
+
+        private set;
+    }
+
+    [UnityEngine.Scripting.Preserve]
+    public void CloseNotices()
     {
         __flag &= ~Flag.Show;
+    }
+
+    public void QueryNotices(bool isForceShow)
+    {
+        //__flag &= ~Flag.Show;
         
         GameProgressbar progressbar;
         if (__queryNoticeCoroutineIndex == -1)
@@ -102,10 +120,10 @@ public class GameManager : MonoBehaviour
         else
             progressbar = null;
         
-        __coroutine = StartCoroutine(__OnQueryNotices(isForceShow, __coroutine));
+        __noticeCoroutine = StartCoroutine(__OnQueryNotices(isForceShow, __noticeCoroutine));
         
         if(progressbar != null)
-            progressbar.EndCoroutine(__queryNoticeCoroutineIndex, __coroutine);
+            progressbar.EndCoroutine(__queryNoticeCoroutineIndex, __noticeCoroutine);
     }
 
     public bool ApplyNoticeCodes()
@@ -123,17 +141,7 @@ public class GameManager : MonoBehaviour
                 codes = new List<string>();
             
             codes.Add(notice.code);
-        }
-
-        if (codes == null || !ApplyCode(codes.ToArray()))
-            return false;
-        
-        for (int i = 0; i < numNotices; ++i)
-        {
-            notice = __notices[i];
-            if(string.IsNullOrEmpty(notice.code))
-                continue;
-
+            
             notice.code = null;
             if(notice.style.button != null)
                 notice.style.button.interactable = false;
@@ -141,33 +149,35 @@ public class GameManager : MonoBehaviour
             __notices[i] = notice;
         }
 
+        if(codes != null)
+            ApplyCode(codes.ToArray());
+        
+        if (((__flag & Flag.Hot) == Flag.Hot))
+        {
+            __flag &= ~Flag.Hot;
+            
+            if(onNoticeHot != null)
+                onNoticeHot(false);
+        }
+        
         return true;
     }
     
-    public bool ApplyCode(params string[] codes)
+    public void ApplyCode(params string[] codes)
     {
-        if (__coroutine != null)
-            return false;
-        
-        if (onLoading != null)
-            onLoading(true);
+        __RetainLoading();
         
         string version = GameConstantManager.Get(CONSTANT_KEY_VERSION_CODE);
-        __coroutine = StartCoroutine(IGameData.instance.ApplyCode(
+        StartCoroutine(IGameData.instance.ApplyCode(
             GameMain.userID,
             string.IsNullOrEmpty(version) || !uint.TryParse(version, out uint versionValue) ? 0 : versionValue,
             codes,
             __OnApplyCode));
-        
-        return true;
     }
     
     private void __OnApplyCode(Memory<UserReward> rewards)
     {
-        __coroutine = null;
-        
-        if (onLoading != null)
-            onLoading(false);
+        __ReleaseLoading();
 
         if(onRewardSubmit != null)
             onRewardSubmit(rewards);
@@ -267,8 +277,7 @@ public class GameManager : MonoBehaviour
                     onClick.RemoveAllListeners();
                     onClick.AddListener(() =>
                     {
-                        if (!ApplyCode(result.code))
-                            return;
+                        ApplyCode(result.code);
                         
                         noticeStyle.button.interactable = false;
 
@@ -297,7 +306,7 @@ public class GameManager : MonoBehaviour
 
     private void __ClearProgressBar()
     {
-        __coroutine = null;
+        __noticeCoroutine = null;
 
         if (__queryNoticeCoroutineIndex != -1)
         {
@@ -329,11 +338,29 @@ public class GameManager : MonoBehaviour
             else
                 __flag &= ~Flag.Hot;
             
-            if(onHot != null)
-                onHot(isHot);
+            if(onNoticeHot != null)
+                onNoticeHot(isHot);
         }
     }
 
+    private void __RetainLoading()
+    {
+        if (__loadingCount++ < 1)
+        {
+            if (onLoading != null)
+                onLoading(true);
+        }
+    }
+
+    private void __ReleaseLoading()
+    {
+        if (--__loadingCount < 1)
+        {
+            if (onLoading != null)
+                onLoading(false);
+        }
+    }
+    
     private IEnumerator __OnQueryNotices(bool isForceShow, Coroutine coroutine)
     {
         if(coroutine != null)
@@ -346,8 +373,7 @@ public class GameManager : MonoBehaviour
             __queryNoticeTime = time;
             __userID = userID;
 
-            if (onLoading != null)
-                onLoading(true);
+            __RetainLoading();
 
             string version = GameConstantManager.Get(CONSTANT_KEY_VERSION_NOTICE);
             yield return IGameData.instance.QueryNotices(
@@ -356,8 +382,7 @@ public class GameManager : MonoBehaviour
                 GameLanguage.overrideLanguage,
                 __OnQueryNotices);
 
-            if (onLoading != null)
-                onLoading(false);
+            __ReleaseLoading();
         }
         else
             __ClearProgressBar();
@@ -381,10 +406,15 @@ public class GameManager : MonoBehaviour
             else
                 __flag &= ~Flag.New;
             
-            if(onNew != null)
-                onNew(isNew);
+            if(onNoticeNew != null)
+                onNoticeNew(isNew);
         }
 
         __MarkHot();
+    }
+
+    private void Awake()
+    {
+        instance = this;
     }
 }

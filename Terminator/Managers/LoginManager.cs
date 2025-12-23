@@ -178,6 +178,18 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onHotDisable;
 
     [SerializeField]
+    internal UnityEvent _onNoticeHotEnable;
+
+    [SerializeField]
+    internal UnityEvent _onNoticeHotDisable;
+
+    [SerializeField]
+    internal UnityEvent _onNoticeNewEnable;
+
+    [SerializeField]
+    internal UnityEvent _onNoticeNewDisable;
+
+    [SerializeField]
     internal UnityEvent _onEnergyEnable;
 
     [SerializeField]
@@ -354,6 +366,18 @@ public sealed class LoginManager : MonoBehaviour
     }
     
     public IReadOnlyCollection<int> levelIndices => __levelStyles.Keys;
+
+    [Preserve]
+    public void ShowNotices()
+    {
+        GameManager.instance?.QueryNotices(true);
+    }
+
+    [Preserve]
+    public void ApplyCode(string code)
+    {
+        GameManager.instance?.ApplyCode(code);
+    }
 
     [Preserve]
     public void RefreshLevel()
@@ -1394,6 +1418,22 @@ public sealed class LoginManager : MonoBehaviour
             StartCoroutine(Start());
     }
 
+    private void __OnNoticeNew(bool value)
+    {
+        if(value)
+            _onNoticeNewEnable?.Invoke();
+        else
+            _onNoticeNewDisable?.Invoke();
+    }
+
+    private void __OnNoticeHot(bool value)
+    {
+        if(value)
+            _onNoticeHotEnable?.Invoke();
+        else
+            _onNoticeHotDisable?.Invoke();
+    }
+
     private IEnumerator __LoadScene(float time, string levelName, string sceneName)
     {
         yield return new WaitForSeconds(time);
@@ -1473,11 +1513,27 @@ public sealed class LoginManager : MonoBehaviour
     void OnDestroy()
     {
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
+        
+        GameManager.onNoticeNew -= __OnNoticeNew;
+        GameManager.onNoticeHot -= __OnNoticeHot;
     }
     
     void Awake()
     {
         GameUser.Shared.onLoginStatusChanged += __OnLoginStatusChanged;
+
+        var manager = GameManager.instance;
+        if (manager != null)
+        {
+            if (manager.isNoticeNew)
+                __OnNoticeNew(true);
+            
+            if (manager.isNoticeHot)
+                __OnNoticeHot(true);
+        }
+        
+        GameManager.onNoticeNew += __OnNoticeNew;
+        GameManager.onNoticeHot += __OnNoticeHot;
     }
 
     IEnumerator Start()
@@ -1494,8 +1550,22 @@ public sealed class LoginManager : MonoBehaviour
         while (IUserData.instance == null)
             yield return null;
         
+        var manager = GameManager.instance;
+        if (manager != null)
+            manager.QueryNotices(false);
+        
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
+        
+        if (manager != null)
+        {
+            while (manager.isLoading)
+                yield return null;
+
+            //if (manager.isNoticeShow)
+            //    ++__sceneActiveDepth;
+        }
+
         yield return __CollectAndQueryLevels();
 
         if (progressBar != null)
@@ -1503,6 +1573,12 @@ public sealed class LoginManager : MonoBehaviour
             progressBar.ClearProgressBar();
             
             while(progressBar.isProgressing)
+                yield return null;
+        }
+
+        if (manager != null)
+        {
+            while (manager.isNoticeShow)
                 yield return null;
         }
         
