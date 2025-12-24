@@ -60,6 +60,9 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     [Tooltip("弹出维护公告，不可关闭")]
     internal UnityEvent _onShowNoticeCanNotBeClosed;
+    [SerializeField]
+    [Tooltip("一键领取失败")]
+    internal UnityEvent _onNoticeCodesFail;
 
     private Flag __flag;
     private uint __userID;
@@ -126,7 +129,8 @@ public class GameManager : MonoBehaviour
             progressbar.EndCoroutine(__queryNoticeCoroutineIndex, __noticeCoroutine);
     }
 
-    public bool ApplyNoticeCodes()
+    [UnityEngine.Scripting.Preserve]
+    public void ApplyNoticeCodes()
     {
         List<string> codes = null;
         Notice notice;
@@ -159,8 +163,6 @@ public class GameManager : MonoBehaviour
             if(onNoticeHot != null)
                 onNoticeHot(false);
         }
-        
-        return true;
     }
     
     public void ApplyCode(params string[] codes)
