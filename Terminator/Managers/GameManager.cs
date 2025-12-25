@@ -248,15 +248,15 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void __Init(NoticeStyle source, NoticeStyle destination, IGameData.Notice data)
+    private void __Init(NoticeStyle source, NoticeStyle destination, IGameData.Notice data, int noticeIndex = -1)
     {
         string key = $"{NAME_SPACE_TIMES}{data.id}";
         int times = PlayerPrefs.GetInt(key);
         PlayerPrefs.SetInt(key, times + 1);
 
         bool isNew = times == 0;
-        
-        ++__newCount;
+        if(isNew)
+            ++__newCount;
         
         destination.onNew?.Invoke(isNew);
         destination.onTitle?.Invoke(data.name);
@@ -265,6 +265,9 @@ public class GameManager : MonoBehaviour
             ? string.Empty
             : new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
 
+        if (noticeIndex == -1)
+            noticeIndex = __notices == null ? 0 : __notices.Count;
+        
         if (data.rewards != null && data.rewards.Length > 0)
         {
             if (destination.button != null)
@@ -275,7 +278,6 @@ public class GameManager : MonoBehaviour
                     destination.button.interactable = false;
                 else
                 {
-                    int noticeIndex = __notices == null ? 0 : __notices.Count;
                     var onClick = destination.button.onClick;
                     onClick.RemoveAllListeners();
                     onClick.AddListener(() =>
@@ -312,7 +314,10 @@ public class GameManager : MonoBehaviour
         if(__notices == null)
             __notices = new List<Notice>();
         
-        __notices.Add(result);
+        if(__notices.Count > noticeIndex)
+            __notices[noticeIndex] = result;
+        else
+            __notices.Add(result);
     }
 
     private void __ClearProgressBar()
@@ -404,7 +409,22 @@ public class GameManager : MonoBehaviour
             __ReleaseLoading();
         }
         else
+        {
+            Notice notice;
+            int numNotices = __notices == null ? 0 : __notices.Count;
+            for(int i = 0; i < numNotices; ++i)
+            {
+                notice = __notices[i];
+                Destroy(notice.destination.gameObject);
+                notice.destination = Instantiate(notice.source);
+                
+                __Init(notice.source, notice.destination, notice.data, i);
+            }
+
             __ClearProgressBar();
+            
+            
+        }
 
         if ((__flag & Flag.Show) == Flag.Show)
             __newCount = 0;
