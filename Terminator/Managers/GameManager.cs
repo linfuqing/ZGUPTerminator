@@ -327,16 +327,19 @@ public class GameManager : MonoBehaviour
     private void __MarkHot()
     {
         bool isHot = false;
-        foreach (var notice in __notices)
+        if (__notices != null)
         {
-            if (!string.IsNullOrEmpty(notice.code))
+            foreach (var notice in __notices)
             {
-                isHot = true;
+                if (!string.IsNullOrEmpty(notice.code))
+                {
+                    isHot = true;
 
-                break;
+                    break;
+                }
             }
         }
-        
+
         if (isHot != ((__flag & Flag.Hot) == Flag.Hot))
         {
             if (isHot)

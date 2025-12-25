@@ -42,7 +42,7 @@ public interface IGameData
     IEnumerator ApplyCode(uint userID, uint version, string[] codes, Action<Memory<UserReward>> callback);
 }
 
-public class GameData : IGameData
+public class GameData : MonoBehaviour, IGameData
 {
     [SerializeField] 
     internal string _url;
