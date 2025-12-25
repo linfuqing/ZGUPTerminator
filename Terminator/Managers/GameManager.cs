@@ -301,6 +301,8 @@ public class GameManager : MonoBehaviour
         }
         else if(destination.button != null)
             destination.button.gameObject.SetActive(false);
+        
+        destination.gameObject.SetActive(true);
 
         Notice result;
         result.data = data;
