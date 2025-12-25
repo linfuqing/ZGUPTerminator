@@ -1,3 +1,4 @@
+using System;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -23,9 +24,27 @@ public class Joystick : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, I
         private set;
     }
     
-    protected void Start()
+    protected void OnEnable()
     {
         __origin = _point.anchoredPosition;
+    }
+
+    protected void OnDisable()
+    {
+        __Release();
+    }
+
+    private void __Release()
+    {
+        __pointerID = -1;
+
+        if (_circle)
+            _circle.anchoredPosition = __origin;
+
+        if (_point != null)
+            _point.anchoredPosition = __origin;
+
+        axis = Vector2.zero;
     }
 
     void IPointerDownHandler.OnPointerDown(PointerEventData eventData)
@@ -92,15 +111,7 @@ public class Joystick : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, I
         if (eventData.pointerId != __pointerID)
             return;
         
-        __pointerID = -1;
-
-        if (_circle)
-            _circle.anchoredPosition = __origin;
-
-        if (_point != null)
-            _point.anchoredPosition = __origin;
-
-        axis = Vector2.zero;
+        __Release();
     }
 
     void IPointerExitHandler.OnPointerExit(PointerEventData eventData)

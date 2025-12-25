@@ -172,6 +172,9 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onStart;
 
     [SerializeField]
+    internal UnityEvent _onEnd;
+
+    [SerializeField]
     internal UnityEvent _onHotEnable;
 
     [SerializeField]
@@ -1510,6 +1513,8 @@ public sealed class LoginManager : MonoBehaviour
         {
             __isStart = false;
             
+            _onEnd?.Invoke();
+
             yield break;
         }
 
@@ -1564,15 +1569,14 @@ public sealed class LoginManager : MonoBehaviour
         while (IUserData.instance == null)
             yield return null;
         
-        var manager = GameManager.instance;
-        if (manager != null)
-            manager.QueryNotices(false);
-        
         var userData = IUserData.instance;
         yield return userData.QueryUser(GameUser.Shared.channelName, GameUser.Shared.channelUser, __ApplyEnergy);
         
+        var manager = GameManager.instance;
         if (manager != null)
         {
+            manager.QueryNotices(false);
+
             while (manager.isLoading)
                 yield return null;
 
@@ -1589,6 +1593,8 @@ public sealed class LoginManager : MonoBehaviour
             while(progressBar.isProgressing)
                 yield return null;
         }
+        
+        _onEnd?.Invoke();
 
         if (manager != null)
         {
