@@ -16,8 +16,9 @@ public class GameManager : MonoBehaviour
 
     private struct Notice
     {
-        public string code;
-        public NoticeStyle style;
+        public IGameData.Notice data;
+        public NoticeStyle source;
+        public NoticeStyle destination;
     }
     
     public static Action<bool> onNoticeNew;
@@ -138,17 +139,18 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < numNotices; ++i)
         {
             notice = __notices[i];
-            if(string.IsNullOrEmpty(notice.code))
+            if((notice.data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used || 
+               string.IsNullOrEmpty(notice.data.code))
                 continue;
             
             if(codes == null)
                 codes = new List<string>();
             
-            codes.Add(notice.code);
+            codes.Add(notice.data.code);
             
-            notice.code = null;
-            if(notice.style.button != null)
-                notice.style.button.interactable = false;
+            notice.data.flag |= IGameData.Notice.Flag.Used;
+            if(notice.destination.button != null)
+                notice.destination.button.interactable = false;
 
             __notices[i] = notice;
         }
@@ -197,7 +199,7 @@ public class GameManager : MonoBehaviour
         if (__notices != null)
         {
             foreach (var notice in __notices)
-                Destroy(notice.style.gameObject);
+                Destroy(notice.destination.gameObject);
             
             __notices.Clear();
         }
@@ -209,7 +211,7 @@ public class GameManager : MonoBehaviour
             foreach (var notice in notices.notices)
             {
                 noticeStyle = Instantiate(_noticeStyleCanNotBeClosed, parent);
-                __Init(noticeStyle, notice);
+                __Init(_noticeStyleCanNotBeClosed, noticeStyle, notice);
             }
 
             _onShowNoticeCanNotBeClosed?.Invoke();
@@ -234,7 +236,7 @@ public class GameManager : MonoBehaviour
 
                 noticeStyle = Instantiate(noticeStylePrefab, noticeStylePrefab.transform.parent);
                 
-                __Init(noticeStyle, notice);
+                __Init(noticeStylePrefab, noticeStyle, notice);
             }
 
             if (isImportantNew)
@@ -246,9 +248,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void __Init(NoticeStyle noticeStyle, IGameData.Notice notice)
+    private void __Init(NoticeStyle source, NoticeStyle destination, IGameData.Notice data)
     {
-        string key = $"{NAME_SPACE_TIMES}{notice.id}";
+        string key = $"{NAME_SPACE_TIMES}{data.id}";
         int times = PlayerPrefs.GetInt(key);
         PlayerPrefs.SetInt(key, times + 1);
 
@@ -256,53 +258,54 @@ public class GameManager : MonoBehaviour
         
         ++__newCount;
         
-        noticeStyle.onNew?.Invoke(isNew);
-        noticeStyle.onTitle?.Invoke(notice.name);
-        noticeStyle.onDetail?.Invoke(notice.text);
-        noticeStyle.onDealLine?.Invoke(notice.ticks == 0
+        destination.onNew?.Invoke(isNew);
+        destination.onTitle?.Invoke(data.name);
+        destination.onDetail?.Invoke(data.text);
+        destination.onDealLine?.Invoke(data.ticks == 0
             ? string.Empty
-            : new DateTime(notice.ticks).ToLocalTime().ToString(_dealLineFormat));
+            : new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
 
-
-        int noticeIndex = __notices.Count;
-        Notice result;
-        result.code = null;
-        if (notice.rewards != null && notice.rewards.Length > 0)
+        if (data.rewards != null && data.rewards.Length > 0)
         {
-            if (noticeStyle.button != null)
+            if (destination.button != null)
             {
-                if (string.IsNullOrEmpty(notice.code))
-                    noticeStyle.button.gameObject.SetActive(false);
-                else if((notice.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
-                    noticeStyle.button.interactable = false;
+                if (string.IsNullOrEmpty(data.code))
+                    destination.button.gameObject.SetActive(false);
+                else if((data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
+                    destination.button.interactable = false;
                 else
                 {
-                    result.code = notice.code;
-
-                    var onClick = noticeStyle.button.onClick;
+                    int noticeIndex = __notices == null ? 0 : __notices.Count;
+                    var onClick = destination.button.onClick;
                     onClick.RemoveAllListeners();
                     onClick.AddListener(() =>
                     {
-                        ApplyCode(result.code);
+                        var notice = __notices[noticeIndex];
+                        if ((notice.data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
+                            return;
                         
-                        noticeStyle.button.interactable = false;
+                        notice.data.flag |= IGameData.Notice.Flag.Used;
+                        __notices[noticeIndex] = notice;
+                        
+                        ApplyCode(data.code);
+                        
+                        destination.button.interactable = false;
 
-                        result.code = null;
-                        result.style = noticeStyle;
-                        __notices[noticeIndex] = result;
-                        
                         __MarkHot();
                     });
                 }
             }
 
             if (onRewardInit != null)
-                onRewardInit(notice.rewards, noticeStyle.rewardParent);
+                onRewardInit(data.rewards, destination.rewardParent);
         }
-        else if(noticeStyle.button != null)
-            noticeStyle.button.gameObject.SetActive(false);
+        else if(destination.button != null)
+            destination.button.gameObject.SetActive(false);
 
-        result.style = noticeStyle;
+        Notice result;
+        result.data = data;
+        result.source = source;
+        result.destination = destination;
         
         if(__notices == null)
             __notices = new List<Notice>();
@@ -331,12 +334,13 @@ public class GameManager : MonoBehaviour
         {
             foreach (var notice in __notices)
             {
-                if (!string.IsNullOrEmpty(notice.code))
-                {
-                    isHot = true;
+                if((notice.data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used || 
+                   string.IsNullOrEmpty(notice.data.code))
+                    continue;
 
-                    break;
-                }
+                isHot = true;
+
+                break;
             }
         }
 

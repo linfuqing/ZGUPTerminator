@@ -9,7 +9,9 @@ using ZG;
 [BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial struct LevelPlayerSystem : ISystem
 {
+#if !DEBUG
     [BurstCompile]
+#endif
     private struct Apply : IJobParallelFor
     {
         public int effectRage;
