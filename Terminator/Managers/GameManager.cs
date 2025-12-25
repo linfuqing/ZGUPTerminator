@@ -416,7 +416,7 @@ public class GameManager : MonoBehaviour
             {
                 notice = __notices[i];
                 Destroy(notice.destination.gameObject);
-                notice.destination = Instantiate(notice.source);
+                notice.destination = Instantiate(notice.source, notice.source.transform.parent);
                 
                 __Init(notice.source, notice.destination, notice.data, i);
             }
