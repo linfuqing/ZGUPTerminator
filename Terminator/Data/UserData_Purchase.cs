@@ -111,20 +111,16 @@ public partial interface IUserData
     /// <summary>
     /// 针对常规付费的查询
     /// </summary>
-    /// <param name="type"></param>
-    /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryPurchaseItems(uint userID, PurchaseType type, int level, Action<PurchaseItems> onComplete);
+    IEnumerator QueryPurchaseItems(uint userID, IPurchaseData.Input[] inputs, Action<Memory<PurchaseItems>> onComplete);
 
     /// <summary>
     /// 针对首充、补给卡、月卡、游荡卡日常奖励或令牌路线奖励的查询
     /// </summary>
-    /// <param name="type"></param>
-    /// <param name="level"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryPurchaseTokens(uint userID, PurchaseType type, int level, Action<PurchaseTokens> onComplete);
+    IEnumerator QueryPurchaseTokens(uint userID, IPurchaseData.Input[] inputs, Action<Memory<PurchaseTokens>> onComplete);
     
     /// <summary>
     /// 付费后

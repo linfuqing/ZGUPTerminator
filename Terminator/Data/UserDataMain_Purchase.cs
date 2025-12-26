@@ -111,75 +111,87 @@ public partial class UserDataMain
     
     private const string NAME_SPACE_USER_PURCHASE_ITEM = "UserPurchaseItem";
     
-    public IEnumerator QueryPurchaseItems(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
+    public IEnumerator QueryPurchaseItems(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseItems>> onComplete)
     {
         //客户端
         while (IPurchaseAPI.instance != null && IPurchaseAPI.instance.isPending)
             yield return null;
         
         yield return __CreateEnumerator();
-        
+
+        int numResults = inputs.Length, time;
+        IPurchaseData.Input input;
+        IPurchaseData.Output output;
         IUserData.PurchaseItems result;
-        result.status = PurchaseData.IsValid(
-            type,
-            level,
-            NAME_SPACE_USER_PURCHASE_ITEM,
-            out int time,
-            out var output)
-            ? (time < output.times ? IUserData.PurchaseItems.Status.Purchased : IUserData.PurchaseItems.Status.Valid) : 
-            IUserData.PurchaseItems.Status.Invalid;
-        switch (type)
+        var results = new IUserData.PurchaseItems[numResults];
+        for (int i = 0; i < numResults; ++i)
         {
-            case PurchaseType.Level:
-                result.exp = UserData.chapter;
-                break;
-            case PurchaseType.GoldBank:
-                result.exp = goldBank;
-                break;
-            default:
-                result.exp = 0;
-                break;
-        }
-
-        result.expMax = 0;
-        result.capacity = 0;
-        
-        result.times = output.times;
-        result.deadline = output.deadline;
-        result.ticks = output.ticks;
-        result.options = null;
-        
-        foreach (var purchaseItem in _purchaseItems)
-        {
-            if (purchaseItem.type == type && 
-                purchaseItem.level == level)
+            input = inputs[i];
+            result.status = PurchaseData.IsValid(
+                input.type,
+                input.level,
+                NAME_SPACE_USER_PURCHASE_ITEM,
+                out time,
+                out output)
+                ? (time < output.times
+                    ? IUserData.PurchaseItems.Status.Purchased
+                    : IUserData.PurchaseItems.Status.Valid)
+                : IUserData.PurchaseItems.Status.Invalid;
+            switch (input.type)
             {
-                result.expMax = purchaseItem.exp;
-                result.capacity = purchaseItem.capacity;
-                result.options = purchaseItem.options;
-
-                break;
+                case PurchaseType.Level:
+                    result.exp = UserData.chapter;
+                    break;
+                case PurchaseType.GoldBank:
+                    result.exp = goldBank;
+                    break;
+                default:
+                    result.exp = 0;
+                    break;
             }
-        }
 
-        result.metadata = null;
-        
-        //客户端（服务器返回时）
-        if (IUserData.PurchaseItems.Status.Invalid == result.status && IPurchaseAPI.instance != null)
-        {
-            bool isWaiting = true;
-            IPurchaseAPI.instance.Query(userID, type, level, x =>
+            result.expMax = 0;
+            result.capacity = 0;
+
+            result.times = output.times;
+            result.deadline = output.deadline;
+            result.ticks = output.ticks;
+            result.options = null;
+
+            foreach (var purchaseItem in _purchaseItems)
             {
-                result.metadata = x;
+                if (purchaseItem.type == input.type &&
+                    purchaseItem.level == input.level)
+                {
+                    result.expMax = purchaseItem.exp;
+                    result.capacity = purchaseItem.capacity;
+                    result.options = purchaseItem.options;
 
-                isWaiting = false;
-            });
-            
-            while(isWaiting)
-                yield return null;
+                    break;
+                }
+            }
+
+            result.metadata = null;
+
+            //客户端（服务器返回时）
+            if (IUserData.PurchaseItems.Status.Invalid == result.status && IPurchaseAPI.instance != null)
+            {
+                bool isWaiting = true;
+                IPurchaseAPI.instance.Query(userID, input.type, input.level, x =>
+                {
+                    result.metadata = x;
+
+                    isWaiting = false;
+                });
+
+                while (isWaiting)
+                    yield return null;
+            }
+
+            results[i] = result;
         }
 
-        onComplete(result);
+        onComplete(results);
     }
 
     public IEnumerator CollectPurchaseItem(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
@@ -301,114 +313,130 @@ public partial class UserDataMain
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS = "UserPurchaseTokenSeconds";
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_TIMES = "UserPurchaseTokenTimes";
 
-    public IEnumerator QueryPurchaseTokens(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
+    public IEnumerator QueryPurchaseTokens(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseTokens>> onComplete)
     {
         yield return __CreateEnumerator();
 
-        var output = PurchaseData.Query(type, level);
-        
-        IUserData.PurchaseTokens result;
-        switch (type)
-        {
-            case PurchaseType.FirstCharge:
-                result.exp = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{type}{level}");
-                break;
-            case PurchaseType.DiamondCard:
-            case PurchaseType.MonthlyCard:
-            case PurchaseType.SweepCard:
-                result.exp = 0;
-                break;
-            case PurchaseType.Fund:
-                result.exp = __GetChapterStageRewardCount();
-                
-                if (level == -1 && output.ticks == 0)
-                {
-                    PurchaseData.Buy(type, level);
-            
-                    output = PurchaseData.Query(type, level);
-                }
-
-                break;
-            case PurchaseType.Pass:
-                result.exp = am;
-                
-                if (level == -1 && (output.ticks == 0 || output.ticks + output.deadline * TimeSpan.TicksPerSecond < DateTime.UtcNow.Ticks))
-                {
-                    PurchaseData.Buy(type, level);
-            
-                    output = PurchaseData.Query(type, level);
-                }
-
-                break;
-            default:
-                yield break;
-        }
-
-        result.days = 1;
-        
-        List<UserPurchaseToken> values = null;
-        UserPurchaseToken value;
-        PurchaseToken token;
-        Active<string> name;
+        int numResults = inputs.Length;
         string key;
-        int i, j, numOptions, numPurchasesTokens = _purchaseTokens.Length;
-        for(i = 0; i < numPurchasesTokens; ++i)
+        IPurchaseData.Input input;
+        IPurchaseData.Output output;
+        IUserData.PurchaseTokens result;
+        PurchaseToken token;
+        UserPurchaseToken value;
+        Active<string> name;
+        List<UserPurchaseToken> values = null;
+        var results = new IUserData.PurchaseTokens[numResults];
+        int i, j, k, numOptions, numPurchasesTokens = _purchaseTokens.Length;
+        for (i = 0; i < numResults; ++i)
         {
-            token = _purchaseTokens[i];
-            if (token.type == type && 
-                token.level == level)
+            input = inputs[i];
+            output = PurchaseData.Query(input.type, input.level);
+
+            switch (input.type)
             {
-                value.name = token.name;
-                value.id = __ToID(i);
-                value.exp = token.exp;
+                case PurchaseType.FirstCharge:
+                    result.exp = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{input.type}{input.level}");
+                    break;
+                case PurchaseType.DiamondCard:
+                case PurchaseType.MonthlyCard:
+                case PurchaseType.SweepCard:
+                    result.exp = 0;
+                    break;
+                case PurchaseType.Fund:
+                    result.exp = __GetChapterStageRewardCount();
 
-                value.options = token.options;
-
-                if ( token.exp <= result.exp && output.times > 0)
-                {
-                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
+                    if (input.level == -1 && output.ticks == 0)
                     {
-                        key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
+                        PurchaseData.Buy(input.type, input.level);
 
-                        name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
+                        output = PurchaseData.Query(input.type, input.level);
+                    }
 
-                        value.flag = name.ToDay() == null ? 0 : UserPurchaseToken.Flag.Locked;
-                        if (value.flag == 0 && name.seconds != 0)
+                    break;
+                case PurchaseType.Pass:
+                    result.exp = am;
+
+                    if (input.level == -1 && (output.ticks == 0 ||
+                                              output.ticks + output.deadline * TimeSpan.TicksPerSecond <
+                                              DateTime.UtcNow.Ticks))
+                    {
+                        PurchaseData.Buy(input.type, input.level);
+
+                        output = PurchaseData.Query(input.type, input.level);
+                    }
+
+                    break;
+                default:
+                    continue;
+            }
+
+            result.days = 1;
+            
+            if(values != null)
+                values.Clear();
+
+            for (j = 0; j < numPurchasesTokens; ++j)
+            {
+                token = _purchaseTokens[j];
+                if (token.type == input.type &&
+                    token.level == input.level)
+                {
+                    value.name = token.name;
+                    value.id = __ToID(j);
+                    value.exp = token.exp;
+
+                    value.options = token.options;
+
+                    if (token.exp <= result.exp && output.times > 0)
+                    {
+                        if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
                         {
-                            numOptions = token.options == null ? 0 : token.options.Length;
-                            if (numOptions > 0)
+                            key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{input.type}{input.level}";
+
+                            name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
+
+                            value.flag = name.ToDay() == null ? 0 : UserPurchaseToken.Flag.Locked;
+                            if (value.flag == 0 && name.seconds != 0)
                             {
-                                if(name.value == token.name)
-                                    result.days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _));
-
-                                if (result.days > 0)
+                                numOptions = token.options == null ? 0 : token.options.Length;
+                                if (numOptions > 0)
                                 {
-                                    Array.Resize(ref value.options, result.days * numOptions);
+                                    if (name.value == token.name)
+                                        result.days =
+                                            Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _));
 
-                                    for (j = 0; j < result.days; ++j)
-                                        Array.Copy(token.options, 0, value.options, j * numOptions, numOptions);
+                                    if (result.days > 0)
+                                    {
+                                        Array.Resize(ref value.options, result.days * numOptions);
+
+                                        for (k = 0; k < result.days; ++k)
+                                            Array.Copy(token.options, 0, value.options, k * numOptions, numOptions);
+                                    }
+                                    else
+                                        value.options = null;
                                 }
-                                else
-                                    value.options = null;
                             }
                         }
+                        else
+                            value.flag = UserPurchaseToken.Flag.Collected;
                     }
                     else
-                        value.flag = UserPurchaseToken.Flag.Collected;
-                }
-                else
-                    value.flag = UserPurchaseToken.Flag.Locked;
+                        value.flag = UserPurchaseToken.Flag.Locked;
 
-                if (values == null)
-                    values = new List<UserPurchaseToken>();
-                
-                values.Add(value);
+                    if (values == null)
+                        values = new List<UserPurchaseToken>();
+
+                    values.Add(value);
+                }
             }
+
+            result.values = values == null ? null : values.ToArray();
+
+            results[i] = result;
         }
 
-        result.values = values == null ? null : values.ToArray();
-        
-        onComplete(result);
+        onComplete(results);
     }
     
     public IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
@@ -588,9 +616,9 @@ public partial class UserDataMain
 
 public partial class UserData
 {
-    public IEnumerator QueryPurchaseItems(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseItems> onComplete)
+    public IEnumerator QueryPurchaseItems(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseItems>> onComplete)
     {
-        return UserDataMain.instance.QueryPurchaseItems(userID, type, level, onComplete);
+        return UserDataMain.instance.QueryPurchaseItems(userID, inputs, onComplete);
     }
     
     public IEnumerator CollectPurchaseItem(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)
@@ -598,9 +626,9 @@ public partial class UserData
         return UserDataMain.instance.CollectPurchaseItem(userID, type, level, onComplete);
     }
 
-    public IEnumerator QueryPurchaseTokens(uint userID, PurchaseType type, int level, Action<IUserData.PurchaseTokens> onComplete)
+    public IEnumerator QueryPurchaseTokens(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseTokens>> onComplete)
     {
-        return UserDataMain.instance.QueryPurchaseTokens(userID, type, level, onComplete);
+        return UserDataMain.instance.QueryPurchaseTokens(userID, inputs, onComplete);
     }
 
     public IEnumerator CollectPurchaseToken(uint userID, PurchaseType type, int level, Action<Memory<UserReward>> onComplete)

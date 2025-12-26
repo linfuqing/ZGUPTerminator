@@ -422,8 +422,6 @@ public class GameManager : MonoBehaviour
             }
 
             __ClearProgressBar();
-            
-            
         }
 
         if ((__flag & Flag.Show) == Flag.Show)
