@@ -347,6 +347,8 @@ public class GameManager : MonoBehaviour
 
                             __MarkHot();
                         });
+                        
+                        destination.button.gameObject.SetActive(true);
                     }
                 }
 
