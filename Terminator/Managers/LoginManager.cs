@@ -183,6 +183,9 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal UnityEvent _onNoticeActive;
 
+    [SerializeField] 
+    internal UnityEvent _onNoticeCodesFail;
+
     [SerializeField]
     internal UnityEvent _onNoticeNewEnable;
 
@@ -1466,6 +1469,16 @@ public sealed class LoginManager : MonoBehaviour
             _onNoticeHotDisable?.Invoke();
     }
 
+    private void __OnNoticeShow()
+    {
+        _onNoticeActive?.Invoke();
+    }
+
+    private void __OnNoticeCodesFail()
+    {
+        _onNoticeCodesFail?.Invoke();
+    }
+
     private IEnumerator __LoadScene(float time, string levelName, string sceneName)
     {
         yield return new WaitForSeconds(time);
@@ -1547,30 +1560,20 @@ public sealed class LoginManager : MonoBehaviour
     void OnDestroy()
     {
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
+        
         var manager = GameManager.instance;
         if (manager != null)
         {
             manager.onNoticeNew -= __OnNoticeNew;
             manager.onNoticeHot -= __OnNoticeHot;
+            manager.onNoticeShow -= __OnNoticeShow;
+            manager.onNoticeCodesFail -= __OnNoticeCodesFail;
         }
     }
     
     void Awake()
     {
         GameUser.Shared.onLoginStatusChanged += __OnLoginStatusChanged;
-
-        var manager = GameManager.instance;
-        if (manager != null)
-        {
-            if (manager.isNoticeNew)
-                __OnNoticeNew(true);
-            
-            if (manager.isNoticeHot)
-                __OnNoticeHot(true);
-        
-            manager.onNoticeNew += __OnNoticeNew;
-            manager.onNoticeHot += __OnNoticeHot;
-        }
     }
 
     IEnumerator Start()
@@ -1601,8 +1604,22 @@ public sealed class LoginManager : MonoBehaviour
             
             manager.QueryNotices(false);
 
-            while (manager.isLoading)
+            while (manager != null && manager.isLoading)
                 yield return null;
+
+            if (manager.isNoticeNew)
+                __OnNoticeNew(true);
+            
+            if (manager.isNoticeHot)
+                __OnNoticeHot(true);
+
+            if (manager.isNoticeShow)
+                __OnNoticeShow();
+
+            manager.onNoticeNew += __OnNoticeNew;
+            manager.onNoticeHot += __OnNoticeHot;
+            manager.onNoticeShow += __OnNoticeShow;
+            manager.onNoticeCodesFail += __OnNoticeCodesFail;
 
             //if (manager.isNoticeShow)
             //    ++__sceneActiveDepth;
@@ -1620,11 +1637,8 @@ public sealed class LoginManager : MonoBehaviour
         
         _onEnd?.Invoke();
 
-        if (manager != null)
-        {
-            while (manager.isNoticeShow)
-                yield return null;
-        }
+        while (manager != null && manager.isNoticeShow)
+            yield return null;
         
         __onLevelActivatedFirst?.Invoke();
 

@@ -38,8 +38,45 @@ public class GameManager : MonoBehaviour
     public static event Action<Memory<UserReward>> onRewardSubmit;
 
     public event Action<bool> onNoticeNew;
-
     public event Action<bool> onNoticeHot;
+    
+    public event UnityAction onNoticeShow
+    {
+        add
+        {
+            if (_onShowNotice == null)
+                _onShowNotice = new UnityEvent();
+            
+            _onShowNotice.AddListener(value);
+        }
+
+        remove
+        {
+            if (_onShowNotice == null)
+                return;
+            
+            _onShowNotice.RemoveListener(value);
+        }
+    }
+
+    public event UnityAction onNoticeCodesFail
+    {
+        add
+        {
+            if (_onNoticeCodesFail == null)
+                _onNoticeCodesFail = new UnityEvent();
+            
+            _onNoticeCodesFail.AddListener(value);
+        }
+
+        remove
+        {
+            if (_onNoticeCodesFail == null)
+                return;
+            
+            _onNoticeCodesFail.RemoveListener(value);
+        }
+    }
 
     [Tooltip("普通邮件")]
     public NoticeStyle noticeStyle;
