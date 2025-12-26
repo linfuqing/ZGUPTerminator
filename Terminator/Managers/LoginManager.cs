@@ -402,6 +402,12 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     [Preserve]
+    public void ApplyNoticeCodes()
+    {
+        GameManager.instance?.ApplyNoticeCodes();
+    }
+
+    [Preserve]
     public void ApplyCode()
     {
         GameManager.instance?.ApplyCode(code);
