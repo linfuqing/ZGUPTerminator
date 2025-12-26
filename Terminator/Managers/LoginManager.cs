@@ -1547,9 +1547,12 @@ public sealed class LoginManager : MonoBehaviour
     void OnDestroy()
     {
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
-        
-        GameManager.onNoticeNew -= __OnNoticeNew;
-        GameManager.onNoticeHot -= __OnNoticeHot;
+        var manager = GameManager.instance;
+        if (manager != null)
+        {
+            manager.onNoticeNew -= __OnNoticeNew;
+            manager.onNoticeHot -= __OnNoticeHot;
+        }
     }
     
     void Awake()
@@ -1564,10 +1567,10 @@ public sealed class LoginManager : MonoBehaviour
             
             if (manager.isNoticeHot)
                 __OnNoticeHot(true);
-        }
         
-        GameManager.onNoticeNew += __OnNoticeNew;
-        GameManager.onNoticeHot += __OnNoticeHot;
+            manager.onNoticeNew += __OnNoticeNew;
+            manager.onNoticeHot += __OnNoticeHot;
+        }
     }
 
     IEnumerator Start()

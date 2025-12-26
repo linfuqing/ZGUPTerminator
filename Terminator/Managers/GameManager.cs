@@ -41,14 +41,6 @@ public class GameManager : MonoBehaviour
 
     public event Action<bool> onNoticeHot;
 
-    public event Action onNoticeShow
-    {
-        add
-        {
-            if(_onShowNotice )
-        }
-    }
-
     [Tooltip("普通邮件")]
     public NoticeStyle noticeStyle;
     [Tooltip("重要邮件")]
