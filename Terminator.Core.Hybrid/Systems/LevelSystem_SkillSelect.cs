@@ -366,6 +366,7 @@ public partial class LevelSystemManaged
             clearBulletEntitiesUnmanaged.RunByRef(__bulletGroupUnmanaged);
             
             system.__DestroyEntities(__bulletGroupUnmanaged);
+            system.__DestroyEntities();
         }
 
         public void UpdateBullets(in Entity parent, in NativeArray<int> skillIndices, LevelSystemManaged system)

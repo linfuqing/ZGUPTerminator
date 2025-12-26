@@ -151,7 +151,7 @@ public partial class LevelSystemManaged : SystemBase
         var manager = LevelManager.instance;
         if (manager == null || !SystemAPI.TryGetSingleton<LevelStatus>(out var status))
         {
-            __DestroyEntities(__group);
+            __DestroyEntities();
 
             return;
         }
@@ -189,7 +189,7 @@ public partial class LevelSystemManaged : SystemBase
                 if (thirdPersonPlayerEntity != Entity.Null)
                     EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
                 
-                __DestroyEntities(__group);
+                __DestroyEntities();
             }
         }
         
@@ -310,6 +310,11 @@ public partial class LevelSystemManaged : SystemBase
         __DestroyEntities(group, ref collectLinkedEntitiesWrapper);
     }
     
+    private void __DestroyEntities()
+    {
+        __DestroyEntities(__group);
+    }
+
     private void __GetSkill(
         in Entity player, 
         out BlobAssetReference<SkillDefinition> definition, 

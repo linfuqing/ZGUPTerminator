@@ -180,6 +180,9 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField]
     internal UnityEvent _onHotDisable;
 
+    [SerializeField] 
+    internal UnityEvent _onNoticeActive;
+
     [SerializeField]
     internal UnityEvent _onNoticeNewEnable;
 
@@ -228,6 +231,12 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal Progressbar _energy;
 
+    [SerializeField]
+    internal NoticeStyle _noticeStyle;
+    
+    [SerializeField]
+    internal NoticeStyle _noticeStyleImportant;
+    
     [SerializeField]
     internal LevelStyle _style;
 
@@ -381,6 +390,12 @@ public sealed class LoginManager : MonoBehaviour
     public void ShowNotices()
     {
         GameManager.instance?.QueryNotices(true);
+    }
+
+    [Preserve]
+    public void CloseNotices()
+    {
+        GameManager.instance?.CloseNotices();
     }
 
     [Preserve]
@@ -1575,6 +1590,12 @@ public sealed class LoginManager : MonoBehaviour
         var manager = GameManager.instance;
         if (manager != null)
         {
+            if(_noticeStyle != null)
+                manager.noticeStyle = _noticeStyle;
+            
+            if(_noticeStyleImportant != null)
+                manager.noticeStyleImportant = _noticeStyleImportant;
+            
             manager.QueryNotices(false);
 
             while (manager.isLoading)

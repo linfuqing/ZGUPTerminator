@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour
     {
         Show = 0x01,
         New = 0x02, 
-        Hot = 0x04
+        Hot = 0x04, 
+        NotBeClosed = 0x08
     }
 
     private struct Notice
@@ -21,25 +22,42 @@ public class GameManager : MonoBehaviour
         public NoticeStyle destination;
     }
     
-    public static Action<bool> onNoticeNew;
-
-    public static Action<bool> onNoticeHot;
-
     /// <summary>
     /// 显示菊花
     /// </summary>
-    public static Action<bool> onLoading;
+    public static event Action<bool> onLoading;
     
     /// <summary>
     /// 创建邮件可领取的奖励物品
     /// </summary>
-    public static Action<Memory<UserRewardData>, Transform> onRewardInit;
+    public static event Action<Memory<UserRewardData>, Transform> onRewardInit;
     
     /// <summary>
     /// 弹出奖励框
     /// </summary>
-    public static Action<Memory<UserReward>> onRewardSubmit;
+    public static event Action<Memory<UserReward>> onRewardSubmit;
 
+    public event Action<bool> onNoticeNew;
+
+    public event Action<bool> onNoticeHot;
+
+    public event Action onNoticeShow
+    {
+        add
+        {
+            if(_onShowNotice )
+        }
+    }
+
+    [Tooltip("普通邮件")]
+    public NoticeStyle noticeStyle;
+    [Tooltip("重要邮件")]
+    public NoticeStyle noticeStyleImportant;
+    
+    [SerializeField]
+    [Tooltip("维护公告，不可关闭")]
+    internal NoticeStyle _noticeStyleCanNotBeClosed;
+    
     [SerializeField] 
     internal float _minQueryNoticeTime = 30.0f;
 
@@ -47,22 +65,13 @@ public class GameManager : MonoBehaviour
     internal string _dealLineFormat;
     
     [SerializeField]
-    [Tooltip("普通邮件")]
-    internal NoticeStyle _noticeStyle;
-    [SerializeField]
-    [Tooltip("重要邮件")]
-    internal NoticeStyle _noticeStyleImportant;
-    [SerializeField]
-    [Tooltip("维护公告，不可关闭")]
-    internal NoticeStyle _noticeStyleCanNotBeClosed;
-    [SerializeField]
     [Tooltip("弹出邮件")]
     internal UnityEvent _onShowNotice;
     [SerializeField]
     [Tooltip("弹出维护公告，不可关闭")]
     internal UnityEvent _onShowNoticeCanNotBeClosed;
     [SerializeField]
-    [Tooltip("一键领取失败")]
+    [Tooltip("领取失败")]
     internal UnityEvent _onNoticeCodesFail;
 
     private Flag __flag;
@@ -157,6 +166,8 @@ public class GameManager : MonoBehaviour
 
         if(codes != null)
             ApplyCode(codes.ToArray());
+        else
+            _onNoticeCodesFail?.Invoke();
         
         if (((__flag & Flag.Hot) == Flag.Hot))
         {
@@ -207,16 +218,24 @@ public class GameManager : MonoBehaviour
         NoticeStyle noticeStyle;
         if ((notices.flag & IGameData.Notices.Flag.NotBeClosed) == IGameData.Notices.Flag.NotBeClosed)
         {
-            var parent = _noticeStyleCanNotBeClosed.transform.parent;
-            foreach (var notice in notices.notices)
+            if (_noticeStyleCanNotBeClosed == null)
             {
-                noticeStyle = Instantiate(_noticeStyleCanNotBeClosed, parent);
-                __Init(_noticeStyleCanNotBeClosed, noticeStyle, notice);
+                foreach (var notice in notices.notices)
+                    __Init(null, null, notice);
+            }
+            else
+            {
+                var parent = _noticeStyleCanNotBeClosed.transform.parent;
+                foreach (var notice in notices.notices)
+                {
+                    noticeStyle = Instantiate(_noticeStyleCanNotBeClosed, parent);
+                    __Init(_noticeStyleCanNotBeClosed, noticeStyle, notice);
+                }
             }
 
             _onShowNoticeCanNotBeClosed?.Invoke();
             
-            __flag |= Flag.Show;
+            __flag |= Flag.NotBeClosed | Flag.Show;
         }
         else
         {
@@ -229,12 +248,12 @@ public class GameManager : MonoBehaviour
                     if(PlayerPrefs.GetInt($"{NAME_SPACE_TIMES}{notice.id}") == 0)
                         isImportantNew = true;
 
-                    noticeStylePrefab = _noticeStyleImportant == null ? _noticeStyle : _noticeStyleImportant;
+                    noticeStylePrefab = noticeStyleImportant == null ? this.noticeStyle : noticeStyleImportant;
                 }
                 else
-                    noticeStylePrefab = _noticeStyle;
+                    noticeStylePrefab = this.noticeStyle;
 
-                noticeStyle = Instantiate(noticeStylePrefab, noticeStylePrefab.transform.parent);
+                noticeStyle = noticeStylePrefab == null ? null : Instantiate(noticeStylePrefab, noticeStylePrefab.transform.parent);
                 
                 __Init(noticeStylePrefab, noticeStyle, notice);
             }
@@ -245,6 +264,8 @@ public class GameManager : MonoBehaviour
             
                 __flag |= Flag.Show;
             }
+
+            __flag &= ~Flag.NotBeClosed;
         }
     }
 
@@ -257,54 +278,57 @@ public class GameManager : MonoBehaviour
         bool isNew = times == 0;
         if(isNew)
             ++__newCount;
-        
-        destination.onNew?.Invoke(isNew);
-        destination.onTitle?.Invoke(data.name);
-        destination.onDetail?.Invoke(data.text);
-        destination.onDealLine?.Invoke(data.ticks == 0
-            ? string.Empty
-            : new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
 
-        if (noticeIndex == -1)
-            noticeIndex = __notices == null ? 0 : __notices.Count;
-        
-        if (data.rewards != null && data.rewards.Length > 0)
+        if (destination != null)
         {
-            if (destination.button != null)
+            destination.onNew?.Invoke(isNew);
+            destination.onTitle?.Invoke(data.name);
+            destination.onDetail?.Invoke(data.text);
+            destination.onDealLine?.Invoke(data.ticks == 0
+                ? string.Empty
+                : new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
+
+            if (noticeIndex == -1)
+                noticeIndex = __notices == null ? 0 : __notices.Count;
+
+            if (data.rewards != null && data.rewards.Length > 0)
             {
-                if (string.IsNullOrEmpty(data.code))
-                    destination.button.gameObject.SetActive(false);
-                else if((data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
-                    destination.button.interactable = false;
-                else
+                if (destination.button != null)
                 {
-                    var onClick = destination.button.onClick;
-                    onClick.RemoveAllListeners();
-                    onClick.AddListener(() =>
-                    {
-                        var notice = __notices[noticeIndex];
-                        if ((notice.data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
-                            return;
-                        
-                        notice.data.flag |= IGameData.Notice.Flag.Used;
-                        __notices[noticeIndex] = notice;
-                        
-                        ApplyCode(data.code);
-                        
+                    if (string.IsNullOrEmpty(data.code))
+                        destination.button.gameObject.SetActive(false);
+                    else if ((data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
                         destination.button.interactable = false;
+                    else
+                    {
+                        var onClick = destination.button.onClick;
+                        onClick.RemoveAllListeners();
+                        onClick.AddListener(() =>
+                        {
+                            var notice = __notices[noticeIndex];
+                            if ((notice.data.flag & IGameData.Notice.Flag.Used) == IGameData.Notice.Flag.Used)
+                                return;
 
-                        __MarkHot();
-                    });
+                            notice.data.flag |= IGameData.Notice.Flag.Used;
+                            __notices[noticeIndex] = notice;
+
+                            ApplyCode(data.code);
+
+                            destination.button.interactable = false;
+
+                            __MarkHot();
+                        });
+                    }
                 }
-            }
 
-            if (onRewardInit != null)
-                onRewardInit(data.rewards, destination.rewardParent);
+                if (onRewardInit != null)
+                    onRewardInit(data.rewards, destination.rewardParent);
+            }
+            else if (destination.button != null)
+                destination.button.gameObject.SetActive(false);
+
+            destination.gameObject.SetActive(true);
         }
-        else if(destination.button != null)
-            destination.button.gameObject.SetActive(false);
-        
-        destination.gameObject.SetActive(true);
 
         Notice result;
         result.data = data;
@@ -412,15 +436,29 @@ public class GameManager : MonoBehaviour
         {
             Notice notice;
             int numNotices = __notices == null ? 0 : __notices.Count;
-            for(int i = 0; i < numNotices; ++i)
+            if ((__flag & Flag.NotBeClosed) != Flag.NotBeClosed)
+            {
+                for (int i = 0; i < numNotices; ++i)
+                {
+                    notice = __notices[i];
+                    notice.source =
+                        (notice.data.flag & IGameData.Notice.Flag.Important) == IGameData.Notice.Flag.Important
+                            ? noticeStyleImportant
+                            : noticeStyle;
+
+                    __notices[i] = notice;
+                }
+            }
+            
+            for (int i = 0; i < numNotices; ++i)
             {
                 notice = __notices[i];
                 Destroy(notice.destination.gameObject);
                 notice.destination = Instantiate(notice.source, notice.source.transform.parent);
-                
+
                 __Init(notice.source, notice.destination, notice.data, i);
             }
-
+            
             __ClearProgressBar();
         }
 
