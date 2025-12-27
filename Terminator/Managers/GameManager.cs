@@ -59,6 +59,25 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public event UnityAction onNoticeEmpty
+    {
+        add
+        {
+            if (_onNoticeEmpty == null)
+                _onNoticeEmpty = new UnityEvent();
+            
+            _onNoticeEmpty.AddListener(value);
+        }
+
+        remove
+        {
+            if (_onNoticeEmpty == null)
+                return;
+            
+            _onNoticeEmpty.RemoveListener(value);
+        }
+    }
+
     public event UnityAction onNoticeCodesFail
     {
         add
@@ -99,6 +118,9 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     [Tooltip("弹出维护公告，不可关闭")]
     internal UnityEvent _onShowNoticeCanNotBeClosed;
+    [SerializeField]
+    [Tooltip("没有邮件")]
+    internal UnityEvent _onNoticeEmpty;
     [SerializeField]
     [Tooltip("领取失败")]
     internal UnityEvent _onNoticeCodesFail;
@@ -227,7 +249,9 @@ public class GameManager : MonoBehaviour
     {
         __ReleaseLoading();
 
-        if(onRewardSubmit != null)
+        if (rewards.IsEmpty)
+            _onNoticeCodesFail?.Invoke();
+        else if(onRewardSubmit != null)
             onRewardSubmit(rewards);
     }
 
@@ -239,8 +263,11 @@ public class GameManager : MonoBehaviour
         if (__notices != null)
         {
             foreach (var notice in __notices)
-                Destroy(notice.destination.gameObject);
-            
+            {
+                if(notice.destination != null)
+                    Destroy(notice.destination.gameObject);
+            }
+
             __notices.Clear();
         }
 
@@ -313,9 +340,8 @@ public class GameManager : MonoBehaviour
             destination.onNew?.Invoke(isNew);
             destination.onTitle?.Invoke(data.name);
             destination.onDetail?.Invoke(data.text);
-            destination.onDealLine?.Invoke(data.ticks == 0
-                ? string.Empty
-                : new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
+            if(data.ticks > DateTime.UtcNow.Ticks)
+                destination.onDealLine?.Invoke(new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
 
             if (noticeIndex == -1)
                 noticeIndex = __notices == null ? 0 : __notices.Count;
@@ -492,7 +518,10 @@ public class GameManager : MonoBehaviour
             
             __ClearProgressBar();
         }
-
+        
+        if(__notices == null ||  __notices.Count < 1)
+            _onNoticeEmpty?.Invoke();
+        
         if ((__flag & Flag.Show) == Flag.Show)
             __newCount = 0;
         else if (isForceShow)
@@ -519,7 +548,7 @@ public class GameManager : MonoBehaviour
         __MarkHot();
     }
 
-    private void Awake()
+    void Awake()
     {
         instance = this;
     }

@@ -180,6 +180,12 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField]
     internal UnityEvent _onHotDisable;
 
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_onNoticeActive")] 
+    internal UnityEvent _onNoticeShow;
+
+    [SerializeField] 
+    internal UnityEvent _onNoticeEmpty;
+
     [SerializeField] 
     internal UnityEvent _onNoticeActive;
 
@@ -1477,7 +1483,12 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __OnNoticeShow()
     {
-        _onNoticeActive?.Invoke();
+        _onNoticeShow?.Invoke();
+    }
+
+    private void __OnNoticeEmpty()
+    {
+        _onNoticeEmpty?.Invoke();
     }
 
     private void __OnNoticeCodesFail()
@@ -1573,6 +1584,7 @@ public sealed class LoginManager : MonoBehaviour
             manager.onNoticeNew -= __OnNoticeNew;
             manager.onNoticeHot -= __OnNoticeHot;
             manager.onNoticeShow -= __OnNoticeShow;
+            manager.onNoticeEmpty -= __OnNoticeEmpty;
             manager.onNoticeCodesFail -= __OnNoticeCodesFail;
         }
     }
@@ -1625,6 +1637,7 @@ public sealed class LoginManager : MonoBehaviour
             manager.onNoticeNew += __OnNoticeNew;
             manager.onNoticeHot += __OnNoticeHot;
             manager.onNoticeShow += __OnNoticeShow;
+            manager.onNoticeEmpty += __OnNoticeEmpty;
             manager.onNoticeCodesFail += __OnNoticeCodesFail;
 
             //if (manager.isNoticeShow)
