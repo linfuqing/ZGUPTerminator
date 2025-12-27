@@ -517,7 +517,7 @@ public partial class UserDataMain
         int roleIndex = __GetRoleIndex(roleName);
         ref var role = ref _roles[roleIndex];
 
-        var attributes = __CollectRoleAttributes(
+        var roleAttributes = __CollectRoleAttributes(
             role.name, 
             groupName, 
             new List<UserAttributeData>(), 
@@ -567,11 +567,12 @@ public partial class UserDataMain
         result.spawnerLayerMaskAndTags = default;
         
         int i, j, styleIndex, level, 
-            numAttributes = attributes.Count, 
+            numAttributes = 0, 
             numAccessorySlots = _accessorySlots.Length;
         uint accessoryID;
         AccessoryInfo accessoryInfo;
         UserAttributeData attribute;
+        List<UserAttributeData> attributes = null;
         List<int> indices;
         for (i = 0; i < numAccessorySlots; ++i)
         {
@@ -598,6 +599,10 @@ public partial class UserDataMain
                 
                 attribute.type = accessoryStyle.attributeType;
                 attribute.value = 0.0f;
+
+                if (attributes == null)
+                    attributes = new List<UserAttributeData>();
+                
                 attributes.Add(attribute);
             }
             
@@ -700,11 +705,43 @@ public partial class UserDataMain
         }
 
         //先计算装备增益
+        if (attributeResults != null)
+        {
+            __ApplyAttributes(attributes, attributeResults);
+            
+            attributeResults.Clear();
+        }
+
         if (skillResults != null)
         {
             __ApplySkills(role.skillNames, skills, skillResults);
             
             skillResults.Clear();
+        }
+
+        foreach (var roleAttribute in roleAttributes)
+        {
+            for (i = 0; i < numAttributes; ++i)
+            {
+                if (attributes[i].type == roleAttribute.type)
+                    break;
+            }
+
+            if (i < numAttributes)
+            {
+                attribute = attributes[i];
+                attribute.value += roleAttribute.value;
+                attributes[i] = attribute;
+            }
+            else
+            {
+                ++numAttributes;
+                
+                if (attributes == null)
+                    attributes = new List<UserAttributeData>();
+                
+                attributes.Add(roleAttribute);
+            }
         }
 
         __ApplyCardBonds(ref attributeResults, ref skillResults);
@@ -982,15 +1019,16 @@ public partial class UserDataMain
             result.spawnerLayerMaskAndTags = default;
             
             var skills = new List<IUserData.Skill>();
-            var attributes = new List<UserAttributeData>();
+            List<UserAttributeData> attributes = null, roleAttributes = null;
             List<UserPropertyData.Attribute> attributeResults = null;
             List<UserPropertyData.Skill> skillResults = null;
             string[] roleSkillNames = null;
             List<int> indices;
+            UserAttributeData attribute;
             UserPropertyData property;
             IUserData.Skill skill;
             string instanceName = null;
-            int level, styleIndex, hpMax = 0;
+            int level, styleIndex, hpMax = 0, numAttributes = 0;
             for (i = 0; i < numCacheSkills; ++i)
             {
                 cacheSkill = cacheSkills[i];
@@ -1031,10 +1069,10 @@ public partial class UserDataMain
 
                         roleSkillNames = role.skillNames;
 
-                        attributes = __CollectRoleAttributes(
+                        roleAttributes = __CollectRoleAttributes(
                             role.name,
                             roleGroupName, 
-                            attributes,
+                            roleAttributes ?? new List<UserAttributeData>(),
                             out skill.damage);
 
                         skills.Add(skill);
@@ -1094,8 +1132,7 @@ public partial class UserDataMain
                                 PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}"));
                         }
 
-                        int numAttributes = attributes.Count,
-                            accessoryStyleIndex = __GetAccessoryStyleIndex(accessory.styleName);
+                        int accessoryStyleIndex = __GetAccessoryStyleIndex(accessory.styleName);
                         ref var accessoryStyle = ref _accessoryStyles[accessoryStyleIndex];
                         for (j = 0; j < numAttributes; ++j)
                         {
@@ -1103,7 +1140,6 @@ public partial class UserDataMain
                                 break;
                         }
 
-                        UserAttributeData attribute;
                         if (j < numAttributes)
                             attribute = attributes[j];
                         else
@@ -1112,6 +1148,10 @@ public partial class UserDataMain
 
                             attribute.type = accessoryStyle.attributeType;
                             attribute.value = 0.0f;
+                            
+                            if(attributes == null)
+                                attributes = new List<UserAttributeData>();
+                            
                             attributes.Add(attribute);
                         }
 
@@ -1175,11 +1215,43 @@ public partial class UserDataMain
             }
 
             //先计算装备增益
+            if (attributeResults != null)
+            {
+                __ApplyAttributes(attributes, attributeResults);
+            
+                attributeResults.Clear();
+            }
+
             if (skillResults != null)
             {
                 __ApplySkills(roleSkillNames, skills, skillResults);
                 
                 skillResults.Clear();
+            }
+
+            foreach (var roleAttribute in roleAttributes)
+            {
+                for (i = 0; i < numAttributes; ++i)
+                {
+                    if (attributes[i].type == roleAttribute.type)
+                        break;
+                }
+
+                if (i < numAttributes)
+                {
+                    attribute = attributes[i];
+                    attribute.value += roleAttribute.value;
+                    attributes[i] = attribute;
+                }
+                else
+                {
+                    ++numAttributes;
+                
+                    if (attributes == null)
+                        attributes = new List<UserAttributeData>();
+                
+                    attributes.Add(roleAttribute);
+                }
             }
 
             __ApplyCardBonds(ref attributeResults, ref skillResults);
