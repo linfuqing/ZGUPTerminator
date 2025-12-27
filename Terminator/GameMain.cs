@@ -587,6 +587,10 @@ public class GameMain : GameUser
 
 #endif*/
 
+        var assetManager = GameAssetManager.instance;
+        if (assetManager != null)
+            assetManager.onConfirmCancel += __OnConfirmCancel;
+
         Shared.onActivated += __OnActivated;
         onLogin.AddListener(__OnLogin);
         Login();
@@ -696,8 +700,8 @@ public class GameMain : GameUser
         __coroutine = null;
     }
 
-    /*private void __OnConfirmCancel()
+    private void __OnConfirmCancel()
     {
         Application.Quit();
-    }*/
+    }
 }
