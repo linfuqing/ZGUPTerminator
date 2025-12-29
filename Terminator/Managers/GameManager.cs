@@ -158,6 +158,14 @@ public class GameManager : MonoBehaviour
     public void CloseNotices()
     {
         __flag &= ~Flag.Show;
+        
+        if ((__flag & Flag.New) == Flag.New)
+        {
+            __flag &= ~Flag.New;
+
+            if (onNoticeNew != null)
+                onNoticeNew(false);
+        }
     }
 
     public void QueryNotices(bool isForceShow)

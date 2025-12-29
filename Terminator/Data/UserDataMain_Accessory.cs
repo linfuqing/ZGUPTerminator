@@ -534,37 +534,46 @@ public partial class UserDataMain
 
     public IEnumerator QueryAccessoryStages(
         uint userID,
-        uint accessoryID,
-        Action<Memory<UserAccessory.Stage>> onComplete)
+        uint[] accessoryIDs,
+        Action<Memory<IUserData.AccessoryStages>> onComplete)
     {
         yield return __CreateEnumerator();
 
-        if (!__TryGetAccessory(accessoryID, out var info))
-        {
-            onComplete(null);
-
-            yield break;
-        }
-
-        var stageIndices = __GetAccessoryStageIndices(info.index);
-        int numStageIndices = stageIndices.Count;
-        var userAccessoryStages = new UserAccessory.Stage[numStageIndices];
+        int i, j, numStageIndices, numAccessories = accessoryIDs.Length;
         UserAccessory.Stage userAccessoryStage;
         AccessoryStage accessoryStage;
-        for (int i = 0; i < numStageIndices; ++i)
+        List<int> stageIndices;
+        IUserData.AccessoryStages result;
+        var results = new IUserData.AccessoryStages[numAccessories];
+        for(i = 0; i < numAccessories; ++i)
         {
-            accessoryStage = _accessoryStages[stageIndices[i]];
+            if (!__TryGetAccessory(accessoryIDs[i], out var info))
+            {
+                result.stages = null;
+                
+                continue;
+            }
 
-            userAccessoryStage.name = accessoryStage.name;
-            userAccessoryStage.property = accessoryStage.property;
-            userAccessoryStage.materials = accessoryStage.materials;
+            stageIndices = __GetAccessoryStageIndices(info.index);
+            numStageIndices = stageIndices.Count;
+            result.stages = new UserAccessory.Stage[numStageIndices];
+            for (j = 0; j < numStageIndices; ++j)
+            {
+                accessoryStage = _accessoryStages[stageIndices[j]];
+
+                userAccessoryStage.name = accessoryStage.name;
+                userAccessoryStage.property = accessoryStage.property;
+                userAccessoryStage.materials = accessoryStage.materials;
+
+                result.stages[j] = userAccessoryStage;
+            }
             
-            userAccessoryStages[i] = userAccessoryStage;
+            results[i] = result;
         }
-        
-        onComplete(userAccessoryStages);
+
+        onComplete(results);
     }
-    
+
     public IEnumerator SetAccessory(
         uint userID, 
         uint accessoryID, 
@@ -985,10 +994,10 @@ public partial class UserData
     
     public IEnumerator QueryAccessoryStages(
         uint userID,
-        uint accessoryID,
-        Action<Memory<UserAccessory.Stage>> onComplete)
+        uint[] accessoryIDs,
+        Action<Memory<IUserData.AccessoryStages>> onComplete)
     {
-        return UserDataMain.instance.QueryAccessoryStages(userID, accessoryID, onComplete);
+        return UserDataMain.instance.QueryAccessoryStages(userID, accessoryIDs, onComplete);
     }
 
     public IEnumerator SetAccessory(uint userID, uint accessoryID, uint groupID, uint slotID, Action<bool> onComplete)

@@ -158,6 +158,11 @@ public partial interface IUserData
         public uint destinationAccessoryID;
         public uint[] sourceAccessoryIDs;
     }
+
+    public struct AccessoryStages
+    {
+        public UserAccessory.Stage[] stages;
+    }
     
     IEnumerator QueryAccessory(
         uint userID,
@@ -169,8 +174,8 @@ public partial interface IUserData
     /// </summary>
     IEnumerator QueryAccessoryStages(
         uint userID,
-        uint accessoryID, 
-        Action<Memory<UserAccessory.Stage>> onComplete);
+        uint[] accessoryIDs, 
+        Action<Memory<AccessoryStages>> onComplete);
 
     /// <summary>
     /// 装备或卸下装备

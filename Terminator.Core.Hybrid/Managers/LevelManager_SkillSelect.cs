@@ -195,14 +195,14 @@ public partial class LevelManager
     {
         IAnalytics.instance?.SelectSkillEnd();
 
-        __StartCoroutine(__FinishSkillSelection());
+        __StartCoroutine(nameof(SelectSkillEnd), __FinishSkillSelection());
     }
 
     public void SelectSkills(int styleIndex, LevelSkillData[] skills)
     {
         IAnalytics.instance?.SelectSkills(styleIndex, skills);
 
-        __StartCoroutine(__SelectSkills(styleIndex, skills));
+        __StartCoroutine(nameof(SelectSkills), __SelectSkills(styleIndex, skills));
     }
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)

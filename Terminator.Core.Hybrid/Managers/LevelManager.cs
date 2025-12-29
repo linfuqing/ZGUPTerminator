@@ -7,6 +7,13 @@ using UnityEngine.Events;
 
 public partial class LevelManager : MonoBehaviour
 {
+    private struct CoroutineEnumerator
+    {
+        public string name;
+
+        public IEnumerator value;
+    }
+    
     [Serializable]
     internal struct Stage
     {
@@ -100,7 +107,7 @@ public partial class LevelManager : MonoBehaviour
 
     private Coroutine __coroutine;
 
-    private Queue<IEnumerator> __coroutineEnumerators;
+    private Queue<CoroutineEnumerator> __coroutineEnumerators;
 
     private List<int> __timeScaleIndices;
 
@@ -269,7 +276,7 @@ public partial class LevelManager : MonoBehaviour
             if(numActiveSkillNames > 0)
                 __activeSkillNames.Values.CopyTo(activeSkillNames, 0);*/
             
-            __StartCoroutine(levelData.SubmitLevel(
+            __StartCoroutine(nameof(Quit), levelData.SubmitLevel(
                 //__dataFlag, 
                 __stage,
                 Mathf.RoundToInt(__GetStageTime(out _)), 
@@ -283,8 +290,14 @@ public partial class LevelManager : MonoBehaviour
 
     private IEnumerator __Coroutine()
     {
-        while(__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
-            yield return coroutineEnumerator;
+        while (__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
+        {
+            print($"Level manager waiting for coroutine {coroutineEnumerator.name}");
+            
+            yield return coroutineEnumerator.value;
+            
+            print($"Level manager end of coroutine {coroutineEnumerator.name}");
+        }
 
         __coroutine = null;
     }
@@ -300,12 +313,16 @@ public partial class LevelManager : MonoBehaviour
         }
     }
     
-    private void __StartCoroutine(IEnumerator enumerator)
+    private void __StartCoroutine(string name, IEnumerator enumerator)
     {
-        if (__coroutineEnumerators == null)
-            __coroutineEnumerators = new Queue<IEnumerator>();
+        CoroutineEnumerator coroutineEnumerator;
+        coroutineEnumerator.name = name;
+        coroutineEnumerator.value = enumerator;
         
-        __coroutineEnumerators.Enqueue(enumerator);
+        if (__coroutineEnumerators == null)
+            __coroutineEnumerators = new Queue<CoroutineEnumerator>();
+        
+        __coroutineEnumerators.Enqueue(coroutineEnumerator);
         
         if(__coroutine == null)
             __coroutine = StartCoroutine(__Coroutine());
@@ -409,19 +426,19 @@ public partial class LevelManager : MonoBehaviour
             }
         }
 
-        __StartCoroutine(levelData.SubmitStage(
+        __StartCoroutine(nameof(__Submit), levelData.SubmitStage(
             //__dataFlag, 
             stage,
-            time, 
-            __hpPercentage, 
-            __killCount, 
-            __killBossCount, 
+            time,
+            __hpPercentage,
+            __killCount,
+            __killBossCount,
             gold,
-            rage, 
+            rage,
             exp,
             maxExp,
             skillActiveNames,
-            items, 
+            items,
             __OnStageChanged));
     }
 
