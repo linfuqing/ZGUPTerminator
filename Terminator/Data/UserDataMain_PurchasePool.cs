@@ -324,7 +324,7 @@ public partial class UserDataMain
             freeTimes = new Active<int>(
                 PlayerPrefs.GetString($"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}"), __Parse);
 
-            if (!DateTimeUtility.IsToday(freeTimes.seconds))
+            if (!DateTimeUtility.IsToday(freeTimes.seconds, DateTimeUtility.DataTimeType.UTC))
                 freeTimes.value = purchasePool.freeTimes;
             
             userPurchasePool.freeTimes = freeTimes.value;
@@ -403,7 +403,7 @@ public partial class UserDataMain
         
         guaranteedTimes = PlayerPrefs.GetInt(guaranteedTimesKey, purchasePool.timesToGuarantee);
         
-        if (!DateTimeUtility.IsToday(freeTimes.seconds))
+        if (!DateTimeUtility.IsToday(freeTimes.seconds, DateTimeUtility.DataTimeType.UTC))
             freeTimes.value = purchasePool.freeTimes;
 
         if (freeTimes.value < times)

@@ -308,8 +308,8 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 seconds = output.GetDeadline(ticks);
                 seconds = (int)(((seconds == 0
                         ? DateTime.Today
-                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime()).AddMonths(1)
-                    .ToUniversalTime().Ticks - ticks) / TimeSpan.TicksPerSecond);
+                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks)/*.ToLocalTime()*/).AddMonths(1)
+                    /*.ToUniversalTime()*/.Ticks - ticks) / TimeSpan.TicksPerSecond);
                 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
@@ -317,14 +317,14 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 seconds = output.GetDeadline(ticks);
                 seconds = (int)(((seconds == 0
                         ? DateTime.Today
-                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime()).AddDays(1)
-                    .ToUniversalTime().Ticks - ticks) / TimeSpan.TicksPerSecond);
+                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks)/*.ToLocalTime()*/).AddDays(1)
+                    /*.ToUniversalTime()*/.Ticks - ticks) / TimeSpan.TicksPerSecond);
 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
             default:
                 seconds = 0;
-                
+
                 PlayerPrefs.DeleteKey(input.ToString(NAME_SPACE_DEADLINE));
                 break;
         }
@@ -333,10 +333,10 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
 
         return seconds == 0 ? 0 : (int)DateTimeUtility.GetTicks((uint)seconds);
     }
-    
+
     public IEnumerator Query(
-        uint userID, 
-        IPurchaseData.Input[] inputs, 
+        uint userID,
+        IPurchaseData.Input[] inputs,
         Action<Memory<IPurchaseData.Result>> onComplete)
     {
         //客户端
@@ -354,7 +354,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             input = inputs[i];
             result.output = Query(input);
             result.metadata = null;
-            
+
             //客户端（服务器返回时）
             if (IPurchaseAPI.instance != null)
             {
@@ -365,7 +365,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
 
                     isWaiting = false;
                 });
-            
+
                 while(isWaiting)
                     yield return null;
             }
@@ -393,15 +393,15 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             {
                 result = x;
             });
-            
+
             while(result == null || api.isPending)
                 yield return null;
-            
+
             if (result.Value)
             {
                 //这里实现服务器的时候要注意，平台回调或者确认订单（在服务端，该数据结构要有订单号）完成后，Buy才会被执行（而不是在这里执行）。所以当实现服务器时，这里直接返回结果就行。
                 Buy(type, level);
-                
+
                 onComplete(true);
             }
             else

@@ -192,7 +192,7 @@ public partial class UserDataMain
             get
             {
                 var active = new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_LEVEL_TICKET}{name}"), __Parse);
-                return DateTimeUtility.IsToday(active.seconds) ? active.value : Mathf.Max(active.value, capacity);
+                return DateTimeUtility.IsToday(active.seconds, DateTimeUtility.DataTimeType.UTC) ? active.value : Mathf.Max(active.value, capacity);
             }
 
             set

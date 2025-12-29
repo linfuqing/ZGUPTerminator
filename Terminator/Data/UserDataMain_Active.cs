@@ -44,17 +44,17 @@ public partial class UserDataMain
 
         public T ToDay()
         {
-            return ZG.DateTimeUtility.IsToday(seconds) ? value : default;
+            return ZG.DateTimeUtility.IsToday(seconds, DateTimeUtility.DataTimeType.UTC) ? value : default;
         }
         
         public T ToWeek()
         {
-            return ZG.DateTimeUtility.IsThisWeek(seconds) ? value : default;
+            return ZG.DateTimeUtility.IsThisWeek(seconds, DateTimeUtility.DataTimeType.UTC) ? value : default;
         }
 
         public T ToMonth()
         {
-            return ZG.DateTimeUtility.IsThisMonth(seconds) ? value : default;
+            return ZG.DateTimeUtility.IsThisMonth(seconds, DateTimeUtility.DataTimeType.UTC) ? value : default;
         }
 
         public override string ToString()

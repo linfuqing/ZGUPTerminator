@@ -500,15 +500,15 @@ public partial class UserDataMain
         switch (cacheType)
         {
             case UserLevel.CacheType.Day:
-                if (!DateTimeUtility.IsToday(result.seconds))
+                if (!DateTimeUtility.IsToday(result.seconds, DateTimeUtility.DataTimeType.UTC))
                     return IUserData.StageCache.Empty;
                 break;
             case UserLevel.CacheType.Week:
-                if (!DateTimeUtility.IsThisWeek(result.seconds))
+                if (!DateTimeUtility.IsThisWeek(result.seconds, DateTimeUtility.DataTimeType.UTC))
                     return IUserData.StageCache.Empty;
                 break;
             case UserLevel.CacheType.Month:
-                if (!DateTimeUtility.IsThisMonth(result.seconds))
+                if (!DateTimeUtility.IsThisMonth(result.seconds, DateTimeUtility.DataTimeType.UTC))
                     return IUserData.StageCache.Empty;
                 break;
         }

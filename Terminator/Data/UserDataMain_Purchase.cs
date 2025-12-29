@@ -404,7 +404,7 @@ public partial class UserDataMain
                                 {
                                     if (name.value == token.name)
                                         result.days =
-                                            Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _));
+                                            Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _, DateTimeUtility.DataTimeType.UTC));
 
                                     if (result.days > 0)
                                     {
@@ -514,9 +514,9 @@ public partial class UserDataMain
                             }
                             else
                             {
-                                days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now));
+                                days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now, DateTimeUtility.DataTimeType.UTC));
                                 
-                                name.seconds = DateTimeUtility.GetSeconds(now.ToUniversalTime().Ticks);
+                                name.seconds = DateTimeUtility.GetSeconds(now/*.ToUniversalTime()*/.Ticks);
                             }
 
                             if (isWriteSeconds)
