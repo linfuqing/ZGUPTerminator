@@ -75,6 +75,9 @@ public partial class LevelManager : MonoBehaviour
     internal StringEvent _onStage;
 
     [SerializeField] 
+    internal ActiveEvent _onSubmit;
+
+    [SerializeField] 
     internal ZG.UI.Progressbar _progressbar;
     [SerializeField] 
     internal ZG.UI.Progressbar _expProgressbar;
@@ -354,6 +357,8 @@ public partial class LevelManager : MonoBehaviour
         }
         
         //__coroutine = null;
+        
+        _onSubmit?.Invoke(false);
     }
     
     private void __OnQuit(bool result)
@@ -404,6 +409,8 @@ public partial class LevelManager : MonoBehaviour
         int numSkillActiveNames = __skillActiveNames == null ? 0 : __skillActiveNames.Count;
         if (numSkillActiveNames < 1)
             return;
+        
+        _onSubmit?.Invoke(true);
         
         var skillActiveNames = new string[numSkillActiveNames];
         numSkillActiveNames = 0;
