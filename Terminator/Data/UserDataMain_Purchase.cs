@@ -525,8 +525,17 @@ public partial class UserDataMain
                                 PlayerPrefs.SetString(secondsKey, name.ToString());
                             }
 
-                            if(expKey != null)
-                                PlayerPrefs.SetInt(expKey, exp + 1);
+                            if (expKey != null)
+                            {
+                                PlayerPrefs.SetInt(expKey, exp + days);
+
+                                if (days > 0)
+                                {
+                                    exp += days - 1;
+
+                                    days = 1;
+                                }
+                            }
 
                             if (rewards == null)
                                 rewards = new List<UserReward>();

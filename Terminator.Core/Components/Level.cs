@@ -500,7 +500,7 @@ public struct LevelStageOption
                     //status.killBossCount = 0;
                     //status.stage = value;
                     System.Threading.Interlocked.Add(ref status.stage, value);
-                    System.Threading.Interlocked.Increment(ref version.value);
+                    //System.Threading.Interlocked.Increment(ref version.value);
                     break;
                 case Type.Level:
                     LevelStage levelStage;
