@@ -38,258 +38,19 @@ public partial class LevelSystemManaged
         }
     }
 
-    private struct ClearBulletEntitiesUnmanaged
-    {
-        public double time;
-        
-        [ReadOnly]
-        public NativeArray<BulletEntity> bulletEntities;
-
-        [ReadOnly]
-        public ComponentLookup<BulletDefinitionData> bulletDefinitions;
-
-        public BufferLookup<BulletStatus> bulletStates;
-
-        public void Execute(int index)
-        {
-            var bulletEntity = this.bulletEntities[index];
-            if (!this.bulletStates.TryGetBuffer(bulletEntity.parent, out var bulletStates) || 
-                bulletStates.Length <= bulletEntity.index)
-                return;
-
-            float startTime = 0.0f;
-            if (bulletDefinitions.TryGetComponent(bulletEntity.parent, out var bulletDefinition))
-            {
-                ref var definition = ref bulletDefinition.definition.Value;
-                if(definition.bullets.Length > bulletEntity.index)
-                    startTime = definition.bullets[bulletEntity.index].startTime;
-            }
-
-            ref var bulletStatus = ref bulletStates.ElementAt(bulletEntity.index);
-            bulletStatus = default;
-            //bulletStatus.cooldown = time + startTime;
-        }
-    }
-
-    [BurstCompile]
-    private struct ClearBulletEntitiesUnmanagedEx : IJobChunk
-    {
-        public double time;
-
-        [ReadOnly]
-        public ComponentTypeHandle<BulletEntity> bulletEntityType;
-
-        [ReadOnly]
-        public ComponentLookup<BulletDefinitionData> bulletDefinitions;
-
-        public BufferLookup<BulletStatus> bulletStates;
-
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
-        {
-            ClearBulletEntitiesUnmanaged clearBulletEntitiesUnmanaged;
-            clearBulletEntitiesUnmanaged.time = time;
-            clearBulletEntitiesUnmanaged.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
-            clearBulletEntitiesUnmanaged.bulletDefinitions = bulletDefinitions;
-            clearBulletEntitiesUnmanaged.bulletStates = bulletStates;
-
-            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
-            while (iterator.NextEntityIndex(out int i))
-                clearBulletEntitiesUnmanaged.Execute(i);
-        }
-    }
-    
-    private struct CollectBulletEntities
-    {
-        public Entity parent;
-
-        public BlobAssetReference<SkillDefinition> skillDefinition;
-        
-        //[ReadOnly] 
-        //public BufferAccessor<LinkedEntityGroup> linkedEntityGroups;
-
-        [ReadOnly]
-        public NativeArray<int> skillIndices;
-
-        [ReadOnly]
-        public NativeArray<Entity> entityArray;
-
-        [ReadOnly]
-        public NativeArray<BulletEntity> bulletEntities;
-
-        public NativeList<Entity> entities;
-
-        //public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
-
-        public void Execute(int index)
-        {
-            var bulletEntity = bulletEntities[index];
-            if (bulletEntity.parent != parent)
-                return;
-
-            int numBulletIndices, i;
-            ref var skillDefinition = ref this.skillDefinition.Value;
-            foreach (var skillIndex in skillIndices)
-            {
-                ref var skill = ref skillDefinition.skills[skillIndex];
-                numBulletIndices = skill.bulletIndices.Length;
-                for (i = 0; i < numBulletIndices; ++i)
-                {
-                    if (skillDefinition.bullets[skill.bulletIndices[i]].index == bulletEntity.index)
-                    {
-                        var entity = entityArray[index];
-                        entities.Add(entity);
-
-                        //Disable(entity);
-
-                        /*if (index <　linkedEntityGroups.Length)
-                        {
-                            var linkedEntityGroups = this.linkedEntityGroups[index];
-                            foreach (var linkedEntityGroup in linkedEntityGroups)
-                                Disable(linkedEntityGroup.Value);
-                        }*/
-
-                        return;
-                    }
-                }
-            }
-        }
-
-        /*public void Disable(in Entity entity)
-        {
-            if (copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID))
-            {
-                copyMatrixToTransformInstanceID.isSendMessageOnDestroy = false;
-                
-                copyMatrixToTransformInstanceIDs[entity] = copyMatrixToTransformInstanceID;
-            }
-        }*/
-    }
-
-    [BurstCompile]
-    private struct CollectBulletEntitiesEx : IJobChunk
-    {
-        public Entity parent;
-
-        [ReadOnly]
-        public NativeArray<int> skillIndices;
-
-        [ReadOnly]
-        public EntityTypeHandle entityType;
-
-        //[ReadOnly] 
-        //public BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType;
-
-        [ReadOnly]
-        public ComponentTypeHandle<BulletEntity> bulletEntityType;
-
-        [ReadOnly]
-        public ComponentLookup<SkillDefinitionData> skills;
-
-        //public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
-
-        public NativeList<Entity> entities;
-
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
-        {
-            CollectBulletEntities collectBulletEntities;
-            collectBulletEntities.parent = parent;
-            collectBulletEntities.skillDefinition = skills[parent].definition;
-            collectBulletEntities.skillIndices = skillIndices;
-            //collectBulletEntities.linkedEntityGroups = chunk.GetBufferAccessor(ref linkedEntityGroupType);
-            collectBulletEntities.entityArray = chunk.GetNativeArray(entityType);
-            collectBulletEntities.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
-            //collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
-            collectBulletEntities.entities = entities;
-
-            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
-            while (iterator.NextEntityIndex(out int i))
-                collectBulletEntities.Execute(i);
-        }
-    }
-
-    private readonly struct CollectBulletEntitiesWrapper : ICollectLinkedEntitiesWrapper
-    {
-        public readonly Entity Parent;
-        public readonly NativeArray<int> SkillIndices;
-        public readonly ComponentTypeHandle<BulletEntity> BulletEntityType;
-        public readonly ComponentLookup<SkillDefinitionData> Skills;
-
-        public CollectBulletEntitiesWrapper(
-            in Entity parent, 
-            in NativeArray<int> skillIndices, 
-            in ComponentTypeHandle<BulletEntity> bulletEntityType, 
-            in ComponentLookup<SkillDefinitionData> skills)
-        {
-            Parent = parent;
-            SkillIndices = skillIndices;
-            BulletEntityType = bulletEntityType;
-            Skills = skills;
-        }
-
-        public void Run(
-            in EntityQuery group,
-            in EntityTypeHandle entityType,
-            in BufferTypeHandle<LinkedEntityGroup> linkedEntityGroupType,
-            //ref ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs,
-            ref NativeList<Entity> entities)
-        {
-            CollectBulletEntitiesEx collectBulletEntities;
-            collectBulletEntities.skillIndices = SkillIndices;
-            collectBulletEntities.parent = Parent;
-            //collectBulletEntities.linkedEntityGroupType = linkedEntityGroupType;
-            collectBulletEntities.entityType = entityType;
-            collectBulletEntities.bulletEntityType = BulletEntityType;
-            collectBulletEntities.skills = Skills;
-            //collectBulletEntities.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
-            collectBulletEntities.entities = entities;
-            
-            collectBulletEntities.RunByRef(group);
-        }
-    }
-
     private struct SkillSelection
     {
         public SkillSelectionStatus status;
         
         public SkillVersion version;
 
-        private int __stage;
+        //private int __stage;
     
-        private ComponentTypeHandle<BulletEntity> __bulletEntityType;
-
-        private ComponentLookup<BulletDefinitionData> __bulletDefinitions;
-
-        private ComponentLookup<SkillDefinitionData> __skills;
-
-        private BufferLookup<BulletStatus> __bulletStates;
-
-        private EntityQuery __bulletGroup;
-        private EntityQuery __bulletGroupUnmanaged;
-
-        //private NativeHashMap<WeakObjectReference<Sprite>, int> __spriteRefCounts; 
-
         public SkillSelection(SystemBase system)
         {
             status = SkillSelectionStatus.None;
             version = default;
-            __stage = 0;
-            __bulletEntityType = system.GetComponentTypeHandle<BulletEntity>(true);
-            __bulletDefinitions = system.GetComponentLookup<BulletDefinitionData>(true);
-            __skills = system.GetComponentLookup<SkillDefinitionData>(true);
-            __bulletStates = system.GetBufferLookup<BulletStatus>();
-
-            using (var builder = new EntityQueryBuilder(Allocator.Temp))
-                __bulletGroup = builder
-                    .WithAll<BulletEntity>()
-                    .Build(system);
-
-            using (var builder = new EntityQueryBuilder(Allocator.Temp))
-                __bulletGroupUnmanaged = builder
-                    .WithAll<BulletEntity>()
-                    .WithNone<BulletEntityManaged>()
-                    .Build(system);
-            
-            //__spriteRefCounts = new NativeHashMap<WeakObjectReference<Sprite>, int>(1, Allocator.Persistent);
+            //__stage = 0;
         }
 
         public void Dispose()
@@ -297,86 +58,14 @@ public partial class LevelSystemManaged
             //__spriteRefCounts.Dispose();
         }
 
-        public void Reset(LevelSystemManaged system)
+        public void Reset()
         {
-            SpawnerShared.attributeScale = __stage < LevelShared.stages.Length ? LevelShared.stages[__stage].spawnerAttributeScale : default;
-
             version = default;
-            
-            system.__DestroyEntities(__bulletGroup);
         }
 
         public void Release()
         {
             status = SkillSelectionStatus.None;
-
-/*#if UNITY_EDITOR
-            WeakObjectReference<Sprite> key;
-            int value, i;
-            foreach (var spriteRefCount in __spriteRefCounts)
-            {
-                key = spriteRefCount.Key;
-                value = spriteRefCount.Value;
-                for(i = 0; i < value; ++i)
-                    key.Release();
-            }
-
-            __spriteRefCounts.Clear();
-#endif*/
-        }
-
-        /*public void Retain(in WeakObjectReference<Sprite> sprite)
-        {
-            if (__spriteRefCounts.TryGetValue(sprite, out int refCount))
-                ++refCount;
-            else
-            {
-                refCount = 1;
-
-                sprite.LoadAsync();
-            }
-
-            __spriteRefCounts[sprite] = refCount;
-        }
-
-        public void Retain(in LevelSkillDesc desc)
-        {
-            Retain(desc.sprite);
-            Retain(desc.icon);
-        }*/
-
-        public void SetStage(int value, LevelSystemManaged system)
-        {
-            if (value == __stage)
-                return;
-            
-            __stage = value;
-
-            SpawnerShared.attributeScale = value < LevelShared.stages.Length ? LevelShared.stages[value].spawnerAttributeScale : default;
-            
-            __bulletEntityType.Update(system);
-            __bulletDefinitions.Update(system);
-            __bulletStates.Update(system);
-
-            ClearBulletEntitiesUnmanagedEx clearBulletEntitiesUnmanaged;
-            clearBulletEntitiesUnmanaged.time = system.World.Time.ElapsedTime;
-            clearBulletEntitiesUnmanaged.bulletEntityType = __bulletEntityType;
-            clearBulletEntitiesUnmanaged.bulletDefinitions = __bulletDefinitions;
-            clearBulletEntitiesUnmanaged.bulletStates = __bulletStates;
-            clearBulletEntitiesUnmanaged.RunByRef(__bulletGroupUnmanaged);
-            
-            system.__DestroyEntities(__bulletGroupUnmanaged);
-        }
-
-        public void UpdateBullets(in Entity parent, in NativeArray<int> skillIndices, LevelSystemManaged system)
-        {
-            __bulletEntityType.Update(system);
-            __skills.Update(system);
-
-            var collectBulletEntitiesWrapper =
-                new CollectBulletEntitiesWrapper(parent, skillIndices, __bulletEntityType, __skills);
-
-            system.__DestroyLinkedEntities(__bulletGroup, ref collectBulletEntitiesWrapper);
         }
     }
 
@@ -395,12 +84,12 @@ public partial class LevelSystemManaged
         if (manager.isRestart || !SystemAPI.Exists(player))
         {
             __skillSelection.Release();
-            __skillSelection.Reset(this);
+            __skillSelection.Reset();
 
             return;
         }
 
-        __skillSelection.SetStage(stage, this);
+        //__skillSelection.SetStage(stage, this);
         
         if (SystemAPI.TryGetSingletonEntity<LevelSkillVersion>(out Entity entity))
         {
@@ -452,12 +141,11 @@ public partial class LevelSystemManaged
 
                                 int numActiveSkillIndices = skillIndices.Length;
                                 if (numActiveSkillIndices > numSelectedSkillIndices)
-                                    __skillSelection.UpdateBullets(
+                                    __UpdateBullets(
                                         entity,
                                         skillIndices.AsArray()
                                             .GetSubArray(numSelectedSkillIndices,
-                                                numActiveSkillIndices - numSelectedSkillIndices),
-                                        this);
+                                                numActiveSkillIndices - numSelectedSkillIndices));
 
                                 skillIndices.Dispose();
                             }

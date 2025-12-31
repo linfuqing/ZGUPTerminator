@@ -27,6 +27,8 @@ public partial struct LevelSystem : ISystem
 
         public RefRW<LocalTransform> playerTransform;
 
+        public RefRW<LevelVersion> version;
+
         public Random random;
         
         public LevelSpawners.ReadOnly spawners;
@@ -281,6 +283,7 @@ public partial struct LevelSystem : ISystem
                             ref definition.items,
                             ref items, 
                             ref stages, 
+                            ref version.ValueRW, 
                             ref playerPosition,
                             ref random,
                             ref status,
@@ -335,11 +338,16 @@ public partial struct LevelSystem : ISystem
         public float deltaTime;
         public double time;
         
+        public Entity levelEntity;
+
+        public Entity playerEntity;
+
         public Entity spawnerLayerMaskAndTagsEntity;
         
-        public Entity playerEntity;
-        
         public LevelSpawners.ReadOnly spawners;
+
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<LevelVersion> versions;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalTransform> localTransforms;
@@ -411,6 +419,7 @@ public partial struct LevelSystem : ISystem
             update.spawnerLayerMaskAndTagsExclude = spawnerLayerMaskAndTagsExcludes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
+            update.version = versions.GetRefRW(levelEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
             update.spawnerDefinitions = spawnerDefinitions;
@@ -522,6 +531,8 @@ public partial struct LevelSystem : ISystem
     private ComponentLookup<LocalTransform> __localTransforms;
     private ComponentLookup<EffectTarget> __effectTargets;
 
+    private ComponentLookup<LevelVersion> __versions;
+
     private ComponentLookup<SpawnerDefinitionData> __spawnerDefinitions;
 
     private ComponentLookup<SpawnerLayerMaskAndTagsOverride> __spawnerLayerMaskAndTagsOverrides;
@@ -565,6 +576,7 @@ public partial struct LevelSystem : ISystem
     {
         __localTransforms = state.GetComponentLookup<LocalTransform>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
+        __versions =  state.GetComponentLookup<LevelVersion>();
         __spawnerDefinitions = state.GetComponentLookup<SpawnerDefinitionData>(true);
         __spawnerLayerMaskAndTagsOverrides = state.GetComponentLookup<SpawnerLayerMaskAndTagsOverride>(true);
         __spawnerLayerMaskAndTagsIncludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsInclude>();
@@ -595,6 +607,7 @@ public partial struct LevelSystem : ISystem
                 .WithAll<LevelItemMessage, Message, MessageParameter>()
                 .Build(ref state);
         
+        state.RequireForUpdate<LevelVersion>();
         state.RequireForUpdate<SpawnerLayerMaskAndTags>();
         state.RequireForUpdate<SpawnerSingleton>();
         state.RequireForUpdate<ThirdPersonPlayer>();
@@ -614,6 +627,7 @@ public partial struct LevelSystem : ISystem
     {
         __localTransforms.Update(ref state);
         __effectTargets.Update(ref state);
+        __versions.Update(ref state);
         __spawnerDefinitions.Update(ref state);
         __spawnerLayerMaskAndTagsOverrides.Update(ref state);
         __spawnerLayerMaskAndTagsIncludes.Update(ref state);
@@ -636,9 +650,11 @@ public partial struct LevelSystem : ISystem
         UpdateEx update;
         update.deltaTime = time.DeltaTime;
         update.time = time.ElapsedTime;
+        update.levelEntity = SystemAPI.GetSingletonEntity<LevelVersion>();
         update.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
         update.spawners = __spawners.AsReadOnly(ref state, ref jobHandle);
         update.effectTargets = __effectTargets;
+        update.versions = __versions;
         update.localTransforms = __localTransforms;
         update.spawnerLayerMaskAndTagsEntity = SystemAPI.GetSingletonEntity<SpawnerLayerMaskAndTags>();
         update.spawnerLayerMaskAndTagsOverrides = __spawnerLayerMaskAndTagsOverrides;

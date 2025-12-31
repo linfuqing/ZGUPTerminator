@@ -283,7 +283,7 @@ public partial class UserDataMain
             if (((UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}") &
                  UserTalent.Flag.Collected) != UserTalent.Flag.Collected)
                 continue;
-
+            
             skillGroupDamage += talent.skillGroupDamage;
 
             if (attributes == null)

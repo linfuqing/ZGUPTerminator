@@ -461,6 +461,7 @@ public struct LevelStageOption
         ref BlobArray<LevelDefinition.Item> items, 
         ref DynamicBuffer<LevelItem> levelItems, 
         ref DynamicBuffer<LevelStage> levelStages, 
+        ref LevelVersion version, 
         ref float3 playerPosition, 
         ref Random random, 
         ref LevelStatus status, 
@@ -499,6 +500,7 @@ public struct LevelStageOption
                     //status.killBossCount = 0;
                     //status.stage = value;
                     System.Threading.Interlocked.Add(ref status.stage, value);
+                    System.Threading.Interlocked.Increment(ref version.value);
                     break;
                 case Type.Level:
                     LevelStage levelStage;
@@ -600,6 +602,8 @@ public struct LevelStageOption
                     break;
                 case Type.PlayerArea:
                     playerPosition = areas[value].GetPosition(ref random);
+                    
+                    System.Threading.Interlocked.Increment(ref version.value);
                     //ZG.Mathematics.Math.InterlockedAdd(ref playerPosition, areas[value].GetPosition(ref random));
                     break;
                 case Type.Millisecond:
@@ -727,6 +731,11 @@ public struct LevelStatus : IComponentData
     public int killBossCount;
     public int gold;
     public int stage;
+}
+
+public struct LevelVersion : IComponentData
+{
+    public int value;
 }
 
 public struct LevelPrefab : IBufferElementData

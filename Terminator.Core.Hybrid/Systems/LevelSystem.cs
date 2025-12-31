@@ -96,6 +96,8 @@ public partial class LevelSystemManaged : SystemBase
 
     //private ComponentLookup<CopyMatrixToTransformInstanceID> __copyMatrixToTransformInstanceIDs;
 
+    private int __version;
+    private int __statusStage;
     private EntityQuery __group;
     private EntityQuery __itemGroup;
     
@@ -118,9 +120,12 @@ public partial class LevelSystemManaged : SystemBase
             __itemGroup = builder
                 .WithAllRW<LevelItem>()
                 .Build(this);
-
-        //RequireForUpdate<LevelStatus>();
         
+        //RequireForUpdate<LevelStatus>();
+        EntityManager.CreateSingleton<LevelVersion>();
+        
+        __CreateBulletGroups();
+
         __stage = new Stage(Allocator.Persistent);
         __skillSelection = new SkillSelection(this);
         __skillActive = new SkillActive(Allocator.Persistent);
@@ -190,7 +195,27 @@ public partial class LevelSystemManaged : SystemBase
                     EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
                 
                 __DestroyEntities();
+                __DestroyBulletEntities();
+
+                __statusStage = -1;
             }
+        }
+        
+        int version = SystemAPI.GetSingleton<LevelVersion>().value;
+        if (version != __version)
+        {
+            __version = version;
+            
+            __DestroyBulletEntitiesUnmanaged();
+        }
+        
+        if (__statusStage != status.stage)
+        {
+            __statusStage = status.stage;
+
+            SpawnerShared.attributeScale = status.stage < LevelShared.stages.Length
+                ? LevelShared.stages[status.stage].spawnerAttributeScale
+                : default;
         }
         
         __itemGroup.TryGetSingletonBuffer<LevelItem>(out var levelItems);
