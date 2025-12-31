@@ -327,15 +327,18 @@ public partial class UserDataMain
         Active<string> name;
         List<UserPurchaseToken> values = null;
         var results = new IUserData.PurchaseTokens[numResults];
-        int i, j, k, numOptions, numPurchasesTokens = _purchaseTokens.Length;
+        int i, j, k, maxDays, numOptions, numPurchasesTokens = _purchaseTokens.Length;
         for (i = 0; i < numResults; ++i)
         {
             input = inputs[i];
             output = PurchaseData.Query(input.type, input.level);
 
+            maxDays = int.MaxValue;
             switch (input.type)
             {
                 case PurchaseType.FirstCharge:
+                    maxDays = 1;
+                    
                     result.exp = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{input.type}{input.level}");
                     break;
                 case PurchaseType.DiamondCard:
@@ -408,6 +411,8 @@ public partial class UserDataMain
 
                                     if (result.days > 0)
                                     {
+                                        result.days = Mathf.Max(result.days, maxDays);
+                                        
                                         Array.Resize(ref value.options, result.days * numOptions);
 
                                         for (k = 0; k < result.days; ++k)
@@ -519,22 +524,24 @@ public partial class UserDataMain
                                 name.seconds = DateTimeUtility.GetSeconds(now/*.ToUniversalTime()*/.Ticks);
                             }
 
-                            if (isWriteSeconds)
-                            {
-                                name.value = purchaseToken.name;
-                                PlayerPrefs.SetString(secondsKey, name.ToString());
-                            }
-
                             if (expKey != null)
                             {
                                 PlayerPrefs.SetInt(expKey, exp + days);
 
-                                if (days > 0)
+                                if (days > 1)
                                 {
-                                    exp += days - 1;
+                                    exp += --days;
 
+                                    name.seconds -= 60u * 60u * 24u * (uint)days;
+                                    
                                     days = 1;
                                 }
+                            }
+
+                            if (isWriteSeconds)
+                            {
+                                name.value = purchaseToken.name;
+                                PlayerPrefs.SetString(secondsKey, name.ToString());
                             }
 
                             if (rewards == null)
