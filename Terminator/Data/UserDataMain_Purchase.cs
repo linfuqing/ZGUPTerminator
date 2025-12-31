@@ -119,6 +119,7 @@ public partial class UserDataMain
         
         yield return __CreateEnumerator();
 
+        bool isValid;
         int numResults = inputs.Length, time;
         IPurchaseData.Input input;
         IPurchaseData.Output output;
@@ -127,16 +128,15 @@ public partial class UserDataMain
         for (int i = 0; i < numResults; ++i)
         {
             input = inputs[i];
-            result.status = PurchaseData.IsValid(
+            isValid = PurchaseData.IsValid(
                 input.type,
                 input.level,
                 NAME_SPACE_USER_PURCHASE_ITEM,
                 out time,
-                out output)
-                ? (time < output.times
-                    ? IUserData.PurchaseItems.Status.Purchased
-                    : IUserData.PurchaseItems.Status.Valid)
-                : IUserData.PurchaseItems.Status.Invalid;
+                out output);
+            result.status = time < output.times
+                ? IUserData.PurchaseItems.Status.Purchased :
+                (isValid ? IUserData.PurchaseItems.Status.Valid : IUserData.PurchaseItems.Status.Invalid);
             switch (input.type)
             {
                 case PurchaseType.Level:
