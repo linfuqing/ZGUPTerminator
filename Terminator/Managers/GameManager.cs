@@ -373,6 +373,7 @@ public class GameManager : MonoBehaviour
                                 return;
 
                             notice.data.flag |= IGameData.Notice.Flag.Used;
+                            
                             __notices[noticeIndex] = notice;
 
                             ApplyCode(data.code);
@@ -381,7 +382,8 @@ public class GameManager : MonoBehaviour
 
                             __MarkHot();
                         });
-                        
+
+                        destination.button.interactable = true;
                         destination.button.gameObject.SetActive(true);
                     }
                 }

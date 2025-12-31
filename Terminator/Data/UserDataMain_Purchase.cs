@@ -317,7 +317,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int i, j, k, maxDays, numOptions, numPurchasesTokens = _purchaseTokens.Length, numResults = inputs.Length;
+        int i, j, k, exp, days, maxDays, numOptions, numPurchasesTokens = _purchaseTokens.Length, numResults = inputs.Length;
         string key;
         IPurchaseData.Input input;
         IPurchaseData.Output output;
@@ -346,17 +346,17 @@ public partial class UserDataMain
                     maxDays = 1;
                     
                     result.exp = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{input.type}{input.level}");
-                    if(result.days > 1)
-                        result.exp += result.days - 1;
+                    exp = result.days > 1 ? result.exp + result.days - 1 : result.exp;
                     break;
                 case PurchaseType.DiamondCard:
                 case PurchaseType.MonthlyCard:
                 case PurchaseType.SweepCard:
                     result.exp = 0;
+                    exp = 0;
                     break;
                 case PurchaseType.Fund:
                     result.exp = __GetChapterStageRewardCount();
-
+                    exp = result.exp;
                     if (input.level == -1 && output.ticks == 0)
                     {
                         PurchaseData.Buy(input.type, input.level);
@@ -367,6 +367,7 @@ public partial class UserDataMain
                     break;
                 case PurchaseType.Pass:
                     result.exp = am;
+                    exp = result.exp;
 
                     if (input.level == -1 && (output.ticks == 0 ||
                                               output.ticks + output.deadline * TimeSpan.TicksPerSecond <
@@ -397,7 +398,7 @@ public partial class UserDataMain
 
                     value.options = token.options;
 
-                    if (output.times > 0 && token.exp <= result.exp)
+                    if (output.times > 0 && token.exp <= exp)
                     {
                         if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
                         {
@@ -409,11 +410,11 @@ public partial class UserDataMain
                                 {
                                     if (result.days > 0)
                                     {
-                                        result.days = Mathf.Min(result.days, maxDays);
+                                        days = Mathf.Min(result.days, maxDays);
 
-                                        Array.Resize(ref value.options, result.days * numOptions);
+                                        Array.Resize(ref value.options, days * numOptions);
 
-                                        for (k = 0; k < result.days; ++k)
+                                        for (k = 0; k < days; ++k)
                                             Array.Copy(token.options, 0, value.options, k * numOptions, numOptions);
                                     }
                                     else
