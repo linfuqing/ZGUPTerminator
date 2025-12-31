@@ -317,7 +317,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        int numResults = inputs.Length;
+        int i, j, k, maxDays, numOptions, numPurchasesTokens = _purchaseTokens.Length, numResults = inputs.Length;
         string key;
         IPurchaseData.Input input;
         IPurchaseData.Output output;
@@ -327,11 +327,17 @@ public partial class UserDataMain
         Active<string> name;
         List<UserPurchaseToken> values = null;
         var results = new IUserData.PurchaseTokens[numResults];
-        int i, j, k, maxDays, numOptions, numPurchasesTokens = _purchaseTokens.Length;
         for (i = 0; i < numResults; ++i)
         {
             input = inputs[i];
             output = PurchaseData.Query(input.type, input.level);
+
+            key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{input.type}{input.level}";
+
+            name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
+
+            result.days = name.seconds == 0 ? 1 : Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _,
+                    DateTimeUtility.DataTimeType.UTC));
 
             maxDays = int.MaxValue;
             switch (input.type)
@@ -340,6 +346,8 @@ public partial class UserDataMain
                     maxDays = 1;
                     
                     result.exp = PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN_TIMES}{input.type}{input.level}");
+                    if(result.days > 1)
+                        result.exp += result.days - 1;
                     break;
                 case PurchaseType.DiamondCard:
                 case PurchaseType.MonthlyCard:
@@ -374,8 +382,6 @@ public partial class UserDataMain
                     continue;
             }
 
-            result.days = 1;
-            
             if(values != null)
                 values.Clear();
 
@@ -391,28 +397,20 @@ public partial class UserDataMain
 
                     value.options = token.options;
 
-                    if (token.exp <= result.exp && output.times > 0)
+                    if (output.times > 0 && token.exp <= result.exp)
                     {
                         if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
                         {
-                            key = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{input.type}{input.level}";
-
-                            name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
-
                             value.flag = name.ToDay() == null ? 0 : UserPurchaseToken.Flag.Locked;
                             if (value.flag == 0 && name.seconds != 0)
                             {
                                 numOptions = token.options == null ? 0 : token.options.Length;
                                 if (numOptions > 0)
                                 {
-                                    if (name.value == token.name)
-                                        result.days =
-                                            Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _, DateTimeUtility.DataTimeType.UTC));
-
                                     if (result.days > 0)
                                     {
-                                        result.days = Mathf.Max(result.days, maxDays);
-                                        
+                                        result.days = Mathf.Min(result.days, maxDays);
+
                                         Array.Resize(ref value.options, result.days * numOptions);
 
                                         for (k = 0; k < result.days; ++k)

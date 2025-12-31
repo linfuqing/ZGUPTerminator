@@ -1587,6 +1587,14 @@ public sealed class LoginManager : MonoBehaviour
             manager.onNoticeEmpty -= __OnNoticeEmpty;
             manager.onNoticeCodesFail -= __OnNoticeCodesFail;
         }
+        
+        if (__loaders != null)
+        {
+            foreach (var loader in __loaders)
+                loader.Dispose();
+
+            __loaders.Clear();
+        }
     }
     
     void Awake()
