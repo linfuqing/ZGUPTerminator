@@ -523,6 +523,8 @@ public class GameManager : MonoBehaviour
 
                 __Init(notice.source, notice.destination, notice.data, i);
             }
+
+            yield return null;
             
             __ClearProgressBar();
         }
