@@ -661,9 +661,8 @@ public struct FollowTargetSharedData
             {
                 if (!new FixedLocalToWorld(transformParents, localTransforms).TryGetMatrix(parent.entity, out matrix))
                     return;
-            }
-
-            if (transformLocalToWorlds.TryGetComponent(parent.entity, out var localToWorld))
+            } 
+            else if (transformLocalToWorlds.TryGetComponent(parent.entity, out var localToWorld))
                 matrix = localToWorld.Value;
             else
                 return;

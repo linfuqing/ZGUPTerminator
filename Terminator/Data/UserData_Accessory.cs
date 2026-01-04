@@ -166,8 +166,8 @@ public partial interface IUserData
     
     IEnumerator QueryAccessory(
         uint userID,
-        uint accessoryID, 
-        Action<UserAccessory> onComplete);
+        uint[] accessoryIDs, 
+        Action<Memory<UserAccessory>> onComplete);
 
     /// <summary>
     /// 查询装备所有品阶

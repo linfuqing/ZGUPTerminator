@@ -130,7 +130,7 @@ public class GameManager : MonoBehaviour
     private int __newCount;
     private int __loadingCount;
     private int __queryNoticeCoroutineIndex = -1;
-    private float __queryNoticeTime;
+    private float __queryNoticeTime = float.MinValue * 0.5f;
     private Coroutine __noticeCoroutine;
     private List<Notice> __notices;
     
@@ -172,6 +172,8 @@ public class GameManager : MonoBehaviour
     {
         //__flag &= ~Flag.Show;
         
+        __RetainLoading();
+
         GameProgressbar progressbar;
         if (__queryNoticeCoroutineIndex == -1)
         {
@@ -309,10 +311,9 @@ public class GameManager : MonoBehaviour
             {
                 if ((notice.flag & IGameData.Notice.Flag.Important) == IGameData.Notice.Flag.Important)
                 {
-                    if(PlayerPrefs.GetInt($"{NAME_SPACE_TIMES}{notice.id}") == 0)
-                        isImportantNew = true;
-
                     noticeStylePrefab = noticeStyleImportant == null ? this.noticeStyle : noticeStyleImportant;
+                    if(noticeStylePrefab != null && PlayerPrefs.GetInt($"{NAME_SPACE_TIMES}{notice.id}") == 0)
+                        isImportantNew = true;
                 }
                 else
                     noticeStylePrefab = this.noticeStyle;
@@ -322,7 +323,7 @@ public class GameManager : MonoBehaviour
                 __Init(noticeStylePrefab, noticeStyle, notice);
             }
 
-            if (isImportantNew)
+            if (isImportantNew & (__flag & Flag.Show) != Flag.Show)
             {
                 _onShowNotice?.Invoke();
             
@@ -337,22 +338,22 @@ public class GameManager : MonoBehaviour
     {
         string key = $"{NAME_SPACE_TIMES}{data.id}";
         int times = PlayerPrefs.GetInt(key);
-        PlayerPrefs.SetInt(key, times + 1);
-
         bool isNew = times == 0;
         if(isNew)
             ++__newCount;
 
+        if (noticeIndex == -1)
+            noticeIndex = __notices == null ? 0 : __notices.Count;
+
         if (destination != null)
         {
+            PlayerPrefs.SetInt(key, times + 1);
+            
             destination.onNew?.Invoke(isNew);
             destination.onTitle?.Invoke(data.name);
             destination.onDetail?.Invoke(data.text);
             if(data.ticks > DateTime.UtcNow.Ticks)
                 destination.onDealLine?.Invoke(new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
-
-            if (noticeIndex == -1)
-                noticeIndex = __notices == null ? 0 : __notices.Count;
 
             if (data.rewards != null && data.rewards.Length > 0)
             {
@@ -484,8 +485,6 @@ public class GameManager : MonoBehaviour
             __queryNoticeTime = time;
             __userID = userID;
 
-            __RetainLoading();
-
             string version = GameConstantManager.Get(CONSTANT_KEY_VERSION_NOTICE);
             var gameData = IGameData.instance;
             if (gameData == null)
@@ -496,8 +495,6 @@ public class GameManager : MonoBehaviour
                     string.IsNullOrEmpty(version) || !uint.TryParse(version, out uint versionValue) ? 0 : versionValue,
                     GameLanguage.overrideLanguage,
                     __OnQueryNotices);
-
-            __ReleaseLoading();
         }
         else
         {
@@ -509,19 +506,34 @@ public class GameManager : MonoBehaviour
                 {
                     notice = __notices[i];
                     notice.source =
-                        (notice.data.flag & IGameData.Notice.Flag.Important) == IGameData.Notice.Flag.Important
+                        (notice.data.flag & IGameData.Notice.Flag.Important) == IGameData.Notice.Flag.Important &&
+                        noticeStyleImportant != null
                             ? noticeStyleImportant
                             : noticeStyle;
 
                     __notices[i] = notice;
                 }
             }
-            
+
+            bool isImportantNew = false;
             for (int i = 0; i < numNotices; ++i)
             {
                 notice = __notices[i];
-                Destroy(notice.destination.gameObject);
-                notice.destination = Instantiate(notice.source, notice.source.transform.parent);
+                if (notice.destination != null)
+                {
+                    Destroy(notice.destination.gameObject);
+
+                    notice.destination = null;
+                }
+
+                if (notice.source != null)
+                {
+                    if ((notice.data.flag & IGameData.Notice.Flag.Important) == IGameData.Notice.Flag.Important &&
+                        PlayerPrefs.GetInt($"{NAME_SPACE_TIMES}{notice.data.id}") == 0)
+                        isImportantNew = true;
+                    
+                    notice.destination = Instantiate(notice.source, notice.source.transform.parent);
+                }
 
                 __Init(notice.source, notice.destination, notice.data, i);
             }
@@ -529,6 +541,13 @@ public class GameManager : MonoBehaviour
             yield return null;
             
             __ClearProgressBar();
+            
+            if (isImportantNew & (__flag & Flag.Show) != Flag.Show)
+            {
+                _onShowNotice?.Invoke();
+            
+                __flag |= Flag.Show;
+            }
         }
         
         if(__notices == null ||  __notices.Count < 1)
@@ -558,6 +577,8 @@ public class GameManager : MonoBehaviour
         }
 
         __MarkHot();
+        
+        __ReleaseLoading();
     }
 
     void Awake()

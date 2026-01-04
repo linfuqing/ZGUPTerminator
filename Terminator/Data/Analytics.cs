@@ -5,6 +5,8 @@ using UnityEngine;
 
 public interface IAnalyticsEx : IAnalytics
 {
+    void Init();
+    
     void Activate(string channelName, string channelUser);
     
     void Login(uint userID);
@@ -37,6 +39,14 @@ public interface IAnalyticsEx : IAnalytics
 public class Analytics : MonoBehaviour, IAnalyticsEx
 {
     public static readonly HashSet<IAnalyticsEx> instances = new HashSet<IAnalyticsEx>();
+
+    public void Init()
+    {
+        foreach (var instance in instances)
+        {
+            instance.Init();
+        }
+    }
 
     public void Activate(string channelName, string channelUser)
     {
@@ -253,6 +263,11 @@ public class Analytics : MonoBehaviour, IAnalyticsEx
 
 public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
 {
+    public virtual void Init()
+    {
+        
+    }
+
     public virtual void Activate(string channelName, string channelUser)
     {
     }

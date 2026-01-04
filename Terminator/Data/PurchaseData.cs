@@ -306,17 +306,18 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 break;
             case PurchaseType.Pass:
                 seconds = output.GetDeadline(ticks);
-                seconds = (int)(((seconds == 0
-                        ? DateTime.Today
-                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks)/*.ToLocalTime()*/).AddMonths(1)
-                    /*.ToUniversalTime()*/.Ticks - ticks) / TimeSpan.TicksPerSecond);
+                DateTime today = seconds == 0
+                    ? DateTime.Today.ToUniversalTime()
+                    : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks) /*.ToLocalTime()*/;
+                
+                seconds = (int)((today.AddDays(1 - today.Day).Date.AddMonths(1).Ticks - ticks) / TimeSpan.TicksPerSecond);
                 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
             case PurchaseType.GoldBank:
                 seconds = output.GetDeadline(ticks);
                 seconds = (int)(((seconds == 0
-                        ? DateTime.Today
+                        ? DateTime.Today.ToUniversalTime()
                         : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks)/*.ToLocalTime()*/).AddDays(1)
                     /*.ToUniversalTime()*/.Ticks - ticks) / TimeSpan.TicksPerSecond);
 

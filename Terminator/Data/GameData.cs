@@ -80,9 +80,9 @@ public class GameData : MonoBehaviour, IGameData
                 
                 notice.text = sb.ToString();
                 notice.code = x.ReadString();
-                notice.id = x.ReadUInt32();
                 seconds = x.ReadUInt32();
                 notice.ticks = seconds == 0 ? 0 : ZG.DateTimeUtility.GetTicks(seconds);
+                notice.id = x.ReadUInt32();
                 notice.flag = (IGameData.Notice.Flag)x.ReadByte();
                 numRewards = x.ReadByte();
                 notice.rewards = new UserRewardData[numRewards];

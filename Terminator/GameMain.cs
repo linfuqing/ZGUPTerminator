@@ -510,6 +510,17 @@ public class GameMain : GameUser
                 yield return ((Func<IEnumerator>)onStart)();
         }
 
+        var manager = GameManager.instance;
+        if (manager != null)
+        {
+            manager.QueryNotices(false);
+
+            while (manager.isLoading || manager.isNoticeShow)
+                yield return null;
+        }
+        
+        (IAnalytics.instance as IAnalyticsEx)?.Init();
+        
 /*#if ENABLE_CONTENT_DELIVERY
         string contentPackPath = GameConstantManager.Get(ContentPackPath);
         var contentPack = AssetUtility.RetrievePack(contentPackPath);
@@ -548,11 +559,11 @@ public class GameMain : GameUser
             if (string.IsNullOrEmpty(filePath))
             {
                 ContentDeliveryGlobalState.Initialize(
-                    null, 
-                    null, 
-                    null, 
+                    null,
+                    null,
+                    null,
                     null);
-                
+
                 Func<string, string> remapFunc = x =>
                 {
                     if (contentPack.GetFileInfo(x, out ulong fileOffset, out string filePath))

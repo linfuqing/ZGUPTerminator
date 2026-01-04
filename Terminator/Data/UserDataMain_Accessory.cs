@@ -450,86 +450,92 @@ public partial class UserDataMain
     
     public IEnumerator QueryAccessory(
         uint userID,
-        uint accessoryID,
-        Action<UserAccessory> onComplete)
+        uint[] accessoryIDs,
+        Action<Memory<UserAccessory>> onComplete)
     {
         yield return __CreateEnumerator();
-
-        if (!__TryGetAccessory(accessoryID, out var info))
-        {
-            onComplete(default);
-            
-            yield break;
-        }
         
+        int i, j, k, numAccessories = accessoryIDs.Length, numRoleGroups = _roleGroups.Length, numAccessorySlots = _accessorySlots.Length;
+        uint accessoryID;
+        string userAccessoryGroupKey, skillGroupName;
+        Accessory accessory;
         UserAccessory result;
-        var accessory = _accessories[info.index];
-        result.name = accessory.name;
-        result.id = accessoryID;
-        
-        if (string.IsNullOrEmpty(accessory.skillName))
-            result.skillNames = null;
-        else
-        {
-            string skillGroupName = __GetSkillGroupName(accessory.skillName);
-            if (string.IsNullOrEmpty(skillGroupName))
-            {
-                result.skillNames = new string[1];
-                result.skillNames[0] = accessory.skillName;
-            }
-            else
-                result.skillNames = __GetSkillGroupSkillNames(skillGroupName).ToArray();
-        }
-
-        result.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
-
-        result.stage = info.stage;
-
-        result.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
-        result.skillDamage = accessory.skillDamage;
-        result.attributeValue = accessory.attributeValue;
-        result.property = accessory.property;
-
-        var accessoryStageIndices = __GetAccessoryStageIndices(info.index);
-        if (info.stage < accessoryStageIndices.Count)
-        {
-            var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
-
-            result.stageDesc.name = accessoryStage.name;
-            //result.stageDesc.count = accessoryStage.count;
-            result.stageDesc.property = accessoryStage.property;
-            result.stageDesc.materials = accessoryStage.materials;
-        }
-        else
-            result.stageDesc = default;
-
-        int i, j, numRoleGroups = _roleGroups.Length, numAccessorySlots = _accessorySlots.Length;
-        string userAccessoryGroupKey;
         UserAccessory.Group userAccessoryGroup;
         var userAccessoryGroups = new List<UserAccessory.Group>();
-        for (i = 0; i < numRoleGroups; ++i)
+        var results = new UserAccessory[numAccessories];
+        for (i = 0; i < numAccessories; ++i)
         {
-            userAccessoryGroupKey =
-                $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[i].name}{UserData.SEPARATOR}";
-            for (j = 0; j < numAccessorySlots; ++j)
-            {
-                if ((uint)PlayerPrefs.GetInt(
-                        $"{userAccessoryGroupKey}{_accessorySlots[j].name}") ==
-                    accessoryID)
-                    break;
-            }
-
-            if (j == numAccessorySlots)
+            accessoryID = accessoryIDs[i];
+            if (!__TryGetAccessory(accessoryID, out var info))
                 continue;
 
-            userAccessoryGroup.slotID = __ToID(j);
-            userAccessoryGroup.groupID = __ToID(i);
-            userAccessoryGroups.Add(userAccessoryGroup);
+            accessory = _accessories[info.index];
+            result.name = accessory.name;
+            result.id = accessoryID;
+
+            if (string.IsNullOrEmpty(accessory.skillName))
+                result.skillNames = null;
+            else
+            {
+                skillGroupName = __GetSkillGroupName(accessory.skillName);
+                if (string.IsNullOrEmpty(skillGroupName))
+                {
+                    result.skillNames = new string[1];
+                    result.skillNames[0] = accessory.skillName;
+                }
+                else
+                    result.skillNames = __GetSkillGroupSkillNames(skillGroupName).ToArray();
+            }
+
+            result.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
+
+            result.stage = info.stage;
+
+            result.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
+            result.skillDamage = accessory.skillDamage;
+            result.attributeValue = accessory.attributeValue;
+            result.property = accessory.property;
+
+            var accessoryStageIndices = __GetAccessoryStageIndices(info.index);
+            if (info.stage < accessoryStageIndices.Count)
+            {
+                var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
+
+                result.stageDesc.name = accessoryStage.name;
+                //result.stageDesc.count = accessoryStage.count;
+                result.stageDesc.property = accessoryStage.property;
+                result.stageDesc.materials = accessoryStage.materials;
+            }
+            else
+                result.stageDesc = default;
+
+            userAccessoryGroups.Clear();
+            for (j = 0; j < numRoleGroups; ++j)
+            {
+                userAccessoryGroupKey =
+                    $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[j].name}{UserData.SEPARATOR}";
+                for (k = 0; k < numAccessorySlots; ++k)
+                {
+                    if ((uint)PlayerPrefs.GetInt(
+                            $"{userAccessoryGroupKey}{_accessorySlots[k].name}") ==
+                        accessoryID)
+                        break;
+                }
+
+                if (k == numAccessorySlots)
+                    continue;
+
+                userAccessoryGroup.slotID = __ToID(k);
+                userAccessoryGroup.groupID = __ToID(j);
+                userAccessoryGroups.Add(userAccessoryGroup);
+            }
+
+            result.groups = userAccessoryGroups.ToArray();
+
+            results[i] = result;
         }
 
-        result.groups = userAccessoryGroups.ToArray();
-        
-        onComplete(result);
+        onComplete(results);
     }
 
     public IEnumerator QueryAccessoryStages(
@@ -986,10 +992,10 @@ public partial class UserData
 {
     public IEnumerator QueryAccessory(
         uint userID,
-        uint accessoryID,
-        Action<UserAccessory> onComplete)
+        uint[] accessoryIDs,
+        Action<Memory<UserAccessory>> onComplete)
     {
-        return UserDataMain.instance.QueryAccessory(userID, accessoryID, onComplete);
+        return UserDataMain.instance.QueryAccessory(userID, accessoryIDs, onComplete);
     }
     
     public IEnumerator QueryAccessoryStages(
