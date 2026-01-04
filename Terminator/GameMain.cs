@@ -469,6 +469,8 @@ public class GameMain : GameUser
         if (userID == GameMain.userID)
             return;
         
+        (IAnalytics.instance as IAnalyticsEx)?.Login(userID);
+
         if(onUserLogin != null)
             onUserLogin(userID, __isActivated);
 

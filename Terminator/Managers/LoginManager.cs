@@ -1383,8 +1383,6 @@ public sealed class LoginManager : MonoBehaviour
         
         GameMain.Login(user.id);
         
-        (IAnalytics.instance as IAnalyticsEx)?.Login(user.id);
-        
         _onLogin?.Invoke(user.id.ToString());
     }
 
@@ -1607,8 +1605,8 @@ public sealed class LoginManager : MonoBehaviour
         var progressBar = GameProgressbar.instance;
         if (progressBar != null)
         {
-            progressBar.ShowProgressBar();
-            progressBar.UpdateProgressBar(1.0f);
+            progressBar.ShowProgressBar(1.0f);
+            //progressBar.UpdateProgressBar(1.0f);
         }
 
         instance = this;
