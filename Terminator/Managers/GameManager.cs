@@ -184,8 +184,8 @@ public class GameManager : MonoBehaviour
                 {
                     __queryNoticeCoroutineIndex = progressbar.BeginCoroutine();
 
-                    progressbar.ShowProgressBar(GameProgressbar.ProgressbarType.Other, __queryNoticeCoroutineIndex);
-                    progressbar.UpdateProgressBar(1.0f);
+                    progressbar.ShowProgressBar(GameProgressbar.ProgressbarType.Other, __queryNoticeCoroutineIndex, 1.0f);
+                    //progressbar.UpdateProgressBar(1.0f);
                 }
                 else
                     progressbar = null;
@@ -241,6 +241,23 @@ public class GameManager : MonoBehaviour
     
     public void ApplyCode(params string[] codes)
     {
+        if (codes == null)
+            return;
+
+        bool result = false;
+        foreach (var code in codes)
+        {
+            if (!string.IsNullOrEmpty(code))
+            {
+                result = true;
+                
+                break;
+            }
+        }
+
+        if (!result)
+            return;
+        
         var gameData = IGameData.instance;
         if (gameData == null)
             return;

@@ -366,6 +366,8 @@ public partial class LevelManager
                         style.button.onClick.RemoveAllListeners();
                         style.button.onClick.AddListener(() =>
                         {
+                            style.button.interactable = false;
+                            
                             if (__skillSelectionGuideNames == null)
                                 __skillSelectionGuideNames = new HashSet<string>();
 
@@ -375,6 +377,8 @@ public partial class LevelManager
 
                             __onSkillSelectionComplete = destination.onDisable == null ? null : destination.onDisable.Invoke;
                         });
+
+                        style.button.interactable = true;
                     }
 
                     if (__skillStyles == null)

@@ -111,7 +111,12 @@ public class GameData : MonoBehaviour, IGameData
         form.AddField("version", (int)version);
 
         foreach (var code in codes)
+        {
+            if(string.IsNullOrEmpty(code))
+                continue;
+            
             form.AddField("codes[]", code);
+        }
 
         yield return WWWUtility.MD5Request(x =>
         {
