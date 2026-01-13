@@ -53,7 +53,7 @@ public partial class UserDataMain
                 }
 
                 id = 1;
-                count = 3;
+                count = 0;//3;
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
                 break;
             case UserRewardType.Card:
