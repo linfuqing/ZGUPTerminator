@@ -75,6 +75,13 @@ public abstract class TimeActivator : MonoBehaviour, ITimeActivator
 
 public class TimeActivatorController : MonoBehaviour
 {
+    public enum Status
+    {
+        None, 
+        Pause, 
+        ActivateRightNow
+    }
+    
     private struct Comparer : IComparer<ITimeActivator>
     {
         public int Compare(ITimeActivator x, ITimeActivator y)
@@ -89,7 +96,7 @@ public class TimeActivatorController : MonoBehaviour
     private bool __isActivateOnEnable;
     private bool __isActive;
     private int __index;
-    private bool __isActivateRightNow;
+    private Status __status;
     private Coroutine __coroutine;
     private List<ITimeActivator> __buffer;
     private HashSet<ITimeActivator> __activators = new HashSet<ITimeActivator>();
@@ -130,9 +137,15 @@ public class TimeActivatorController : MonoBehaviour
     }
 
     [UnityEngine.Scripting.Preserve]
+    public void Pause()
+    {
+        __status = Status.Pause;
+    }
+
+    [UnityEngine.Scripting.Preserve]
     public void ActivateRightNow()
     {
-        __isActivateRightNow = true;
+        __status = Status.ActivateRightNow;
     }
 
     public bool Refresh(ITimeActivator activator)
@@ -216,7 +229,7 @@ public class TimeActivatorController : MonoBehaviour
 
     private IEnumerator __Activate()
     {
-        __isActivateRightNow = false;
+        __status = Status.None;
         
         if (__buffer == null)
             __buffer = new List<ITimeActivator>(__activators.Count);
@@ -237,8 +250,17 @@ public class TimeActivatorController : MonoBehaviour
         {
             while (__Next())
             {
-                if(!__isActivateRightNow)
-                    yield return new WaitForSecondsRealtime(time);
+                switch (__status)
+                {
+                    case Status.Pause:
+                        yield return null;
+                        break;
+                    case Status.ActivateRightNow:
+                        break;
+                    default:
+                        yield return new WaitForSecondsRealtime(time);
+                        break;
+                }
             }
         }
         else
