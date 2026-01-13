@@ -65,13 +65,6 @@ public partial class UserDataMain
                     __AppendQuest(UserQuest.Type.Cards + cardStyleIndex, reward.count);
 
                 bool isDirty = false;
-                if ((flag & Flag.CardsUnlock) == 0 /* && UserData.level > 0*/) //(flag & Flag.CardsCreated) == 0)
-                {
-                    flag |= Flag.CardsUnlock;
-
-                    isDirty = true;
-                }
-
                 /*if ((flag & (Flag.CardUnlock | Flag.CardUpgrade)) == 0)
                 {
                     flag |= Flag.CardUpgrade;
@@ -87,30 +80,69 @@ public partial class UserDataMain
                 int level = __GetCardLevel(reward.name, out string levelKey);
                 if (level == -1)
                 {
-                    if ((flag & Flag.CardReplace) == 0 && UserData.chapter > 0)
+                    switch (UserData.chapter)
                     {
-                        int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
-                        foreach (var card in _cards)
-                        {
-                            if(__GetCardLevel(card.name, out _) == -1)
-                                continue;
-
-                            if (++length >= capacity)
+                        case 2:
+                            if ((flag & Flag.CardsUnlock) == 0 /* && UserData.level > 0*/) //(flag & Flag.CardsCreated) == 0)
                             {
-                                flag |= Flag.CardReplace;
+                                flag |= Flag.CardsUnlock;
 
                                 isDirty = true;
-                                
-                                break;
                             }
-                        }
+                            break;
+                        case 3:
+                            /*if ((flag & Flag.CardReplace) == 0)
+                            {
+                                flag |= Flag.CardReplace;
+                                
+                                isDirty = true;
+                            }*/
+                            /*{
+                                int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
+                                foreach (var card in _cards)
+                                {
+                                    if(__GetCardLevel(card.name, out _) == -1)
+                                        continue;
+
+                                    if (++length >= capacity)
+                                    {
+                                        flag |= Flag.CardReplace;
+
+                                        isDirty = true;
+
+                                        break;
+                                    }
+                                }
+                            }*/
+                            break;
                     }
-                    
+
                     if (isDirty)
                         UserDataMain.flag = flag;
                     
                     PlayerPrefs.SetInt(key, cardCount - 1);
                     PlayerPrefs.SetInt(levelKey, 0);
+
+                    int cardCapacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY);
+                    if (cardCapacity < 4)
+                    {
+                        int i;
+                        string cardGroupPositionKey;
+                        foreach (var cardGroup in _cardGroups)
+                        {
+                            cardGroupPositionKey =
+                                $"{NAME_SPACE_USER_CARD_GROUP}{cardGroup.name}{UserData.SEPARATOR}";
+                            for (i = 0; i < cardCapacity; ++i)
+                            {
+                                if (!string.IsNullOrEmpty(PlayerPrefs.GetString($"{cardGroupPositionKey}{i}")))
+                                    continue;
+                                
+                                __SetCard(reward.name, cardGroup.name, i);
+
+                                break;
+                            }
+                        }
+                    }
 
                     key = null;
                     break;
@@ -158,12 +190,49 @@ public partial class UserDataMain
                 __AppendQuest(UserQuest.Type.Accessories, 1);
                 if(reward.count > 1)
                     __AppendQuest(UserQuest.Type.Accessories + reward.count + 1, 1);
-                
-                if ((flag & Flag.RolesUnlock) == 0 && UserData.chapter > 0)//(flag & Flag.RolesCreated) == 0)
-                    UserDataMain.flag |= Flag.RolesUnlock;
-                
+
                 id = (uint)Random.Range(int.MinValue, int.MaxValue);
-                __CreateAccessory(id, __GetAccessoryIndex(reward.name), reward.count);
+                int accessoryIndex = __GetAccessoryIndex(reward.name);
+                __CreateAccessory(id, accessoryIndex, reward.count);
+
+                if ((flag & Flag.RolesUnlock) == 0 /* && UserData.chapter > 1*/) //(flag & Flag.RolesCreated) == 0)
+                {
+                    bool isContains = false;
+                    string roleGroupAccessorySlotKey;
+                    foreach (var roleGroup in _roleGroups)
+                    {
+                        roleGroupAccessorySlotKey = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroup.name}{UserData.SEPARATOR}";
+                        foreach (var accessorySlot in _accessorySlots)
+                        {
+                            if (PlayerPrefs.GetInt($"{roleGroupAccessorySlotKey}{accessorySlot.name}") == 0)
+                                continue;
+
+                            isContains = true;
+
+                            break;
+                        }
+                    }
+                    
+                    if(isContains)
+                        UserDataMain.flag |= Flag.RolesUnlock;
+                    else
+                    {
+                        string accessoryStyleName = _accessories[accessoryIndex].styleName;
+                        foreach (var roleGroup in _roleGroups)
+                        {
+                            roleGroupAccessorySlotKey = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroup.name}{UserData.SEPARATOR}";
+                            foreach (var accessorySlot in _accessorySlots)
+                            {
+                                if(accessorySlot.styleName != accessoryStyleName)
+                                    continue;
+
+                                PlayerPrefs.SetInt($"{roleGroupAccessorySlotKey}{accessorySlot.name}", (int)id);
+                                
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 key = null;
                 break;
