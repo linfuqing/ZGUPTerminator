@@ -137,6 +137,12 @@ public class TimeActivatorController : MonoBehaviour
     }
 
     [UnityEngine.Scripting.Preserve]
+    public void Continue()
+    {
+        __status = Status.None;
+    }
+    
+    [UnityEngine.Scripting.Preserve]
     public void Pause()
     {
         __status = Status.Pause;
