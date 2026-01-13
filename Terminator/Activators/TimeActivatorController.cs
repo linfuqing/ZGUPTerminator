@@ -259,7 +259,11 @@ public class TimeActivatorController : MonoBehaviour
                 switch (__status)
                 {
                     case Status.Pause:
-                        yield return null;
+                        do
+                        {
+                            yield return null;
+                        } while (Status.Pause == __status);
+
                         break;
                     case Status.ActivateRightNow:
                         break;
@@ -272,7 +276,22 @@ public class TimeActivatorController : MonoBehaviour
         else
         {
             while (__Next())
-                yield return null;
+            {
+                switch (__status)
+                {
+                    case Status.Pause:
+                        do
+                        {
+                            yield return null;
+                        } while (Status.Pause == __status);
+                        break;
+                    case Status.ActivateRightNow:
+                        break;
+                    default:
+                        yield return null;
+                        break;
+                }
+            }
         }
 
         __coroutine = null;
