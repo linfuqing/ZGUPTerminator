@@ -45,7 +45,7 @@ public partial class UserDataMain
 
                 break;
             case UserRewardType.CardsCapacity:
-                if ((flag & Flag.CardUnlock) == 0)
+                if ((flag & Flag.CardUnlock) == 0 && UserData.chapter > 1)
                 {
                     flag &= ~Flag.CardUpgradeFirst;
                     
@@ -823,7 +823,7 @@ public partial class UserDataMain
 
         result.name = role.instanceName;
         result.hpMax = role.hpMax;
-        result.attributes = attributes.ToArray();
+        result.attributes = attributes?.ToArray();
         result.skills = skills.ToArray();
 
         return result;
@@ -1333,7 +1333,7 @@ public partial class UserDataMain
 
             result.name = instanceName;
             result.hpMax = hpMax;
-            result.attributes = attributes.ToArray();
+            result.attributes = attributes?.ToArray();
             result.skills = skills.ToArray();
         }
 
