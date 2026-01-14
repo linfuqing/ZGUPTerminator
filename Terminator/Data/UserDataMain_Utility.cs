@@ -64,7 +64,6 @@ public partial class UserDataMain
                 if(cardStyleIndex > 0)
                     __AppendQuest(UserQuest.Type.Cards + cardStyleIndex, reward.count);
 
-                bool isDirty = false;
                 /*if ((flag & (Flag.CardUnlock | Flag.CardUpgrade)) == 0)
                 {
                     flag |= Flag.CardUpgrade;
@@ -80,6 +79,7 @@ public partial class UserDataMain
                 int level = __GetCardLevel(reward.name, out string levelKey);
                 if (level == -1)
                 {
+                    bool isDirty = false;
                     switch (UserData.chapter)
                     {
                         case 2:
@@ -145,11 +145,10 @@ public partial class UserDataMain
                     }
 
                     key = null;
-                    break;
-                    //return id;
+                    //break;
                 }
                 
-                var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(_cards[cardIndex].styleName));
+                /*var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(_cards[cardIndex].styleName));
                 if (levelIndices.Count > level)
                 {
                     var cardLevel = _cardLevels[levelIndices[level]];
@@ -165,7 +164,7 @@ public partial class UserDataMain
                 }
                 
                 if (isDirty)
-                    UserDataMain.flag = flag;
+                    UserDataMain.flag = flag;*/
 
                 break;
             case UserRewardType.Role:

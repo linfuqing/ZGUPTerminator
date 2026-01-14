@@ -2236,173 +2236,173 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
-        if (fixedFrame.count <= __frameCount)
-            return;
-        
-        float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
+        double time = SystemAPI.Time.ElapsedTime;
 
-        __frameCount = fixedFrame.count;
+        var jobHandle = state.Dependency;
 
-        var inputDeps = state.Dependency;
-        
+        var damageInstances = __damageInstances.AsParallelWriter();
+        var prefabLoader = __prefabLoader.AsParallelWriter();
+
         var entityCommandBuffer = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged);
 
         var entityManager = entityCommandBuffer.AsParallelWriter();
-        
-        double time = SystemAPI.Time.ElapsedTime;
-
-        __children.Update(ref state);
-        __characterInterpolations.Update(ref state);
-        __physicsGraphicalInterpolationBuffers.Update(ref state);
-        __statusTargets.Update(ref state);
-        __states.Update(ref state);
-        __targetBuffs.Update(ref state);
-        __damages.Update(ref state);
-
-        Instantiate instantiate;
-        instantiate.time = time;
-        instantiate.children = __children;
-        instantiate.statusTargets = __statusTargets;
-        instantiate.states = __states;
-        instantiate.damages = __damages;
-        instantiate.targetBuffs = __targetBuffs;
-        instantiate.characterInterpolations = __characterInterpolations;
-        instantiate.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
-        instantiate.damageInstances = __damageInstances;
-        instantiate.entityManager = entityCommandBuffer;
-        instantiate.prefabLoader = __prefabLoader.AsWriter();
-        var jobHandle = instantiate.ScheduleByRef(inputDeps);
-            
-        __targets.Update(ref state);
-        __children.Update(ref state);
-        __entityType.Update(ref state);
-        __parentType.Update(ref state);
-        __simulationEventType.Update(ref state);
-        __instanceIDs.Update(ref state);
-
-        SpawnEx spawn;
-        spawn.targets = __targets;
-        spawn.children = __children;
-        spawn.entityType = __entityType;
-        spawn.parentType = __parentType;
-        spawn.simulationEventType = __simulationEventType;
-        spawn.instanceIDs = __instanceIDs;
-        spawn.entityManager = entityManager;
-        jobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, jobHandle);
-
-        __characterBodyType.Update(ref state);
-        __targetType.Update(ref state);
-        __targetDamageType.Update(ref state);
-        
-        DestroyEx destroy;
-        destroy.characterBodyType = __characterBodyType;
-        destroy.targetType = __targetType;
-        destroy.targetDamageType = __targetDamageType;
-        jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, jobHandle);
-
-        __instanceType.Update(ref state);
-        __statusTargetType.Update(ref state);
-        __statusType.Update(ref state);
-        
-        ClearEx clear;
-        //clear.deltaTime = deltaTime;
-        clear.time = time;
-        clear.instanceType = __instanceType;
-        clear.simulationEventType = __simulationEventType;
-        clear.statusTargetType = __statusTargetType;
-        clear.statusType = __statusType;
-        //var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
-        jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
-        
-        __physicsColliders.Update(ref state);
-        __characterProperties.Update(ref state);
-        __rages.Update(ref state);
-        __targetDamageScales.Update(ref state);
-        __damageParents.Update(ref state);
-        __damageParentType.Update(ref state);
-        __simulationCollisionType.Update(ref state);
-        __prefabType.Update(ref state);
-        __inputMessageType.Update(ref state);
-        __targetDamages.Update(ref state);
-        __targetHPs.Update(ref state);
-        __targetLevels.Update(ref state);
-        __delayDestroies.Update(ref state);
-        __dropToDamages.Update(ref state);
-        __characterBodies.Update(ref state);
-        __localToWorlds.Update(ref state);
-        __outputMessages.Update(ref state);
-        __damageStatistics.Update(ref state);
-        
-        var damageInstances = __damageInstances.AsParallelWriter();
-        var prefabLoader = __prefabLoader.AsParallelWriter();
 
         quaternion cameraRotation = SystemAPI.TryGetSingleton<MainCameraTransform>(out var mainCameraTransform)
             ? mainCameraTransform.rotation
             : quaternion.identity;
-        
-        CollectEx collect;
-        //collect.deltaTime = deltaTime;
-        collect.time = time;
-        collect.cameraRotation = cameraRotation;
-        collect.children = __children;
-        collect.physicsColliders = __physicsColliders;
-        collect.characterProperties = __characterProperties;
-        collect.targets = __targets;
-        collect.targetDamageScales = __targetDamageScales;
-        collect.damageParents = __damageParents;
-        collect.damages = __damages;
-        collect.rages = __rages;
-        collect.entityType = __entityType;
-        collect.damageParentType = __damageParentType;
-        collect.instanceType = __instanceType;
-        collect.simulationCollisionType = __simulationCollisionType;
-        collect.simulationEventType = __simulationEventType;
-        collect.prefabType = __prefabType;
-        collect.inputMessageType = __inputMessageType;
-        collect.statusTargetType = __statusTargetType;
-        collect.statusType = __statusType;
-        collect.targetDamages = __targetDamages;
-        collect.targetHPs = __targetHPs;
-        collect.targetLevels = __targetLevels;
-        collect.delayDestroies = __delayDestroies;
-        collect.dropToDamages = __dropToDamages;
-        collect.characterBodies = __characterBodies;
-        collect.localToWorlds = __localToWorlds;
-        collect.instanceIDs = __instanceIDs;
-        collect.damageStatistics = __damageStatistics;
-        collect.outputMessages = __outputMessages;
-        collect.entityManager = entityManager;
-        collect.prefabLoader = prefabLoader;
-        collect.damageInstances = damageInstances;
-        //jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
-        jobHandle = collect.ScheduleParallelByRef(__groupToCollect,  jobHandle);
+
+        var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
+        if (fixedFrame.count > __frameCount)
+        {
+            __frameCount = fixedFrame.count;
+
+            __children.Update(ref state);
+            __characterInterpolations.Update(ref state);
+            __physicsGraphicalInterpolationBuffers.Update(ref state);
+            __statusTargets.Update(ref state);
+            __states.Update(ref state);
+            __targetBuffs.Update(ref state);
+            __damages.Update(ref state);
+
+            Instantiate instantiate;
+            instantiate.time = time;
+            instantiate.children = __children;
+            instantiate.statusTargets = __statusTargets;
+            instantiate.states = __states;
+            instantiate.damages = __damages;
+            instantiate.targetBuffs = __targetBuffs;
+            instantiate.characterInterpolations = __characterInterpolations;
+            instantiate.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
+            instantiate.damageInstances = __damageInstances;
+            instantiate.entityManager = entityCommandBuffer;
+            instantiate.prefabLoader = __prefabLoader.AsWriter();
+            jobHandle = instantiate.ScheduleByRef(jobHandle);
+
+            __targets.Update(ref state);
+            __children.Update(ref state);
+            __entityType.Update(ref state);
+            __parentType.Update(ref state);
+            __simulationEventType.Update(ref state);
+            __instanceIDs.Update(ref state);
+
+            SpawnEx spawn;
+            spawn.targets = __targets;
+            spawn.children = __children;
+            spawn.entityType = __entityType;
+            spawn.parentType = __parentType;
+            spawn.simulationEventType = __simulationEventType;
+            spawn.instanceIDs = __instanceIDs;
+            spawn.entityManager = entityManager;
+            jobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, jobHandle);
+
+            __characterBodyType.Update(ref state);
+            __targetType.Update(ref state);
+            __targetDamageType.Update(ref state);
+
+            DestroyEx destroy;
+            destroy.characterBodyType = __characterBodyType;
+            destroy.targetType = __targetType;
+            destroy.targetDamageType = __targetDamageType;
+            jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, jobHandle);
+
+            __instanceType.Update(ref state);
+            __statusTargetType.Update(ref state);
+            __statusType.Update(ref state);
+
+            ClearEx clear;
+            //clear.deltaTime = deltaTime;
+            clear.time = time;
+            clear.instanceType = __instanceType;
+            clear.simulationEventType = __simulationEventType;
+            clear.statusTargetType = __statusTargetType;
+            clear.statusType = __statusType;
+            //var jobHandle = JobHandle.CombineDependencies(instantiateJobHandle, spawnJobHandle);
+            jobHandle = clear.ScheduleParallelByRef(__groupToClear, jobHandle);
+
+            __physicsColliders.Update(ref state);
+            __characterProperties.Update(ref state);
+            __rages.Update(ref state);
+            __targetDamageScales.Update(ref state);
+            __damageParents.Update(ref state);
+            __damageParentType.Update(ref state);
+            __simulationCollisionType.Update(ref state);
+            __prefabType.Update(ref state);
+            __inputMessageType.Update(ref state);
+            __targetDamages.Update(ref state);
+            __targetHPs.Update(ref state);
+            __targetLevels.Update(ref state);
+            __delayDestroies.Update(ref state);
+            __dropToDamages.Update(ref state);
+            __characterBodies.Update(ref state);
+            __localToWorlds.Update(ref state);
+            __outputMessages.Update(ref state);
+            __damageStatistics.Update(ref state);
+
+            CollectEx collect;
+            //collect.deltaTime = deltaTime;
+            collect.time = time;
+            collect.cameraRotation = cameraRotation;
+            collect.children = __children;
+            collect.physicsColliders = __physicsColliders;
+            collect.characterProperties = __characterProperties;
+            collect.targets = __targets;
+            collect.targetDamageScales = __targetDamageScales;
+            collect.damageParents = __damageParents;
+            collect.damages = __damages;
+            collect.rages = __rages;
+            collect.entityType = __entityType;
+            collect.damageParentType = __damageParentType;
+            collect.instanceType = __instanceType;
+            collect.simulationCollisionType = __simulationCollisionType;
+            collect.simulationEventType = __simulationEventType;
+            collect.prefabType = __prefabType;
+            collect.inputMessageType = __inputMessageType;
+            collect.statusTargetType = __statusTargetType;
+            collect.statusType = __statusType;
+            collect.targetDamages = __targetDamages;
+            collect.targetHPs = __targetHPs;
+            collect.targetLevels = __targetLevels;
+            collect.delayDestroies = __delayDestroies;
+            collect.dropToDamages = __dropToDamages;
+            collect.characterBodies = __characterBodies;
+            collect.localToWorlds = __localToWorlds;
+            collect.instanceIDs = __instanceIDs;
+            collect.damageStatistics = __damageStatistics;
+            collect.outputMessages = __outputMessages;
+            collect.entityManager = entityManager;
+            collect.prefabLoader = prefabLoader;
+            collect.damageInstances = damageInstances;
+            //jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
+            jobHandle = collect.ScheduleParallelByRef(__groupToCollect, jobHandle);
+        }
 
         ApplyEx apply;
-        SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
-        __levelStates.Update(ref state);
-        __localToWorldType.Update(ref state);
-        __fallToDestroyType.Update(ref state);
-        __characterGravityFactorType.Update(ref state);
-        __delayDestroyType.Update(ref state);
-        __targetInstanceType.Update(ref state);
-        __targetLevelType.Update(ref state);
-        __targetImmunityType.Update(ref state);
-        __targetImmunityStatusType.Update(ref state);
-        __targetMessageType.Update(ref state);
-        __targetDamageScaleType.Update(ref state);
-        __targetHPType.Update(ref state);
-        __outputMessageType.Update(ref state);
-        __messageParameterType.Update(ref state);
-        __delayTimeType.Update(ref state);
+            SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
+            __levelStates.Update(ref state);
+            __localToWorldType.Update(ref state);
+            __fallToDestroyType.Update(ref state);
+            __characterGravityFactorType.Update(ref state);
+            __delayDestroyType.Update(ref state);
+            __targetInstanceType.Update(ref state);
+            __targetLevelType.Update(ref state);
+            __targetImmunityType.Update(ref state);
+            __targetImmunityStatusType.Update(ref state);
+            __targetMessageType.Update(ref state);
+            __targetDamageScaleType.Update(ref state);
+            __targetHPType.Update(ref state);
+            __outputMessageType.Update(ref state);
+            __messageParameterType.Update(ref state);
+            __delayTimeType.Update(ref state);
 
-        /*if (deltaTime > math.FLT_MIN_NORMAL)
-            __time += deltaTime;
-        else if(__frameCount > 0)
-            __time += __time / __frameCount;
-        
-        ++__frameCount;*/
+            /*if (deltaTime > math.FLT_MIN_NORMAL)
+                __time += deltaTime;
+            else if(__frameCount > 0)
+                __time += __time / __frameCount;
+
+            ++__frameCount;*/
+
+            float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         apply.deltaTime = deltaTime;
         apply.time = time;
