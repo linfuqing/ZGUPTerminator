@@ -151,6 +151,8 @@ public partial class LevelSystemManaged : SystemBase
     
     protected override void OnUpdate()
     {
+        LevelShared.unscaledDeltaTime = UnityEngine.Time.unscaledDeltaTime;
+        
         CompleteDependency();
 
         var manager = LevelManager.instance;

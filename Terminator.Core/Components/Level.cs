@@ -821,6 +821,11 @@ public static class LevelShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ExpMax>();
     }
     
+    private struct UnscaledDeltaTime
+    {
+        public static readonly SharedStatic<float> Value = SharedStatic<float>.GetOrCreate<UnscaledDeltaTime>();
+    }
+
     /*private struct SpawnerAttributeScale
     {
         private static readonly SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>> Value =
@@ -853,4 +858,6 @@ public static class LevelShared
     public static ref FixedList512Bytes<Item> items => ref Items.values;
     
     public static ref FixedList4096Bytes<Stage> stages => ref Stages.values;
+
+    public static ref float unscaledDeltaTime => ref UnscaledDeltaTime.Value.Data;
 }

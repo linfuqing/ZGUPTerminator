@@ -91,12 +91,12 @@ public partial class UserDataMain
                             }
                             break;
                         case 3:
-                            /*if ((flag & Flag.CardReplace) == 0)
+                            if ((flag & Flag.CardReplace) == 0)
                             {
                                 flag |= Flag.CardReplace;
                                 
                                 isDirty = true;
-                            }*/
+                            }
                             /*{
                                 int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
                                 foreach (var card in _cards)

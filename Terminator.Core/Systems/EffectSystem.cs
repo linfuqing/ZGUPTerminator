@@ -2017,7 +2017,7 @@ public partial struct EffectSystem : ISystem
     }
 
     private int __frameCount;
-    private float __deltaTime;
+    //private float __deltaTime;
 
     //private double __time;
     
@@ -2400,16 +2400,12 @@ public partial struct EffectSystem : ISystem
 
         ++__frameCount;*/
 
-        float deltaTime = SystemAPI.Time.DeltaTime;
-        if (deltaTime > math.FLT_MIN_NORMAL)
-            __deltaTime = deltaTime;
-        
         //deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         ApplyEx apply;
             SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
 
-        apply.deltaTime = __deltaTime;
+        apply.deltaTime = LevelShared.unscaledDeltaTime;
         apply.time = time;
         apply.cameraRotation = cameraRotation;
         apply.levelStates = __levelStates;
