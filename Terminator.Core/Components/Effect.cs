@@ -257,7 +257,7 @@ public struct EffectTarget : IComponentData, IEnableableComponent
 
     public float Update(double time, float deltaTime)
     {
-        deltaTime = this.time > math.DBL_MIN_NORMAL ? (float)(time - this.time) : deltaTime;
+        deltaTime = this.time > math.DBL_MIN_NORMAL && time > this.time ? (float)(time - this.time) : deltaTime;
         this.time = time;
             
         if (immunizedTime >= 0.0f)

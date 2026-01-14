@@ -2399,12 +2399,13 @@ public partial struct EffectSystem : ISystem
 
         ++__frameCount;*/
 
-        //float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
+        float deltaTime = SystemAPI.Time.DeltaTime;
+        deltaTime = deltaTime > math.FLT_MIN_NORMAL ? deltaTime : fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         ApplyEx apply;
             SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
 
-        apply.deltaTime = SystemAPI.Time.DeltaTime;//deltaTime;
+        apply.deltaTime = deltaTime;
         apply.time = time;
         apply.cameraRotation = cameraRotation;
         apply.levelStates = __levelStates;
