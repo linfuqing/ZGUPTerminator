@@ -2236,6 +2236,18 @@ public partial struct EffectSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __entityType.Update(ref state);
+        __children.Update(ref state);
+        __damages.Update(ref state);
+        __damageParents.Update(ref state);
+        __prefabType.Update(ref state);
+        __damageParentType.Update(ref state);
+        __instanceType.Update(ref state);
+        __targetDamageType.Update(ref state);
+        __targetType.Update(ref state);
+        __characterBodyType.Update(ref state);
+        __instanceIDs.Update(ref state);
+        
         double time = SystemAPI.Time.ElapsedTime;
 
         var jobHandle = state.Dependency;
@@ -2257,13 +2269,11 @@ public partial struct EffectSystem : ISystem
         {
             __frameCount = fixedFrame.count;
 
-            __children.Update(ref state);
             __characterInterpolations.Update(ref state);
             __physicsGraphicalInterpolationBuffers.Update(ref state);
             __statusTargets.Update(ref state);
             __states.Update(ref state);
             __targetBuffs.Update(ref state);
-            __damages.Update(ref state);
 
             Instantiate instantiate;
             instantiate.time = time;
@@ -2280,11 +2290,8 @@ public partial struct EffectSystem : ISystem
             jobHandle = instantiate.ScheduleByRef(jobHandle);
 
             __targets.Update(ref state);
-            __children.Update(ref state);
-            __entityType.Update(ref state);
             __parentType.Update(ref state);
             __simulationEventType.Update(ref state);
-            __instanceIDs.Update(ref state);
 
             SpawnEx spawn;
             spawn.targets = __targets;
@@ -2296,17 +2303,12 @@ public partial struct EffectSystem : ISystem
             spawn.entityManager = entityManager;
             jobHandle = spawn.ScheduleParallelByRef(__groupToSpawn, jobHandle);
 
-            __characterBodyType.Update(ref state);
-            __targetType.Update(ref state);
-            __targetDamageType.Update(ref state);
-
             DestroyEx destroy;
             destroy.characterBodyType = __characterBodyType;
             destroy.targetType = __targetType;
             destroy.targetDamageType = __targetDamageType;
             jobHandle = destroy.ScheduleParallelByRef(__groupToDestroy, jobHandle);
 
-            __instanceType.Update(ref state);
             __statusTargetType.Update(ref state);
             __statusType.Update(ref state);
 
@@ -2324,10 +2326,7 @@ public partial struct EffectSystem : ISystem
             __characterProperties.Update(ref state);
             __rages.Update(ref state);
             __targetDamageScales.Update(ref state);
-            __damageParents.Update(ref state);
-            __damageParentType.Update(ref state);
             __simulationCollisionType.Update(ref state);
-            __prefabType.Update(ref state);
             __inputMessageType.Update(ref state);
             __targetDamages.Update(ref state);
             __targetHPs.Update(ref state);
@@ -2376,35 +2375,36 @@ public partial struct EffectSystem : ISystem
             //jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
             jobHandle = collect.ScheduleParallelByRef(__groupToCollect, jobHandle);
         }
+        
+        __levelStates.Update(ref state);
+        __localToWorldType.Update(ref state);
+        __fallToDestroyType.Update(ref state);
+        __characterGravityFactorType.Update(ref state);
+        __delayDestroyType.Update(ref state);
+        __targetInstanceType.Update(ref state);
+        __targetLevelType.Update(ref state);
+        __targetImmunityType.Update(ref state);
+        __targetImmunityStatusType.Update(ref state);
+        __targetMessageType.Update(ref state);
+        __targetDamageScaleType.Update(ref state);
+        __targetHPType.Update(ref state);
+        __outputMessageType.Update(ref state);
+        __messageParameterType.Update(ref state);
+        __delayTimeType.Update(ref state);
+
+        /*if (deltaTime > math.FLT_MIN_NORMAL)
+            __time += deltaTime;
+        else if(__frameCount > 0)
+            __time += __time / __frameCount;
+
+        ++__frameCount;*/
+
+        //float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         ApplyEx apply;
             SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
-            __levelStates.Update(ref state);
-            __localToWorldType.Update(ref state);
-            __fallToDestroyType.Update(ref state);
-            __characterGravityFactorType.Update(ref state);
-            __delayDestroyType.Update(ref state);
-            __targetInstanceType.Update(ref state);
-            __targetLevelType.Update(ref state);
-            __targetImmunityType.Update(ref state);
-            __targetImmunityStatusType.Update(ref state);
-            __targetMessageType.Update(ref state);
-            __targetDamageScaleType.Update(ref state);
-            __targetHPType.Update(ref state);
-            __outputMessageType.Update(ref state);
-            __messageParameterType.Update(ref state);
-            __delayTimeType.Update(ref state);
 
-            /*if (deltaTime > math.FLT_MIN_NORMAL)
-                __time += deltaTime;
-            else if(__frameCount > 0)
-                __time += __time / __frameCount;
-
-            ++__frameCount;*/
-
-            float deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
-
-        apply.deltaTime = deltaTime;
+        apply.deltaTime = SystemAPI.Time.DeltaTime;//deltaTime;
         apply.time = time;
         apply.cameraRotation = cameraRotation;
         apply.levelStates = __levelStates;
