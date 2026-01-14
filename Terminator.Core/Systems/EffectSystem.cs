@@ -2017,6 +2017,7 @@ public partial struct EffectSystem : ISystem
     }
 
     private int __frameCount;
+    private float __deltaTime;
 
     //private double __time;
     
@@ -2268,7 +2269,7 @@ public partial struct EffectSystem : ISystem
         if (fixedFrame.count > __frameCount)
         {
             __frameCount = fixedFrame.count;
-
+            
             __characterInterpolations.Update(ref state);
             __physicsGraphicalInterpolationBuffers.Update(ref state);
             __statusTargets.Update(ref state);
@@ -2399,13 +2400,17 @@ public partial struct EffectSystem : ISystem
 
         ++__frameCount;*/
 
-        float deltaTime = SystemAPI.Time.DeltaTime;
-        deltaTime = deltaTime > math.FLT_MIN_NORMAL ? deltaTime : fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
+        float deltaTime = SystemAPI.GetSingleton<FixedFrame>().deltaTime;
+
+        if (deltaTime > math.FLT_MIN_NORMAL)
+            __deltaTime = deltaTime;
+        
+        //deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         ApplyEx apply;
             SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
 
-        apply.deltaTime = deltaTime;
+        apply.deltaTime = __deltaTime;
         apply.time = time;
         apply.cameraRotation = cameraRotation;
         apply.levelStates = __levelStates;
