@@ -2400,8 +2400,7 @@ public partial struct EffectSystem : ISystem
 
         ++__frameCount;*/
 
-        float deltaTime = SystemAPI.GetSingleton<FixedFrame>().deltaTime;
-
+        float deltaTime = SystemAPI.Time.DeltaTime;
         if (deltaTime > math.FLT_MIN_NORMAL)
             __deltaTime = deltaTime;
         
