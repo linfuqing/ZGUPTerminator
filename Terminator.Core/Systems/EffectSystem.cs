@@ -1440,9 +1440,10 @@ public partial struct EffectSystem : ISystem
                     damage = 0;
 
                     damageLayerMask = 0;
+                    
                     messageLayerMask = 0;
                 }
-                else
+                else if (target.hp > 0)
                 {
                     damage = (int)math.ceil(
                         (targetDamage.value + (target.immunizedTime > 0.0f ? 0.0f : targetDamage.valueImmunized)) *
@@ -1460,35 +1461,22 @@ public partial struct EffectSystem : ISystem
                     else
                     {
                         damage -= targetHP.shield;
-                        
+
                         isShieldDirty = targetHP.shield != 0;
                     }
 
                     if (damage < targetHP.value)
                     {
                         isHPDirty = true;
-                        
+
+                        damageLayerMask = 0; //targetHP.layerMask;
+                        messageLayerMask = 0;//targetHP.messageLayerMask;
+
                         targetHP.value -= damage;
 
+                        target.hp += targetHP.value;
+
                         damage = 0;
-
-                        damageLayerMask = 0;//targetHP.layerMask;
-                        messageLayerMask = targetHP.messageLayerMask;
-
-                        if (targetHP.value > 0)
-                            target.hp += targetHP.value;
-                        else
-                        {
-                            target.hp = targetHP.value;
-
-                            if (targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
-                            {
-                                target.invincibleTime = targetInstance.recoveryInvincibleTime;
-                                result |= EnabledFlags.Invincible;
-                            }
-                        }
-
-                        result |= EnabledFlags.Recovery;
                     }
                     else
                     {
@@ -1590,7 +1578,7 @@ public partial struct EffectSystem : ISystem
                             {
                                 if (target.shield != 0)
                                     isShieldDirty = true;
-                                
+
                                 damage -= target.shield;
                                 target.shield = 0;
 
@@ -1598,7 +1586,7 @@ public partial struct EffectSystem : ISystem
                                 {
                                     if (damage != 0)
                                         isHPDirty = true;
-                                    
+
                                     target.hp += -damage;
                                 }
                                 else
@@ -1606,6 +1594,24 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                     }
+                }
+                else
+                {
+                    target.hp = targetHP.value;
+
+                    if (targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
+                    {
+                        target.invincibleTime = targetInstance.recoveryInvincibleTime;
+                        result |= EnabledFlags.Invincible;
+                    }
+
+                    result |= EnabledFlags.Recovery;
+
+                    messageLayerMask = 0;//targetHP.messageLayerMask;
+
+                    damageLayerMask = 0;
+
+                    damage = 0;
                 }
 
                 float delayTime = 0.0f, deadTime = 0.0f;
@@ -1766,7 +1772,7 @@ public partial struct EffectSystem : ISystem
                             targetHP.value = targetInstance.hpMax;
                             targetHP.shield = 0;
                             //targetHP.layerMask = damageLayerMask;
-                            targetHP.messageLayerMask = messageLayerMask;
+                            targetHP.messageLayerMask = 1;//messageLayerMask;
 
                             if (!targetInstance.recoveryMessageName.IsEmpty && messages.IsCreated)
                             {
