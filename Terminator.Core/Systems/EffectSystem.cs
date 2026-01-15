@@ -1597,6 +1597,8 @@ public partial struct EffectSystem : ISystem
                 }
                 else
                 {
+                    isHPDirty = true;
+
                     target.hp = targetHP.value;
 
                     if (targetInstance.recoveryInvincibleTime > math.FLT_MIN_NORMAL)
