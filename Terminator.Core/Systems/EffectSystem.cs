@@ -1775,6 +1775,9 @@ public partial struct EffectSystem : ISystem
                                 message.value = targetInstance.recoveryMessageValue;
                                 messages.Add(message);
                             }
+                            
+                            if(isFallToDestroy)
+                                entityManager.RemoveComponent<FallToDestroy>(0, entityArray[index]);
                         }
                         else if(index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
                             DestroyEntity(false, entityArray[index], children, ref instanceIDs, ref entityManager);
