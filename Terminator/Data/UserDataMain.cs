@@ -223,8 +223,86 @@ public sealed partial class UserDataMain : MonoBehaviour
 
 public partial class UserData
 {
-    [SerializeField]
-    internal string _defaultSceneName = "S1";
+    //[SerializeField]
+    //internal string _defaultSceneName = "S1";
+
+    [Serializable]
+    internal struct Chapter
+    {
+        public string name;
+
+        public uint id;
+
+        public int stages;
+    }
+
+    [SerializeField] 
+    internal Chapter[] _chapters =
+    {
+        new Chapter()
+        {
+            name = "S01",
+            id = 1, 
+            stages = 2,
+        }, 
+        
+        new Chapter()
+        {
+            name = "S02",
+            id = 2, 
+            stages = 2,
+        }, 
+        
+        new Chapter()
+        {
+            name = "S03",
+            id = 3, 
+            stages = 1,
+        }
+    };
+    
+    public IEnumerator QueryUser(
+        string channelName,
+        string channelUser,
+        Action<IUserData.Status, uint> onComplete)
+    {
+        yield return null;
+
+        IUserData.Status status;
+        status.levelID = 0;
+        status.stage = -1;
+        status.chapter = chapter;
+        if (status.chapter < _chapters.Length)
+        {
+            var chapter = _chapters[status.chapter];
+            var levelCache = UserData.levelCache;
+            if (levelCache != null)
+            {
+                var temp = levelCache.Value;
+                if (temp.id == chapter.id && temp.stage == chapter.stages)
+                {
+                    onComplete(status, id);
+
+                    yield break;
+                }
+            }
+
+            int i;
+            for (i = 0; i < chapter.stages; ++i)
+            {
+                if (GetStageFlag(chapter.name, i) == 0)
+                    break;
+            }
+
+            if (i < chapter.stages)
+            {
+                status.stage = i;
+                status.levelID = chapter.id;
+            }
+        }
+        
+        onComplete(status, id);
+    }
     
     public IEnumerator QueryUser(
         string channelName, 

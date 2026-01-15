@@ -121,10 +121,27 @@ public struct UserTalent
 
 public partial interface IUserData : IGameUserData
 {
-    public enum Status
+    /*public enum Status
     {
         Normal, 
         Guide
+    }*/
+    public struct Status
+    {
+        /// <summary>
+        /// 引导关卡ID，如果给了这个ID，则会直接进入改关卡（而不进入Login）
+        /// </summary>
+        public uint levelID;
+
+        /// <summary>
+        /// 引导关卡对应的小关
+        /// </summary>
+        public int stage;
+
+        /// <summary>
+        /// 玩家当前的章节进度
+        /// </summary>
+        public int chapter;
     }
     
     public static IUserData instance;
@@ -162,16 +179,6 @@ public partial class UserData : MonoBehaviour, IUserData
         }
     }
 
-    public IEnumerator QueryUser(
-        string channelName,
-        string channelUser,
-        Action<IUserData.Status, uint> onComplete)
-    {
-        yield return null;
-
-        onComplete(chapter > 0 ? IUserData.Status.Normal : IUserData.Status.Guide, id);
-    }
-    
     public IEnumerator Activate(
         string code,
         string channel,

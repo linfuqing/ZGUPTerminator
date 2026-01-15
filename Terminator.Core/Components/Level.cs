@@ -811,6 +811,11 @@ public static class LevelShared
         public static ref FixedList512Bytes<Item> values => ref Value.Data;
     }
 
+    private struct UserType
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<UserType>();
+    }
+
     private struct Exp
     {
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Exp>();
@@ -841,6 +846,13 @@ public static class LevelShared
         set => Stage.Value.Data = value;
     }
     
+    public static int userType
+    {
+        get => UserType.Value.Data;
+        
+        set => UserType.Value.Data = value;
+    }
+
     public static int exp
     {
         get => Exp.Value.Data;
@@ -855,9 +867,9 @@ public static class LevelShared
         set => ExpMax.Value.Data = value;
     }
 
+    public static ref float unscaledDeltaTime => ref UnscaledDeltaTime.Value.Data;
+    
     public static ref FixedList512Bytes<Item> items => ref Items.values;
     
     public static ref FixedList4096Bytes<Stage> stages => ref Stages.values;
-
-    public static ref float unscaledDeltaTime => ref UnscaledDeltaTime.Value.Data;
 }

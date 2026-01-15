@@ -824,11 +824,13 @@ public partial class UserData
         if (userDataMain == null)
         {
             yield return null;
+
+            var chapter = _chapters[closestStage];
             
-            StartStage(_defaultSceneName, closestStage);
+            StartStage(chapter.name, closestStage);
             
             LevelCache levelCache;
-            levelCache.name = _defaultSceneName;
+            levelCache.name = chapter.name;
             levelCache.id = levelID;
             levelCache.seconds = DateTimeUtility.GetSeconds();
             levelCache.stage = closestStage;
@@ -837,6 +839,9 @@ public partial class UserData
             levelCache.killBossCount = 0;
 
             UserData.levelCache = levelCache;
+
+            if(onComplete != null)
+                onComplete(default);
         }
         else
             yield return userDataMain.ApplyLevel(userID, levelID, closestStage, onComplete);

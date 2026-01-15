@@ -303,7 +303,7 @@ public class GameMain : GameUser
         }
     }
     
-    public struct AssetUnzipper : IGameAssetUnzipper
+    private struct AssetUnzipper : IGameAssetUnzipper
     {
         public static readonly string Filename = GameConstantManager.Get(ContentPackPath);
         
@@ -392,6 +392,14 @@ public class GameMain : GameUser
         }
     }
 
+    [Serializable]
+    internal struct Chapter
+    {
+        public string name;
+        
+        public SpawnerAttribute.Scale[] spawnerAttributes;
+    }
+
     public event Func<IEnumerator> onStart;
 
     public static readonly string LanguagePackageResourcePath = "LanguagePackageResourcePath";
@@ -406,6 +414,9 @@ public class GameMain : GameUser
     //public const string NAME_SPACE_LEVEL = "GameMainLevel";
     
     public const string NAME_SPACE_PLAYER_PREF_VERSION = "PlayerPrefVersion";
+
+    [SerializeField] 
+    internal Chapter[] _chapters;
 
     [SerializeField] 
     internal SpawnerAttribute.Scale[] _defaultSpawnerAttributes;
@@ -634,7 +645,8 @@ public class GameMain : GameUser
         if(coroutine != null)
             yield return coroutine;
         
-        uint userID = 0;
+        uint userID = 0, levelID = 0;
+        int stage = -1;
         string defaultSceneName = null;
         GameSceneActivation activation = null;
         yield return IUserData.instance.QueryUser(
@@ -643,8 +655,37 @@ public class GameMain : GameUser
             (x, y) =>
             {
                 (IAnalytics.instance as IAnalyticsEx)?.Login(y);
+
+                if (x.levelID == 0 || x.chapter >= _chapters.Length)
+                    defaultSceneName = GameConstantManager.Get(DefaultSceneName);
+                else
+                {
+                    levelID = x.levelID;
+                    stage = x.stage;
+                    
+                    var chapter = _chapters[x.chapter];
+
+                    defaultSceneName = chapter.name;
+                    
+                    LevelShared.stages.Clear();
+                    
+                    if (chapter.spawnerAttributes != null)
+                    {
+                        LevelShared.Stage stage;
+                        foreach (var spawnerAttribute in chapter.spawnerAttributes)
+                        {
+                            stage.spawnerAttributeScale = spawnerAttribute;
+                            stage.quests = default;
+                            LevelShared.stages.Add(stage);
+                        }
+                    }
+                    
+                    activation = new GameSceneActivation();
+                    
+                    userID = y;
+                }
         
-                switch (x)
+                /*switch (x)
                 {
                     case IUserData.Status.Guide:
                         if (__isActivated)
@@ -664,7 +705,7 @@ public class GameMain : GameUser
                     default:
                         defaultSceneName = GameConstantManager.Get(DefaultSceneName);
                         break;
-                }
+                }*/
 
                 ILevelData.instance = new GameLevelData(y);
                 
@@ -676,11 +717,14 @@ public class GameMain : GameUser
             var analytics = IAnalytics.instance as IAnalyticsEx;
             analytics?.StartLevel(defaultSceneName);
 
-            yield return IUserData.instance.ApplyLevel(userID, 1, 0, null);
+            if(stage > 0)
+                yield return IUserData.instance.ApplyStage(userID, levelID, stage, __ApplyStage);
+            else
+                yield return IUserData.instance.ApplyLevel(userID, levelID, stage, null);
 
             IRewardData.instance = new GameRewardData(userID);
             
-            LevelShared.stages.Clear();
+            /*LevelShared.stages.Clear();
 
             if (_defaultSpawnerAttributes != null)
             {
@@ -691,7 +735,7 @@ public class GameMain : GameUser
                     stage.quests = default;
                     LevelShared.stages.Add(stage);
                 }
-            }
+            }*/
         }
 
         var assetPaths = new GameAssetManager.AssetPath[2];
@@ -711,6 +755,16 @@ public class GameMain : GameUser
             assetPaths);
 
         __coroutine = null;
+    }
+
+    private void __ApplyStage(IUserData.StageProperty property)
+    {
+        LevelPlayerShared.effectRage = property.cache.rage;
+
+        LevelShared.exp = property.cache.exp;
+        LevelShared.expMax = property.cache.expMax;
+        
+        LevelShared.stage = property.stage;
     }
 
     private void __OnConfirmCancel()
