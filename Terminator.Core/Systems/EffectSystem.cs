@@ -1118,7 +1118,7 @@ public partial struct EffectSystem : ISystem
                                     if (closestHit.Entity != Entity.Null)
                                     {
                                         transform = math.RigidTransform(
-                                            Math.FromToRotation(math.up(), closestHit.SurfaceNormal),
+                                            math.mul(Math.FromToRotation( math.mul(transform.rot, math.up()), closestHit.SurfaceNormal), transform.rot),
                                             closestHit.Position);
 
                                         source.Value = math.float4x4(transform);

@@ -1344,6 +1344,9 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __CreateRewards(Transform parent, UserRewardData[] values)
     {
+        if (values == null || values.Length < 1)
+            return;
+        
         if(onCreateRewards != null)
             onCreateRewards(values, parent);
         /*if (style != null && values != null &&
