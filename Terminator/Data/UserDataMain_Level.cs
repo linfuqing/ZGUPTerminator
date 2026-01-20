@@ -821,7 +821,7 @@ public partial class UserData
         Action<IUserData.LevelProperty> onComplete)
     {
         var userDataMain = UserDataMain.instance;
-        if (userDataMain == null)
+        if (null == (object)userDataMain)
         {
             yield return null;
 
@@ -840,8 +840,13 @@ public partial class UserData
 
             UserData.levelCache = levelCache;
 
+            IUserData.LevelProperty property;
+            property.stage = closestStage;
+            property.value = chapter.property;
+            property.levelStages = null;
+            
             if(onComplete != null)
-                onComplete(default);
+                onComplete(property);
         }
         else
             yield return userDataMain.ApplyLevel(userID, levelID, closestStage, onComplete);

@@ -398,6 +398,18 @@ public partial class UserDataMain
                 skillGroupDamage += accessory.roleSkillGroupDamage;
         }
 
+        if (__HasSweepCard())
+        {
+            UserAttributeData attribute;
+            attribute.type = UserAttributeType.Recovery;
+            attribute.value = 1.0f;
+            
+            if (attributes == null)
+                attributes = new List<UserAttributeData>();
+            
+            attributes.Add(attribute);
+        }
+
         return attributes;
     }
 

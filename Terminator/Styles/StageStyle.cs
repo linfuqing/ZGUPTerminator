@@ -12,6 +12,8 @@ public class StageStyle : MonoBehaviour
     
     public Toggle toggle;
     
+    public Transform rewardParent;
+
     public StageRewardStyle rewardStyle;
     
     public GameObject[] ranks;

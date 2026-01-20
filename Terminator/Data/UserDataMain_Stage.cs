@@ -696,7 +696,37 @@ public partial class UserData
         int stage, 
         Action<IUserData.StageProperty> onComplete)
     {
-        return UserDataMain.instance.ApplyStage(userID, levelID, stage, onComplete);
+        var userDataMain = UserDataMain.instance;
+        if (null == (object)userDataMain)
+        {
+            yield return null;
+            
+            var chapter = _chapters[stage];
+            var stageCache = GetStageCache(chapter.name, stage);
+            
+            StartStage(chapter.name, stage);
+
+            LevelCache levelCache;
+            levelCache.name = chapter.name;
+            levelCache.id = levelID;
+            levelCache.seconds = stageCache.seconds == 0 ? DateTimeUtility.GetSeconds() : stageCache.seconds;
+            levelCache.stage = stage;
+            levelCache.gold = 0;
+            levelCache.killCount = 0;
+            levelCache.killBossCount = 0;
+            UserData.levelCache = levelCache;
+        
+            IUserData.StageProperty stageProperty;
+            stageProperty.stage = stage;
+            stageProperty.cache = stageCache;
+            stageProperty.value = chapter.property;
+
+            stageProperty.levelStages = null;
+            
+            onComplete(stageProperty);
+        }
+        else
+            yield return userDataMain.ApplyStage(userID, levelID, stage, onComplete);
     }
     
     public IEnumerator SubmitStage(

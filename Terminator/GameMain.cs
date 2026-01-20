@@ -419,9 +419,6 @@ public class GameMain : GameUser
     internal Chapter[] _chapters;
 
     [SerializeField] 
-    internal SpawnerAttribute.Scale[] _defaultSpawnerAttributes;
-    
-    [SerializeField] 
     internal int _playerPrefVersion = 1;
 
     private Coroutine __coroutine;
@@ -720,7 +717,7 @@ public class GameMain : GameUser
             if(stage > 0)
                 yield return IUserData.instance.ApplyStage(userID, levelID, stage, __ApplyStage);
             else
-                yield return IUserData.instance.ApplyLevel(userID, levelID, stage, null);
+                yield return IUserData.instance.ApplyLevel(userID, levelID, stage, __ApplyLevel);
 
             IRewardData.instance = new GameRewardData(userID);
             
@@ -757,6 +754,13 @@ public class GameMain : GameUser
         __coroutine = null;
     }
 
+    private void __ApplyLevel(IUserData.LevelProperty property)
+    {
+        LevelShared.stage = property.stage;
+
+        property.value.Apply();
+    }
+
     private void __ApplyStage(IUserData.StageProperty property)
     {
         LevelPlayerShared.effectRage = property.cache.rage;
@@ -765,6 +769,8 @@ public class GameMain : GameUser
         LevelShared.expMax = property.cache.expMax;
         
         LevelShared.stage = property.stage;
+        
+        property.value.Apply();
     }
 
     private void __OnConfirmCancel()

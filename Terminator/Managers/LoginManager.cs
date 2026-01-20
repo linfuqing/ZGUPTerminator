@@ -132,6 +132,10 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
+    public static event Action onDestroyRewards;
+
+    public static event Action<Memory<UserRewardData>, Transform> onCreateRewards;
+
     public static event Action<IUserData.LevelStage> onAwake;
     
     /// <summary>
@@ -255,7 +259,7 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField]
     internal Reward[] _rewards;
 
-    private List<StageRewardStyle> __rewardStyles;
+    //private List<StageRewardStyle> __rewardStyles;
     private List<StageStyle>[] __stageStyles;
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
@@ -781,7 +785,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 stageStyle.toggle.isOn = false;
                                             }
 
-                                            __CreateRewards(stageStyle.rewardStyle, stage.rewards);
+                                            __CreateRewards(stageStyle.rewardParent, stage.rewards);
                                         }
                                         else
                                         {
@@ -809,7 +813,7 @@ public sealed class LoginManager : MonoBehaviour
                                             }
 
                                             if (!isUnlocked)
-                                                __CreateRewards(stageStyle.rewardStyle, stage.rewards);
+                                                __CreateRewards(stageStyle.rewardParent, stage.rewards);
 
                                             if (sceneUnlocked == null)
                                                 sceneUnlocked = new Dictionary<int, bool>();
@@ -1211,8 +1215,6 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelPlayerShared.effectRage = 0;
 
-        SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
-        
         LevelShared.items.Clear();
 
         LevelShared.stages.Clear();
@@ -1244,8 +1246,6 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelPlayerShared.effectRage = property.cache.rage;
 
-        SpawnerShared.layerMaskAndTags = property.value.spawnerLayerMaskAndTags;
-        
         LevelShared.items.Clear();
         if (property.cache.items != null)
         {
@@ -1274,74 +1274,14 @@ public sealed class LoginManager : MonoBehaviour
 
     private void __SubmitStage(IUserData.Property property)
     {
-        if (property.skills == null && property.attributes == null)
+        if (!property.isVail)
         {
             __isStart = false;
 
             return;
         }
-
-        float effectTargetHPScale = 0.0f, 
-            effectTargetRecovery = 0.0f, 
-            effectTargetDamageScale = 0.0f, 
-            effectDamageScale = 0.0f;
-        if (property.attributes != null)
-        {
-            foreach (var attribute in property.attributes)
-            {
-                switch (attribute.type)
-                {
-                    case UserAttributeType.Hp:
-                        effectTargetHPScale += attribute.value;
-                        break;
-                    case UserAttributeType.Attack:
-                        effectDamageScale += attribute.value;
-                        break;
-                    case UserAttributeType.Defence:
-                        effectTargetDamageScale += attribute.value;
-                        break;
-                    case UserAttributeType.Recovery:
-                        effectTargetRecovery += attribute.value;
-                        break;
-                }
-            }
-        }
-
-        LevelPlayerShared.effectTargetHP = property.hpMax;
-        LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
-        LevelPlayerShared.effectTargetRecovery = effectTargetRecovery;
-        LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
-        LevelPlayerShared.effectDamageScale = effectDamageScale;
         
-        LevelPlayerShared.instanceName = property.name;
-
-        ref var activeSkills = ref LevelPlayerShared.activeSkills;
-        activeSkills.Clear();
-        
-        ref var skillGroups = ref LevelPlayerShared.skillGroups;
-        skillGroups.Clear();
-        
-        if (property.skills != null)
-        {
-            LevelPlayerActiveSkill activeSkill;
-            LevelPlayerSkillGroup skillGroup;
-            foreach (var skill in property.skills)
-            {
-                switch (skill.type)
-                {
-                    case UserSkillType.Individual:
-                        activeSkill.name = skill.name;
-                        activeSkill.damageScale = skill.damage;// + effectDamageScale;
-                        activeSkills.Add(activeSkill);
-                        break;
-                    case UserSkillType.Group:
-                        skillGroup.name = skill.name;
-                        skillGroup.damageScale = skill.damage;// + effectDamageScale;
-                        skillGroups.Add(skillGroup);
-                        break;
-                }
-            }
-        }
+        property.Apply();
 
         uint userID = LoginManager.userID.Value;
         
@@ -1402,9 +1342,11 @@ public sealed class LoginManager : MonoBehaviour
             style.button.interactable = true;*/
     }
     
-    private void __CreateRewards(StageRewardStyle style, UserRewardData[] values)
+    private void __CreateRewards(Transform parent, UserRewardData[] values)
     {
-        if (style != null && values != null &&
+        if(onCreateRewards != null)
+            onCreateRewards(values, parent);
+        /*if (style != null && values != null &&
             values.Length > 0)
         {
             if (__rewardIndices == null)
@@ -1424,7 +1366,7 @@ public sealed class LoginManager : MonoBehaviour
             {
                 if(!__rewardIndices.TryGetValue(value.name, out rewardIndex))
                     continue;
-                
+
                 ref var reward = ref _rewards[rewardIndex];
                 rewardStyle = Instantiate(style, style.transform.parent);
 
@@ -1438,23 +1380,25 @@ public sealed class LoginManager : MonoBehaviour
 
                 __rewardStyles.Add(rewardStyle);
             }
-        }
+        }*/
     }
 
     private void __DestroyRewards()
     {
-        if (__rewardStyles != null)
+        if(onDestroyRewards != null)
+            onDestroyRewards();
+        /*if (__rewardStyles != null)
         {
             foreach (var rewardStyle in __rewardStyles)
             {
                 if (rewardStyle.onDestroy != null)
                     rewardStyle.onDestroy.Invoke();
-                            
+
                 Destroy(rewardStyle.gameObject, _rewardStyleDestroyTime);
             }
-                        
+
             __rewardStyles.Clear();
-        }
+        }*/
     }
 
     private void __OnLoginStatusChanged(bool status)

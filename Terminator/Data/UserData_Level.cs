@@ -119,6 +119,7 @@ public partial interface IUserData
         public float damage;
     }
 
+    [Serializable]
     public struct Property
     {
         public string name;
@@ -126,8 +127,78 @@ public partial interface IUserData
         public LayerMaskAndTagsAuthoring spawnerLayerMaskAndTags;
         public Skill[] skills;
         public UserAttributeData[] attributes;
+        
+        public bool isVail => skills != null || attributes != null;
+
+        public void Apply()
+        {
+            SpawnerShared.layerMaskAndTags = spawnerLayerMaskAndTags;
+
+            float effectTargetHPScale = 0.0f,
+                effectTargetRecovery = 0.0f,
+                effectTargetDamageScale = 0.0f,
+                effectDamageScale = 0.0f;
+            if (attributes != null)
+            {
+                foreach (var attribute in attributes)
+                {
+                    switch (attribute.type)
+                    {
+                        case UserAttributeType.Hp:
+                            effectTargetHPScale += attribute.value;
+                            break;
+                        case UserAttributeType.Attack:
+                            effectDamageScale += attribute.value;
+                            break;
+                        case UserAttributeType.Defence:
+                            effectTargetDamageScale += attribute.value;
+                            break;
+                        case UserAttributeType.Recovery:
+                            effectTargetRecovery += attribute.value;
+                            break;
+                    }
+                }
+            }
+
+            LevelPlayerShared.effectTargetHP = hpMax;
+            LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
+            LevelPlayerShared.effectTargetRecovery = effectTargetRecovery;
+            LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
+            LevelPlayerShared.effectDamageScale = effectDamageScale;
+
+            LevelPlayerShared.instanceName = name;
+
+            ref var activeSkills = ref LevelPlayerShared.activeSkills;
+            activeSkills.Clear();
+
+            ref var skillGroups = ref LevelPlayerShared.skillGroups;
+            skillGroups.Clear();
+
+            if (skills != null)
+            {
+                LevelPlayerActiveSkill activeSkill;
+                LevelPlayerSkillGroup skillGroup;
+                foreach (var skill in skills)
+                {
+                    switch (skill.type)
+                    {
+                        case UserSkillType.Individual:
+                            activeSkill.name = skill.name;
+                            activeSkill.damageScale = skill.damage; // + effectDamageScale;
+                            activeSkills.Add(activeSkill);
+                            break;
+                        case UserSkillType.Group:
+                            skillGroup.name = skill.name;
+                            skillGroup.damageScale = skill.damage; // + effectDamageScale;
+                            skillGroups.Add(skillGroup);
+                            break;
+                    }
+                }
+            }
+
+        }
     }
-    
+
     public struct LevelProperty
     {
         public int stage;

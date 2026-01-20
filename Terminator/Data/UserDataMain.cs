@@ -234,6 +234,8 @@ public partial class UserData
         public uint id;
 
         public int stages;
+
+        public IUserData.Property property;
     }
 
     [SerializeField] 
@@ -243,7 +245,34 @@ public partial class UserData
         {
             name = "S01",
             id = 1, 
-            stages = 2,
+            stages = 2, 
+            
+            
+            property = new IUserData.Property()
+            {
+                hpMax = 200,
+                
+                skills = new IUserData.Skill[]
+                {
+                    new IUserData.Skill()
+                    {
+                        name = "Berserk_011",
+                        damage = 0.0f
+                    }, 
+                    
+                    new IUserData.Skill()
+                    {
+                        name = "Shield_011",
+                        damage = 0.0f
+                    }, 
+                    
+                    new IUserData.Skill()
+                    {
+                        name = "Crossbow_011",
+                        damage = 0.0f
+                    }
+                }
+            }
         }, 
         
         new Chapter()
@@ -251,13 +280,44 @@ public partial class UserData
             name = "S02",
             id = 2, 
             stages = 2,
-        }, 
-        
-        new Chapter()
-        {
-            name = "S03",
-            id = 3, 
-            stages = 1,
+            
+            property = new IUserData.Property()
+            {
+                hpMax = 200,
+                
+                skills = new IUserData.Skill[]
+                {
+                    new IUserData.Skill()
+                    {
+                        name = "Berserk_011",
+                        damage = 0.0f
+                    }, 
+                    
+                    new IUserData.Skill()
+                    {
+                        name = "Shield_011",
+                        damage = 0.0f
+                    }, 
+                    
+                    new IUserData.Skill()
+                    {
+                        name = "Crossbow_011",
+                        damage = 0.0f
+                    }, 
+                    
+                    new IUserData.Skill()
+                    {
+                        name = "RocketPack_000",
+                        damage = 0.0f
+                    }, 
+                    
+                    new IUserData.Skill()
+                    {
+                        name = "Bowling_000",
+                        damage = 0.0f
+                    }
+                }
+            }
         }
     };
     
@@ -298,6 +358,8 @@ public partial class UserData
             {
                 status.stage = i;
                 status.levelID = chapter.id;
+                
+                UserData.levelCache = null;
             }
         }
         
