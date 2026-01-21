@@ -205,7 +205,7 @@ public partial struct LevelPickableSystem : ISystem
                     (result.count == 1 || result.index == 0 || result.version != version.entity))
                     continue;
 
-                if (result.priorityToStyleIndex != 0)
+                if (result.priorityToStyleIndex > 0)
                 {
                     if (version.priority == 0 && !skills.IsEmpty)
                     {
@@ -217,6 +217,8 @@ public partial struct LevelPickableSystem : ISystem
                     
                     version.priority += result.priorityToStyleIndex;
                 }
+                else if (result.priorityToStyleIndex < 0 && version.priority == 0 && skills.Length == 1)
+                    version.priority -= result.priorityToStyleIndex;
 
                 version.selection = result.selection;
                 version.count = result.count;
