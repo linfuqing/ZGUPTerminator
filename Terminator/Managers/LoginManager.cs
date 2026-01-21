@@ -36,12 +36,12 @@ public sealed class LoginManager : MonoBehaviour
         public Scene[] scenes;
     }
 
-    [Serializable]
+    /*[Serializable]
     internal struct Reward
     {
         public string name;
         public Sprite sprite;
-    }
+    }*/
 
     private struct Loader
     {
@@ -256,8 +256,8 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField] 
     internal Level[] _levels;
 
-    [SerializeField]
-    internal Reward[] _rewards;
+    //[SerializeField]
+    //internal Reward[] _rewards;
 
     //private List<StageRewardStyle> __rewardStyles;
     private List<StageStyle>[] __stageStyles;

@@ -721,7 +721,7 @@ public partial struct EffectSystem : ISystem
                 
                 EffectDamageParent instanceDamageParent;
                 if (index < damageParents.Length)
-                    instanceDamageParent = damageParents[index].GetRoot(damageParentMap, damages);
+                    instanceDamageParent = damageParents[index].GetRoot(damageParentMap/*, damages*/);
                 else
                 {
                     instanceDamageParent.index = -1;
@@ -1829,7 +1829,7 @@ public partial struct EffectSystem : ISystem
 
                                 EffectDamageParent instanceDamageParent;
                                 if (index < damageParents.Length)
-                                    instanceDamageParent = damageParents[index].GetRoot(damageParentMap, damages);
+                                    instanceDamageParent = damageParents[index].GetRoot(damageParentMap/*, damages*/);
                                 else
                                 {
                                     instanceDamageParent.index = -1;

@@ -129,11 +129,11 @@ public struct EffectDamageParent : IComponentData
     public Entity entity;
 
     public EffectDamageParent GetRoot(
-        in ComponentLookup<EffectDamageParent> damageParents,
-        in ComponentLookup<EffectDamage> damages)
+        in ComponentLookup<EffectDamageParent> damageParents/*,
+        in ComponentLookup<EffectDamage> damages*/)
     {
         if(damageParents.TryGetComponent(entity, out EffectDamageParent parent))
-            return parent.GetRoot(damageParents, damages);
+            return parent.GetRoot(damageParents/*, damages*/);
 
         return this;
     }

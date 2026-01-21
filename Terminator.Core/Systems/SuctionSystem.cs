@@ -465,7 +465,7 @@ public partial struct SuctionSystem : ISystem
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __targetGroup = builder
                 .WithAllRW<SuctionTargetVelocity, LocalTransform>()
-                .WithNone<FallToDestroy>()
+                //.WithNone<FallToDestroy>()
                 .Build(ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
