@@ -811,9 +811,9 @@ public static class LevelShared
         public static ref FixedList512Bytes<Item> values => ref Value.Data;
     }
 
-    private struct UserType
+    private struct UserGroup
     {
-        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<UserType>();
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<UserGroup>();
     }
 
     private struct Exp
@@ -846,11 +846,11 @@ public static class LevelShared
         set => Stage.Value.Data = value;
     }
     
-    public static int userType
+    public static int userGroup
     {
-        get => UserType.Value.Data;
+        get => UserGroup.Value.Data;
         
-        set => UserType.Value.Data = value;
+        set => UserGroup.Value.Data = value;
     }
 
     public static int exp

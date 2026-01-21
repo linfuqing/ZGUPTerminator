@@ -13,6 +13,14 @@ public partial class LevelManager : MonoBehaviour
 
         public IEnumerator value;
     }
+
+    [Serializable]
+    internal struct UserGroup
+    {
+        public string name;
+
+        public UnityEvent callback;
+    }
     
     [Serializable]
     internal struct Stage
@@ -84,6 +92,9 @@ public partial class LevelManager : MonoBehaviour
 
     [SerializeField] 
     internal GameObject[] _ranks;
+
+    [SerializeField] 
+    internal UserGroup[] _userGroups;
 
     [SerializeField] 
     internal Stage[] _stages;
@@ -456,6 +467,10 @@ public partial class LevelManager : MonoBehaviour
         __stageTime = __startTime;
         
         instance = this;
+
+        int userGroup = LevelShared.userGroup;
+        if(_userGroups != null && _userGroups.Length > userGroup)
+            _userGroups[userGroup].callback?.Invoke();
     }
 
     void OnApplicationFocus(bool focus)

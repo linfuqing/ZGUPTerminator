@@ -199,7 +199,7 @@ public partial struct LevelPickableSystem : ISystem
                     ref skills, 
                     ref random, 
                     out version.priority, 
-                    result.priorityToStyleIndex == 0 ? 0 : 1);
+                    result.priorityToStyleIndex > 0 ? 1 : 0);
 
                 if (skills.Length < 1 && 
                     (result.count == 1 || result.index == 0 || result.version != version.entity))

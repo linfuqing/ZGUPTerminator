@@ -112,6 +112,7 @@ public partial interface IUserData
         public UserLevel[] levels;
     }
 
+    [Serializable]
     public struct Skill
     {
         public UserSkillType type;
