@@ -33,6 +33,7 @@ public partial class LevelManager
         public enum Flag
         {
             Force = 0x01, 
+            Recommend = 0x02
         }
         
         public string name;
@@ -252,7 +253,7 @@ public partial class LevelManager
             {
                 destination.onEnable.Invoke();
 
-                bool isRecommend;
+                bool isRecommend, isGuideRecommend = false;
                 int guideSkillIndex = -1, guideIndex = -1;
                 SkillAsset asset;
                 string[] keyNames, oldKeyNames;
@@ -355,8 +356,13 @@ public partial class LevelManager
                         guideSkillIndex == -1)
                     {
                         guideIndex = SkillSelectionGuide.IndexOf(_skillSelectionGuides, source.name, isRecommend);
-                        if(guideIndex != -1)
+                        if (guideIndex != -1)
+                        {
                             guideSkillIndex = i;
+
+                            isGuideRecommend = (_skillSelectionGuides[guideIndex].flag &
+                                               SkillSelectionGuide.Flag.Recommend) == SkillSelectionGuide.Flag.Recommend;
+                        }
                     }
 
                     if (style.button != null && source.selectIndex != -1)
@@ -394,11 +400,12 @@ public partial class LevelManager
                 {
                     var skillName = skills[guideSkillIndex].name;
                     style = __skillStyles[skillName];
-                    if (style.onGuide != null)
-                        style.onGuide.Invoke();
+                    if(isGuideRecommend)
+                        style.onGuideRecommend?.Invoke();
+                    else
+                        style.onGuide?.Invoke();
 
-                    if (_onSkillSelectionGuide != null)
-                        _onSkillSelectionGuide.Invoke(guideIndex);
+                    _onSkillSelectionGuide?.Invoke(guideIndex);
                 }
 
                 if (result)

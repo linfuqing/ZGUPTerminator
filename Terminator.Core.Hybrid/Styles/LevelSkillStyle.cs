@@ -9,6 +9,7 @@ using ZG;
 public class LevelSkillStyle : SkillStyle
 {
     public UnityEvent onGuide;
+    public UnityEvent onGuideRecommend;
     public UnityEvent onRecommend;
     public UnityEvent onDestroy;
 
