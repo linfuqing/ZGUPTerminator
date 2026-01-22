@@ -554,7 +554,7 @@ public sealed class LoginManager : MonoBehaviour
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved;
         int movedLevelIndex = -1, 
-            //selectedLevelIndex = -1,
+            selectedLevelIndex = -1,
             //finalLevelIndex = -1, 
             endLevelIndex = -1, 
             numStageRewards = 0, 
@@ -629,14 +629,14 @@ public sealed class LoginManager : MonoBehaviour
             if (isMoved)
                 movedLevelIndex = userLevelIndex;
 
-            /*if (__selectedUserLevelID == 0 || __selectedUserLevelID == userLevel.id)
+            if (__selectedUserLevelID == 0 || __selectedUserLevelID == userLevel.id)
                 isSelected = true;
             if (isSelected && selectedLevelIndex != -1 &&
                      levelChapters.levels[selectedLevelIndex].id == __selectedUserLevelID)
                 isSelected = false;
 
             if (isSelected)
-                selectedLevelIndex = userLevelIndex;*/
+                selectedLevelIndex = userLevelIndex;
 
             endLevelIndex = userLevelIndex;
 
@@ -950,7 +950,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 }
 
                                                 if (__levelActivatedFirst == null &&
-                                                    __sceneActiveDepth == 0// &&
+                                                    (selectedLevelIndex == -1 || selectedLevelIndex == userLevelIndex)
+                                                    //__sceneActiveDepth == 0// &&
                                                     //selectedLevelIndex == -1 &&
                                                     //finalLevelIndex == userLevelIndex
                                                     )
