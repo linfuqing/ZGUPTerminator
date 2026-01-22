@@ -421,6 +421,9 @@ public class GameMain : GameUser
     [SerializeField] 
     internal int _playerPrefVersion = 1;
 
+    [SerializeField] 
+    internal Vector2Int _userGroupRange = new Vector2Int(0, 1);
+
     private Coroutine __coroutine;
     
     private static bool __isActivated;
@@ -519,6 +522,8 @@ public class GameMain : GameUser
             foreach (var onStart in onStarts)
                 yield return ((Func<IEnumerator>)onStart)();
         }
+        
+        LevelShared.userGroup = UnityEngine.Random.Range(_userGroupRange.x, _userGroupRange.y + 1);
 
         var manager = GameManager.instance;
         if (manager != null)

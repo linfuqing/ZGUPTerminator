@@ -776,7 +776,21 @@ public sealed class LoginManager : MonoBehaviour
                                         if (stageStyle.onTitle != null)
                                             stageStyle.onTitle.Invoke(( /*i*/sceneStageIndex + 1).ToString());
 
-                                        if ((stage.flag & UserStage.Flag.Unlocked) == UserStage.Flag.Unlocked)
+                                        if (stage.rewardFlags == null)
+                                        {
+                                            if (stageStyle.onHot != null)
+                                                stageStyle.onHot.Invoke(false);
+
+                                            if (stageStyle.toggle != null)
+                                            {
+                                                stageStyle.toggle.interactable = false;
+
+                                                stageStyle.toggle.isOn = false;
+                                            }
+
+                                            __CreateRewards(stageStyle.rewardParent, stage.rewards);
+                                        }
+                                        else
                                         {
                                             isUnlocked = false;
 
@@ -900,20 +914,6 @@ public sealed class LoginManager : MonoBehaviour
                                                     }
                                                 });
                                             }
-                                        }
-                                        else
-                                        {
-                                            if (stageStyle.onHot != null)
-                                                stageStyle.onHot.Invoke(false);
-
-                                            if (stageStyle.toggle != null)
-                                            {
-                                                stageStyle.toggle.interactable = false;
-
-                                                stageStyle.toggle.isOn = false;
-                                            }
-
-                                            __CreateRewards(stageStyle.rewardParent, stage.rewards);
                                         }
                                         
                                         //stageStyle.gameObject.SetActive(true);
