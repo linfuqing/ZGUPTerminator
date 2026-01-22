@@ -554,7 +554,7 @@ public sealed class LoginManager : MonoBehaviour
         numLevels = levelChapters.levels.Length;
         bool isHot = false;
         int selectedLevelIndex = -1, 
-            finalLevelIndex = -1, 
+            //finalLevelIndex = -1, 
             endLevelIndex = -1, 
             numStageRewards = 0, 
             numStageRewardsTotal = 0, 
@@ -628,10 +628,10 @@ public sealed class LoginManager : MonoBehaviour
             {
                 selectedLevelIndex = userLevelIndex;
 
-                finalLevelIndex = userLevelIndex;
+                //finalLevelIndex = userLevelIndex;
             }
-            else if(__sceneActiveDepth != 0)
-                finalLevelIndex = userLevelIndex;
+            //else if(__sceneActiveDepth != 0)
+                //finalLevelIndex = userLevelIndex;
 
             endLevelIndex = userLevelIndex;
 
@@ -773,21 +773,7 @@ public sealed class LoginManager : MonoBehaviour
                                         if (stageStyle.onTitle != null)
                                             stageStyle.onTitle.Invoke(( /*i*/sceneStageIndex + 1).ToString());
 
-                                        if (stage.rewardFlags == null)
-                                        {
-                                            if (stageStyle.onHot != null)
-                                                stageStyle.onHot.Invoke(false);
-
-                                            if (stageStyle.toggle != null)
-                                            {
-                                                stageStyle.toggle.interactable = false;
-
-                                                stageStyle.toggle.isOn = false;
-                                            }
-
-                                            __CreateRewards(stageStyle.rewardParent, stage.rewards);
-                                        }
-                                        else
+                                        if ((stage.flag & UserStage.Flag.Unlocked) == UserStage.Flag.Unlocked)
                                         {
                                             isUnlocked = false;
 
@@ -912,6 +898,21 @@ public sealed class LoginManager : MonoBehaviour
                                                 });
                                             }
                                         }
+                                        else
+                                        {
+                                            if (stageStyle.onHot != null)
+                                                stageStyle.onHot.Invoke(false);
+
+                                            if (stageStyle.toggle != null)
+                                            {
+                                                stageStyle.toggle.interactable = false;
+
+                                                stageStyle.toggle.isOn = false;
+                                            }
+
+                                            __CreateRewards(stageStyle.rewardParent, stage.rewards);
+                                        }
+                                        
                                         //stageStyle.gameObject.SetActive(true);
 
                                         stageStyles.Add(stageStyle);
@@ -935,10 +936,11 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
+                                            temp = false;
                                             //bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 || 
-                                                selectedLevelIndex != -1 && selectedLevelIndex != userLevelIndex || 
-                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp)
+                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp || 
+                                                selectedLevelIndex != -1 && selectedLevelIndex != userLevelIndex)
                                                 //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
@@ -952,7 +954,9 @@ public sealed class LoginManager : MonoBehaviour
                                                 if (__levelActivatedFirst == null &&
                                                     __sceneActiveDepth == 0 &&
                                                     //selectedLevelIndex == -1 &&
-                                                    finalLevelIndex == userLevelIndex)
+                                                    //finalLevelIndex == userLevelIndex
+                                                    temp
+                                                    )
                                                 {
                                                     __levelActivatedFirst = false;
                                                     
