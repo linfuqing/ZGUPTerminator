@@ -434,19 +434,23 @@ public sealed class LoginManager : MonoBehaviour
         else
             return;
         
-        foreach (var levelStyle in __levelStyles.Values)
-        {
-            if (levelStyle.toggle.isOn)
-            {
-                levelStyle.toggle.onValueChanged.Invoke(true);
-                
-                break;
-            }
-        }
-        
+        int selectedLevelIndex = __levelStyles.Count - 1;
         var scrollRect = _style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
-        if (scrollRect != null)
-            scrollRect.MoveTo(__levelStyles.Count - 1);
+        if (scrollRect != null && scrollRect.selectedIndex[scrollRect.axis] != selectedLevelIndex)
+            scrollRect.MoveTo(selectedLevelIndex);
+        else
+        {
+            foreach (var levelStyle in __levelStyles.Values)
+            {
+                if (levelStyle.toggle.isOn)
+                {
+                    levelStyle.toggle.onValueChanged.Invoke(true);
+                
+                    break;
+                }
+            }
+
+        }
     }
     
     [Preserve]
