@@ -950,8 +950,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 }
 
                                                 if (__levelActivatedFirst == null &&
+                                                    __sceneActiveDepth == 0 && 
                                                     (selectedLevelIndex == -1 || selectedLevelIndex == userLevelIndex)
-                                                    //__sceneActiveDepth == 0// &&
                                                     //selectedLevelIndex == -1 &&
                                                     //finalLevelIndex == userLevelIndex
                                                     )
