@@ -474,7 +474,7 @@ public partial class UserDataMain
                     guaranteedTimes = 0;
 
                 reward.name = purchasePoolOption.name;
-                reward.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount);
+                reward.count = UnityEngine.Random.Range(purchasePoolOption.minCount, purchasePoolOption.maxCount + 1);
 
                 __ApplyReward(reward, outRewards);
             }

@@ -552,8 +552,9 @@ public sealed class LoginManager : MonoBehaviour
             levelIndices[_levels[i].name] = i;
 
         numLevels = levelChapters.levels.Length;
-        bool isHot = false;
-        int selectedLevelIndex = -1, 
+        bool isHot = false, isMoved;
+        int movedLevelIndex = -1, 
+            //selectedLevelIndex = -1,
             //finalLevelIndex = -1, 
             endLevelIndex = -1, 
             numStageRewards = 0, 
@@ -616,22 +617,26 @@ public sealed class LoginManager : MonoBehaviour
                 }
             }
 
+            isMoved = isSelected;
             if (__selectedUserLevelID == 0)
-                isSelected |= __sceneActiveDepth == 0;
+                isMoved |= __sceneActiveDepth == 0;
             else if (__sceneActiveDepth == 0)
-                isSelected = __selectedUserLevelID == userLevel.id;
-            else if (isSelected && selectedLevelIndex != -1 &&
+                isMoved = __selectedUserLevelID == userLevel.id;
+            else if (isMoved && movedLevelIndex != -1 &&
+                     levelChapters.levels[movedLevelIndex].id == __selectedUserLevelID)
+                isMoved = false;
+
+            if (isMoved)
+                movedLevelIndex = userLevelIndex;
+
+            /*if (__selectedUserLevelID == 0 || __selectedUserLevelID == userLevel.id)
+                isSelected = true;
+            if (isSelected && selectedLevelIndex != -1 &&
                      levelChapters.levels[selectedLevelIndex].id == __selectedUserLevelID)
                 isSelected = false;
 
             if (isSelected)
-            {
-                selectedLevelIndex = userLevelIndex;
-
-                //finalLevelIndex = userLevelIndex;
-            }
-            //else if(__sceneActiveDepth != 0)
-                //finalLevelIndex = userLevelIndex;
+                selectedLevelIndex = userLevelIndex;*/
 
             endLevelIndex = userLevelIndex;
 
@@ -694,16 +699,10 @@ public sealed class LoginManager : MonoBehaviour
                 {
                     __levelName = selectedLevel.name;
                     
-                    //selectedEnergy = selectedLevel.energy;
-
-                    /*if (style.button != null)
-                        style.button.interactable = __selectedLevelEnergy <= energy && !__isStart;*/
-                    
-                    //__selectedLevelIndex = index;
                     __selectedUserLevelID = selectedLevel.id;
 
-                    if (selectedLevelIndex == userLevelIndex)
-                        selectedLevelIndex = -1;
+                    /*if (selectedLevelIndex == userLevelIndex)
+                        selectedLevelIndex = -1;*/
 
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
@@ -939,9 +938,8 @@ public sealed class LoginManager : MonoBehaviour
                                             temp = false;
                                             //bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 || 
-                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp || 
-                                                selectedLevelIndex != -1 && selectedLevelIndex != userLevelIndex)
-                                                //GameMain.GetSceneTimes(level.scenes[currentSceneIndex].name) > 0)
+                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp/* || 
+                                                selectedLevelIndex != -1 && selectedLevelIndex != userLevelIndex*/)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
@@ -952,10 +950,9 @@ public sealed class LoginManager : MonoBehaviour
                                                 }
 
                                                 if (__levelActivatedFirst == null &&
-                                                    __sceneActiveDepth == 0 &&
+                                                    __sceneActiveDepth == 0// &&
                                                     //selectedLevelIndex == -1 &&
                                                     //finalLevelIndex == userLevelIndex
-                                                    temp
                                                     )
                                                 {
                                                     __levelActivatedFirst = false;
@@ -1147,11 +1144,9 @@ public sealed class LoginManager : MonoBehaviour
         var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            selectedLevelIndex = Mathf.Max(0, selectedLevelIndex);
-            scrollRect.MoveTo(selectedLevelIndex);
+            movedLevelIndex = Mathf.Max(0, movedLevelIndex);
+            scrollRect.MoveTo(movedLevelIndex);
         }
-        else
-            selectedLevelIndex = -1;
 
         if (isHot)
         {
