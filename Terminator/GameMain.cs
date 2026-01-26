@@ -409,6 +409,8 @@ public class GameMain : GameUser
     public static readonly string DefaultLevelSceneName = "DefaultLevelSceneName";
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
+    
+    public static readonly string NAME_SPACE_USER_GROUP = "GameMainUserGroup";
 
     //public const string NAME_SPACE_SCENE = "GameMainScene";
     //public const string NAME_SPACE_LEVEL = "GameMainLevel";
@@ -522,8 +524,16 @@ public class GameMain : GameUser
             foreach (var onStart in onStarts)
                 yield return ((Func<IEnumerator>)onStart)();
         }
-        
-        LevelShared.userGroup = UnityEngine.Random.Range(_userGroupRange.x, _userGroupRange.y + 1);
+
+        int userGroup = PlayerPrefs.GetInt(NAME_SPACE_USER_GROUP, -1);
+        if (userGroup == -1)
+        {
+            userGroup = UnityEngine.Random.Range(_userGroupRange.x, _userGroupRange.y + 1);
+            
+            PlayerPrefs.SetInt(NAME_SPACE_USER_GROUP, userGroup);
+        }
+
+        LevelShared.userGroup = userGroup;
 
         var manager = GameManager.instance;
         if (manager != null)

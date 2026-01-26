@@ -236,6 +236,18 @@ public partial class UserData
         public int stages;
 
         public IUserData.Property property;
+
+        public static int IndexOf(Chapter[] chapters, uint id)
+        {
+            int numChapters = chapters.Length;
+            for (int i = 0; i < numChapters; ++i)
+            {
+                if (chapters[i].id == id)
+                    return i;
+            }
+
+            return -1;
+        }
     }
 
     [SerializeField] 

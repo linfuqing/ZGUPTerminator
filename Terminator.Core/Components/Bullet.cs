@@ -963,6 +963,7 @@ public struct BulletDefinition
 
             if (minDot < 1.0f)
             {
+                vector.y = 0.0f;
                 float dot = math.normalizesafe(vector).z;
                 if (dot < minDot)
                     return false;

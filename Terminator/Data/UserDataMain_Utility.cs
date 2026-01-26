@@ -770,10 +770,18 @@ public partial class UserDataMain
             {
                 styleIndex = __GetCardStyleIndex(card.styleName);
                 indices = __GetCardLevelIndices(styleIndex);
-                skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
+                
+                ref var cardLevel = ref _cardLevels[indices[level - 1]];
+                skill.damage = cardLevel.skillGroupDamage;
+
+                property = cardLevel.property;
             }
             else
+            {
                 skill.damage = card.skillGroupDamage;
+                
+                property = card.property;
+            }
 
             skill.type = UserSkillType.Individual;
             skill.name = card.skillName;
@@ -782,6 +790,22 @@ public partial class UserDataMain
             skill.type = UserSkillType.Group;
             skill.name = __GetSkillGroupName(card.skillName);
             skills.Add(skill);
+            
+            if (property.attributes != null && property.attributes.Length > 0)
+            {
+                if (attributeResults == null)
+                    attributeResults = new List<UserPropertyData.Attribute>();
+
+                attributeResults.AddRange(property.attributes);
+            }
+
+            if (property.skills != null && property.skills.Length > 0)
+            {
+                if (skillResults == null)
+                    skillResults = new List<UserPropertyData.Skill>();
+
+                skillResults.AddRange(property.skills);
+            }
         }
 
         //先计算装备增益
@@ -1129,16 +1153,40 @@ public partial class UserDataMain
                         {
                             styleIndex = __GetCardStyleIndex(card.styleName);
                             indices = __GetCardLevelIndices(styleIndex);
-                            skill.damage = _cardLevels[indices[level - 1]].skillGroupDamage;
+
+                            ref var cardLevel = ref _cardLevels[indices[level - 1]];
+                            skill.damage = cardLevel.skillGroupDamage;
+
+                            property = cardLevel.property;
                         }
                         else
+                        {
                             skill.damage = card.skillGroupDamage;
+
+                            property = card.property;
+                        }
 
                         skills.Add(skill);
 
                         skill.type = UserSkillType.Group;
                         skill.name = __GetSkillGroupName(card.skillName);
                         skills.Add(skill);
+                        
+                        if (property.attributes != null && property.attributes.Length > 0)
+                        {
+                            if (attributeResults == null)
+                                attributeResults = new List<UserPropertyData.Attribute>();
+
+                            attributeResults.AddRange(property.attributes);
+                        }
+
+                        if (property.skills != null && property.skills.Length > 0)
+                        {
+                            if (skillResults == null)
+                                skillResults = new List<UserPropertyData.Skill>();
+
+                            skillResults.AddRange(property.skills);
+                        }
                         break;
                     case SkillInfo.BelongTo.Role:
                         ref var role = ref _roles[skillInfo.index];

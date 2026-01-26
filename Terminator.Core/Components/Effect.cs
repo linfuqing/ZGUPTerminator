@@ -287,7 +287,8 @@ public struct EffectTargetHP : IComponentData, IEnableableComponent
         else
         {
             if (messageLayerMask == 0)
-                messageLayerMask = 1;
+                //messageLayerMask = 1;
+                return;
 
             int origin;
             do

@@ -1620,7 +1620,7 @@ public partial struct EffectSystem : ISystem
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
-                    ((targetHP.value != 0 || targetHP.shield != 0) && targetHP.messageLayerMask != 0 ||
+                    ((targetHP.value != 0 || targetHP.shield != 0)/* && targetHP.messageLayerMask != 0*/ ||
                      damage != 0 && messageLayerMask != 0))
                 {
                     float3 position = localToWorlds[index].Position;

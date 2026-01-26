@@ -701,7 +701,8 @@ public partial class UserData
         {
             yield return null;
             
-            var chapter = _chapters[stage];
+            int chapterIndex = Chapter.IndexOf(_chapters, levelID);
+            var chapter = _chapters[chapterIndex];
             var stageCache = GetStageCache(chapter.name, stage);
             
             StartStage(chapter.name, stage);
@@ -817,7 +818,7 @@ public partial class UserData
 
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
             
-            __SubmitStageFlag(hpPercentage == 100, /*flag, */temp.name, temp.stage, stage);
+            __SubmitStageFlag(hpPercentage > 0, /*flag, */temp.name, temp.stage, stage);
 
             IUserData.StageCache stageCache;
             stageCache.seconds = temp.seconds;

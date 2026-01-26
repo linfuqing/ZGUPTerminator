@@ -825,7 +825,8 @@ public partial class UserData
         {
             yield return null;
 
-            var chapter = _chapters[closestStage];
+            int chapterIndex = Chapter.IndexOf(_chapters, levelID);
+            var chapter = _chapters[chapterIndex];
             
             StartStage(chapter.name, closestStage);
             

@@ -52,6 +52,8 @@ public partial class UserDataMain
 
         public float skillGroupDamage;
         
+        public UserPropertyData property;
+
 #if UNITY_EDITOR
         [CSVField]
         public string 卡牌名字
@@ -136,6 +138,8 @@ public partial class UserDataMain
 
         [Tooltip("下一等级技能组伤害")]
         public float skillGroupDamage;
+
+        public UserPropertyData property;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -180,6 +184,69 @@ public partial class UserDataMain
             set
             {
                 skillGroupDamage = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌等级属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserPropertyData.Attribute attribute;
+                property.attributes = new UserPropertyData.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserPropertyData.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌等级技能
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserPropertyData.Skill skill;
+                property.skills = new UserPropertyData.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserPropertyData.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    property.skills[i] = skill;
+                }
             }
         }
 #endif

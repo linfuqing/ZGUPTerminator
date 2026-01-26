@@ -351,7 +351,7 @@ public class AnimationCurveTransformAuthoring : MonoBehaviour
         public override void Bake(AnimationCurveTransformAuthoring authoring)
         {
             if(authoring._clip == null)
-                Debug.LogError($"Clip of authoring {authoring} is null", authoring);
+                Debug.LogError($"Clip of authoring {authoring.transform.root} is null", authoring.transform.root);
             
             var transforms = authoring._clip.ToAnimationCurveTransforms();
             
