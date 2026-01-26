@@ -7,7 +7,8 @@ public struct UserPropertyData
     public enum Opcode
     {
         Add, 
-        Mul
+        Mul, 
+        AddIfExists
     }
 
     [Serializable]

@@ -40,7 +40,7 @@ public partial class UserDataMain
 
     [SerializeField, CSV("_skills", guidIndex = -1, nameIndex = 0)]
     internal string _skillsPath;
-    
+
     [Serializable]
     internal struct Card
     {

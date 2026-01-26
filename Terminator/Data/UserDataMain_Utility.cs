@@ -431,6 +431,7 @@ public partial class UserDataMain
                     switch (propertyAttribute.opcode)
                     {
                         case UserPropertyData.Opcode.Add:
+                        case UserPropertyData.Opcode.AddIfExists:
                             attribute.value += propertyAttribute.value;
                             break;
                         case UserPropertyData.Opcode.Mul:
@@ -528,6 +529,7 @@ public partial class UserDataMain
                     switch (propertySkill.opcode)
                     {
                         case UserPropertyData.Opcode.Add:
+                        case UserPropertyData.Opcode.AddIfExists:
                             skill.damage += propertySkill.damage;
                             break;
                         case UserPropertyData.Opcode.Mul:
@@ -804,7 +806,27 @@ public partial class UserDataMain
                 if (skillResults == null)
                     skillResults = new List<UserPropertyData.Skill>();
 
-                skillResults.AddRange(property.skills);
+                foreach (var propertySkill in property.skills)
+                {
+                    if (propertySkill.opcode == UserPropertyData.Opcode.AddIfExists)
+                    {
+                        switch (propertySkill.type)
+                        {
+                            case UserSkillType.Group:
+                                if(propertySkill.name != skill.name)
+                                    continue;
+                                            
+                                break;
+                            case UserSkillType.Individual:
+                                if(propertySkill.name != card.skillName)
+                                    continue;
+
+                                break;
+                        }
+                    }
+                                
+                    skillResults.Add(propertySkill);
+                }
             }
         }
 
@@ -900,10 +922,11 @@ public partial class UserDataMain
 
         public BelongTo belongTo;
         public int index;
+        public int groupIndex;
 
         public bool Equals(SkillInfo other)
         {
-            return belongTo == other.belongTo && index == other.index;
+            return belongTo == other.belongTo && index == other.index && groupIndex == other.groupIndex;
         }
     }
 
@@ -917,7 +940,7 @@ public partial class UserDataMain
             __skillNameToInfos = new Dictionary<string, SkillInfo>();
 
             info.belongTo = SkillInfo.BelongTo.Card;
-            int i, numCards = _cards.Length;
+            int i, j, numSkillNames, numCards = _cards.Length;
             for (i = 0; i < numCards; ++i)
             {
                 ref var card = ref _cards[i];
@@ -925,9 +948,12 @@ public partial class UserDataMain
                 info.index = i;
 
                 skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName));
-
-                foreach (var skillName in skillNames)
-                    __skillNameToInfos.Add(skillName, info);
+                numSkillNames = skillNames.Count;
+                for (j = 0; j < numSkillNames; ++j)
+                {
+                    info.groupIndex = j;
+                    __skillNameToInfos.Add(skillNames[j], info);
+                }
             }
             
             info.belongTo = SkillInfo.BelongTo.Role;
@@ -948,9 +974,12 @@ public partial class UserDataMain
                     else*/
                     {
                         skillNames = __GetSkillGroupSkillNames(skillGroupName);
-                        
-                        foreach (var skillName in skillNames)
-                            __skillNameToInfos.Add(skillName, info);
+                        numSkillNames = skillNames.Count;
+                        for (j = 0; j < numSkillNames; ++j)
+                        {
+                            info.groupIndex = j;
+                            __skillNameToInfos.Add(skillNames[j], info);
+                        }
                     }
                 }
             }
@@ -968,12 +997,19 @@ public partial class UserDataMain
                 {
                     skillGroupName = __GetSkillGroupName(accessory.skillName);
                     if (string.IsNullOrEmpty(skillGroupName))
+                    {
+                        info.groupIndex = -1;
                         __skillNameToInfos.Add(accessory.skillName, info);
+                    }
                     else
                     {
                         skillNames = __GetSkillGroupSkillNames(skillGroupName);
-                        foreach (var skillName in skillNames)
-                            __skillNameToInfos.Add(skillName, info);
+                        numSkillNames = skillNames.Count;
+                        for (j = 0; j < numSkillNames; ++j)
+                        {
+                            info.groupIndex = j;
+                            __skillNameToInfos.Add(skillNames[j], info);
+                        }
                     }
                 }
             }
@@ -1185,7 +1221,27 @@ public partial class UserDataMain
                             if (skillResults == null)
                                 skillResults = new List<UserPropertyData.Skill>();
 
-                            skillResults.AddRange(property.skills);
+                            foreach (var propertySkill in property.skills)
+                            {
+                                if (propertySkill.opcode == UserPropertyData.Opcode.AddIfExists)
+                                {
+                                    switch (propertySkill.type)
+                                    {
+                                        case UserSkillType.Group:
+                                            if(propertySkill.name != skill.name)
+                                                continue;
+                                            
+                                            break;
+                                        case UserSkillType.Individual:
+                                            if(propertySkill.name != cacheSkill)
+                                                continue;
+
+                                            break;
+                                    }
+                                }
+                                
+                                skillResults.Add(propertySkill);
+                            }
                         }
                         break;
                     case SkillInfo.BelongTo.Role:
