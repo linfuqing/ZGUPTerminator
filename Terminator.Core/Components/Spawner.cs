@@ -1016,8 +1016,9 @@ public struct SpawnerEntity : IComponentData, IEquatable<SpawnerEntity>, ICompar
 }
 
 
-public struct SpawnerTrigger : IComponentData
+public struct SpawnerTrigger : IBufferElementData
 {
+    public uint belongs;
     public LayerMaskAndTags layerMaskAndTags;
 }
 

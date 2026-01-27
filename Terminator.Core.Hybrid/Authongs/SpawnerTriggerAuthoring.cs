@@ -5,11 +5,13 @@ using UnityEngine;
 //[RequireComponent(typeof(SimulationEventAuthoring))]
 public class SpawnerTriggerAuthoring : MonoBehaviour
 {
-    [SerializeField]
-    internal LayerMask _layerMask;
-    
-    [SerializeField]
-    internal string[] _tags;
+    [System.Serializable]
+    internal struct SpawnerTriggerData
+    {
+        public LayerMask belongs;
+
+        public LayerMaskAndTagsAuthoring layerMaskAndTags;
+    }
     
     class Baker : Baker<SpawnerTriggerAuthoring>
     {
@@ -21,17 +23,42 @@ public class SpawnerTriggerAuthoring : MonoBehaviour
             
             var entity = GetEntity(TransformUsageFlags.None);
 
-            LayerMaskAndTagsAuthoring layerMaskAndTags;
-            layerMaskAndTags.layerMask = authoring._layerMask;
-            layerMaskAndTags.tags = authoring._tags;
+            var triggers = AddBuffer<SpawnerTrigger>(entity);
             
-            SpawnerTrigger trigger;
-            trigger.layerMaskAndTags = layerMaskAndTags;
+            LayerMaskAndTagsAuthoring layerMaskAndTags;
+            int numTriggers = authoring._triggers == null ? 0 : authoring._triggers.Length;
+            if (numTriggers > 0)
+            {
+                triggers.ResizeUninitialized(numTriggers);
+                for (int i = 0; i < numTriggers; ++i)
+                {
+                    ref var source = ref authoring._triggers[i];
+                    ref var destination = ref triggers.ElementAt(i);
 
-            AddComponent(entity, trigger);
-            /*AddBuffer<SimulationEvent>(entity);
-            SetComponentEnabled<SimulationEvent>(entity, false);*/
+                    destination.belongs = (uint)source.belongs.value;
+                    destination.layerMaskAndTags = source.layerMaskAndTags;
+                }
+            }
+            else
+            {
+                triggers.ResizeUninitialized(1);
+                ref var trigger = ref triggers.ElementAt(0);
+                layerMaskAndTags.layerMask = authoring._layerMask;
+                layerMaskAndTags.tags = authoring._tags;
+
+                trigger.layerMaskAndTags = layerMaskAndTags;
+                trigger.belongs = 0;
+            }
         }
     }
+    
+    [SerializeField]
+    internal LayerMask _layerMask;
+    
+    [SerializeField]
+    internal string[] _tags;
+
+    [SerializeField, Tooltip("填了这个默认标签将不再生效")]
+    internal SpawnerTriggerData[] _triggers;
 }
 #endif

@@ -196,11 +196,41 @@ public partial struct SpawnerSystem : ISystem
         public RefRW<SpawnerLayerMaskAndTagsOverride> layerMaskAndTags;
 
         [ReadOnly]
-        public NativeArray<SpawnerTrigger> triggers;
+        public CollisionWorld collisionWorld;
+
+        [ReadOnly]
+        public BufferAccessor<SpawnerTrigger> triggers;
+
+        [ReadOnly]
+        public BufferAccessor<SimulationEvent> simulationEvents;
 
         public void Execute(int index)
         {
-            layerMaskAndTags.ValueRW.value.InterOr(triggers[index].layerMaskAndTags);
+            bool isContains;
+            int rigidBodyIndex;
+            var simulationEvents = this.simulationEvents[index];
+            foreach (var trigger in triggers[index])
+            {
+                if (trigger.belongs != 0)
+                {
+                    isContains = false;
+                    foreach (var simulationEvent in simulationEvents)
+                    {
+                        rigidBodyIndex = collisionWorld.GetRigidBodyIndex(simulationEvent.entity);
+                        isContains = rigidBodyIndex != -1 &&
+                                     (collisionWorld.Bodies[rigidBodyIndex].Collider.Value.GetCollisionFilter(simulationEvent.colliderKey)
+                                          .BelongsTo &
+                                      trigger.belongs) != 0;
+                        if (isContains)
+                            break;
+                    }
+                    
+                    if(!isContains)
+                        continue;
+                }
+                
+                layerMaskAndTags.ValueRW.value.InterOr(trigger.layerMaskAndTags);
+            }
         }
     }
 
@@ -213,7 +243,13 @@ public partial struct SpawnerSystem : ISystem
         public ComponentLookup<SpawnerLayerMaskAndTagsOverride> layerMaskAndTags;
 
         [ReadOnly]
-        public ComponentTypeHandle<SpawnerTrigger> triggerType;
+        public CollisionWorld collisionWorld;
+
+        [ReadOnly]
+        public BufferTypeHandle<SpawnerTrigger> triggerType;
+
+        [ReadOnly]
+        public BufferTypeHandle<SimulationEvent> simulationEventType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
@@ -222,7 +258,9 @@ public partial struct SpawnerSystem : ISystem
             
             Trigger trigger;
             trigger.layerMaskAndTags = layerMaskAndTags.GetRefRW(layerMaskEntity);
-            trigger.triggers = chunk.GetNativeArray(ref triggerType);
+            trigger.collisionWorld = collisionWorld;
+            trigger.triggers = chunk.GetBufferAccessor(ref triggerType);
+            trigger.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
                 trigger.Execute(i);
@@ -436,7 +474,9 @@ public partial struct SpawnerSystem : ISystem
     private ComponentTypeHandle<SpawnerLayerMaskAndTagsInclude> __layerMaskAndTagsIncludeType;
     private ComponentTypeHandle<SpawnerLayerMaskAndTagsExclude> __layerMaskAndTagsExcludeType;
 
-    private ComponentTypeHandle<SpawnerTrigger> __triggerType;
+    private BufferTypeHandle<SimulationEvent> __simulationEventType;
+
+    private BufferTypeHandle<SpawnerTrigger> __triggerType;
 
     private BufferTypeHandle<SpawnerPrefab> __prefabType;
     private BufferTypeHandle<SpawnerStatus> __statusType;
@@ -463,7 +503,8 @@ public partial struct SpawnerSystem : ISystem
         __layerMaskAndTagsOverrideType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTagsOverride>(true);
         __layerMaskAndTagsIncludeType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTagsInclude>(true);
         __layerMaskAndTagsExcludeType = state.GetComponentTypeHandle<SpawnerLayerMaskAndTagsExclude>(true);
-        __triggerType = state.GetComponentTypeHandle<SpawnerTrigger>(true);
+        __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
+        __triggerType = state.GetBufferTypeHandle<SpawnerTrigger>(true);
         __prefabType = state.GetBufferTypeHandle<SpawnerPrefab>(true);
         __statusType = state.GetBufferTypeHandle<SpawnerStatus>();
         __entityCountType = state.GetBufferTypeHandle<SpawnerEntityCount>();
@@ -506,13 +547,18 @@ public partial struct SpawnerSystem : ISystem
         reset.layerMaskEntity = layerMaskEntity;
         reset.layerMaskAndTags = __layerMaskAndTags;
         var resetJobHandle = reset.ScheduleByRef(jobHandle);
-
+        
+        var collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
+        
+        __simulationEventType.Update(ref state);
         __triggerType.Update(ref state);
 
         TriggerEx trigger;
         trigger.layerMaskEntity = layerMaskEntity;
         trigger.layerMaskAndTags = __layerMaskAndTags;
+        trigger.collisionWorld = collisionWorld;
         trigger.triggerType = __triggerType;
+        trigger.simulationEventType = __simulationEventType;
         var triggerJobHandle = trigger.ScheduleParallelByRef(__groupToTrigger, resetJobHandle);
 
         __messageParameters.Update(ref state);
@@ -539,7 +585,7 @@ public partial struct SpawnerSystem : ISystem
         collect.spawnerTime = SystemAPI.GetSingleton<SpawnerTime>();
         collect.instanceCount = spawnerSingleton.instanceCount;
         collect.entities = spawnerSingleton.entities;
-        collect.collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
+        collect.collisionWorld = collisionWorld;
         collect.colliders = __colliders;
         collect.characterInterpolations = __characterInterpolations;
         collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
