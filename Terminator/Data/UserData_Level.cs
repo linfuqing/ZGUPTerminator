@@ -28,9 +28,12 @@ public struct UserLevelStageData
     public SpawnerAttribute.Scale spawnerAttributeScale;
     public LevelQuest[] quests;
 
-    public LevelShared.Stage ToShared()
+    public LevelShared.Stage ToShared(in FixedString32Bytes name, in FixedString32Bytes bossTitle, in FixedString32Bytes bossDescription)
     {
         LevelShared.Stage result;
+        result.name = name;
+        result.bossTitle = bossTitle;
+        result.bossDescription = bossDescription;
         result.spawnerAttributeScale = spawnerAttributeScale;
         result.quests = default;
         if (quests != null)

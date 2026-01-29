@@ -784,6 +784,9 @@ public static class LevelShared
 {
     public struct Stage
     {
+        public FixedString32Bytes name;
+        public FixedString32Bytes bossTitle;
+        public FixedString128Bytes bossDescription;
         public SpawnerAttribute.Scale spawnerAttributeScale;
         public FixedList32Bytes<LevelQuest> quests;
 

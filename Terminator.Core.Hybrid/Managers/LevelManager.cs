@@ -82,6 +82,15 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField]
     internal StringEvent _onStage;
 
+    [SerializeField]
+    internal StringEvent _onStageTitle;
+
+    [SerializeField]
+    internal StringEvent _onStageBossTitle;
+
+    [SerializeField]
+    internal StringEvent _onStageBossDescription;
+
     [SerializeField] 
     internal ActiveEvent _onSubmit;
 

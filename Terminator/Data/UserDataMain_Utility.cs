@@ -1142,7 +1142,7 @@ public partial class UserDataMain
                     if (!__TryGetSkill(cacheSkill, out temp))
                         continue;
                     
-                    if(!temp.Equals(skillInfo))
+                    if(temp.belongTo != skillInfo.belongTo || temp.index != skillInfo.index)
                         continue;
                     
                     if(__GetSkillGroupName(cacheSkill) != skillGroupName)

@@ -131,7 +131,21 @@ public partial class LevelManager
 
             if (_onStage != null)
                 _onStage.Invoke(stage.ToString());
-            
+
+            if (stage < LevelShared.stages.Length)
+            {
+                var levelStage = LevelShared.stages[stage];
+                
+                if (_onStageTitle != null)
+                    _onStageTitle.Invoke(levelStage.name.ToString());
+                
+                if (_onStageBossTitle != null)
+                    _onStageBossTitle.Invoke(levelStage.bossTitle.ToString());
+                
+                if (_onStageBossDescription != null)
+                    _onStageBossDescription.Invoke(levelStage.bossDescription.ToString());
+            }
+
             if (!isRestart && stage > __stage)
                 __Submit(stage, gold, exp, maxExp, time, levelItems);
 

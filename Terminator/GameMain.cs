@@ -395,9 +395,17 @@ public class GameMain : GameUser
     [Serializable]
     internal struct Chapter
     {
+        internal struct Stage
+        {
+            public string name;
+            public string bossTitle;
+            public string bossDescription;
+            public SpawnerAttribute.Scale spawnerAttribute;
+        }
+        
         public string name;
         
-        public SpawnerAttribute.Scale[] spawnerAttributes;
+        public Stage[] stages;
     }
 
     public event Func<IEnumerator> onStart;
@@ -681,12 +689,15 @@ public class GameMain : GameUser
                     
                     LevelShared.stages.Clear();
                     
-                    if (chapter.spawnerAttributes != null)
+                    if (chapter.stages != null)
                     {
                         LevelShared.Stage stage;
-                        foreach (var spawnerAttribute in chapter.spawnerAttributes)
+                        foreach (var chapterStage in chapter.stages)
                         {
-                            stage.spawnerAttributeScale = spawnerAttribute;
+                            stage.name = chapterStage.name;
+                            stage.bossTitle = chapterStage.bossTitle;
+                            stage.bossDescription = chapterStage.bossDescription;
+                            stage.spawnerAttributeScale = chapterStage.spawnerAttribute;
                             stage.quests = default;
                             LevelShared.stages.Add(stage);
                         }

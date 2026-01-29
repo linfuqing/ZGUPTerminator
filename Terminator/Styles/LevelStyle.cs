@@ -20,6 +20,9 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
         public Transform root;
 
         public Toggle toggle;
+        
+        public StringEvent onTitle;
+        public StringEvent onDescription;
 
         public Progressbar loaderProgressbar;
         
@@ -27,7 +30,6 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
     }
     
     public StringEvent onEnergy;
-    public StringEvent onTitle;
 
     public Toggle toggle;
 

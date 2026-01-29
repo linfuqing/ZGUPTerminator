@@ -20,20 +20,108 @@ public sealed class LoginManager : MonoBehaviour
     [Serializable]
     internal struct Scene
     {
+        [Serializable]
+        public struct Stage
+        {
+            public string name;
+
+            public string bossTitle;
+            public string bossDescription;
+
+            public int index;
+        }
+        
         public string name;
+        public string title;
+        public string description;
         
         public AssetObjectLoader prefab;
         
-        public int[] stageIndices;
+        public Stage[] stages;
+
+        public int StageIndexOf(int stageIndex)
+        {
+            int numStages = stages.Length;
+            for (int i = 0; i < numStages; ++i)
+            {
+                if (stages[i].index == stageIndex)
+                    return i;
+            }
+
+            return -1;
+        }
     }
 
     [Serializable]
     internal struct Level
     {
+        public enum Flag
+        {
+            Chapter = 0x01
+        }
+        
         public string name;
-        public string title;
+
+        public Flag flag;
         
         public Scene[] scenes;
+
+        public Scene.Stage GetSceneStage(int stageIndex)
+        {
+            if (scenes != null)
+            {
+                int index;
+                foreach (var scene in scenes)
+                {
+                    index = scene.StageIndexOf(stageIndex);
+                    if (index != -1)
+                        return scene.stages[index];
+                }
+            }
+
+            return default;
+        }
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 章节名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public string 章节场景
+        {
+            set
+            {
+                string[] parameters = value.Split('+'), temp, temp2;
+                int i, j, stageIndex = 0, numStages, numParameters = parameters.Length;
+                scenes = new Scene[numParameters];
+                Scene scene;
+                for (i = 0; i < numParameters; ++i)
+                {
+                    temp =  parameters[i].Split(':');
+                    scene.name = temp[0];
+                    scene.title = temp[1];
+                    scene.description = temp[2];
+                    scene.prefab = new AssetObjectLoader(AssetObjectLoader.Space.Local, temp[3], temp[4], null, null);
+                    temp = temp[5].Split('|');
+                    numStages = temp.Length;
+                    scene.stages = new Scene.Stage[numStages];
+                    for (j = 0; j < numStages; ++j)
+                    {
+                        temp2 = temp[j].Split('*');
+                        ref var stage = ref scene.stages[j];
+                        stage.name = temp2[0];
+                        stage.bossTitle = temp2[1];
+                        stage.bossDescription = temp2[2];
+                        stage.index = stageIndex++;
+                    }
+                    scenes[i] = scene;
+                }
+            }
+        }
+#endif
     }
 
     /*[Serializable]
@@ -263,6 +351,7 @@ public sealed class LoginManager : MonoBehaviour
     private List<StageStyle>[] __stageStyles;
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
+    private Dictionary<string, int> __levelIndices;
     private LinkedList<Loaders> __loaders;
     
     private UnityEvent __onLevelActivatedFirst;
@@ -288,6 +377,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private int __sceneActiveDepth;
     
+    private int __startLevelIndex;
     private bool __isStart;
     private bool __isEnergyActive = true;
     private bool? __levelActivatedFirst;
@@ -551,9 +641,12 @@ public sealed class LoginManager : MonoBehaviour
         }
         
         int i, numLevels = _levels.Length;
-        var levelIndices = new Dictionary<string, int>(numLevels);
-        for (i = 0; i < numLevels; ++i)
-            levelIndices[_levels[i].name] = i;
+        if (__levelIndices == null)
+        {
+            __levelIndices = new Dictionary<string, int>(numLevels);
+            for (i = 0; i < numLevels; ++i)
+                __levelIndices[_levels[i].name] = i;
+        }
 
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved;
@@ -649,11 +742,14 @@ public sealed class LoginManager : MonoBehaviour
             
             var selectedLevel = userLevel;
 
-            index = levelIndices[userLevel.name];
+            index = __levelIndices[userLevel.name];
             var level = _levels[index];
             
-            if(style.onTitle != null)
+            /*if(style.onTitle != null)
                 style.onTitle.Invoke(level.title);
+
+            if(style.onDescription != null)
+                style.onDescription.Invoke(level.description);*/
 
             //if(style.onImage != null)
             //    style.onImage.Invoke(level.sprite);
@@ -705,6 +801,8 @@ public sealed class LoginManager : MonoBehaviour
                     
                     __selectedUserLevelID = selectedLevel.id;
 
+                    if (movedLevelIndex == userLevelIndex)
+                        movedLevelIndex = -1;
                     /*if (selectedLevelIndex == userLevelIndex)
                         selectedLevelIndex = -1;*/
 
@@ -739,7 +837,7 @@ public sealed class LoginManager : MonoBehaviour
                                 {
                                     ref var levelScene = ref level.scenes[j];
 
-                                    sceneStageIndex = Array.IndexOf(levelScene.stageIndices, i);
+                                    sceneStageIndex = levelScene.StageIndexOf(i);
                                     if (sceneStageIndex != -1)
                                         break;
                                 }
@@ -754,6 +852,16 @@ public sealed class LoginManager : MonoBehaviour
 
                                 var styleScene = style.scenes[sceneIndex];
 
+                                {
+                                    ref var levelScene = ref level.scenes[sceneIndex];
+
+                                    if (styleScene.onTitle != null)
+                                        styleScene.onTitle.Invoke(levelScene.title);
+
+                                    if (styleScene.onDescription != null)
+                                        styleScene.onDescription.Invoke(levelScene.description);
+                                }
+                                
                                 numStageStyles = styleScene.stageStyles == null ? 0 : styleScene.stageStyles.Length;
                                 if (numStageStyles > 0)
                                 {
@@ -852,13 +960,14 @@ public sealed class LoginManager : MonoBehaviour
 
                                                             __selectedStageIndex = stageIndex;
 
-                                                            __sceneName = level.scenes[sceneIndex].name;
+                                                            ref var levelScene = ref level.scenes[sceneIndex];
+                                                            __sceneName = levelScene.name;
 
                                                             if (onStageChanged != null)
                                                             {
                                                                 Stage result;
                                                                 result.name = (sceneStageIndex + 1).ToString();
-                                                                result.levelName = level.title;
+                                                                result.levelName = levelScene.title;
                                                                 result.id = stage.id;
                                                                 onStageChanged.Invoke(result);
                                                             }
@@ -942,8 +1051,9 @@ public sealed class LoginManager : MonoBehaviour
                                             temp = false;
                                             //bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 || 
-                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp/* || 
-                                                selectedLevelIndex != -1 && selectedLevelIndex != userLevelIndex*/)
+                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp || 
+                                                //重新进入关卡创建风格时候
+                                                movedLevelIndex != -1 && movedLevelIndex != userLevelIndex)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
@@ -1223,8 +1333,15 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelShared.stages.Clear();
 
-        foreach (var levelStage in property.levelStages)
-            LevelShared.stages.Add(levelStage.ToShared());
+        Scene.Stage sceneStage;
+        var level = __startLevelIndex == -1 ? default : _levels[__startLevelIndex];
+        int numLevelStages = property.levelStages.Length;
+        for (int i = 0; i < numLevelStages; ++i)
+        {
+            sceneStage = level.GetSceneStage(i);
+            
+            LevelShared.stages.Add(property.levelStages[i].ToShared(sceneStage.name, sceneStage.bossTitle, sceneStage.bossDescription));
+        }
 
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
@@ -1265,9 +1382,16 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelShared.stages.Clear();
 
-        foreach (var levelStage in property.levelStages)
-            LevelShared.stages.Add(levelStage.ToShared());
-        
+        Scene.Stage sceneStage;
+        var level = __startLevelIndex == -1 ? default : _levels[__startLevelIndex];
+        int numLevelStages = property.levelStages.Length;
+        for (int i = 0; i < numLevelStages; ++i)
+        {
+            sceneStage = level.GetSceneStage(i);
+            
+            LevelShared.stages.Add(property.levelStages[i].ToShared(sceneStage.name, sceneStage.bossTitle, sceneStage.bossDescription));
+        }
+
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
         
@@ -1494,10 +1618,8 @@ public sealed class LoginManager : MonoBehaviour
 
         uint userID = LoginManager.userID.Value;
         
-#if USER_DATA_LEGACY
-        yield return userData.QuerySkills(userID, __ApplySkills);
-#endif
-
+        __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : 0;
+        
         if (isRestart)
             yield return userData.ApplyLevel(userID, userLevelID, stageIndex, __ApplyLevel);
         else
