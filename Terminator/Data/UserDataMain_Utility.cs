@@ -785,12 +785,14 @@ public partial class UserDataMain
                 property = card.property;
             }
 
+            string skillGroupName = __GetSkillGroupName(card.skillName);
+
             skill.type = UserSkillType.Individual;
             skill.name = card.skillName;
             skills.Add(skill);
 
             skill.type = UserSkillType.Group;
-            skill.name = __GetSkillGroupName(card.skillName);
+            skill.name = skillGroupName;
             skills.Add(skill);
             
             if (property.attributes != null && property.attributes.Length > 0)
@@ -813,13 +815,24 @@ public partial class UserDataMain
                         switch (propertySkill.type)
                         {
                             case UserSkillType.Group:
-                                if(propertySkill.name != skill.name)
+                                if(propertySkill.name != skillGroupName)
                                     continue;
                                             
                                 break;
                             case UserSkillType.Individual:
-                                if(propertySkill.name != card.skillName)
+                                if (propertySkill.name != card.skillName)
+                                {
+                                    if (__GetSkillGroupName(propertySkill.name) == skillGroupName)
+                                    {
+                                        skill.type = UserSkillType.OpAdd;
+                                        skill.name = propertySkill.name;
+                                        skill.damage = propertySkill.damage;
+                                        
+                                        skills.Add(skill);
+                                    }
+                                    
                                     continue;
+                                }
 
                                 break;
                         }
@@ -1204,8 +1217,10 @@ public partial class UserDataMain
 
                         skills.Add(skill);
 
+                        string skillGroupName = __GetSkillGroupName(card.skillName);
+
                         skill.type = UserSkillType.Group;
-                        skill.name = __GetSkillGroupName(card.skillName);
+                        skill.name = skillGroupName;
                         skills.Add(skill);
                         
                         if (property.attributes != null && property.attributes.Length > 0)
@@ -1228,13 +1243,24 @@ public partial class UserDataMain
                                     switch (propertySkill.type)
                                     {
                                         case UserSkillType.Group:
-                                            if(propertySkill.name != skill.name)
+                                            if(propertySkill.name != skillGroupName)
                                                 continue;
                                             
                                             break;
                                         case UserSkillType.Individual:
-                                            if(propertySkill.name != cacheSkill)
+                                            if (propertySkill.name != cacheSkill)
+                                            {
+                                                if (__GetSkillGroupName(propertySkill.name) == skillGroupName)
+                                                {
+                                                    skill.type = UserSkillType.OpAdd;
+                                                    skill.name = propertySkill.name;
+                                                    skill.damage = propertySkill.damage;
+                                        
+                                                    skills.Add(skill);
+                                                }
+
                                                 continue;
+                                            }
 
                                             break;
                                     }

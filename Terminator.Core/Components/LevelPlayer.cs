@@ -20,6 +20,15 @@ public struct LevelPlayerSkillGroup
     public float damageScale;
 }
 
+public struct LevelPlayerSkillOpcode
+{
+    public FixedString32Bytes name;
+
+    public LevelSkillOpcode.Type type;
+    
+    public float value;
+}
+
 public static class LevelPlayerShared
 {
     private class Value<TChildClass, TValue> where TValue : unmanaged
