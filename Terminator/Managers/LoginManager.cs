@@ -104,6 +104,7 @@ public sealed class LoginManager : MonoBehaviour
                     scene.name = temp[0];
                     scene.title = temp[1];
                     scene.description = temp[2];
+                    scene.description = scene.description.Replace(@"\n", "\n");
                     scene.prefab = new AssetObjectLoader(AssetObjectLoader.Space.Local, temp[3], temp[4], null, null);
                     temp = temp[5].Split('|');
                     numStages = temp.Length;
