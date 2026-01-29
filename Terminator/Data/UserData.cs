@@ -24,7 +24,9 @@ public enum UserRewardType
 public enum UserSkillType
 {
     Individual, 
-    Group
+    Group, 
+    OpAdd, 
+    OpMul
 }
 
 public enum UserAttributeType

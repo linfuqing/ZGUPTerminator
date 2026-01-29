@@ -159,6 +159,9 @@ public partial struct LevelPickableSystem : ISystem
         [ReadOnly]
         public BufferLookup<LevelSkillGroup> skillGroups;
 
+        [ReadOnly]
+        public BufferLookup<LevelSkillOpcode> skillOpcodes;
+
         public BufferLookup<LevelSkill> skills;
 
         public ComponentLookup<LevelSkillVersion> versions;
@@ -187,6 +190,7 @@ public partial struct LevelPickableSystem : ISystem
             var random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32));
             LevelSkill skill;
             DynamicBuffer<LevelSkillGroup> skillGroups;
+            DynamicBuffer<LevelSkillOpcode> skillOpcodes;
             DynamicBuffer<SkillActiveIndex> skillActiveIndices;
             while (results.TryDequeue(out Result result))
             {
@@ -196,6 +200,7 @@ public partial struct LevelPickableSystem : ISystem
                 definition.definition.Value.Select(
                     skillActiveIndices.AsNativeArray(), 
                     this.skillGroups.TryGetBuffer(result.entity, out skillGroups) ? skillGroups.AsNativeArray() : default,
+                    this.skillOpcodes.TryGetBuffer(result.entity, out skillOpcodes) ? skillOpcodes.AsNativeArray() : default,
                     ref skills, 
                     ref random, 
                     out version.priority, 
@@ -253,6 +258,7 @@ public partial struct LevelPickableSystem : ISystem
     private BufferLookup<LevelSkill> __skills;
 
     private BufferLookup<LevelSkillGroup> __skillGroups;
+    private BufferLookup<LevelSkillOpcode> __skillOpcodes;
 
     private BufferLookup<SkillActiveIndex> __skillActiveIndices;
     
@@ -273,6 +279,7 @@ public partial struct LevelPickableSystem : ISystem
         __items = state.GetBufferLookup<LevelItem>();
         __skills = state.GetBufferLookup<LevelSkill>();
         __skillGroups = state.GetBufferLookup<LevelSkillGroup>(true);
+        __skillOpcodes =  state.GetBufferLookup<LevelSkillOpcode>(true);
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>(true);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -321,6 +328,7 @@ public partial struct LevelPickableSystem : ISystem
         __definitions.Update(ref state);
         __skills.Update(ref state);
         __skillGroups.Update(ref state);
+        __skillOpcodes.Update(ref state);
         __skillActiveIndices.Update(ref state);
         
         Select select;
@@ -329,6 +337,7 @@ public partial struct LevelPickableSystem : ISystem
         select.definitions = __definitions;
         select.skillActiveIndices = __skillActiveIndices;
         select.skillGroups = __skillGroups;
+        select.skillOpcodes = __skillOpcodes;
         select.skills = __skills;
         select.versions = __versions;
         select.results = __results;

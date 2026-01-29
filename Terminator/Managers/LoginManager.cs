@@ -343,6 +343,11 @@ public sealed class LoginManager : MonoBehaviour
 
     [SerializeField] 
     internal Level[] _levels;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_levels", guidIndex = -1, nameIndex = 0)] 
+    internal string _levelsPath;
+#endif
 
     //[SerializeField]
     //internal Reward[] _rewards;

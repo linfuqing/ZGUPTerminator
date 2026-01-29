@@ -64,6 +64,7 @@ public struct LevelSkillDefinition
     public void Select(
         in NativeArray<SkillActiveIndex> activeIndices, 
         in NativeArray<LevelSkillGroup> groups, 
+        in NativeArray<LevelSkillOpcode> opcodes,
         ref DynamicBuffer<LevelSkill> results, 
         ref Random random, 
         out int priority, 
@@ -256,6 +257,8 @@ public struct LevelSkillDefinition
                         for (j = 0; j < numSkillIndices; ++j)
                         {
                             result.index = skillIndices[j];
+                            
+                            result.damageScale = LevelSkillOpcode.Apply(opcodes, result.index, result.damageScale);
 
                             results.Add(result);
                         }
@@ -316,6 +319,8 @@ public struct LevelSkillDefinition
                                 {
                                     result.index = skillIndices[k];
 
+                                    result.damageScale = LevelSkillOpcode.Apply(opcodes, result.index, result.damageScale);
+
                                     results.Add(result);
                                 }
 
@@ -352,6 +357,8 @@ public struct LevelSkillDefinition
                     for (j = 0; j < numSkillIndices; ++j)
                     {
                         result.index = skillIndices[j];
+
+                        result.damageScale = LevelSkillOpcode.Apply(opcodes, result.index, result.damageScale);
 
                         results.Add(result);
                     }
@@ -525,4 +532,41 @@ public struct LevelSkillGroup : IBufferElementData
     public int value;
 
     public float damageScale;
+}
+
+public struct LevelSkillOpcode : IBufferElementData
+{
+    public enum Type
+    {
+        Add, 
+        Mul
+    }
+
+    public Type type;
+    public int index;
+    public float value;
+
+    public static float Apply(in NativeArray<LevelSkillOpcode> opcodes, int skillIndex, float value)
+    {
+        if (opcodes.IsCreated)
+        {
+            foreach (var opcode in opcodes)
+            {
+                if (opcode.index != skillIndex)
+                    continue;
+
+                switch (opcode.type)
+                {
+                    case Type.Add:
+                        value += opcode.value;
+                        break;
+                    case Type.Mul:
+                        value *= opcode.value;
+                        break;
+                }
+            }
+        }
+
+        return value;
+    }
 }
