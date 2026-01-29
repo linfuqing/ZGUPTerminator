@@ -85,7 +85,15 @@ public static class LevelPlayerShared
         private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerSkillGroup>> Values =
             SharedStatic<FixedList4096Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
 
-        public static ref FixedList4096Bytes<LevelPlayerSkillGroup> names => ref Values.Data;
+        public static ref FixedList4096Bytes<LevelPlayerSkillGroup> values => ref Values.Data;
+    }
+
+    private struct SkillOpcode
+    {
+        private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerSkillOpcode>> Values =
+            SharedStatic<FixedList4096Bytes<LevelPlayerSkillOpcode>>.GetOrCreate<SkillOpcode>();
+
+        public static ref FixedList4096Bytes<LevelPlayerSkillOpcode> values => ref Values.Data;
     }
 
     public static int effectRage
@@ -139,5 +147,7 @@ public static class LevelPlayerShared
 
     public static ref FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills => ref ActiveSkills.values;
     
-    public static ref FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups => ref SkillGroup.names;
+    public static ref FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups => ref SkillGroup.values;
+    
+    public static ref FixedList4096Bytes<LevelPlayerSkillOpcode> skillOpcodes => ref SkillOpcode.values;
 }

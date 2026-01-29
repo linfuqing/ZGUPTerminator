@@ -131,6 +131,11 @@ public partial interface IUserData : IGameUserData
     public struct Status
     {
         /// <summary>
+        /// 一个在服务器比较容易修改的配置，测试的时候用来开关强制引导，0是关闭强制引导，1是强制引导，默认是0，如果数据不好，第二天改成1。
+        /// </summary>
+        public int type;
+        
+        /// <summary>
         /// 引导关卡ID，如果给了这个ID，则会直接进入改关卡（而不进入Login）
         /// </summary>
         public uint levelID;

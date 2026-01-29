@@ -178,10 +178,14 @@ public partial interface IUserData
             ref var skillGroups = ref LevelPlayerShared.skillGroups;
             skillGroups.Clear();
 
+            ref var skillOpcodes = ref LevelPlayerShared.skillOpcodes;
+            skillOpcodes.Clear();
+
             if (skills != null)
             {
                 LevelPlayerActiveSkill activeSkill;
                 LevelPlayerSkillGroup skillGroup;
+                LevelPlayerSkillOpcode skillOpcode;
                 foreach (var skill in skills)
                 {
                     switch (skill.type)
@@ -195,6 +199,18 @@ public partial interface IUserData
                             skillGroup.name = skill.name;
                             skillGroup.damageScale = skill.damage; // + effectDamageScale;
                             skillGroups.Add(skillGroup);
+                            break;
+                        case UserSkillType.OpAdd:
+                            skillOpcode.name = skill.name;
+                            skillOpcode.type = LevelSkillOpcode.Type.Add;
+                            skillOpcode.value = skill.damage;
+                            skillOpcodes.Add(skillOpcode);
+                            break;
+                        case UserSkillType.OpMul:
+                            skillOpcode.name = skill.name;
+                            skillOpcode.type = LevelSkillOpcode.Type.Mul;
+                            skillOpcode.value = skill.damage;
+                            skillOpcodes.Add(skillOpcode);
                             break;
                     }
                 }

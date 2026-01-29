@@ -26,6 +26,7 @@ public partial struct LevelPlayerSystem : ISystem
 
         public FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills;
         public FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups;
+        public FixedList4096Bytes<LevelPlayerSkillOpcode> skillOpcodes;
 
         [ReadOnly, DeallocateOnJobCompletion] 
         public NativeArray<Entity> entityArray;
@@ -41,6 +42,9 @@ public partial struct LevelPlayerSystem : ISystem
 
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<Instance> instances;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<LevelSkillOpcode> levelSkillOpcodes;
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<LevelSkillGroup> levelSkillGroups;
@@ -146,6 +150,39 @@ public partial struct LevelPlayerSystem : ISystem
                             UnityEngine.Debug.LogError($"Skill group {skillGroup.name} can not been found!");
                     }
                 }
+                
+                if (skillOpcodes.Length > 0 &&
+                    this.levelSkillOpcodes.TryGetBuffer(player, out var levelSkillOpcodes))
+                {
+                    LevelSkillOpcode levelSkillOpcode;
+                    int numSkills = definition.skills.Length, i;
+                    bool isClear = true;
+                    foreach (var skillOpcode in skillOpcodes)
+                    {
+                        for (i = 0; i < numSkills; ++i)
+                        {
+                            if (definition.skills[i] == skillOpcode.name)
+                                break;
+                        }
+
+                        if (i < numSkills)
+                        {
+                            if (isClear)
+                            {
+                                isClear = false;
+                                
+                                levelSkillOpcodes.Clear();
+                            }
+
+                            levelSkillOpcode.index = i;
+                            levelSkillOpcode.type = skillOpcode.type;
+                            levelSkillOpcode.value = skillOpcode.value;
+                            levelSkillOpcodes.Add(levelSkillOpcode);
+                        }
+                        else
+                            UnityEngine.Debug.LogError($"Skill group {skillOpcode.name} can not been found!");
+                    }
+                }
             }
 
             if (effectTargets.TryGetComponent(player, out var effectTarget))
@@ -227,6 +264,8 @@ public partial struct LevelPlayerSystem : ISystem
 
     private BufferLookup<LevelSkillGroup> __levelSkillGroups;
 
+    private BufferLookup<LevelSkillOpcode> __levelSkillOpcodes;
+
     private BufferLookup<SkillActiveIndex> __skillActiveIndices;
 
     private BufferLookup<MessageParameter> __messageParameters;
@@ -252,6 +291,7 @@ public partial struct LevelPlayerSystem : ISystem
         //__bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __instances = state.GetComponentLookup<Instance>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
+        __levelSkillOpcodes = state.GetBufferLookup<LevelSkillOpcode>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
         __effectTargetDatas = state.GetComponentLookup<EffectTargetData>();
@@ -285,6 +325,9 @@ public partial struct LevelPlayerSystem : ISystem
             players = new NativeArray<Entity>(count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             for(int i = 0; i < count; ++i)
                 players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
+            
+            if(LevelPlayerShared.skillOpcodes.Length > 0)
+                entityManager.AddComponent<LevelSkillOpcode>(players);
 
             //entityManager.AddComponent<EffectDamage>(players);
         }
@@ -293,6 +336,7 @@ public partial struct LevelPlayerSystem : ISystem
         //__bulletLayerMaskAndTags.Update(ref state);
         __instances.Update(ref state);
         __levelSkillGroups.Update(ref state);
+        __levelSkillOpcodes.Update(ref state);
         __skillActiveIndices.Update(ref state);
         __messageParameters.Update(ref state);
         __effectTargetDatas.Update(ref state);
@@ -312,11 +356,13 @@ public partial struct LevelPlayerSystem : ISystem
         apply.instanceName = LevelPlayerShared.instanceName;
         apply.activeSkills = LevelPlayerShared.activeSkills;
         apply.skillGroups = LevelPlayerShared.skillGroups;
+        apply.skillOpcodes = LevelPlayerShared.skillOpcodes;
         apply.entityArray = entityArray;
         apply.players = players;
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
         //apply.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         apply.instances = __instances;
+        apply.levelSkillOpcodes = __levelSkillOpcodes;
         apply.levelSkillGroups = __levelSkillGroups;
         apply.skillActiveIndices = __skillActiveIndices;
         apply.messageParameters = __messageParameters;

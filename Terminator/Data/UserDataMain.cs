@@ -251,6 +251,9 @@ public partial class UserData
     }
 
     [SerializeField] 
+    internal int _userType;
+
+    [SerializeField] 
     internal Chapter[] _chapters =
     {
         new Chapter()
@@ -341,6 +344,7 @@ public partial class UserData
         yield return null;
 
         IUserData.Status status;
+        status.type = _userType;
         status.levelID = 0;
         status.stage = -1;
         status.chapter = chapter;
