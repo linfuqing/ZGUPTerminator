@@ -395,7 +395,8 @@ public class GameMain : GameUser
     [Serializable]
     internal struct Chapter
     {
-        internal struct Stage
+        [Serializable]
+        public struct Stage
         {
             public string name;
             public string bossTitle;
@@ -407,8 +408,6 @@ public class GameMain : GameUser
         
         public Stage[] stages;
     }
-
-    public event Func<IEnumerator> onStart;
 
     public static readonly string LanguagePackageResourcePath = "LanguagePackageResourcePath";
     public static readonly string AssetPath = "AssetPath";
@@ -424,6 +423,15 @@ public class GameMain : GameUser
     //public const string NAME_SPACE_LEVEL = "GameMainLevel";
     
     public const string NAME_SPACE_PLAYER_PREF_VERSION = "PlayerPrefVersion";
+
+    public static int userType
+    {
+        get;
+
+        private set;
+    }
+
+    public event Func<IEnumerator> onStart;
 
     [SerializeField] 
     internal Chapter[] _chapters;
@@ -674,6 +682,8 @@ public class GameMain : GameUser
             Shared.channelUser,
             (x, y) =>
             {
+                userType = x.type;
+                
                 (IAnalytics.instance as IAnalyticsEx)?.Login(y);
 
                 if (x.levelID == 0 || x.chapter >= _chapters.Length)

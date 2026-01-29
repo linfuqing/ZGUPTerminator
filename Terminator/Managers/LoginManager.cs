@@ -124,6 +124,14 @@ public sealed class LoginManager : MonoBehaviour
 #endif
     }
 
+    [Serializable]
+    internal struct UserType
+    {
+        public string name;
+
+        public UnityEvent callback;
+    }
+
     /*[Serializable]
     internal struct Reward
     {
@@ -349,6 +357,8 @@ public sealed class LoginManager : MonoBehaviour
     internal string _levelsPath;
 #endif
 
+    [SerializeField] 
+    internal UserType[] _userTypes;
     //[SerializeField]
     //internal Reward[] _rewards;
 
@@ -1756,6 +1766,9 @@ public sealed class LoginManager : MonoBehaviour
                 onLevelActivated();
         }
 
+        int numUserTypes = _userTypes == null ? 0 : _userTypes.Length;
+        if(numUserTypes > 0)
+            _userTypes[GameMain.userType].callback?.Invoke();
     }
     
     void Update()
