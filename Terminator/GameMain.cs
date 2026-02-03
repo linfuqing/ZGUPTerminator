@@ -223,9 +223,13 @@ public class GameMain : GameUser
             long ticks = DateTime.Now.Ticks;
             while (index < __assetNames.Length)
             {
-                if (__Load(__assetNames[index++]) && 
-                    (DateTime.Now.Ticks - ticks) * 1.0 / TimeSpan.TicksPerSecond > maximumDeltaTime)
+                if(!__Load(__assetNames[index]))
+                    continue;
+                
+                if ((DateTime.Now.Ticks - ticks) * 1.0 / TimeSpan.TicksPerSecond > maximumDeltaTime)
                     return true;
+
+                ++index;
             }
 
             return false;
@@ -271,8 +275,9 @@ public class GameMain : GameUser
 
             string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
             assetName = assetName.ToLower();
+            //TODO: Check MD5
             if (AssetManager.Get(assetName, out _))
-                return false;
+                return true;
 
             var text = __assetBundle.LoadAsset(filename) as TextAsset;
             var bytes = text == null ? null : text.bytes;
@@ -281,23 +286,32 @@ public class GameMain : GameUser
 
             DestroyImmediate(text, true);
 
-            AssetManager.CreateDirectory(path);
-            
-            File.WriteAllBytes(path, bytes);
+            try
+            {
+                AssetManager.CreateDirectory(path);
 
-            AssetManager.AssetData assetData;
-            assetData.type = AssetManager.AssetType.Uncompressed;
-            assetData.info.version = 0;
-            assetData.info.size = (uint)bytes.LongLength;
-            assetData.info.fileName = filename;
-            using (var md5 = new MD5CryptoServiceProvider())
-                assetData.info.md5 = md5.ComputeHash(bytes);
+                File.WriteAllBytes(path, bytes);
 
-            assetData.pack = AssetManager.AssetPack.Default;
-            assetData.dependencies = null;
+                AssetManager.AssetData assetData;
+                assetData.type = AssetManager.AssetType.Uncompressed;
+                assetData.info.version = 0;
+                assetData.info.size = (uint)bytes.LongLength;
+                assetData.info.fileName = filename;
+                using (var md5 = new MD5CryptoServiceProvider())
+                    assetData.info.md5 = md5.ComputeHash(bytes);
 
-            using (var writer = new AssetManager.Writer(folder, AssetManager))
-                writer.Write(assetName, assetData);
+                assetData.pack = AssetManager.AssetPack.Default;
+                assetData.dependencies = null;
+
+                using (var writer = new AssetManager.Writer(folder, AssetManager))
+                    writer.Write(assetName, assetData);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e.InnerException ?? e);
+
+                return false;
+            }
 
             return true;
         }

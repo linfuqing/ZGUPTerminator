@@ -898,7 +898,7 @@ public sealed class LoginManager : MonoBehaviour
                                         stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
                                         if (stageStyle.onTitle != null)
-                                            stageStyle.onTitle.Invoke(( /*i*/sceneStageIndex + 1).ToString());
+                                            stageStyle.onTitle.Invoke((stageIndex/*sceneStageIndex*/ + 1).ToString());
 
                                         if (stage.rewardFlags == null)
                                         {
@@ -1071,6 +1071,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 //重新进入关卡创建风格时候
                                                 movedLevelIndex != -1 && movedLevelIndex != userLevelIndex)
                                             {
+                                                movedLevelIndex = -1;
+                                                
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
                                                     if (previousSceneIndex == -1)
@@ -1356,7 +1358,10 @@ public sealed class LoginManager : MonoBehaviour
         {
             sceneStage = level.GetSceneStage(i);
             
-            LevelShared.stages.Add(property.levelStages[i].ToShared(sceneStage.name, sceneStage.bossTitle, sceneStage.bossDescription));
+            LevelShared.stages.Add(property.levelStages[i].ToShared(
+                sceneStage.name ?? String.Empty, 
+                sceneStage.bossTitle ?? String.Empty, 
+                sceneStage.bossDescription ?? String.Empty));
         }
 
         LevelShared.exp = 0;
@@ -1405,7 +1410,10 @@ public sealed class LoginManager : MonoBehaviour
         {
             sceneStage = level.GetSceneStage(i);
             
-            LevelShared.stages.Add(property.levelStages[i].ToShared(sceneStage.name, sceneStage.bossTitle, sceneStage.bossDescription));
+            LevelShared.stages.Add(property.levelStages[i].ToShared(
+                sceneStage.name ?? String.Empty, 
+                sceneStage.bossTitle ?? String.Empty, 
+                sceneStage.bossDescription ?? String.Empty));
         }
 
         LevelShared.exp = property.cache.exp;
@@ -1634,7 +1642,7 @@ public sealed class LoginManager : MonoBehaviour
 
         uint userID = LoginManager.userID.Value;
         
-        __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : 0;
+        __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : -1;
         
         if (isRestart)
             yield return userData.ApplyLevel(userID, userLevelID, stageIndex, __ApplyLevel);

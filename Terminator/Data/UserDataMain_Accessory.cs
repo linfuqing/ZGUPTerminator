@@ -186,6 +186,24 @@ public partial class UserDataMain
         public string name;
 
         public string styleName;
+        
+        [CSVField]
+        public string 装备槽名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 装备槽风格
+        {
+            set
+            {
+                styleName = value;
+            }
+        }
     }
 
     [Serializable]
@@ -195,6 +213,25 @@ public partial class UserDataMain
         
         [Tooltip("该种类加什么属性")]
         public UserAttributeType attributeType;
+        
+        [CSVField]
+        public string 装备风格名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public int 装备风格属性类型
+        {
+            set
+            {
+                attributeType = (UserAttributeType)value;
+            }
+        }
+
     }
 
     [Serializable]
@@ -426,8 +463,20 @@ public partial class UserDataMain
 
     [SerializeField, Tooltip("装备槽")] 
     internal AccessorySlot[] _accessorySlots;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_accessorySlots", guidIndex = -1, nameIndex = 0)] 
+    internal string _accessorySlotsPath;
+#endif
+
     [SerializeField, Tooltip("装备类型")] 
     internal AccessoryStyle[] _accessoryStyles;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_accessoryStyles", guidIndex = -1, nameIndex = 0)] 
+    internal string _accessoryStylesPath;
+#endif
+    
     [SerializeField, Tooltip("装备槽等级")] 
     internal AccessoryLevel[] _accessoryLevels;
 
