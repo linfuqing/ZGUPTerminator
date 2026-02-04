@@ -537,6 +537,124 @@ public partial class UserDataMain
         onComplete(results);
     }
     
+    [Serializable]
+    internal struct ActiveEvent
+    {
+        public string name;
+        
+        public int startDay;
+        public int days;
+        
+        public string[] questNames;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 活跃活动名
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public int 活跃活动开始天数
+        {
+            set => startDay =value;
+        }
+        
+        [CSVField]
+        public int 活跃活动总天数
+        {
+            set => days = value;
+        }
+        
+        [CSVField]
+        public string 活跃活动任务名
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    questNames = null;
+
+                    return;
+                }
+
+                questNames = value.Split('/');
+            }
+        }
+#endif
+    }
+    
+    [SerializeField]
+    internal ActiveEvent[] _activeEvents;
+    
+#if UNITY_EDITOR
+    [SerializeField, CSV("_activeEvents", guidIndex = -1, nameIndex = 0)] 
+    internal string _activeEventsPath;
+#endif
+
+    private const string NAME_SPACE_USER_ACTIVE_EVENT_TIME = "UserActiveEventTime";
+
+    public IEnumerator QueryActiveEvents(
+        uint userID,
+        Action<IUserData.ActiveEvents> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        IUserData.ActiveEvents results;
+        int seconds = PlayerPrefs.GetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME);
+        if (seconds == 0)
+        {
+            PlayerPrefs.SetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME, (int)DateTimeUtility.GetSeconds());
+
+            results.days = 0;
+        }
+        else
+            results.days = DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
+        
+        if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
+            __AppendQuest(UserQuest.Type.Login, 1);
+        
+        int numActiveEvents = _activeEvents.Length;
+        results.values = new IUserData.ActiveEvent[numActiveEvents];
+
+        int i, j, numQuests;
+        IUserData.ActiveEvent result;
+        ActiveEvent activeEvent;
+        Quest quest;
+        UserQuest userQuest;
+        for (i = 0; i < numActiveEvents; ++i)
+        {
+            activeEvent = _activeEvents[i];
+            if(activeEvent.startDay > results.days || activeEvent.days > 0 && activeEvent.startDay + activeEvent.days <= results.days)
+                continue;
+            
+            result.name = activeEvent.name;
+            result.startDay = activeEvent.startDay;
+            result.days = activeEvent.days;
+            numQuests = activeEvent.questNames == null ? 0 : activeEvent.questNames.Length;
+            result.quests = new UserQuest[numQuests];
+            for (j = 0; j < numQuests; ++j)
+            {
+                quest = _quests[__GetQuestIndex(activeEvent.questNames[j])];
+                userQuest.name = quest.name;
+                userQuest.id = __ToID(i);
+                userQuest.type = quest.type;
+                userQuest.flag =
+                    PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACHIEVEMENT_QUEST}{quest.name}") == 0
+                        ? 0
+                        : UserQuest.Flag.Collected;
+                userQuest.count = __GetQuest(userQuest.type, ActiveType.Achievement);
+                userQuest.capacity = quest.capacity;
+                userQuest.rewards = quest.rewards;
+                result.quests[j] = userQuest;
+            }
+
+            results.values[i] = result;
+        }
+
+        onComplete(results);
+    }
+
     private int __GetQuest(UserQuest.Type questType, ActiveType activeType)
     {
         switch (questType)
@@ -771,5 +889,12 @@ public partial class UserData
         Action<Memory<UserQuest>> onComplete)
     {
         return UserDataMain.instance.QueryAchievements(userID, onComplete);;
+    }
+
+    public IEnumerator QueryActiveEvents(
+        uint userID,
+        Action<IUserData.ActiveEvents> onComplete)
+    {
+        return UserDataMain.instance.QueryActiveEvents(userID, onComplete);;
     }
 }

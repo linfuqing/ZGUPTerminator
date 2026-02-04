@@ -246,4 +246,25 @@ public partial interface IUserData
     IEnumerator QueryAchievements(
         uint userID, 
         Action<Memory<UserQuest>> onComplete);
+
+    public struct ActiveEvent
+    {
+        public string name;
+        
+        public int startDay;
+        public int days;
+
+        public UserQuest[] quests;
+    }
+
+    public struct ActiveEvents
+    {
+        public int days;
+        
+        public ActiveEvent[] values;
+    }
+
+    IEnumerator QueryActiveEvents(
+        uint userID,
+        Action<IUserData.ActiveEvents> onComplete);
 }

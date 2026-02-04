@@ -1278,6 +1278,16 @@ public sealed class LoginManager : MonoBehaviour
         if (scrollRect != null)
         {
             movedLevelIndex = Mathf.Max(0, movedLevelIndex);
+            if (scrollRect.selectedIndex[scrollRect.axis] == movedLevelIndex)
+            {
+                var submitHandlers = scrollRect.submitHandlers;
+                var submitHandler = submitHandlers != null && submitHandlers.Count > movedLevelIndex
+                    ? submitHandlers[movedLevelIndex]
+                    : null;
+                if(submitHandler != null)
+                    submitHandler.OnSubmit(null);
+            }
+            
             scrollRect.MoveTo(movedLevelIndex);
         }
 
