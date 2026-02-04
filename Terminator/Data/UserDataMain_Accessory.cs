@@ -188,7 +188,7 @@ public partial class UserDataMain
         public string styleName;
         
         [CSVField]
-        public string 装备槽名字
+        public string 装备槽名称
         {
             set
             {
@@ -215,7 +215,7 @@ public partial class UserDataMain
         public UserAttributeType attributeType;
         
         [CSVField]
-        public string 装备风格名字
+        public string 装备类型名字
         {
             set
             {
@@ -224,7 +224,7 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public int 装备风格属性类型
+        public int 装备类型属性种类
         {
             set
             {
