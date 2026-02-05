@@ -12,7 +12,7 @@ public static class CollectionUtility
         __CheckResize<T, U>(list, list.Length + 1);
         
         fixed(void* ptr = &list)
-            list[Interlocked.Increment(ref *((int*)ptr))] = item;
+            list[Interlocked.Increment(ref *((int*)ptr)) - 1] = item;
     }
     
     [GenerateTestsForBurstCompatibility(GenericTypeArguments = new [] { typeof(int), typeof(int) })]

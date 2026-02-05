@@ -570,6 +570,22 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public string 活跃活动活跃名
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    activeNames = null;
+
+                    return;
+                }
+
+                activeNames = value.Split('/');
+            }
+        }
+        
+        [CSVField]
         public string 活跃活动任务名
         {
             set
