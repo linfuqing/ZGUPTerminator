@@ -413,7 +413,7 @@ public struct LevelStageOption
 
                     return (Status)condition.value == Status.Finish;
                 case Type.PlayerArea:
-                    return areas[value].Contains(playerPosition);
+                    return value < 0 ? !areas[-value - 1].Contains(playerPosition) : areas[value].Contains(playerPosition);
                 case Type.Item:
                     ref var item = ref items[value];
                     if (item.count > 0)

@@ -5,19 +5,11 @@ using Random = UnityEngine.Random;
 
 public partial class UserDataMain
 {
-    private Dictionary<string, string> __skillToGroupNames;
-
-    private string __GetSkillGroupName(string skillName)
+    private const string NAME_SPACE_USER_EVENT = "UserEvent";
+    
+    private static int __GetEvent(string name)
     {
-        if (__skillToGroupNames == null)
-        {
-            __skillToGroupNames = new Dictionary<string, string>();
-
-            foreach (var skill in _skills)
-                __skillToGroupNames.Add(skill.name, skill.group);
-        }
-
-        return __skillToGroupNames.TryGetValue(skillName, out string skillGroupName) ? skillGroupName : null;
+        return PlayerPrefs.GetInt($"{NAME_SPACE_USER_EVENT}{name}");
     }
 
     private bool __ApplyReward(in UserRewardData reward, List<UserReward> outRewards = null)
@@ -241,14 +233,17 @@ public partial class UserDataMain
                 key = $"{NAME_SPACE_USER_ITEM_COUNT}{reward.name}";
                 break; 
             case UserRewardType.Diamond:
+                id = 1;
                 diamond += reward.count;
                 key = null;
                 break;
             case UserRewardType.Gold:
+                id = 1;
                 gold += reward.count;
                 key = null;
                 break;
             case UserRewardType.Energy:
+                id = 1;
                 __ApplyEnergy(-reward.count);
                 key = null;
                 break;
@@ -257,16 +252,19 @@ public partial class UserDataMain
                 key = NAME_SPACE_USER_ENERGY_MAX;
                 break;
             case UserRewardType.ActiveDay:
+                id = 1;
                 __AppendActive(reward.count, ActiveType.Day);
                 
                 key = null;
                 break;
             case UserRewardType.ActiveWeek:
+                id = 1;
                 __AppendActive(reward.count, ActiveType.Week);
                 
                 key = null;
                 break;
             case UserRewardType.Ticket:
+                id = 1;
                 var levelTicket = _levelTickets[__GetLevelTicketIndex(reward.name)];
                 
                 levelTicket.count += reward.count;
@@ -274,12 +272,18 @@ public partial class UserDataMain
                 key = null;
                 break;
             case UserRewardType.Exp:
+                id = 1;
                 exp += reward.count;
                 key = null;
                 break;
             case UserRewardType.RoleExp:
+                id = 1;
                 roleExp += reward.count;
                 key = null;
+                break;
+            case UserRewardType.Event:
+                id = 1;
+                key = $"{NAME_SPACE_USER_EVENT}{reward.name}";
                 break;
             default:
                 return false;

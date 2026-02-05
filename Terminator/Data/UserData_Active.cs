@@ -202,6 +202,20 @@ public struct UserQuest
     public UserRewardData[] rewards;
 }
 
+public struct UserActiveEvent
+{
+    public uint id;
+    public string name;
+        
+    public int startDay;
+    public int days;
+
+    public int exp;
+
+    public UserActive[] actives;
+    public UserQuest[] quests;
+}
+
 public partial interface IUserData
 {
     public struct SignIn
@@ -247,24 +261,20 @@ public partial interface IUserData
         uint userID, 
         Action<Memory<UserQuest>> onComplete);
 
-    public struct ActiveEvent
-    {
-        public string name;
-        
-        public int startDay;
-        public int days;
-
-        public UserQuest[] quests;
-    }
-
     public struct ActiveEvents
     {
         public int days;
         
-        public ActiveEvent[] values;
+        public UserActiveEvent[] values;
     }
 
     IEnumerator QueryActiveEvents(
         uint userID,
         Action<IUserData.ActiveEvents> onComplete);
+
+    IEnumerator CollectActiveEventActive(uint userID, uint activeEventID, uint activeID,
+        Action<Memory<UserReward>> onComplete);
+
+    IEnumerator CollectActiveEventQuest(uint userID, uint activeEventID, uint questID,
+        Action<Memory<UserReward>> onComplete);
 }

@@ -95,9 +95,9 @@ public struct LayerMaskAndTags
             origin = this.layerMask;
         } while (System.Threading.Interlocked.CompareExchange(ref this.layerMask, origin | layerMask, origin) != origin);
 
-        //TODO
         foreach (var tag in layerMaskAndTags.tags)
-            tags.Add(tag);
+            CollectionUtility.FixedListInterlockedAdd(ref tags, tag);
+            //tags.Add(tag);
     }
     
     public static LayerMaskAndTags Except(in LayerMaskAndTags x, in LayerMaskAndTags y)

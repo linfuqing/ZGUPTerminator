@@ -18,7 +18,8 @@ public enum UserRewardType
     ActiveWeek, 
     Ticket,
     Exp,
-    RoleExp
+    RoleExp, 
+    Event
 }
 
 public enum UserSkillType
