@@ -13,7 +13,7 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         var used = Tip.used;
-        if (++used.timesFromAd > _tip.timesPerDayFromAd)
+        if (++used.timesFromAd > _tip._timesPerDayFromAd)
         {
             onComplete(null);
             
@@ -27,10 +27,10 @@ public partial class UserDataMain
             yield break;
         }
 
-        var instance = _tip.instance;
+        var instance = __CreateTip(out _);
         Tip.used = used;
         
-        var rewards = instance.Generate((long)(_tip.intervalPerTime * TimeSpan.TicksPerSecond));
+        var rewards = instance.Generate((long)(_tip._intervalPerTime * TimeSpan.TicksPerSecond));
         
         __AppendQuest(UserQuest.Type.Tip, 1);
 

@@ -5,6 +5,15 @@ using Random = UnityEngine.Random;
 
 public partial class UserDataMain
 {
+    private static bool __HasSweepCard()
+    {
+        return PurchaseData.IsValid(PurchaseType.SweepCard,
+            0,
+            NAME_SPACE_USER_PURCHASE_ITEM,
+            out _,
+            out _);
+    }
+
     private const string NAME_SPACE_USER_EVENT = "UserEvent";
     
     private static int __GetEvent(string name)
