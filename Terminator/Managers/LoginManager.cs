@@ -90,6 +90,12 @@ public sealed class LoginManager : MonoBehaviour
         }
         
         [CSVField]
+        public int 章节标签
+        {
+            set => flag = (Flag)value;
+        }
+
+        [CSVField]
         public string 章节场景
         {
             set
@@ -633,12 +639,22 @@ public sealed class LoginManager : MonoBehaviour
             __loaders.Clear();
         }
 
+        int i, numLevels = _levels.Length;
+        if (__levelIndices == null)
+        {
+            __levelIndices = new Dictionary<string, int>(numLevels);
+            for (i = 0; i < numLevels; ++i)
+                __levelIndices[_levels[i].name] = i;
+        }
+
         bool isSelected = false;
         foreach (var level in levelChapters.levels)
         {
             if (level.id == __selectedUserLevelID)
             {
-                isSelected = true;
+                if((_levels[__levelIndices[level.name]].flag & Level.Flag.Chapter) == Level.Flag.Chapter)
+                    isSelected = true;
+                
                 break;
             }
         }
@@ -656,14 +672,6 @@ public sealed class LoginManager : MonoBehaviour
             __selectedStageIndex = -1;
         }
         
-        int i, numLevels = _levels.Length;
-        if (__levelIndices == null)
-        {
-            __levelIndices = new Dictionary<string, int>(numLevels);
-            for (i = 0; i < numLevels; ++i)
-                __levelIndices[_levels[i].name] = i;
-        }
-
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved;
         int movedLevelIndex = -1, 
