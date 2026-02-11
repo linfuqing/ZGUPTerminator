@@ -2,6 +2,18 @@ using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
 
+public struct RemotePlayer
+{
+    private static readonly SharedStatic<bool> Active = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
+
+    public static bool active
+    {
+        get => Active.Data;
+
+        set => Active.Data = value;
+    }
+}
+
 public struct LevelPlayer : IComponentData
 {
 }

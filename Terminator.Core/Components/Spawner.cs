@@ -638,16 +638,19 @@ public struct SpawnerDefinition
             break;
         }
 
-        if (i == numLoaderIndices)
-            return false;
-
-        if (!prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out Entity prefab))
-            return false;
-
+        Entity prefab;
+        if (i < numLoaderIndices)
+        {
+            if (!prefabLoader.TryGetOrLoadPrefabRoot(prefabs[data.loaderIndices[i].value].prefab, out prefab))
+                return false;
+        }
+        else
+            prefab = Entity.Null;
+        
         /*if (spawnerTime.version != status.version)
         {
             status = default;
-            
+
             status.version = spawnerTime.version;
         }*/
 
@@ -669,7 +672,8 @@ public struct SpawnerDefinition
                     break;
                 }
 
-                if (__Apply(
+                if (prefab == Entity.Null || 
+                    __Apply(
                         currentTime, 
                         playerPosition,
                         prefab,
