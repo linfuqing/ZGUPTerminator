@@ -100,6 +100,7 @@ public partial class LevelSystemManaged : SystemBase
     private int __statusStage;
     private EntityQuery __group;
     private EntityQuery __itemGroup;
+    private EntityQuery __remotePlayerGroup;
     
     protected override void OnCreate()
     {
@@ -121,6 +122,11 @@ public partial class LevelSystemManaged : SystemBase
                 .WithAllRW<LevelItem>()
                 .Build(this);
         
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __remotePlayerGroup = builder
+                .WithAllRW<RemotePlayer>()
+                .Build(this);
+
         //RequireForUpdate<LevelStatus>();
         EntityManager.CreateSingleton<LevelVersion>();
         
@@ -176,6 +182,10 @@ public partial class LevelSystemManaged : SystemBase
                 status.expMax = LevelShared.expMax;
                 status.killCount = 0;
                 status.killBossCount = 0;
+                status.stage = LevelShared.stage;
+                SystemAPI.SetSingleton(status);
+
+                var entityManager = EntityManager;
                 if (SystemAPI.Exists(player))
                 {
                     if (SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
@@ -185,23 +195,24 @@ public partial class LevelSystemManaged : SystemBase
                         SystemAPI.SetComponent(player, instanceID);
                     }
 
-                    EntityManager.DestroyEntity(player);
+                    entityManager.DestroyEntity(player);
                 }
-                /*else
-                    status.gold = 0;*/
-
-                status.stage = LevelShared.stage;
-                SystemAPI.SetSingleton(status);
+                
+                entityManager.DestroyEntity(__remotePlayerGroup);
 
                 if (thirdPersonPlayerEntity != Entity.Null)
-                    EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
+                    entityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
                 
                 __DestroyEntities();
                 __DestroyBulletEntities();
 
                 __statusStage = -1;
+                
+                LevelPlayer.instanceID = 0;
             }
         }
+        else if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
+            LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
         
         int version = SystemAPI.GetSingleton<LevelVersion>().value;
         if (version != __version)
@@ -289,7 +300,7 @@ public partial class LevelSystemManaged : SystemBase
                     skillDefinition,
                     skillNameDefinition,
                     player,
-                    status.stage,
+                    //status.stage,
                     manager);
         }
         

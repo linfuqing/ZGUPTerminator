@@ -2,7 +2,7 @@ using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
 
-public struct RemotePlayer
+public struct RemotePlayer : IComponentData
 {
     private static readonly SharedStatic<bool> Active = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
 
@@ -16,6 +16,14 @@ public struct RemotePlayer
 
 public struct LevelPlayer : IComponentData
 {
+    private static readonly SharedStatic<int> InstanceID = SharedStatic<int>.GetOrCreate<LevelPlayer>();
+
+    public static int instanceID
+    {
+        get => InstanceID.Data;
+
+        set => InstanceID.Data = value;
+    }
 }
 
 public struct LevelPlayerActiveSkill

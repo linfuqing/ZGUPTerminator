@@ -78,7 +78,7 @@ public partial class LevelSystemManaged
         in BlobAssetReference<SkillDefinition> definition, 
         in BlobAssetReference<LevelSkillNameDefinition> nameDefinition, 
         in Entity player, 
-        int stage, 
+        //int stage, 
         LevelManager manager)
     {
         if (manager.isRestart || !SystemAPI.Exists(player))

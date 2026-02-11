@@ -10,8 +10,10 @@ public class PlayerController : MonoBehaviour
         Respawn = 0x02 | Dead,
     }
 
+    private bool __isLocal;
     private Status __status;
     private int __timeScaleIndex = -1;
+    private int __instanceID;
     
     private AttributeEventReceiver __attributeEventReceiver;
 
@@ -35,7 +37,9 @@ public class PlayerController : MonoBehaviour
             case "Hit":
                 //LevelManager.instance.dataFlag |= (int)ILevelData.Flag.HasBeenDamaged;
                 
-                VibrateUtility.Apply(VibrationType.Peek);
+                if(__isLocal)
+                    VibrateUtility.Apply(VibrationType.Peek);
+                
                 break;
             case "Die":
                 if(__attributeEventReceiver != null)
@@ -81,7 +85,7 @@ public class PlayerController : MonoBehaviour
 
     private void __SetStatus(Status value)
     {
-        if (((value ^ __status) & Status.Dead) == Status.Dead)
+        if (__isLocal && ((value ^ __status) & Status.Dead) == Status.Dead)
         {
             var analytics = IAnalytics.instance as IAnalyticsEx;
             if ((value & Status.Dead) == Status.Dead)
@@ -110,25 +114,27 @@ public class PlayerController : MonoBehaviour
         
         __status = value;
     }
-
+    
     void Awake()
     {
         if (__attributeEventReceiver == null)
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
-
-        if (__attributeEventReceiver != null)
-            __attributeEventReceiver.onChanged += __OnChanged;
     }
 
-    private void OnEnable()
+    /*void OnEnable()
     {
         __SetStatus(0);
         
         PlayerEvents.isActive = true;
-    }
+    }*/
 
-    private void OnDisable()
+    void OnDisable()
     {
+        if (!__isLocal)
+            return;
+
+        __isLocal = false;
+        
         if ((__status & Status.Dead) == Status.Dead)
         {
             if(__timeScaleIndex == -1)
@@ -136,13 +142,13 @@ public class PlayerController : MonoBehaviour
             
             PlayerEvents.isActive = false;
         }
+        
+        if ((object)__attributeEventReceiver != null)
+            __attributeEventReceiver.onChanged -= __OnChanged;
     }
 
     void OnDestroy()
     {
-        if ((object)__attributeEventReceiver != null)
-            __attributeEventReceiver.onChanged -= __OnChanged;
-        
         TimeScaleUtility.Remove(__timeScaleIndex);
 
         __timeScaleIndex = -1;
@@ -150,7 +156,29 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        int instanceID = LevelPlayer.instanceID;
+        if (instanceID == 0)
+            return;
+
         var transform = this.transform;
+        if(__instanceID == 0)
+            __instanceID = transform.GetInstanceID();
+
+        if (!__isLocal)
+        {
+            if(__instanceID != instanceID)
+                return;
+            
+            __isLocal = true;
+            
+            if (__attributeEventReceiver != null)
+                __attributeEventReceiver.onChanged += __OnChanged;
+            
+            __SetStatus(0);
+        
+            PlayerEvents.isActive = true;
+        }
+
         var position = transform.position;
 
         var positionInstance = PlayerPosition.instance;
