@@ -8,6 +8,7 @@ public partial class LevelManager
         None, 
         Waiting,
         Recovering,
+        TheLastTime, 
         Finish
     }
     
@@ -37,13 +38,20 @@ public partial class LevelManager
 
             hasBeenRecovered = false;
         }
-        else if (RecoveryStatus.Recovering == __recoveredStatus)
+        else
         {
-            __recoveredStatus = RecoveryStatus.None;
+            switch (__recoveredStatus)
+            {
+                case RecoveryStatus.Recovering:
+                    __recoveredStatus = RecoveryStatus.None;
 
-            return true;
+                    return true;
+                case RecoveryStatus.TheLastTime:
+                    __recoveredStatus = RecoveryStatus.Finish;
+                    return true;
+            }
         }
-
+        
         return false;
     }
 
@@ -87,7 +95,7 @@ public partial class LevelManager
                         callback(x);
 
                     if(RecoveryStatus.Waiting == __recoveredStatus)
-                        __recoveredStatus = x ? RecoveryStatus.Finish : RecoveryStatus.None;
+                        __recoveredStatus = x ? RecoveryStatus.TheLastTime : RecoveryStatus.None;
             
                     if(x)
                         _onRecoveredSuccess?.Invoke();
