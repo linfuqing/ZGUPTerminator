@@ -78,7 +78,7 @@ public partial class LevelManager
         {
             if (levelData.canRecoveryExtra)
             {
-                __recoveredStatus = RecoveryStatus.Finish;
+                __recoveredStatus = RecoveryStatus.TheLastTime;
                 
                 if(callback != null)
                     callback(true);
