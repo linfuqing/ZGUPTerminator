@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -56,11 +54,28 @@ public class PlayerEvents : MonoBehaviour
 
     public static void Respawn()
     {
+        var levelData = ILevelData.instance;
+        if (levelData == null)
+            __Respawn();
+        else
+            levelData.Recovery(__Respawn);
+    }
+
+    private static void __Respawn()
+    {
         if (__instances != null)
         {
             foreach (var instance in __instances)
                 instance._onRespawn?.Invoke();
         }
+    }
+    
+    private static void __Respawn(bool result)
+    {
+        if (result)
+            __Respawn();
+        else
+            isActive = false;
     }
 
     void OnEnable()

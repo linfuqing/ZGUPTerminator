@@ -28,6 +28,22 @@ public class PlayerController : MonoBehaviour
     private AttributeEventReceiver __attributeEventReceiver;
 
     private Animator __animator;
+    
+    public static bool isWaitingToRespawn
+    {
+        get
+        {
+            if (!EffectShared.keepRecoveryTime)
+                return true;
+            
+            var levelData = ILevelData.instance;
+            if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
+                return true;
+
+            return false;
+        }
+    }
+
     public Animator animator
     {
         get
@@ -67,22 +83,6 @@ public class PlayerController : MonoBehaviour
         
         parameters.Apply(animator);
     }
-
-    public static bool isWaitingToRespawn
-    {
-        get
-        {
-            if (!EffectShared.keepRecoveryTime)
-                return true;
-            
-            var levelData = ILevelData.instance;
-            if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
-                return true;
-
-            return false;
-        }
-    }
-    
 
     [Preserve]
     public void Respawn()
