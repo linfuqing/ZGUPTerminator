@@ -74,14 +74,22 @@ public partial class LevelManager
             return;
         }
 
+        var recoveryStatus = RecoveryStatus.Recovering;
         if (hasBeenRecovered)
         {
             if (levelData.canRecoveryExtra)
             {
-                __recoveredStatus = RecoveryStatus.TheLastTime;
-                
-                if(callback != null)
-                    callback(true);
+                if (EffectShared.keepRecoveryTime)
+                {
+                    __recoveredStatus = RecoveryStatus.TheLastTime;
+
+                    if (callback != null)
+                        callback(true);
+
+                    return;
+                }
+
+                recoveryStatus = RecoveryStatus.TheLastTime;
             }
             else
             {
@@ -102,21 +110,23 @@ public partial class LevelManager
                     else
                         _onRecoveredFailure?.Invoke();
                 }));
+
+                return;
             }
-
-            return;
         }
-        
-        hasBeenRecovered = true;
-
-        if (EffectShared.keepRecoveryTime)
+        else
         {
-            if(callback != null)
-                callback(true);
+            hasBeenRecovered = true;
 
-            __recoveredStatus = RecoveryStatus.None;
+            if (EffectShared.keepRecoveryTime)
+            {
+                if (callback != null)
+                    callback(true);
 
-            return;
+                __recoveredStatus = RecoveryStatus.None;
+
+                return;
+            }
         }
 
         __recoveredStatus = RecoveryStatus.Waiting;
@@ -129,7 +139,7 @@ public partial class LevelManager
                 callback(x);
 
             if(RecoveryStatus.Waiting == __recoveredStatus)
-                __recoveredStatus = x ? RecoveryStatus.Recovering : RecoveryStatus.None;
+                __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
             
             if(x)
                 _onRecoveredSuccess?.Invoke();
