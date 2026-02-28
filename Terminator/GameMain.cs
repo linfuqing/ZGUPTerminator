@@ -74,13 +74,6 @@ public class GameLevelData : ILevelData
 {
     private readonly uint UserID;
 
-    public bool hasBeenRecovered
-    {
-        get;
-
-        private set;
-    }
-
     public bool canRecoveryExtra
     {
         get; 
@@ -91,8 +84,6 @@ public class GameLevelData : ILevelData
     {
         UserID = userID;
 
-        hasBeenRecovered = false;
-        
         canRecoveryExtra = hasSweepCard;
     }
     
@@ -167,29 +158,34 @@ public class GameLevelData : ILevelData
             onComplete);
     }
 
-    public IEnumerator Recovery(Action<bool> onComplete)
+    public IEnumerator Buy(Action<bool> onComplete)
     {
-        if (hasBeenRecovered && !canRecoveryExtra)
+        if (!canRecoveryExtra)
         {
             var purchaseData = IPurchaseData.instance;
-            if(purchaseData != null)
+            if (purchaseData != null)
                 return purchaseData.Buy(UserID, PurchaseType.SweepCard, 0, x =>
                 {
                     canRecoveryExtra = x;
 
                     onComplete(x);
                 });
+            
         }
 
-        hasBeenRecovered = true;
-
-        if (!EffectShared.keepRecoveryTime)
-        {
-            var advertisementData = IAdvertisementData.instance;
-            if(advertisementData != null)
-                return advertisementData.Broadcast(UserID, AdvertisementType.Recovery, null, onComplete);
-        }
-
+        onComplete(true);
+        
+        return null;
+    }
+    
+    public IEnumerator Broadcast(Action<bool> onComplete)
+    {
+        var advertisementData = IAdvertisementData.instance;
+        if(advertisementData != null)
+            return advertisementData.Broadcast(UserID, AdvertisementType.Recovery, null, onComplete);
+        
+        onComplete(true);
+        
         return null;
     }
 

@@ -54,11 +54,11 @@ public class PlayerEvents : MonoBehaviour
 
     public static void Respawn()
     {
-        var levelData = ILevelData.instance;
-        if (levelData == null)
+        var levelManager = LevelManager.instance;
+        if (levelManager == null)
             __Respawn();
         else
-            levelData.Recovery(__Respawn);
+            levelManager.Recovery(__Respawn);
     }
 
     private static void __Respawn()

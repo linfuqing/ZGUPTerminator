@@ -8,6 +8,7 @@ public partial class LevelManager
         None, 
         Waiting,
         Recovering,
+        Finish
     }
     
     [SerializeField]
@@ -18,9 +19,22 @@ public partial class LevelManager
 
     private RecoveryStatus __recoveredStatus;
     
+    public bool hasBeenRecovered
+    {
+        get;
+
+        private set;
+    }
+    
     public bool IsRecovery()
     {
-        if (RecoveryStatus.Recovering == __recoveredStatus)
+        if (isRestart)
+        {
+            __recoveredStatus = RecoveryStatus.None;
+
+            hasBeenRecovered = false;
+        }
+        else if (RecoveryStatus.Recovering == __recoveredStatus)
         {
             __recoveredStatus = RecoveryStatus.None;
 
@@ -49,16 +63,59 @@ public partial class LevelManager
             return;
         }
 
-        __recoveredStatus = RecoveryStatus.Waiting;
+        if (hasBeenRecovered)
+        {
+            if (levelData.canRecoveryExtra)
+            {
+                __recoveredStatus = RecoveryStatus.Finish;
+                
+                if(callback != null)
+                    callback(true);
+            }
+            else
+            {
+                __recoveredStatus = RecoveryStatus.Waiting;
+
+                _onRecoveredStart?.Invoke();
+
+                __StartCoroutine(nameof(ILevelData.Buy), levelData.Buy(x =>
+                {
+                    if(callback != null)
+                        callback(x);
+
+                    if(RecoveryStatus.Waiting == __recoveredStatus)
+                        __recoveredStatus = x ? RecoveryStatus.Finish : RecoveryStatus.None;
+            
+                    _onRecoveredEnd?.Invoke(!x);
+                }));
+            }
+
+            return;
+        }
         
+        hasBeenRecovered = true;
+
+        if (EffectShared.keepRecoveryTime)
+        {
+            if(callback != null)
+                callback(true);
+
+            __recoveredStatus = RecoveryStatus.None;
+
+            return;
+        }
+
+        __recoveredStatus = RecoveryStatus.Waiting;
+
         _onRecoveredStart?.Invoke();
         
-        __StartCoroutine(nameof(ILevelData.Recovery), levelData.Recovery(x =>
+        __StartCoroutine(nameof(ILevelData.Broadcast), levelData.Broadcast(x =>
         {
             if(callback != null)
                 callback(x);
 
-            __recoveredStatus = x ? RecoveryStatus.Recovering : RecoveryStatus.None;
+            if(RecoveryStatus.Waiting == __recoveredStatus)
+                __recoveredStatus = x ? RecoveryStatus.Recovering : RecoveryStatus.None;
             
             _onRecoveredEnd?.Invoke(!x);
         }));

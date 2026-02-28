@@ -168,6 +168,8 @@ public partial class LevelSystemManaged : SystemBase
 
             return;
         }
+
+        bool isRecovery = manager.IsRecovery();
         
         Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
@@ -216,7 +218,7 @@ public partial class LevelSystemManaged : SystemBase
             if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
                 LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
 
-            if (manager.IsRecovery())
+            if (isRecovery)
             {
                 if (SystemAPI.HasComponent<EffectTarget>(player))
                 {

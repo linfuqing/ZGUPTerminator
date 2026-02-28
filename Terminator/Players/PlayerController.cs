@@ -37,7 +37,7 @@ public class PlayerController : MonoBehaviour
                 return true;
             
             var levelData = ILevelData.instance;
-            if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
+            if (levelData != null && !levelData.canRecoveryExtra && LevelManager.instance.hasBeenRecovered)
                 return true;
 
             return false;

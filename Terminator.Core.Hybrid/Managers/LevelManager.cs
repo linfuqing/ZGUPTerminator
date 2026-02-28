@@ -108,6 +108,8 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField] 
     internal Stage[] _stages;
 
+    private bool __isRestart;
+
     private int __time;
     private int __max;
     private int __value;

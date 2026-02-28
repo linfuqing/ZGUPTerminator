@@ -25,8 +25,6 @@ public interface ILevelData
 
     public static ILevelData instance;
     
-    bool hasBeenRecovered { get; }
-    
     bool canRecoveryExtra { get; }
     
     IEnumerator SubmitStage(
@@ -54,5 +52,7 @@ public interface ILevelData
         int gold, 
         Action<bool> onComplete);
     
-    IEnumerator Recovery(Action<bool> onComplete);
+    IEnumerator Buy(Action<bool> onComplete);
+    
+    IEnumerator Broadcast(Action<bool> onComplete);
 }
