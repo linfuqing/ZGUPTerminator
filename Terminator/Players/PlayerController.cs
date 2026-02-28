@@ -71,6 +71,8 @@ public class PlayerController : MonoBehaviour
     [Preserve]
     public void Respawn()
     {
+        PlayerEvents.isActive = true;
+        
         animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.RightNow);
     }
 
@@ -111,18 +113,8 @@ public class PlayerController : MonoBehaviour
 
                 if ((value & Status.Respawn) == Status.Respawn)
                 {
-                    bool isWaiting = false;
-                    if (!EffectShared.keepRecoveryTime)
-                        animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.Waiting);
-                    else
-                    {
-                        var levelData = ILevelData.instance;
-                        if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
-                            animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.Waiting);
-                    }
+                    animator.SetInteger(RespawnStatusHash, PlayerEvents.isWaitingToRespawn ? (int)RespawnStatus.Waiting : 0);
                     
-                    animator.SetInteger(RespawnStatusHash, 0);
-
                     PlayerEvents.Respawn();
                     
                     analytics?.RespawnPlayer();

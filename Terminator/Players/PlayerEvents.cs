@@ -54,6 +54,21 @@ public class PlayerEvents : MonoBehaviour
         }
     }
 
+    public static bool isWaitingToRespawn
+    {
+        get
+        {
+            if (!EffectShared.keepRecoveryTime)
+                return true;
+            
+            var levelData = ILevelData.instance;
+            if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
+                return true;
+
+            return false;
+        }
+    }
+
     public static void Respawn()
     {
         LevelManager.instance?.Recovery(__Recovery);
@@ -61,7 +76,7 @@ public class PlayerEvents : MonoBehaviour
 
     private static void __Recovery(bool result)
     {
-        if (result)
+        if (result && !isWaitingToRespawn)
         {
             if (__instances != null)
             {
