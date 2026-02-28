@@ -321,7 +321,7 @@ public partial class UserDataMain
             if (HasSweepCard())
                 result |= IUserData.PurchaseFlag.SweepCard;
 
-            if (__HasPurchase(PurchaseType.AdvertisingFreeCard, 0))
+            if (AdvertisementData.hasAdvertisingFreeCard)
                 result |= IUserData.PurchaseFlag.AdvertisingFreeCard;
 
             return result;
@@ -330,7 +330,11 @@ public partial class UserDataMain
 
     public static bool HasSweepCard()
     {
-        return __HasPurchase(PurchaseType.SweepCard,0);
+        return PurchaseData.IsValid(PurchaseType.SweepCard,
+            0,
+            NAME_SPACE_USER_PURCHASE_ITEM,
+            out _,
+            out _);
     }
 
     public IEnumerator QueryPurchaseTokens(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseTokens>> onComplete)
@@ -640,15 +644,6 @@ public partial class UserDataMain
         }
         
         onComplete(rewards == null ? null : rewards.ToArray());
-    }
-    
-    private static bool __HasPurchase(PurchaseType type, int level)
-    {
-        return PurchaseData.IsValid(type,
-            0,
-            NAME_SPACE_USER_PURCHASE_ITEM,
-            out _,
-            out _);
     }
     
     private static string __PurchaseParse(Memory<string> parameters)

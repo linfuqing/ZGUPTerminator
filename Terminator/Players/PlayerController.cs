@@ -126,8 +126,8 @@ public class PlayerController : MonoBehaviour
             var analytics = IAnalytics.instance as IAnalyticsEx;
             if ((value & Status.Dead) == Status.Dead)
             {
-                if(__timeScaleIndex == -1)
-                    __timeScaleIndex = TimeScaleUtility.Add(0.0f);
+                //if(__timeScaleIndex == -1)
+                //    __timeScaleIndex = TimeScaleUtility.Add(0.0f);
 
                 if ((value & Status.Respawn) == Status.Respawn)
                 {

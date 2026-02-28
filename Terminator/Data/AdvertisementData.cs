@@ -73,6 +73,15 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
 {
     public const string NAME_SPACE_TIMES = "AdvertisementTimes";
 
+    public static bool hasAdvertisingFreeCard
+    {
+        get
+        {
+            var output = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0);
+            return output.IsValid(1) || output.GetDeadline(DateTime.UtcNow.Ticks) > 0;
+        }
+    }
+
     public static string GetNameSpace(AdvertisementType type, string name)
     {
         return $"{NAME_SPACE_TIMES}{type}{name}";
@@ -101,9 +110,7 @@ public class AdvertisementData : MonoBehaviour, IAdvertisementData
     {
         yield return null;
 
-        var output = PurchaseData.Query(PurchaseType.AdvertisingFreeCard, 0);
-        var api = output.IsValid(1) || output.GetDeadline(DateTime.UtcNow.Ticks) > 0 ? 
-            null : IAdvertisementAPI.instance;
+        var api = hasAdvertisingFreeCard ? null : IAdvertisementAPI.instance;
         if (api == null)
         {
             var key = GetNameSpace(type, name);
