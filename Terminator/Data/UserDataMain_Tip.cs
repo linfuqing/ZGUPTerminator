@@ -34,6 +34,8 @@ public partial class UserDataMain
         {
             public string name;
 
+            public string rewardName;
+
             public UserRewardType type;
 
             public int minCount;
@@ -58,6 +60,15 @@ public partial class UserDataMain
                 }
             }
             
+            [CSVField]
+            public string 游荡奖励内容名字
+            {
+                set
+                {
+                    rewardName = value;
+                }
+            }
+
             [CSVField]
             public int 游荡奖励类型
             {
@@ -205,6 +216,7 @@ public partial class UserDataMain
                         continue;
 
                     destination.name = source.name;
+                    destination.rewardName = source.rewardName;
                     destination.type = source.type;
                     destination.min = source.minCount;
                     destination.max = source.maxCount;
@@ -230,6 +242,7 @@ public partial class UserDataMain
                         continue;
 
                     destination.name = source.name;
+                    destination.rewardName = source.rewardName;
                     destination.type = source.type;
                     destination.min = source.minCount;
                     destination.max = source.maxCount;
@@ -419,6 +432,7 @@ public partial class UserDataMain
                     tipReward = _tip.GetReward(tipLevel.rewardNames[j]);
                     
                     userTipReward.name = tipReward.name;
+                    userTipReward.rewardName = tipReward.rewardName;
                     userTipReward.type = tipReward.type;
                     userTipReward.min = tipReward.minCount;
                     userTipReward.max = tipReward.maxCount;
@@ -545,6 +559,7 @@ public partial class UserDataMain
                 source = _tip.GetReward(level.rewardNames[i]);
                     
                 destination.name = source.name;
+                destination.rewardName = source.rewardName;
                 destination.type = source.type;
                 destination.min = source.minCount;
                 destination.max = source.maxCount;

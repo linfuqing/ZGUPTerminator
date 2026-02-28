@@ -6,6 +6,8 @@ using UnityEngine;
 public struct UserTipReward
 {
     public string name;
+    
+    public string rewardName;
 
     public UserRewardType type;
 
@@ -116,7 +118,7 @@ public partial interface IUserData
                     if (!results.TryGetValue(i, out result))
                     {
                         result.type = reward.type;
-                        result.name = reward.name;
+                        result.name = reward.rewardName;
                         result.count = 0;
                     }
 
