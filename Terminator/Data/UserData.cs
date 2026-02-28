@@ -19,7 +19,8 @@ public enum UserRewardType
     Ticket,
     Exp,
     RoleExp, 
-    Event
+    Event, 
+    Tip
 }
 
 public enum UserSkillType

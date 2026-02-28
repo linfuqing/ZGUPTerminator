@@ -1,4 +1,5 @@
 using System.Threading;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
@@ -237,6 +238,7 @@ public struct EffectTargetData : IComponentData
 
     public TargetType targetType;
     public int hpMax;
+    public int recoveryTimeBeenKeptOfMaxTimes;
     public float recoveryChance;
     public float recoveryTime;
     public float recoveryInvincibleTime;
@@ -433,4 +435,16 @@ public struct EffectTargetBuff : ICleanupComponentData
 
         return false;
     }
+}
+
+public static class EffectShared
+{
+    private class KeepRecoveryTime
+    {
+        private static readonly SharedStatic<bool> Value = SharedStatic<bool>.GetOrCreate<KeepRecoveryTime>();
+        
+        public static ref bool value => ref Value.Data;
+    }
+
+    public static bool keepRecoveryTime => KeepRecoveryTime.value;
 }

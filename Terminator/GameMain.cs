@@ -73,6 +73,11 @@ public class GameSceneActivation : IEnumerator
 
 public class GameLevelData : ILevelData
 {
+    public enum Flag
+    {
+        
+    }
+    
     private uint __userID;
     
     public GameLevelData(uint userID)
@@ -149,6 +154,11 @@ public class GameLevelData : ILevelData
             killBossCount, 
             gold, 
             onComplete);
+    }
+
+    public IEnumerator Recovery(Action<bool> onComplete)
+    {
+        if()
     }
 
     /*private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)

@@ -1766,9 +1766,11 @@ public partial struct EffectSystem : ISystem
                         {
                             result |= EnabledFlags.Recovery;
 
-                            --target.times;
+                            target.invincibleTime = target.times-- > targetInstance.recoveryTimeBeenKeptOfMaxTimes &&
+                                                    EffectShared.keepRecoveryTime
+                                ? targetInstance.recoveryTime
+                                : float.MaxValue;
 
-                            target.invincibleTime = targetInstance.recoveryTime;
                             target.hp = 0;
 
                             targetHP.value = targetInstance.hpMax;

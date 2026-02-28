@@ -28,6 +28,11 @@ public struct UserTipLevel
         public uint id;
 
         /// <summary>
+        /// 需要设计图数量
+        /// </summary>
+        public int cost;
+
+        /// <summary>
         /// 下一级需要章节
         /// </summary>
         public int chapter;
@@ -38,6 +43,11 @@ public struct UserTipLevel
     public string name;
     
     public uint id;
+
+    /// <summary>
+    /// 需要设计图数量
+    /// </summary>
+    public int cost;
 
     public string[] rewardNames;
 
@@ -151,6 +161,8 @@ public partial interface IUserData
         /// 快速游荡每次消耗多少体力
         /// </summary>
         public int energiesPerTime;
+
+        public int total;
 
         public Tip value;
 

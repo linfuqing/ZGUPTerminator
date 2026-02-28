@@ -264,9 +264,14 @@ public partial class UserDataMain
         }
     }
 
-    private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
-    private const string NAME_SPACE_USER_TIP_USED = "UserTipUsed";
-    private const string NAME_SPACE_USER_TIP_LEVEL = "UserTipLevel";
+    private const string NAME_SPACE_USER_TIP = "UserTip";
+
+    public static int tip
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_TIP);
+        
+        private set => PlayerPrefs.SetInt(NAME_SPACE_USER_TIP, value);
+    }
     
     //private static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -284,16 +289,85 @@ public partial class UserDataMain
         public string nextLevel;
 
         public int chapter;
+        public int cost;
         
         public string[] rewardNames;
+        
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 游荡等级名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+            
+        [CSVField]
+        public string 游荡等级下一级别
+        {
+            set
+            {
+                nextLevel = value;
+            }
+        }
+            
+        [CSVField]
+        public int 游荡等级章节
+        {
+            set
+            {
+                chapter = value;
+            }
+        }
+            
+        [CSVField]
+        public int 游荡等级消耗
+        {
+            set
+            {
+                cost = value;
+            }
+        }
+            
+        [CSVField]
+        public string 游荡等级奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewardNames = null;
+
+                    return;
+                }
+                
+                rewardNames = value.Split('/');
+            }
+        }
+#endif
     }
 
     [SerializeField]
     internal TipLevel[] _tipLevels;
 
+#if UNITY_EDITOR
+    [SerializeField, CSV("_tipLevels", guidIndex = -1, nameIndex = 0)]
+    internal string _tipLevelsPath;
+#endif
+
     [SerializeField] 
     internal string[] _tipLevelNames;
     
+#if UNITY_EDITOR
+    [SerializeField, CSV("_tipLevelNames", guidIndex = -1, nameIndex = 0)]
+    internal string _tipLevelNamesPath;
+#endif
+
+    private const string NAME_SPACE_USER_TIP_TIME = "UserTipTime";
+    private const string NAME_SPACE_USER_TIP_USED = "UserTipUsed";
+
     public IEnumerator QueryTip(
         uint userID,
         Action<IUserData.TipData> onComplete)
@@ -310,6 +384,7 @@ public partial class UserDataMain
         IUserData.TipData result;
         result.energiesPerTime = _energiesPerTime;
         result.value = __CreateTip(out var levelNames);
+        result.total = tip;
         
         int numLevelNames = levelNames.Length, numRewards, tipLevelIndex, i, j;
         TipLevel tipLevel;
@@ -323,6 +398,7 @@ public partial class UserDataMain
             tipLevel = _tipLevels[tipLevelIndex];
             userTipLevel.name = tipLevel.name;
             userTipLevel.id = __ToID(tipLevelIndex);
+            userTipLevel.cost = tipLevel.cost;
             userTipLevel.rewardNames = tipLevel.rewardNames;
 
             if (string.IsNullOrEmpty(tipLevel.nextLevel))
@@ -333,6 +409,7 @@ public partial class UserDataMain
                 tipLevel = _tipLevels[tipLevelIndex];
                 userTipLevel.next.name = tipLevel.name;
                 userTipLevel.next.id = __ToID(tipLevelIndex);
+                userTipLevel.next.cost = tipLevel.cost;
                 userTipLevel.next.chapter = tipLevel.chapter;
 
                 numRewards = tipLevel.rewardNames == null ? 0 : tipLevel.rewardNames.Length;
@@ -405,6 +482,8 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
 
+    private const string NAME_SPACE_USER_TIP_LEVEL = "UserTipLevel";
+    
     public IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<UserTipLevel.Next?> onComplete)
     {
         yield return __CreateEnumerator();
@@ -423,6 +502,17 @@ public partial class UserDataMain
             
             yield break;
         }
+
+        int tip = UserDataMain.tip;
+        if (tip < level.cost)
+        {
+            onComplete(null);
+            
+            yield break;
+        }
+
+        tip -= level.cost;
+        UserDataMain.tip = tip;
 
         int numLevelNames = levelNames.Length - 1;
         Array.Copy(levelNames, index + 1, levelNames, index, numLevelNames - index);
@@ -443,6 +533,7 @@ public partial class UserDataMain
             
             next.name = level.name;
             next.id = __ToID(index);
+            next.cost = level.cost;
             next.chapter = level.chapter;
 
             int numRewards = level.rewardNames == null ? 0 : level.rewardNames.Length;

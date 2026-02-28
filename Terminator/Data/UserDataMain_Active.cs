@@ -619,34 +619,32 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        IUserData.ActiveEvents results;
+        IUserData.ActiveEvents activeEvents;
         int seconds = PlayerPrefs.GetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME);
         if (seconds == 0)
         {
             PlayerPrefs.SetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME, (int)DateTimeUtility.GetSeconds());
 
-            results.days = 0;
+            activeEvents.days = 0;
         }
         else
-            results.days = DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
+            activeEvents.days = DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
         
         if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
             __AppendQuest(UserQuest.Type.Login, 1);
         
-        int numActiveEvents = _activeEvents.Length;
-        results.values = new UserActiveEvent[numActiveEvents];
-
-        int i, j, numActives, numQuests;
+        int i, j, numActives, numQuests, numActiveEvents = _activeEvents.Length;
         UserActiveEvent result;
         ActiveEvent activeEvent;
         Active active;
         Quest quest;
         UserQuest userQuest;
         UserActive userActive;
+        List<UserActiveEvent> results = null;
         for (i = 0; i < numActiveEvents; ++i)
         {
             activeEvent = _activeEvents[i];
-            if(activeEvent.startDay > results.days || activeEvent.days > 0 && activeEvent.startDay + activeEvent.days <= results.days)
+            if(activeEvent.startDay > activeEvents.days || activeEvent.days > 0 && activeEvent.startDay + activeEvent.days <= activeEvents.days)
                 continue;
 
             result.id = __ToID(i);
@@ -687,10 +685,13 @@ public partial class UserDataMain
                 result.quests[j] = userQuest;
             }
 
-            results.values[i] = result;
+            results ??= new List<UserActiveEvent>();
+            results.Add(result);
         }
+        
+        activeEvents.values = results?.ToArray();
 
-        onComplete(results);
+        onComplete(activeEvents);
     }
 
     public IEnumerator CollectActiveEventActive(uint userID, uint activeEventID, uint activeID, Action<Memory<UserReward>> onComplete)

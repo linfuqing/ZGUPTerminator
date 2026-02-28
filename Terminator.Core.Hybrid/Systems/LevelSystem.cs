@@ -211,8 +211,25 @@ public partial class LevelSystemManaged : SystemBase
                 LevelPlayer.instanceID = 0;
             }
         }
-        else if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
-            LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
+        else 
+        {
+            if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
+                LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
+
+            if (manager.IsRecovery())
+            {
+                if (SystemAPI.HasComponent<EffectTarget>(player))
+                {
+                    var effectTarget = SystemAPI.GetComponent<EffectTarget>(player);
+                    if (effectTarget.invincibleTime > math.FLT_MIN_NORMAL)
+                    {
+                        effectTarget.invincibleTime = 0.0f;
+                        
+                        SystemAPI.SetComponent(player, effectTarget);
+                    }
+                }
+            }
+        }
         
         int version = SystemAPI.GetSingleton<LevelVersion>().value;
         if (version != __version)

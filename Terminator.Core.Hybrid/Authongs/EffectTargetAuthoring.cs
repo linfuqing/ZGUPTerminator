@@ -62,6 +62,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             instance.targetType =
                 9 == GetLayer() ? EffectTargetData.TargetType.Boss : EffectTargetData.TargetType.Normal;
             instance.hpMax = authoring._hp;
+            instance.recoveryTimeBeenKeptOfMinTimes = authoring._recoveryTimes;
             instance.recoveryChance = authoring._recoveryChance;
             instance.recoveryTime = authoring._recoveryTime;
             instance.recoveryInvincibleTime = authoring._recoveryInvincibleTime;
@@ -70,7 +71,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             AddComponent(entity, instance);
 
             EffectTarget target;
-            target.times = authoring._times;
+            target.times = authoring._recoveryTimes;
             target.hp = authoring._hp;
             target.shield = authoring._shield;
             target.immunizedTime = authoring._immunizedTime;
@@ -174,8 +175,8 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
         }
     }
     
-    [SerializeField]
-    internal int _times = 0;
+    [Tooltip("复活次数"), SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_times")]
+    internal int _recoveryTimes = 0;
 
     [SerializeField]
     internal int _hp = 1;

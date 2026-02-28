@@ -49,4 +49,6 @@ public interface ILevelData
         int killBossCount, 
         int gold, 
         Action<bool> onComplete);
+    
+    IEnumerator Recovery(Action<bool> onComplete);
 }

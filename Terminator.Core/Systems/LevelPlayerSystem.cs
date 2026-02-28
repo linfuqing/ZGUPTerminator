@@ -215,7 +215,9 @@ public partial struct LevelPlayerSystem : ISystem
                     float recoveryChance = LevelPlayerShared.effectTargetRecovery - effectTarget.times;
                     if (recoveryChance > math.FLT_MIN_NORMAL)
                         effectTargetData.recoveryChance = recoveryChance;
-                    
+
+                    effectTargetData.recoveryTimeBeenKeptOfMaxTimes =
+                        effectTarget.times - LevelPlayerShared.effectTargetRecoveryAutoTimes;
                     effectTargetData.hpMax = hp;
                     effectTargetDatas[player] = effectTargetData;
                 }

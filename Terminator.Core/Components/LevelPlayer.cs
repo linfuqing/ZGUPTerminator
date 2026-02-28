@@ -63,6 +63,10 @@ public static class LevelPlayerShared
         }
     }
 
+    private class EffectTargetRecoveryAutoTimes : Value<EffectTargetHP, int>
+    {
+    }
+
     private class EffectRage : Value<EffectRage, int>
     {
         
@@ -114,6 +118,13 @@ public static class LevelPlayerShared
             SharedStatic<FixedList4096Bytes<LevelPlayerSkillOpcode>>.GetOrCreate<SkillOpcode>();
 
         public static ref FixedList4096Bytes<LevelPlayerSkillOpcode> values => ref Values.Data;
+    }
+
+    public static int effectTargetRecoveryAutoTimes
+    {
+        get => EffectTargetRecoveryAutoTimes.value;
+
+        set => EffectTargetRecoveryAutoTimes.value = value;
     }
 
     public static int effectRage
