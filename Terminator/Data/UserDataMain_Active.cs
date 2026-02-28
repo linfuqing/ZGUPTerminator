@@ -628,7 +628,8 @@ public partial class UserDataMain
             activeEvents.days = 0;
         }
         else
-            activeEvents.days = DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
+            activeEvents.days =
+                DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
         
         if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
             __AppendQuest(UserQuest.Type.Login, 1);

@@ -4,7 +4,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using Unity.Entities.Content;
-using UnityEditor;
 using UnityEngine;
 using ZG;
 
@@ -73,16 +72,23 @@ public class GameSceneActivation : IEnumerator
 
 public class GameLevelData : ILevelData
 {
-    public enum Flag
+    private readonly uint UserID;
+
+    private bool __hasBeenRecovered;
+
+    public bool canRecoveryExtra
     {
-        
+        get; 
+        private set;
     }
     
-    private uint __userID;
-    
-    public GameLevelData(uint userID)
+    public GameLevelData(uint userID, bool hasSweepCard)
     {
-        __userID = userID;
+        UserID = userID;
+
+        __hasBeenRecovered = false;
+        
+        canRecoveryExtra = hasSweepCard;
     }
     
     public IEnumerator SubmitStage(
@@ -110,7 +116,7 @@ public class GameLevelData : ILevelData
         }
         
         return IUserData.instance.SubmitStage(
-            __userID, 
+            UserID, 
             //ToStageFlag(flag),
             stage, 
             time, 
@@ -145,7 +151,7 @@ public class GameLevelData : ILevelData
         Action<bool> onComplete)
     {
         return IUserData.instance.SubmitLevel(
-            __userID, 
+            UserID, 
             //ToStageFlag(flag),
             stage, 
             time, 
@@ -158,6 +164,27 @@ public class GameLevelData : ILevelData
 
     public IEnumerator Recovery(Action<bool> onComplete)
     {
+        if (__hasBeenRecovered && !canRecoveryExtra)
+        {
+            var purchaseData = IPurchaseData.instance;
+            if(purchaseData != null)
+                return purchaseData.Buy(UserID, PurchaseType.SweepCard, 0, x =>
+                {
+                    canRecoveryExtra = x;
+
+                    onComplete(x);
+                });
+        }
+
+        __hasBeenRecovered = true;
+
+        if (!EffectShared.keepRecoveryTime)
+        {
+            var advertisementData = IAdvertisementData.instance;
+            if(advertisementData != null)
+                return advertisementData.Broadcast(UserID, AdvertisementType.Recovery, null, onComplete);
+        }
+
         return null;
     }
 
@@ -441,7 +468,7 @@ public class GameMain : GameUser
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
     
-    public static readonly string NAME_SPACE_USER_GROUP = "GameMainUserGroup";
+    public const string NAME_SPACE_USER_GROUP = "GameMainUserGroup";
 
     //public const string NAME_SPACE_SCENE = "GameMainScene";
     //public const string NAME_SPACE_LEVEL = "GameMainLevel";
@@ -764,7 +791,7 @@ public class GameMain : GameUser
                         break;
                 }*/
 
-                ILevelData.instance = new GameLevelData(y);
+                ILevelData.instance = new GameLevelData(y, false);
                 
                 Login(y);
             });

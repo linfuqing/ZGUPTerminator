@@ -1,17 +1,28 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 public partial class LevelManager
 {
-    private bool __isRecovery;
+    private enum RecoveryStatus
+    {
+        None, 
+        Waiting,
+        Recovering,
+    }
+    
+    [SerializeField]
+    internal UnityEvent _onRecoveredStart;
+    
+    [SerializeField]
+    internal ActiveEvent _onRecoveredEnd;
+
+    private RecoveryStatus __recoveredStatus;
     
     public bool IsRecovery()
     {
-        if (__isRecovery)
+        if (RecoveryStatus.Recovering == __recoveredStatus)
         {
-            __isRecovery = false;
+            __recoveredStatus = RecoveryStatus.None;
 
             return true;
         }
@@ -21,23 +32,41 @@ public partial class LevelManager
 
     public void Recovery(System.Action<bool> callback)
     {
-        if (__isRecovery)
+        if (RecoveryStatus.None != __recoveredStatus)
         {
-            callback(false);
+            if(callback != null)
+                callback(false);
             
             return;
         }
 
-        if (EffectShared.keepRecoveryTime)
+        var levelData = ILevelData.instance;
+        if (levelData == null)
         {
-            __isRecovery = true;
+            if(callback != null)
+                callback(true);
+
+            return;
         }
-        else
-            __StartCoroutine(nameof(ILevelData.Recovery), ILevelData.instance?.Recovery(x =>
-            {
+
+        __recoveredStatus = RecoveryStatus.Waiting;
+        
+        _onRecoveredStart?.Invoke();
+        
+        __StartCoroutine(nameof(ILevelData.Recovery), levelData.Recovery(x =>
+        {
+            if(callback != null)
                 callback(x);
 
-                __isRecovery = x;
-            }));
+            __recoveredStatus = x ? RecoveryStatus.Recovering : RecoveryStatus.None;
+            
+            _onRecoveredEnd?.Invoke(!x);
+        }));
+    }
+
+    [UnityEngine.Scripting.Preserve]
+    public void Recovery()
+    {
+        Recovery(null);
     }
 }

@@ -14,6 +14,8 @@ public enum AdvertisementType
     //买体力
     Energy, 
     
+    Recovery, 
+    
     //活动预留
     Other
 }

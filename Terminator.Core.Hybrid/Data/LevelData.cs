@@ -25,6 +25,8 @@ public interface ILevelData
 
     public static ILevelData instance;
     
+    bool canRecoveryExtra { get; }
+    
     IEnumerator SubmitStage(
         //Flag flag, 
         int stage, 

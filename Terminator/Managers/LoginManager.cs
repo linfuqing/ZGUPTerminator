@@ -1455,7 +1455,7 @@ public sealed class LoginManager : MonoBehaviour
 
         uint userID = LoginManager.userID.Value;
         
-        ILevelData.instance = new GameLevelData(userID);
+        ILevelData.instance = new GameLevelData(userID, false);
 
         IRewardData.instance = new GameRewardData(userID);
     }

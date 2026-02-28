@@ -12,6 +12,10 @@ public class PlayerEvents : MonoBehaviour
     internal UnityEvent _onDisable;
     [SerializeField]
     internal UnityEvent _onRespawn;
+    [SerializeField]
+    internal UnityEvent _noRecoveryExtra;
+    [SerializeField]
+    internal UnityEvent _dontKeepRecoveryTime;
 
     private static HashSet<PlayerEvents> __instances;
 
@@ -52,14 +56,24 @@ public class PlayerEvents : MonoBehaviour
 
     public static void Respawn()
     {
-        if (__instances != null)
+        LevelManager.instance?.Recovery(__Recovery);
+    }
+
+    private static void __Recovery(bool result)
+    {
+        if (result)
         {
-            foreach (var instance in __instances)
+            if (__instances != null)
             {
-                if(instance._onRespawn != null)
-                    instance._onRespawn.Invoke();
+                foreach (var instance in __instances)
+                {
+                    if (instance._onRespawn != null)
+                        instance._onRespawn.Invoke();
+                }
             }
         }
+        else
+            isActive = false;
     }
 
     void OnEnable()
@@ -69,6 +83,13 @@ public class PlayerEvents : MonoBehaviour
 
         if (__instances.Add(this) && __instances.Count == 1)
             __isActive = true;
+
+        var levelData = ILevelData.instance;
+        if(levelData != null && !levelData.canRecoveryExtra)
+            _noRecoveryExtra?.Invoke();
+        
+        if(!EffectShared.keepRecoveryTime)
+            _dontKeepRecoveryTime.Invoke();
     }
 
     void OnDisable()
