@@ -220,6 +220,8 @@ public class PlayerController : MonoBehaviour
             
             __SetStatus(0);
         
+            PlayerEvents.Restart();
+            
             PlayerEvents.isActive = true;
         }
 

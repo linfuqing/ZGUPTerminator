@@ -11,11 +11,14 @@ public partial class LevelManager
         Finish
     }
     
-    [SerializeField]
-    internal UnityEvent _onRecoveredStart;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_onRecoveredStart")]
+    internal UnityEvent _onRecovering;
     
     [SerializeField]
-    internal ActiveEvent _onRecoveredEnd;
+    internal UnityEvent _onRecoveredSuccess;
+
+    [SerializeField]
+    internal UnityEvent _onRecoveredFailure;
 
     private RecoveryStatus __recoveredStatus;
     
@@ -76,7 +79,7 @@ public partial class LevelManager
             {
                 __recoveredStatus = RecoveryStatus.Waiting;
 
-                _onRecoveredStart?.Invoke();
+                _onRecovering?.Invoke();
 
                 __StartCoroutine(nameof(ILevelData.Buy), levelData.Buy(x =>
                 {
@@ -86,7 +89,10 @@ public partial class LevelManager
                     if(RecoveryStatus.Waiting == __recoveredStatus)
                         __recoveredStatus = x ? RecoveryStatus.Finish : RecoveryStatus.None;
             
-                    _onRecoveredEnd?.Invoke(!x);
+                    if(x)
+                        _onRecoveredSuccess?.Invoke();
+                    else
+                        _onRecoveredFailure?.Invoke();
                 }));
             }
 
@@ -107,7 +113,7 @@ public partial class LevelManager
 
         __recoveredStatus = RecoveryStatus.Waiting;
 
-        _onRecoveredStart?.Invoke();
+        _onRecovering?.Invoke();
         
         __StartCoroutine(nameof(ILevelData.Broadcast), levelData.Broadcast(x =>
         {
@@ -117,7 +123,10 @@ public partial class LevelManager
             if(RecoveryStatus.Waiting == __recoveredStatus)
                 __recoveredStatus = x ? RecoveryStatus.Recovering : RecoveryStatus.None;
             
-            _onRecoveredEnd?.Invoke(!x);
+            if(x)
+                _onRecoveredSuccess?.Invoke();
+            else
+                _onRecoveredFailure?.Invoke();
         }));
     }
 

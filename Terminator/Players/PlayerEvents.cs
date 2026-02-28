@@ -52,6 +52,25 @@ public class PlayerEvents : MonoBehaviour
         }
     }
 
+    public static void Restart()
+    {
+        if (__instances == null)
+            return;
+        
+        var levelData = ILevelData.instance;
+        if (levelData != null && !levelData.canRecoveryExtra)
+        {
+            foreach (var instance in __instances)
+                instance._noRecoveryExtra?.Invoke();
+        }
+
+        if (!EffectShared.keepRecoveryTime)
+        {
+            foreach (var instance in __instances)
+                instance._dontKeepRecoveryTime?.Invoke();
+        }
+    }
+
     public static void Respawn()
     {
         var levelManager = LevelManager.instance;
@@ -85,13 +104,6 @@ public class PlayerEvents : MonoBehaviour
 
         if (__instances.Add(this) && __instances.Count == 1)
             __isActive = true;
-
-        var levelData = ILevelData.instance;
-        if(levelData != null && !levelData.canRecoveryExtra)
-            _noRecoveryExtra?.Invoke();
-        
-        if(!EffectShared.keepRecoveryTime)
-            _dontKeepRecoveryTime.Invoke();
     }
 
     void OnDisable()
