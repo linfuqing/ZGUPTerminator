@@ -30,22 +30,17 @@ public partial class LevelManager
         return false;
     }
 
-    public void Recovery(System.Action<bool> callback)
+    [UnityEngine.Scripting.Preserve]
+    public void Recovery()
     {
         if (RecoveryStatus.None != __recoveredStatus)
-        {
-            if(callback != null)
-                callback(false);
-            
             return;
-        }
 
         var levelData = ILevelData.instance;
         if (levelData == null)
         {
-            if(callback != null)
-                callback(true);
-
+            __recoveredStatus = RecoveryStatus.Recovering;
+            
             return;
         }
 
@@ -55,18 +50,9 @@ public partial class LevelManager
         
         __StartCoroutine(nameof(ILevelData.Recovery), levelData.Recovery(x =>
         {
-            if(callback != null)
-                callback(x);
-
             __recoveredStatus = x ? RecoveryStatus.Recovering : RecoveryStatus.None;
             
             _onRecoveredEnd?.Invoke(!x);
         }));
-    }
-
-    [UnityEngine.Scripting.Preserve]
-    public void Recovery()
-    {
-        Recovery(null);
     }
 }

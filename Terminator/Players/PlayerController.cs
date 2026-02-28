@@ -68,10 +68,28 @@ public class PlayerController : MonoBehaviour
         parameters.Apply(animator);
     }
 
+    public static bool isWaitingToRespawn
+    {
+        get
+        {
+            if (!EffectShared.keepRecoveryTime)
+                return true;
+            
+            var levelData = ILevelData.instance;
+            if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
+                return true;
+
+            return false;
+        }
+    }
+    
+
     [Preserve]
     public void Respawn()
     {
         PlayerEvents.isActive = true;
+        
+        (IAnalytics.instance as IAnalyticsEx)?.RespawnPlayer();
         
         animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.RightNow);
     }
@@ -113,11 +131,17 @@ public class PlayerController : MonoBehaviour
 
                 if ((value & Status.Respawn) == Status.Respawn)
                 {
-                    animator.SetInteger(RespawnStatusHash, PlayerEvents.isWaitingToRespawn ? (int)RespawnStatus.Waiting : 0);
-                    
-                    PlayerEvents.Respawn();
-                    
-                    analytics?.RespawnPlayer();
+                    bool isWaitingToRespawn = PlayerController.isWaitingToRespawn;
+                    animator.SetInteger(RespawnStatusHash, isWaitingToRespawn ? (int)RespawnStatus.Waiting : 0);
+
+                    if (isWaitingToRespawn)
+                        PlayerEvents.isActive = false;
+                    else
+                    {
+                        PlayerEvents.Respawn();
+
+                        analytics?.RespawnPlayer();
+                    }
                 }
 
                 analytics?.DisablePlayer();
