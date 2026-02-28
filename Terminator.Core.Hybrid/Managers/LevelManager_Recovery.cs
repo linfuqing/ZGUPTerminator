@@ -81,10 +81,10 @@ public partial class LevelManager
             {
                 if (EffectShared.keepRecoveryTime)
                 {
-                    __recoveredStatus = RecoveryStatus.TheLastTime;
-
                     if (callback != null)
                         callback(true);
+
+                    //__recoveredStatus = RecoveryStatus.None;
 
                     return;
                 }
@@ -123,7 +123,7 @@ public partial class LevelManager
                 if (callback != null)
                     callback(true);
 
-                __recoveredStatus = RecoveryStatus.None;
+                //__recoveredStatus = RecoveryStatus.None;
 
                 return;
             }

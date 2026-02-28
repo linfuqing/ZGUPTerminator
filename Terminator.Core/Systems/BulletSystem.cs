@@ -232,6 +232,7 @@ public partial struct BulletSystem : ISystem
                 out var characterBody,
                 out var character);
     
+            bool isFire = this.isFire;
             BulletLocation location = 0;
             float3 up = math.up();
             ref var definition = ref definitions[index].definition.Value;
@@ -257,10 +258,10 @@ public partial struct BulletSystem : ISystem
                 }
 
                 this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
+                
+                isFire &= characterBodies.IsComponentEnabled(character);
             }
 
-            bool isFire = this.isFire;
-            
             var instances = this.instances[index];
             var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
             if (DelayTime.IsDelay(ref delayTimes, time, out _))

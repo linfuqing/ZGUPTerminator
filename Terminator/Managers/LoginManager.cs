@@ -1452,7 +1452,7 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.stage = stage;
 
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
-        LevelPlayerShared.effectTargetRecoveryTimes = hasSweepCard ? 1 : 0;
+        LevelPlayerShared.effectTargetRecoveryTimes = hasSweepCard ? 2 : 1;
         EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
                                         IUserData.PurchaseFlag.AdvertisingFreeCard;
         
