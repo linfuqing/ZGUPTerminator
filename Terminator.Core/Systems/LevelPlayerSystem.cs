@@ -217,7 +217,7 @@ public partial struct LevelPlayerSystem : ISystem
                         effectTargetData.recoveryChance = recoveryChance;
 
                     effectTargetData.recoveryTimeBeenKeptOfMaxTimes =
-                        effectTarget.times - LevelPlayerShared.effectTargetRecoveryAutoTimes;
+                        effectTarget.times - LevelPlayerShared.effectTargetRecoveryTimes;
                     effectTargetData.hpMax = hp;
                     effectTargetDatas[player] = effectTargetData;
                 }

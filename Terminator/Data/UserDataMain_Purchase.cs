@@ -313,6 +313,26 @@ public partial class UserDataMain
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS = "UserPurchaseTokenSeconds";
     public const string NAME_SPACE_USER_PURCHASE_TOKEN_TIMES = "UserPurchaseTokenTimes";
 
+    public static IUserData.PurchaseFlag purchaseFlag
+    {
+        get
+        {
+            IUserData.PurchaseFlag result = 0;
+            if (HasSweepCard())
+                result |= IUserData.PurchaseFlag.SweepCard;
+
+            if (__HasPurchase(PurchaseType.AdvertisingFreeCard, 0))
+                result |= IUserData.PurchaseFlag.AdvertisingFreeCard;
+
+            return result;
+        }
+    }
+
+    public static bool HasSweepCard()
+    {
+        return __HasPurchase(PurchaseType.SweepCard,0);
+    }
+
     public IEnumerator QueryPurchaseTokens(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseTokens>> onComplete)
     {
         yield return __CreateEnumerator();
@@ -622,11 +642,19 @@ public partial class UserDataMain
         onComplete(rewards == null ? null : rewards.ToArray());
     }
     
+    private static bool __HasPurchase(PurchaseType type, int level)
+    {
+        return PurchaseData.IsValid(type,
+            0,
+            NAME_SPACE_USER_PURCHASE_ITEM,
+            out _,
+            out _);
+    }
+    
     private static string __PurchaseParse(Memory<string> parameters)
     {
         return parameters.Span[0];
     }
-
 }
 
 public partial class UserData

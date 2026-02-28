@@ -228,6 +228,19 @@ public partial class LevelSystemManaged : SystemBase
                         SystemAPI.SetComponent(player, effectTarget);
                     }
                 }
+
+                if (SystemAPI.HasBuffer<Message>(player))
+                {
+                    var messages = SystemAPI.GetBuffer<Message>(player);
+
+                    Message message;
+                    message.key = 0;
+                    message.value = default;
+                    message.name = "Respawn";
+                    messages.Add(message);
+                    
+                    SystemAPI.SetBufferEnabled<Message>(player, true);
+                }
             }
         }
         

@@ -74,7 +74,12 @@ public class GameLevelData : ILevelData
 {
     private readonly uint UserID;
 
-    private bool __hasBeenRecovered;
+    public bool hasBeenRecovered
+    {
+        get;
+
+        private set;
+    }
 
     public bool canRecoveryExtra
     {
@@ -86,7 +91,7 @@ public class GameLevelData : ILevelData
     {
         UserID = userID;
 
-        __hasBeenRecovered = false;
+        hasBeenRecovered = false;
         
         canRecoveryExtra = hasSweepCard;
     }
@@ -164,7 +169,7 @@ public class GameLevelData : ILevelData
 
     public IEnumerator Recovery(Action<bool> onComplete)
     {
-        if (__hasBeenRecovered && !canRecoveryExtra)
+        if (hasBeenRecovered && !canRecoveryExtra)
         {
             var purchaseData = IPurchaseData.instance;
             if(purchaseData != null)
@@ -176,7 +181,7 @@ public class GameLevelData : ILevelData
                 });
         }
 
-        __hasBeenRecovered = true;
+        hasBeenRecovered = true;
 
         if (!EffectShared.keepRecoveryTime)
         {

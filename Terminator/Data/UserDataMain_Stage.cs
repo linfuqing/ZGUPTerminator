@@ -372,6 +372,7 @@ public partial class UserDataMain
         
         IUserData.StageProperty stageProperty;
         stageProperty.stage = stage;
+        stageProperty.purchaseFlag = purchaseFlag;
         stageProperty.cache = stageCache;
         stageProperty.value = __ApplyProperty(
             userID, 
@@ -719,6 +720,7 @@ public partial class UserData
         
             IUserData.StageProperty stageProperty;
             stageProperty.stage = stage;
+            stageProperty.purchaseFlag = UserDataMain.purchaseFlag;
             stageProperty.cache = stageCache;
             stageProperty.value = chapter.property;
 

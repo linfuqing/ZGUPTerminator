@@ -218,6 +218,8 @@ public partial interface IUserData
     public struct StageProperty
     {
         public int stage;
+
+        public PurchaseFlag purchaseFlag;
         
         public Property value;
 

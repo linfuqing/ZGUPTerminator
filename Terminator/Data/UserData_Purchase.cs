@@ -35,6 +35,13 @@ public struct UserPurchaseToken
 
 public partial interface IUserData
 {
+    [Flags]
+    public enum PurchaseFlag
+    {
+        AdvertisingFreeCard = 0x01,
+        SweepCard = 0x02,
+    }
+    
     public struct PurchaseItems
     {
         public enum Status

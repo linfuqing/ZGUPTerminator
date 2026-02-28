@@ -63,7 +63,7 @@ public static class LevelPlayerShared
         }
     }
 
-    private class EffectTargetRecoveryAutoTimes : Value<EffectTargetHP, int>
+    private class EffectTargetRecoveryTimes : Value<EffectTargetRecoveryTimes, int>
     {
     }
 
@@ -120,11 +120,11 @@ public static class LevelPlayerShared
         public static ref FixedList4096Bytes<LevelPlayerSkillOpcode> values => ref Values.Data;
     }
 
-    public static int effectTargetRecoveryAutoTimes
+    public static int effectTargetRecoveryTimes
     {
-        get => EffectTargetRecoveryAutoTimes.value;
+        get => EffectTargetRecoveryTimes.value;
 
-        set => EffectTargetRecoveryAutoTimes.value = value;
+        set => EffectTargetRecoveryTimes.value = value;
     }
 
     public static int effectRage

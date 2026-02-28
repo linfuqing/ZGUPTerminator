@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,6 +10,15 @@ public class PlayerController : MonoBehaviour
         Dead = 0x01, 
         Respawn = 0x02 | Dead,
     }
+
+    private enum RespawnStatus
+    {
+        None, 
+        RightNow, 
+        Waiting
+    }
+
+    private static readonly int RespawnStatusHash = Animator.StringToHash("RespawnStatus");
 
     private bool __isLocal;
     private Status __status;
@@ -29,7 +39,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    [UnityEngine.Scripting.Preserve]
+    [Preserve]
     public void Play(AnimatorParameters parameters)
     {
         switch (parameters.name)
@@ -56,6 +66,12 @@ public class PlayerController : MonoBehaviour
         }
         
         parameters.Apply(animator);
+    }
+
+    [Preserve]
+    public void Respawn()
+    {
+        animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.RightNow);
     }
 
     private void __OnChanged(int id, int value)
@@ -90,10 +106,22 @@ public class PlayerController : MonoBehaviour
             var analytics = IAnalytics.instance as IAnalyticsEx;
             if ((value & Status.Dead) == Status.Dead)
             {
+                if(__timeScaleIndex == -1)
+                    __timeScaleIndex = TimeScaleUtility.Add(0.0f);
+
                 if ((value & Status.Respawn) == Status.Respawn)
                 {
-                    if(__timeScaleIndex == -1)
-                        __timeScaleIndex = TimeScaleUtility.Add(0.0f);
+                    bool isWaiting = false;
+                    if (!EffectShared.keepRecoveryTime)
+                        animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.Waiting);
+                    else
+                    {
+                        var levelData = ILevelData.instance;
+                        if (levelData != null && levelData.hasBeenRecovered && !levelData.canRecoveryExtra)
+                            animator.SetInteger(RespawnStatusHash, (int)RespawnStatus.Waiting);
+                    }
+                    
+                    animator.SetInteger(RespawnStatusHash, 0);
 
                     PlayerEvents.Respawn();
                     

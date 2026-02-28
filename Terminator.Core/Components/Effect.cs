@@ -446,5 +446,5 @@ public static class EffectShared
         public static ref bool value => ref Value.Data;
     }
 
-    public static bool keepRecoveryTime => KeepRecoveryTime.value;
+    public static ref bool keepRecoveryTime => ref KeepRecoveryTime.value;
 }

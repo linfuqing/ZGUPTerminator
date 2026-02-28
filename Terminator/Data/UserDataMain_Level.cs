@@ -243,6 +243,7 @@ public partial class UserDataMain
 
         IUserData.LevelProperty result;
         result.stage = stage;
+        result.purchaseFlag = purchaseFlag;
         
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
@@ -842,6 +843,8 @@ public partial class UserData
             UserData.levelCache = levelCache;
 
             IUserData.LevelProperty property;
+            
+            property.purchaseFlag = UserDataMain.purchaseFlag;
             property.stage = closestStage;
             property.value = chapter.property;
             property.levelStages = null;

@@ -5,15 +5,6 @@ using Random = UnityEngine.Random;
 
 public partial class UserDataMain
 {
-    private static bool __HasSweepCard()
-    {
-        return PurchaseData.IsValid(PurchaseType.SweepCard,
-            0,
-            NAME_SPACE_USER_PURCHASE_ITEM,
-            out _,
-            out _);
-    }
-
     private const string NAME_SPACE_USER_EVENT = "UserEvent";
     
     private static int __GetEvent(string name)
@@ -411,7 +402,7 @@ public partial class UserDataMain
                 skillGroupDamage += accessory.roleSkillGroupDamage;
         }
 
-        if (__HasSweepCard())
+        /*if (HasSweepCard())
         {
             UserAttributeData attribute;
             attribute.type = UserAttributeType.Recovery;
@@ -421,7 +412,7 @@ public partial class UserDataMain
                 attributes = new List<UserAttributeData>();
             
             attributes.Add(attribute);
-        }
+        }*/
 
         return attributes;
     }

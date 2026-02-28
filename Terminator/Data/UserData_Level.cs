@@ -222,6 +222,7 @@ public partial interface IUserData
     public struct LevelProperty
     {
         public int stage;
+        public PurchaseFlag purchaseFlag;
         public Property value;
         public UserLevelStageData[] levelStages;
     }

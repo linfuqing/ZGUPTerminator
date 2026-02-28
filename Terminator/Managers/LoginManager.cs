@@ -1362,7 +1362,7 @@ public sealed class LoginManager : MonoBehaviour
 
             return;
         }
-
+        
         LevelPlayerShared.effectRage = 0;
 
         LevelShared.items.Clear();
@@ -1385,9 +1385,7 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
         
-        LevelShared.stage = property.stage;
-
-        __SubmitStage(property.value);
+        __SubmitStage(property.value, property.stage, property.purchaseFlag);
     }
     
     private void __ApplyStage(IUserData.StageProperty property)
@@ -1437,12 +1435,10 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
         
-        LevelShared.stage = property.stage;
-        
-        __SubmitStage(property.value);
+        __SubmitStage(property.value, property.stage, property.purchaseFlag);
     }
 
-    private void __SubmitStage(IUserData.Property property)
+    private void __SubmitStage(IUserData.Property property, int stage, IUserData.PurchaseFlag purchaseFlag)
     {
         if (!property.isVail)
         {
@@ -1453,9 +1449,16 @@ public sealed class LoginManager : MonoBehaviour
         
         property.Apply();
 
+        LevelShared.stage = stage;
+
+        bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
+        LevelPlayerShared.effectTargetRecoveryTimes = hasSweepCard ? 1 : 0;
+        EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
+                                        IUserData.PurchaseFlag.AdvertisingFreeCard;
+        
         uint userID = LoginManager.userID.Value;
         
-        ILevelData.instance = new GameLevelData(userID, false);
+        ILevelData.instance = new GameLevelData(userID, hasSweepCard);
 
         IRewardData.instance = new GameRewardData(userID);
     }

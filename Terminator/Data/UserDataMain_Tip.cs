@@ -191,7 +191,7 @@ public partial class UserDataMain
                 PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
             }
 
-            return Create(__HasSweepCard(), DateTimeUtility.GetTicks((uint)time), used, rewardNames);
+            return Create(HasSweepCard(), DateTimeUtility.GetTicks((uint)time), used, rewardNames);
         }
 
         public IUserData.Tip Create(bool hasSweepCard, long ticks, in Used used, string[] rewardNames)
@@ -619,7 +619,7 @@ public partial class UserDataMain
             levelRewardNames.AddRange(level.rewardNames);
         }
         
-        return _tip.Create(__HasSweepCard(), DateTimeUtility.GetTicks((uint)time), used, 
+        return _tip.Create(HasSweepCard(), DateTimeUtility.GetTicks((uint)time), used, 
             //服务器要判断空，别崩溃了
             levelRewardNames.ToArray());
     }
