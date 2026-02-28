@@ -158,7 +158,7 @@ public class GameLevelData : ILevelData
 
     public IEnumerator Recovery(Action<bool> onComplete)
     {
-        if()
+        return null;
     }
 
     /*private IUserData.StageFlag ToStageFlag(ILevelData.Flag flag)

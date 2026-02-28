@@ -62,7 +62,7 @@ public class EffectTargetAuthoring : MonoBehaviour, IMessageOverride
             instance.targetType =
                 9 == GetLayer() ? EffectTargetData.TargetType.Boss : EffectTargetData.TargetType.Normal;
             instance.hpMax = authoring._hp;
-            instance.recoveryTimeBeenKeptOfMinTimes = authoring._recoveryTimes;
+            instance.recoveryTimeBeenKeptOfMaxTimes = authoring._recoveryTimes;
             instance.recoveryChance = authoring._recoveryChance;
             instance.recoveryTime = authoring._recoveryTime;
             instance.recoveryInvincibleTime = authoring._recoveryInvincibleTime;
