@@ -34,7 +34,7 @@ public partial class LevelManager
         private set;
     }
     
-    public bool IsRecovery()
+    public bool IsRecovery(out bool isWaiting)
     {
         /*if (isRestart)
         {
@@ -44,8 +44,13 @@ public partial class LevelManager
         }
         else*/
         {
+            isWaiting = false;
             switch (__recoveredStatus)
             {
+                case RecoveryStatus.WaitingForTime:
+                case RecoveryStatus.WaitingForUser:
+                    isWaiting = true;
+                    break;
                 case RecoveryStatus.Recovering:
                     __recoveredStatus = RecoveryStatus.None;
 

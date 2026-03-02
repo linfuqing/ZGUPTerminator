@@ -208,7 +208,7 @@ public partial class LevelSystemManaged : SystemBase
             if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
                 LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
 
-            if (manager.IsRecovery())
+            if (manager.IsRecovery(out bool isWaiting))
             {
                 if (SystemAPI.HasComponent<EffectTarget>(player))
                 {
@@ -234,6 +234,8 @@ public partial class LevelSystemManaged : SystemBase
                     SystemAPI.SetBufferEnabled<Message>(player, true);
                 }
             }
+            else if(isWaiting)
+                __DestroyBulletEntities();
         }
         
         int version = SystemAPI.GetSingleton<LevelVersion>().value;
