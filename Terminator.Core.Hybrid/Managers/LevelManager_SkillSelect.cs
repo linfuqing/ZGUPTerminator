@@ -700,7 +700,20 @@ public partial class LevelManager
             while(1 == step && !isRestart && Time.unscaledTime - startTime < time/* && (skip == null || !skip())*/)
                 yield return null;
         }
-        
+
+        if (isRestart)
+        {
+            if (selectionIndex != -1)
+            {
+                var selection = _skillSelections[selectionIndex];
+                selection.onDisable.Invoke();
+            }
+
+            __skillSelectionStatus = 0;
+            
+            yield break;
+        }
+
         UnityEngine.Assertions.Assert.AreEqual(selectionIndex, selectedSkillSelectionIndex);
         UnityEngine.Assertions.Assert.AreEqual(SkillSelectionStatus.Selecting | SkillSelectionStatus.Awake, __skillSelectionStatus);
 

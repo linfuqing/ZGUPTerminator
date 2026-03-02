@@ -316,22 +316,25 @@ public partial class LevelManager : MonoBehaviour
 
     private IEnumerator __Coroutine()
     {
+        IEnumerator enumerator;
         while (__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
         {
             print($"Level manager waiting for coroutine {coroutineEnumerator.name}");
-            
-            yield return coroutineEnumerator.value;
+
+            enumerator = coroutineEnumerator.value;
+            while (enumerator.MoveNext())
+            {
+                yield return null;
+
+                if (isRestart)
+                {
+                    __coroutineEnumerators.Clear();
+                
+                    __ClearSubmit();
+                }
+            }
             
             print($"Level manager end of coroutine {coroutineEnumerator.name}");
-
-            if (isRestart)
-            {
-                __coroutineEnumerators.Clear();
-                
-                __ClearSubmit();
-                
-                break;
-            }
         }
 
         __coroutine = null;

@@ -91,9 +91,9 @@ public partial class LevelSystemManaged
 
         //__skillSelection.SetStage(stage, this);
         
-        if (SystemAPI.TryGetSingletonEntity<LevelSkillVersion>(out Entity entity))
+        if (SystemAPI.HasComponent<LevelSkillVersion>(player))
         {
-            var skillVersion = SystemAPI.GetComponent<LevelSkillVersion>(entity);
+            var skillVersion = SystemAPI.GetComponent<LevelSkillVersion>(player);
 
             bool isWaiting = false;
             switch (__skillSelection.status)
@@ -109,9 +109,9 @@ public partial class LevelSystemManaged
             
             if (isWaiting)
             {
-                if (SystemAPI.IsBufferEnabled<LevelSkill>(entity))
+                if (SystemAPI.IsBufferEnabled<LevelSkill>(player))
                 {
-                    var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
+                    var skills = SystemAPI.GetBuffer<LevelSkill>(player);
                     var selectedSkillIndices = manager.CollectSelectedSkillIndices();
                     if (skills.IsEmpty || selectedSkillIndices != null)
                     {
@@ -142,7 +142,7 @@ public partial class LevelSystemManaged
                                 int numActiveSkillIndices = skillIndices.Length;
                                 if (numActiveSkillIndices > numSelectedSkillIndices)
                                     __UpdateBullets(
-                                        entity,
+                                        player,
                                         skillIndices.AsArray()
                                             .GetSubArray(numSelectedSkillIndices,
                                                 numActiveSkillIndices - numSelectedSkillIndices));
@@ -151,14 +151,14 @@ public partial class LevelSystemManaged
                             }
                         }
 
-                        SystemAPI.SetBufferEnabled<LevelSkill>(entity, false);
+                        SystemAPI.SetBufferEnabled<LevelSkill>(player, false);
                     }
                 }
             }
             else if(nameDefinition.IsCreated)
             {
                 ref var skillAssetNames = ref nameDefinition.Value.skills;
-                var skills = SystemAPI.GetBuffer<LevelSkill>(entity);
+                var skills = SystemAPI.GetBuffer<LevelSkill>(player);
                 //LevelSkillDesc desc, activeDesc;
                 //SkillAsset asset;
                 int numSkills = skills.Length;
