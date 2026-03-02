@@ -158,7 +158,18 @@ public partial class LevelManager : MonoBehaviour
     {
         get => __restartFrameCount == 0 || __restartFrameCount == Time.frameCount;
 
-        set => __restartFrameCount = value ? 0 : Time.frameCount;
+        set
+        {
+            if (value)
+            {
+                __restartFrameCount = 0;
+
+                return;
+            }
+
+            if (__restartFrameCount == 0)
+                __restartFrameCount = Time.frameCount;
+        }
     }
 
     /*public int dataFlag
