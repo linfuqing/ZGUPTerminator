@@ -210,6 +210,9 @@ public partial class LevelSystemManaged : SystemBase
 
             if (manager.IsRecovery(out bool isWaiting))
             {
+                if (SystemAPI.HasBuffer<BulletStatus>(player))
+                    SystemAPI.GetBuffer<BulletStatus>(player).Clear();
+                
                 if (SystemAPI.HasComponent<EffectTarget>(player))
                 {
                     var effectTarget = SystemAPI.GetComponent<EffectTarget>(player);
@@ -235,7 +238,7 @@ public partial class LevelSystemManaged : SystemBase
                 }
             }
             else if(isWaiting)
-                __DestroyBulletEntities();
+                __DestroyBulletEntities(true);
         }
         
         int version = SystemAPI.GetSingleton<LevelVersion>().value;

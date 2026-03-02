@@ -5,7 +5,7 @@ using Unity.Entities;
 
 public partial class LevelSystemManaged
 {
-    private struct ClearBulletEntitiesUnmanaged
+    private struct ClearBulletEntities
     {
         //public double time;
         
@@ -39,7 +39,7 @@ public partial class LevelSystemManaged
     }
 
     [BurstCompile]
-    private struct ClearBulletEntitiesUnmanagedEx : IJobChunk
+    private struct ClearBulletEntitiesEx : IJobChunk
     {
         //public double time;
 
@@ -53,15 +53,15 @@ public partial class LevelSystemManaged
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            ClearBulletEntitiesUnmanaged clearBulletEntitiesUnmanaged;
+            ClearBulletEntities clearBulletEntities;
             //clearBulletEntitiesUnmanaged.time = time;
-            clearBulletEntitiesUnmanaged.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
+            clearBulletEntities.bulletEntities = chunk.GetNativeArray(ref bulletEntityType);
             //clearBulletEntitiesUnmanaged.bulletDefinitions = bulletDefinitions;
-            clearBulletEntitiesUnmanaged.bulletStates = bulletStates;
+            clearBulletEntities.bulletStates = bulletStates;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
-                clearBulletEntitiesUnmanaged.Execute(i);
+                clearBulletEntities.Execute(i);
         }
     }
     
@@ -244,8 +244,20 @@ public partial class LevelSystemManaged
                 .Build(this);
     }
 
-    private void __DestroyBulletEntities()
+    private void __DestroyBulletEntities(bool isClearStates = false)
     {
+        if (isClearStates)
+        {
+            __bulletEntityType.Update(this);
+            //__bulletDefinitions.Update(system);
+            __bulletStates.Update(this);
+
+            ClearBulletEntitiesEx clearBulletEntities;
+            clearBulletEntities.bulletEntityType = __bulletEntityType;
+            clearBulletEntities.bulletStates = __bulletStates;
+            clearBulletEntities.RunByRef(__bulletGroup);
+        }
+
         __DestroyEntities(__bulletGroup);
     }
     
@@ -255,10 +267,10 @@ public partial class LevelSystemManaged
         //__bulletDefinitions.Update(system);
         __bulletStates.Update(this);
 
-        ClearBulletEntitiesUnmanagedEx clearBulletEntitiesUnmanaged;
-        clearBulletEntitiesUnmanaged.bulletEntityType = __bulletEntityType;
-        clearBulletEntitiesUnmanaged.bulletStates = __bulletStates;
-        clearBulletEntitiesUnmanaged.RunByRef(__bulletGroupUnmanaged);
+        ClearBulletEntitiesEx clearBulletEntities;
+        clearBulletEntities.bulletEntityType = __bulletEntityType;
+        clearBulletEntities.bulletStates = __bulletStates;
+        clearBulletEntities.RunByRef(__bulletGroupUnmanaged);
             
         __DestroyEntities(__bulletGroupUnmanaged);
     }
