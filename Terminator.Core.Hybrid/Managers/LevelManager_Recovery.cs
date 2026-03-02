@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -6,7 +7,9 @@ public partial class LevelManager
     private enum RecoveryStatus
     {
         None, 
-        Waiting,
+        UserConfirmed, 
+        WaitingForUser, 
+        WaitingForQuery,
         Recovering,
         TheLastTime, 
         Finish
@@ -55,13 +58,22 @@ public partial class LevelManager
         return false;
     }
 
+    public void RecoveryConfirm()
+    {
+        if(RecoveryStatus.WaitingForUser != __recoveredStatus)
+            return;
+
+        __recoveredStatus = RecoveryStatus.UserConfirmed;
+    }
+
     public void Recovery(System.Action<bool> callback)
     {
-        if (RecoveryStatus.None != __recoveredStatus)
+        __StartCoroutine(nameof(__Recovering), __Recovering(callback));
+        /*if (RecoveryStatus.None != __recoveredStatus)
         {
             if(callback != null)
                 callback(false);
-            
+
             return;
         }
 
@@ -93,7 +105,7 @@ public partial class LevelManager
             }
             else
             {
-                __recoveredStatus = RecoveryStatus.Waiting;
+                __recoveredStatus = RecoveryStatus.WaitingForQuery;
 
                 _onRecovering?.Invoke();
 
@@ -102,9 +114,9 @@ public partial class LevelManager
                     if(callback != null)
                         callback(x);
 
-                    if(RecoveryStatus.Waiting == __recoveredStatus)
+                    if(RecoveryStatus.WaitingForQuery == __recoveredStatus)
                         __recoveredStatus = x ? RecoveryStatus.TheLastTime : RecoveryStatus.None;
-            
+
                     if(x)
                         _onRecoveredSuccess?.Invoke();
                     else
@@ -129,28 +141,151 @@ public partial class LevelManager
             }
         }
 
-        __recoveredStatus = RecoveryStatus.Waiting;
+        __recoveredStatus = RecoveryStatus.WaitingForQuery;
 
         _onRecovering?.Invoke();
-        
+
         __StartCoroutine(nameof(ILevelData.Broadcast), levelData.Broadcast(x =>
         {
             if(callback != null)
                 callback(x);
 
-            if(RecoveryStatus.Waiting == __recoveredStatus)
+            if(RecoveryStatus.WaitingForQuery == __recoveredStatus)
                 __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
-            
+
             if(x)
                 _onRecoveredSuccess?.Invoke();
             else
                 _onRecoveredFailure?.Invoke();
-        }));
+        }));*/
     }
 
     [UnityEngine.Scripting.Preserve]
     public void Recovery()
     {
-        Recovery(null);
+        RecoveryConfirm();
+        //Recovery(null);
+    }
+
+    private IEnumerator __Recovering(System.Action<bool> callback)
+    {
+        if (RecoveryStatus.None != __recoveredStatus)
+        {
+            if(callback != null)
+                callback(false);
+        }
+        else
+        {
+            var levelData = ILevelData.instance;
+            if (levelData == null)
+            {
+                __recoveredStatus = RecoveryStatus.WaitingForUser;
+                
+                if (callback != null)
+                    callback(true);
+
+                while (RecoveryStatus.WaitingForUser == __recoveredStatus)
+                    yield return null;
+            }
+            else
+            {
+                var recoveryStatus = RecoveryStatus.Recovering;
+                if (hasBeenRecovered)
+                {
+                    if (levelData.canRecoveryExtra)
+                    {
+                        if (EffectShared.keepRecoveryTime)
+                        {
+                            __recoveredStatus = RecoveryStatus.WaitingForUser;
+
+                            if (callback != null)
+                                callback(true);
+
+                            while (RecoveryStatus.WaitingForUser == __recoveredStatus)
+                                yield return null;
+                        }
+                        else
+                            recoveryStatus = RecoveryStatus.TheLastTime;
+                    }
+                    else
+                    {
+                        __recoveredStatus = RecoveryStatus.WaitingForUser;
+
+                        do
+                        {
+                            yield return null;
+                        } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
+
+                        if (RecoveryStatus.UserConfirmed == __recoveredStatus)
+                        {
+                            __recoveredStatus = RecoveryStatus.WaitingForQuery;
+
+                            _onRecovering?.Invoke();
+
+                            yield return levelData.Buy(x =>
+                            {
+                                if (callback != null)
+                                    callback(x);
+
+                                if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
+                                    __recoveredStatus = x ? RecoveryStatus.TheLastTime : RecoveryStatus.None;
+
+                                if (x)
+                                    _onRecoveredSuccess?.Invoke();
+                                else
+                                    _onRecoveredFailure?.Invoke();
+                            });
+                        }
+
+                        yield break;
+                    }
+                }
+                else
+                {
+                    hasBeenRecovered = true;
+
+                    if (EffectShared.keepRecoveryTime)
+                    {
+                        __recoveredStatus = RecoveryStatus.WaitingForUser;
+
+                        if (callback != null)
+                            callback(true);
+
+                        while (RecoveryStatus.WaitingForUser == __recoveredStatus)
+                            yield return null;
+                        
+                        yield break;
+                    }
+                }
+
+                __recoveredStatus = RecoveryStatus.WaitingForUser;
+
+                do
+                {
+                    yield return null;
+                } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
+
+                if (RecoveryStatus.UserConfirmed == __recoveredStatus)
+                {
+                    __recoveredStatus = RecoveryStatus.WaitingForQuery;
+
+                    _onRecovering?.Invoke();
+
+                    yield return levelData.Broadcast(x =>
+                    {
+                        if (callback != null)
+                            callback(x);
+
+                        if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
+                            __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
+
+                        if (x)
+                            _onRecoveredSuccess?.Invoke();
+                        else
+                            _onRecoveredFailure?.Invoke();
+                    });
+                }
+            }
+        }
     }
 }

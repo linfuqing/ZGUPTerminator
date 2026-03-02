@@ -73,28 +73,11 @@ public class PlayerEvents : MonoBehaviour
 
     public static void Respawn()
     {
-        var levelManager = LevelManager.instance;
-        if (levelManager == null)
-            __Respawn();
-        else
-            levelManager.Recovery(__Respawn);
-    }
-
-    private static void __Respawn()
-    {
         if (__instances != null)
         {
             foreach (var instance in __instances)
                 instance._onRespawn?.Invoke();
         }
-    }
-    
-    private static void __Respawn(bool result)
-    {
-        if (result)
-            __Respawn();
-        else
-            isActive = false;
     }
 
     void OnEnable()

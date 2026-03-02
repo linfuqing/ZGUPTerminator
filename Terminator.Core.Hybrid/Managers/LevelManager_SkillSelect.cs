@@ -154,8 +154,10 @@ public partial class LevelManager
     public void SelectSkillBegin(int selectionIndex, float timeScale)
     {
         IAnalytics.instance?.SelectSkillBegin(selectionIndex);
+        
+        StartCoroutine(__StartSkillSelection(selectionIndex, timeScale));
 
-        if (selectionIndex == -1)
+        /*if (selectionIndex == -1)
             StartCoroutine(__StartSkillSelection(selectionIndex, 0.0f, timeScale, null));
         else
         {
@@ -189,7 +191,7 @@ public partial class LevelManager
                             () => step > 1));
                 });
             }
-        }
+        }*/
     }
 
     public void SelectSkillEnd()
@@ -638,25 +640,16 @@ public partial class LevelManager
         __DestroyGameObjects();
     }
 
-    private IEnumerator __StartSkillSelection(int selectionIndex, float time, float timeScale, Func<bool> skip)
+    private IEnumerator __StartSkillSelection(int selectionIndex, /*float time, */float timeScale/*, Func<bool> skip*/)
     {
-        if (time > 0.0f)
-        {
-            if(skip == null)
-                yield return new WaitForSecondsRealtime(time);
-            else
-            {
-                float startTime = Time.unscaledTime;
-                while(Time.unscaledTime - startTime < time && !skip())
-                    yield return null;
-            }
-        }
-
         //不行
         //if (__coroutine != null)
         //    yield return __coroutine;
-        while (0 != __skillSelectionStatus || selectedSkillSelectionIndex != -1)
+        while (!isRestart && (0 != __skillSelectionStatus || selectedSkillSelectionIndex != -1))
             yield return null;
+        
+        if(isRestart)
+            yield break;
 
         UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
         UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
@@ -667,9 +660,63 @@ public partial class LevelManager
         
         TimeScale(timeScale);
 
-        while ((__skillSelectionStatus & SkillSelectionStatus.Complete) != SkillSelectionStatus.Complete)
-            yield return null;
+        /////
+        int step = 1;
+        float time = 0.0f;
+        if (selectionIndex != -1)
+        {
+            var selection = _skillSelections[selectionIndex];
+
+            time = selection.startTime;
+            
+            selection.onEnable.Invoke();
+
+            if (selection.start != null)
+            {
+                step = 0;
+                
+                var onClick = selection.start.onClick;
+                onClick.RemoveAllListeners();
+
+                onClick.AddListener(() =>
+                {
+                    ++step;
+                });
+                
+                while (0 == step && !isRestart)
+                    yield return null;
+            }
+        }
+
+        /////
         
+        if (time > 0.0f)
+        {
+            float startTime = Time.unscaledTime;
+            while(1 == step && !isRestart && Time.unscaledTime - startTime < time/* && (skip == null || !skip())*/)
+                yield return null;
+        }
+
+        while ((__skillSelectionStatus & SkillSelectionStatus.Complete) != SkillSelectionStatus.Complete)
+        {
+            if (isRestart)
+            {
+                Debug.LogError("[skillSelection]wtf????");
+                
+                if (selectionIndex != -1)
+                {
+                    var selection = _skillSelections[selectionIndex];
+                    selection.onDisable.Invoke();
+                }
+
+                __skillSelectionStatus = 0;
+
+                break;
+            }
+            
+            yield return null;
+        }
+
         __ClearTimeScales();
     }
 

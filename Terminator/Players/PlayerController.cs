@@ -123,6 +123,7 @@ public class PlayerController : MonoBehaviour
     {
         if (__isLocal && ((value ^ __status) & Status.Dead) == Status.Dead)
         {
+            var levelManager = LevelManager.instance;
             var analytics = IAnalytics.instance as IAnalyticsEx;
             if ((value & Status.Dead) == Status.Dead)
             {
@@ -134,14 +135,10 @@ public class PlayerController : MonoBehaviour
                     bool isWaitingToRespawn = PlayerController.isWaitingToRespawn;
                     animator.SetInteger(RespawnStatusHash, isWaitingToRespawn ? (int)RespawnStatus.Waiting : 0);
 
-                    if (isWaitingToRespawn)
-                        PlayerEvents.isActive = false;
+                    if (levelManager == null)
+                        __Respawn(false);
                     else
-                    {
-                        PlayerEvents.Respawn();
-
-                        analytics?.RespawnPlayer();
-                    }
+                        levelManager.Recovery(__Respawn);
                 }
 
                 analytics?.DisablePlayer();
@@ -151,6 +148,9 @@ public class PlayerController : MonoBehaviour
                 TimeScaleUtility.Remove(__timeScaleIndex);
 
                 __timeScaleIndex = -1;
+                
+                if(levelManager != null)
+                    levelManager.RecoveryConfirm();
             
                 analytics?.EnablePlayer();
             }
@@ -159,6 +159,19 @@ public class PlayerController : MonoBehaviour
         __status = value;
     }
     
+    private static void __Respawn(bool result)
+    {
+        if (result)
+        {
+            PlayerEvents.Respawn();
+
+            (IAnalytics.instance as IAnalyticsEx)?.RespawnPlayer();
+        }
+        else
+            PlayerEvents.isActive = false;
+    }
+    
+
     void Awake()
     {
         if (__attributeEventReceiver == null)
