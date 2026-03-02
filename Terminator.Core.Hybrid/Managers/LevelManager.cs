@@ -108,7 +108,7 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField] 
     internal Stage[] _stages;
 
-    private bool __isRestart;
+    private int __restartFrameCount;
     private int __submitCount;
 
     private int __time;
@@ -156,10 +156,10 @@ public partial class LevelManager : MonoBehaviour
 
     public bool isRestart
     {
-        get;
+        get => __restartFrameCount == 0 || __restartFrameCount == Time.frameCount;
 
-        set;
-    } = true;
+        set => __restartFrameCount = value ? 0 : Time.frameCount;
+    }
 
     /*public int dataFlag
     {
