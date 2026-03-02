@@ -655,7 +655,7 @@ public partial class LevelManager
             yield break;
 
         UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
-        UnityEngine.Assertions.Assert.AreEqual(0, (int)__skillSelectionStatus);
+        UnityEngine.Assertions.Assert.AreEqual(SkillSelectionStatus.Selecting, __skillSelectionStatus);
 
         selectedSkillSelectionIndex = selectionIndex;
 
