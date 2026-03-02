@@ -218,7 +218,7 @@ public partial class LevelManager
         {
             //等待队列
             yield return null;
-        } while ((SkillSelectionStatus.Start & __skillSelectionStatus) == 0);
+        } while ((SkillSelectionStatus.Start & __skillSelectionStatus) != SkillSelectionStatus.Start);
             
         bool result = false;
         int numSkills = skills.Length;
