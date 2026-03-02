@@ -58,7 +58,7 @@ public partial class LevelManager
         return false;
     }
 
-    public void RecoveryConfirm()
+    public void ConfirmRecovery()
     {
         if(RecoveryStatus.WaitingForUser != __recoveredStatus)
             return;
@@ -66,9 +66,9 @@ public partial class LevelManager
         __recoveredStatus = RecoveryStatus.UserConfirmed;
     }
 
-    public void Recovery(System.Action<bool> callback)
+    public void ScheduleRecovery()
     {
-        __StartCoroutine(nameof(__Recovering), __Recovering(callback));
+        __StartCoroutine(nameof(__Recovering), __Recovering());
         /*if (RecoveryStatus.None != __recoveredStatus)
         {
             if(callback != null)
@@ -163,26 +163,18 @@ public partial class LevelManager
     [UnityEngine.Scripting.Preserve]
     public void Recovery()
     {
-        RecoveryConfirm();
+        ConfirmRecovery();
         //Recovery(null);
     }
 
-    private IEnumerator __Recovering(System.Action<bool> callback)
+    private IEnumerator __Recovering()
     {
-        if (RecoveryStatus.None != __recoveredStatus)
-        {
-            if(callback != null)
-                callback(false);
-        }
-        else
+        if (RecoveryStatus.None == __recoveredStatus)
         {
             var levelData = ILevelData.instance;
             if (levelData == null)
             {
                 __recoveredStatus = RecoveryStatus.WaitingForUser;
-                
-                if (callback != null)
-                    callback(true);
 
                 while (RecoveryStatus.WaitingForUser == __recoveredStatus)
                     yield return null;
@@ -197,9 +189,6 @@ public partial class LevelManager
                         if (EffectShared.keepRecoveryTime)
                         {
                             __recoveredStatus = RecoveryStatus.WaitingForUser;
-
-                            if (callback != null)
-                                callback(true);
 
                             while (RecoveryStatus.WaitingForUser == __recoveredStatus)
                                 yield return null;
@@ -224,9 +213,6 @@ public partial class LevelManager
 
                             yield return levelData.Buy(x =>
                             {
-                                if (callback != null)
-                                    callback(x);
-
                                 if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
                                     __recoveredStatus = x ? RecoveryStatus.TheLastTime : RecoveryStatus.None;
 
@@ -248,12 +234,9 @@ public partial class LevelManager
                     {
                         __recoveredStatus = RecoveryStatus.WaitingForUser;
 
-                        if (callback != null)
-                            callback(true);
-
                         while (RecoveryStatus.WaitingForUser == __recoveredStatus)
                             yield return null;
-                        
+
                         yield break;
                     }
                 }
@@ -273,9 +256,6 @@ public partial class LevelManager
 
                     yield return levelData.Broadcast(x =>
                     {
-                        if (callback != null)
-                            callback(x);
-
                         if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
                             __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
 
