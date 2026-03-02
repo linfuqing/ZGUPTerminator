@@ -674,7 +674,7 @@ public partial class UserDataMain
         AccessoryLevel accessoryLevel;
         string itemName, itemCountKey, accessoryLevelKey = $"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}";
         int? result = null;
-        int itemCount, numLevelIndices = levelIndices.Count, level = PlayerPrefs.GetInt(accessoryLevelKey), times = 0;
+        int itemCount, numLevelIndices = levelIndices == null ? 0 : levelIndices.Count, level = PlayerPrefs.GetInt(accessoryLevelKey), times = 0;
         while (level < numLevelIndices && (maxTimes < 1 || maxTimes > times++))
         {
             accessoryLevel = _accessoryLevels[levelIndices[level]];

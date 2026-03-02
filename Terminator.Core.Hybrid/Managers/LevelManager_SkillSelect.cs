@@ -24,6 +24,7 @@ public partial class LevelManager
         Start = 0x01, 
         End = 0x02, 
         Complete = 0x04,  
+        Selecting = 0x08
     }
 
     [Serializable]
@@ -210,6 +211,8 @@ public partial class LevelManager
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)
     {
+        __skillSelectionStatus |= SkillSelectionStatus.Selecting;
+        
         do
         {
             //等待队列
@@ -445,39 +448,39 @@ public partial class LevelManager
         }
 
         if (result)
-        {
             __DestroyGameObjects();
-
-            yield break;
-        }
-        
-        //等待队列
-        //yield return null;
-        
-        if (__skillStyles != null)
+        else
         {
-            foreach (var skillStyle in __skillStyles.Values)
-            {
-                if(skillStyle == null)
-                    continue;
-                
-                if (__gameObjectsToDestroy == null)
-                    __gameObjectsToDestroy = new List<GameObject>();
+            //等待队列
+            //yield return null;
 
-                __gameObjectsToDestroy.Add(skillStyle.gameObject);
+            if (__skillStyles != null)
+            {
+                foreach (var skillStyle in __skillStyles.Values)
+                {
+                    if (skillStyle == null)
+                        continue;
+
+                    if (__gameObjectsToDestroy == null)
+                        __gameObjectsToDestroy = new List<GameObject>();
+
+                    __gameObjectsToDestroy.Add(skillStyle.gameObject);
+                }
+
+                __skillStyles.Clear();
             }
 
-            __skillStyles.Clear();
+            __DestroyGameObjects();
+
+            __skillSelectionStatus |= SkillSelectionStatus.End;
+
+            //if (selectedSkillSelectionIndex == -1)
+            //    yield return __CompleteSkillSelection();
+            //else if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
+            //    yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
         }
-
-        __DestroyGameObjects();
-
-        __skillSelectionStatus |= SkillSelectionStatus.End;
         
-        //if (selectedSkillSelectionIndex == -1)
-        //    yield return __CompleteSkillSelection();
-        //else if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
-        //    yield return __FinishSkillSelection(_skillSelections[selectedSkillSelectionIndex]);
+        __skillSelectionStatus &= ~SkillSelectionStatus.Selecting;
     }
 
     private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value, string selectionName)
@@ -645,7 +648,7 @@ public partial class LevelManager
         //不行
         //if (__coroutine != null)
         //    yield return __coroutine;
-        while (!isRestart && (0 != __skillSelectionStatus || selectedSkillSelectionIndex != -1))
+        while (!isRestart && (SkillSelectionStatus.Selecting != __skillSelectionStatus || selectedSkillSelectionIndex != -1))
             yield return null;
         
         if(isRestart)

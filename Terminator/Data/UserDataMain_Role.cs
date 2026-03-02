@@ -450,7 +450,7 @@ public partial class UserDataMain
 
             accessoryLevelIndices = __GetAccessoryStyleLevelIndices(i);
 
-            numAccessoryLevelIndices = accessoryLevelIndices.Count;
+            numAccessoryLevelIndices = accessoryLevelIndices == null ? 0 : accessoryLevelIndices.Count;
             userAccessoryStyle.levels = new UserAccessoryStyle.Level[numAccessoryLevelIndices];
             for (j = 0; j < numAccessoryLevelIndices; ++j)
             {
