@@ -210,8 +210,8 @@ public partial class LevelSystemManaged : SystemBase
 
             if (manager.IsRecovery(out bool isWaiting))
             {
-                if (SystemAPI.HasBuffer<BulletStatus>(player))
-                    SystemAPI.GetBuffer<BulletStatus>(player).Clear();
+                /*if (SystemAPI.HasBuffer<BulletStatus>(player))
+                    SystemAPI.GetBuffer<BulletStatus>(player).Clear();*/
                 
                 if (SystemAPI.HasComponent<EffectTarget>(player))
                 {

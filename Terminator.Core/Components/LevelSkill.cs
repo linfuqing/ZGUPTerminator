@@ -492,7 +492,8 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
             for (int i = 0; i < numBullets; ++i)
             {
                 bulletIndex = skillDefinition.bullets[skill.bulletIndices[i]].index;
-                bulletStates[bulletIndex] = default;
+                if(bulletIndex < bulletStates.Length)
+                    bulletStates[bulletIndex] = default;
                 /*ref var bulletStatus = ref bulletStates.ElementAt(bulletIndex);
                 ref var bullet = ref bulletDefinition.bullets[bulletIndex];
                 bulletStatus.cooldown = time + bullet.startTime;

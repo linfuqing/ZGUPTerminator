@@ -503,7 +503,13 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         var level = _tipLevels[__ToIndex(tipLevelID)];
-
+        if (string.IsNullOrEmpty(level.nextLevel))
+        {
+            onComplete(null);
+            
+            yield break;
+        }
+        
         var levelNamesString = PlayerPrefs.GetString(NAME_SPACE_USER_TIP_LEVEL);
         var levelNames = string.IsNullOrEmpty(levelNamesString)
             ? _tipLevelNames
@@ -516,6 +522,9 @@ public partial class UserDataMain
             
             yield break;
         }
+
+        index = __GetTipLevelIndex(level.nextLevel);
+        level = _tipLevels[index];
 
         int tip = UserDataMain.tip;
         if (tip < level.cost)
@@ -531,17 +540,13 @@ public partial class UserDataMain
         int numLevelNames = levelNames.Length - 1;
         Array.Copy(levelNames, index + 1, levelNames, index, numLevelNames - index);
 
+        levelNames[numLevelNames] = level.name;
+
         UserTipLevel.Next next;
         if (string.IsNullOrEmpty(level.nextLevel))
-        {
-            Array.Resize(ref levelNames, numLevelNames);
-
             next = default;
-        }
         else
         {
-            levelNames[numLevelNames] = level.nextLevel;
-
             index = __GetTipLevelIndex(level.nextLevel);
             level = _tipLevels[index];
             
@@ -557,7 +562,7 @@ public partial class UserDataMain
             for (int i = 0; i < numRewards; ++i)
             {
                 source = _tip.GetReward(level.rewardNames[i]);
-                    
+
                 destination.name = source.name;
                 destination.rewardName = source.rewardName;
                 destination.type = source.type;
@@ -572,7 +577,7 @@ public partial class UserDataMain
         }
 
         PlayerPrefs.SetString(NAME_SPACE_USER_TIP_LEVEL, string.Join(UserData.SEPARATOR, levelNames));
-
+        
         onComplete(next);
     }
 
