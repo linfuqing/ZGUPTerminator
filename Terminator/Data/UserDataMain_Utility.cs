@@ -285,6 +285,10 @@ public partial class UserDataMain
                 id = 1;
                 key = $"{NAME_SPACE_USER_EVENT}{reward.name}";
                 break;
+            case UserRewardType.Tip:
+                id = 1;
+                key = $"{NAME_SPACE_USER_TIP}{reward.name}";
+                break;
             default:
                 return false;
         }
