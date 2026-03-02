@@ -21,10 +21,11 @@ public partial class LevelManager
     [Flags]
     private enum SkillSelectionStatus
     {
-        Start = 0x01, 
-        End = 0x02, 
-        Complete = 0x04,  
-        Selecting = 0x08
+        Awake = 0x01, 
+        Start = 0x02 | Awake, 
+        End = 0x04, 
+        Complete = 0x08,  
+        Selecting = 0x10
     }
 
     [Serializable]
@@ -659,7 +660,7 @@ public partial class LevelManager
 
         selectedSkillSelectionIndex = selectionIndex;
 
-        __skillSelectionStatus |= SkillSelectionStatus.Start;
+        __skillSelectionStatus |= SkillSelectionStatus.Awake;
         
         TimeScale(timeScale);
 
@@ -699,6 +700,11 @@ public partial class LevelManager
             while(1 == step && !isRestart && Time.unscaledTime - startTime < time/* && (skip == null || !skip())*/)
                 yield return null;
         }
+        
+        UnityEngine.Assertions.Assert.AreEqual(selectionIndex, selectedSkillSelectionIndex);
+        UnityEngine.Assertions.Assert.AreEqual(SkillSelectionStatus.Selecting | SkillSelectionStatus.Awake, __skillSelectionStatus);
+
+        __skillSelectionStatus |= SkillSelectionStatus.Start;
 
         while ((__skillSelectionStatus & SkillSelectionStatus.Complete) != SkillSelectionStatus.Complete)
         {

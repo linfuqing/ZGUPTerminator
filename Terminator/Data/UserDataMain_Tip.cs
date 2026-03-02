@@ -523,8 +523,7 @@ public partial class UserDataMain
             yield break;
         }
 
-        index = __GetTipLevelIndex(level.nextLevel);
-        level = _tipLevels[index];
+        level = _tipLevels[__GetTipLevelIndex(level.nextLevel)];
 
         int tip = UserDataMain.tip;
         if (tip < level.cost)
