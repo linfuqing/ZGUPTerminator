@@ -46,11 +46,6 @@ public struct UserTipLevel
     
     public uint id;
 
-    /// <summary>
-    /// 需要设计图数量
-    /// </summary>
-    public int cost;
-
     public string[] rewardNames;
 
     public Next next;

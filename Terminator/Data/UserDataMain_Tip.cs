@@ -411,7 +411,7 @@ public partial class UserDataMain
             tipLevel = _tipLevels[tipLevelIndex];
             userTipLevel.name = tipLevel.name;
             userTipLevel.id = __ToID(tipLevelIndex);
-            userTipLevel.cost = tipLevel.cost;
+            //userTipLevel.cost = tipLevel.cost;
             userTipLevel.rewardNames = tipLevel.rewardNames;
 
             if (string.IsNullOrEmpty(tipLevel.nextLevel))
