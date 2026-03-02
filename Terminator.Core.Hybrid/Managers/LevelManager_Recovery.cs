@@ -66,6 +66,13 @@ public partial class LevelManager
 
     public void ConfirmRecovery()
     {
+        if (isRestart)
+        {
+            __recoveredStatus = RecoveryStatus.None;
+
+            return;
+        }
+        
         if(RecoveryStatus.WaitingForUser != __recoveredStatus)
             return;
 
