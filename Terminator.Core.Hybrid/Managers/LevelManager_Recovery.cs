@@ -9,6 +9,7 @@ public partial class LevelManager
         None, 
         UserConfirmed, 
         WaitingForUser, 
+        WaitingForTime, 
         WaitingForQuery,
         Recovering,
         TheLastTime, 
@@ -66,9 +67,9 @@ public partial class LevelManager
         __recoveredStatus = RecoveryStatus.UserConfirmed;
     }
 
-    public void ScheduleRecovery()
+    public void ScheduleRecovery(System.Action<bool> waitingForTime)
     {
-        __StartCoroutine(nameof(__Recovering), __Recovering());
+        __StartCoroutine(nameof(__Recovering), __Recovering(waitingForTime));
         /*if (RecoveryStatus.None != __recoveredStatus)
         {
             if(callback != null)
@@ -167,17 +168,22 @@ public partial class LevelManager
         //Recovery(null);
     }
 
-    private IEnumerator __Recovering()
+    private IEnumerator __Recovering(System.Action<bool> waitingForTime)
     {
         if (RecoveryStatus.None == __recoveredStatus)
         {
             var levelData = ILevelData.instance;
             if (levelData == null)
             {
-                __recoveredStatus = RecoveryStatus.WaitingForUser;
+                if (waitingForTime != null)
+                {
+                    __recoveredStatus = RecoveryStatus.WaitingForUser;
 
-                while (RecoveryStatus.WaitingForUser == __recoveredStatus)
-                    yield return null;
+                    waitingForTime(false);
+
+                    while (RecoveryStatus.WaitingForUser == __recoveredStatus)
+                        yield return null;
+                }
             }
             else
             {
@@ -188,22 +194,32 @@ public partial class LevelManager
                     {
                         if (EffectShared.keepRecoveryTime)
                         {
-                            __recoveredStatus = RecoveryStatus.WaitingForUser;
+                            if (waitingForTime != null)
+                            {
+                                __recoveredStatus = RecoveryStatus.WaitingForTime;
 
-                            while (RecoveryStatus.WaitingForUser == __recoveredStatus)
-                                yield return null;
+                                waitingForTime(true);
+
+                                while (RecoveryStatus.WaitingForTime == __recoveredStatus)
+                                    yield return null;
+                            }
                         }
                         else
                             recoveryStatus = RecoveryStatus.TheLastTime;
                     }
                     else
                     {
-                        __recoveredStatus = RecoveryStatus.WaitingForUser;
-
-                        do
+                        if (waitingForTime != null)
                         {
-                            yield return null;
-                        } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
+                            __recoveredStatus = RecoveryStatus.WaitingForUser;
+
+                            waitingForTime(false);
+
+                            do
+                            {
+                                yield return null;
+                            } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
+                        }
 
                         if (RecoveryStatus.UserConfirmed == __recoveredStatus)
                         {
@@ -232,21 +248,31 @@ public partial class LevelManager
 
                     if (EffectShared.keepRecoveryTime)
                     {
-                        __recoveredStatus = RecoveryStatus.WaitingForUser;
+                        if (waitingForTime != null)
+                        {
+                            __recoveredStatus = RecoveryStatus.WaitingForTime;
 
-                        while (RecoveryStatus.WaitingForUser == __recoveredStatus)
-                            yield return null;
+                            waitingForTime(true);
 
+                            while (RecoveryStatus.WaitingForTime == __recoveredStatus)
+                                yield return null;
+                        }
+                        
                         yield break;
                     }
                 }
 
-                __recoveredStatus = RecoveryStatus.WaitingForUser;
-
-                do
+                if (waitingForTime != null)
                 {
-                    yield return null;
-                } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
+                    __recoveredStatus = RecoveryStatus.WaitingForUser;
+
+                    waitingForTime(false);
+
+                    do
+                    {
+                        yield return null;
+                    } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
+                }
 
                 if (RecoveryStatus.UserConfirmed == __recoveredStatus)
                 {

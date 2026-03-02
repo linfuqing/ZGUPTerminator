@@ -136,15 +136,9 @@ public class PlayerController : MonoBehaviour
                     animator.SetInteger(RespawnStatusHash, isWaitingToRespawn ? (int)RespawnStatus.Waiting : 0);
 
                     if (levelManager == null)
-                        PlayerEvents.isActive = false;
+                        __Respawn(false);
                     else
-                    {
-                        levelManager.ScheduleRecovery();
-                        
-                        PlayerEvents.Respawn();
-
-                        analytics?.RespawnPlayer();
-                    }
+                        levelManager.ScheduleRecovery(__Respawn);
                 }
 
                 analytics?.DisablePlayer();
@@ -165,6 +159,19 @@ public class PlayerController : MonoBehaviour
         __status = value;
     }
     
+    private static void __Respawn(bool result)
+    {
+        if (result)
+        {
+            PlayerEvents.Respawn();
+
+            (IAnalytics.instance as IAnalyticsEx)?.RespawnPlayer();
+        }
+        else
+            PlayerEvents.isActive = false;
+    }
+    
+
     void Awake()
     {
         if (__attributeEventReceiver == null)
