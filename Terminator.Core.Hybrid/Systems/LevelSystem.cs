@@ -1,18 +1,10 @@
-using System;
-using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
-using Unity.Collections.NotBurstCompatible;
 using Unity.Entities;
-using Unity.Entities.Content;
 using Unity.Mathematics;
 using Unity.Profiling;
-using Unity.Scenes;
-using Unity.Transforms;
-using UnityEngine;
 using ZG;
-using Random = Unity.Mathematics.Random;
 
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class LevelSystemManaged : SystemBase
@@ -169,8 +161,6 @@ public partial class LevelSystemManaged : SystemBase
             return;
         }
 
-        bool isRecovery = manager.IsRecovery();
-        
         Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
@@ -218,7 +208,7 @@ public partial class LevelSystemManaged : SystemBase
             if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
                 LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
 
-            if (isRecovery)
+            if (manager.IsRecovery())
             {
                 if (SystemAPI.HasComponent<EffectTarget>(player))
                 {

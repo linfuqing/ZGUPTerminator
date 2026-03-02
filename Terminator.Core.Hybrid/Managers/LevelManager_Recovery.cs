@@ -36,13 +36,13 @@ public partial class LevelManager
     
     public bool IsRecovery()
     {
-        if (isRestart)
+        /*if (isRestart)
         {
             __recoveredStatus = RecoveryStatus.None;
 
             hasBeenRecovered = false;
         }
-        else
+        else*/
         {
             switch (__recoveredStatus)
             {
@@ -182,7 +182,16 @@ public partial class LevelManager
                     waitingForTime(false);
 
                     while (RecoveryStatus.WaitingForUser == __recoveredStatus)
-                        yield return null;
+                    {
+                        if (isRestart)
+                        {
+                            __recoveredStatus = RecoveryStatus.None;
+
+                            hasBeenRecovered = false;
+                        }
+                        else
+                            yield return null;
+                    }
                 }
             }
             else
@@ -201,7 +210,16 @@ public partial class LevelManager
                                 waitingForTime(true);
 
                                 while (RecoveryStatus.WaitingForTime == __recoveredStatus)
-                                    yield return null;
+                                {
+                                    if (isRestart)
+                                    {
+                                        __recoveredStatus = RecoveryStatus.None;
+
+                                        hasBeenRecovered = false;
+                                    }
+                                    else
+                                        yield return null;
+                                }
                             }
                         }
                         else
@@ -217,7 +235,14 @@ public partial class LevelManager
 
                             do
                             {
-                                yield return null;
+                                if (isRestart)
+                                {
+                                    __recoveredStatus = RecoveryStatus.None;
+
+                                    hasBeenRecovered = false;
+                                }
+                                else
+                                    yield return null;
                             } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
                         }
 
@@ -255,7 +280,16 @@ public partial class LevelManager
                             waitingForTime(true);
 
                             while (RecoveryStatus.WaitingForTime == __recoveredStatus)
-                                yield return null;
+                            {
+                                if (isRestart)
+                                {
+                                    __recoveredStatus = RecoveryStatus.None;
+
+                                    hasBeenRecovered = false;
+                                }
+                                else
+                                    yield return null;
+                            }
                         }
                         
                         yield break;
@@ -270,7 +304,14 @@ public partial class LevelManager
 
                     do
                     {
-                        yield return null;
+                        if (isRestart)
+                        {
+                            __recoveredStatus = RecoveryStatus.None;
+
+                            hasBeenRecovered = false;
+                        }
+                        else
+                            yield return null;
                     } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
                 }
 

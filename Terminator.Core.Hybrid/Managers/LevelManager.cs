@@ -322,6 +322,13 @@ public partial class LevelManager : MonoBehaviour
             yield return coroutineEnumerator.value;
             
             print($"Level manager end of coroutine {coroutineEnumerator.name}");
+
+            if (isRestart)
+            {
+                __coroutineEnumerators.Clear();
+                
+                yield break;
+            }
         }
 
         __coroutine = null;
