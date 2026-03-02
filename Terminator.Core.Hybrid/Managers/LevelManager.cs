@@ -109,6 +109,7 @@ public partial class LevelManager : MonoBehaviour
     internal Stage[] _stages;
 
     private bool __isRestart;
+    private int __submitCount;
 
     private int __time;
     private int __max;
@@ -327,7 +328,9 @@ public partial class LevelManager : MonoBehaviour
             {
                 __coroutineEnumerators.Clear();
                 
-                yield break;
+                __ClearSubmit();
+                
+                break;
             }
         }
 
@@ -387,7 +390,7 @@ public partial class LevelManager : MonoBehaviour
         
         //__coroutine = null;
         
-        _onSubmit?.Invoke(false);
+        __SetSubmit(false);
     }
     
     private void __OnQuit(bool result)
@@ -439,7 +442,7 @@ public partial class LevelManager : MonoBehaviour
         if (numSkillActiveNames < 1)
             return;
         
-        _onSubmit?.Invoke(true);
+        __SetSubmit(true);
         
         var skillActiveNames = new string[numSkillActiveNames];
         numSkillActiveNames = 0;
@@ -476,6 +479,27 @@ public partial class LevelManager : MonoBehaviour
             skillActiveNames,
             items,
             __OnStageChanged));
+    }
+
+    private void __SetSubmit(bool value)
+    {
+        if (value)
+        {
+            if (__submitCount++ == 0)
+                _onSubmit?.Invoke(true);
+        }
+        else if (--__submitCount == 0)
+            _onSubmit?.Invoke(false);
+    }
+
+    private void __ClearSubmit()
+    {
+        if (__submitCount == 0)
+            return;
+
+        __submitCount = 0;
+        
+        _onSubmit?.Invoke(false);
     }
 
     void Start()
