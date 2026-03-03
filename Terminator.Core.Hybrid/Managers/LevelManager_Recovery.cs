@@ -34,11 +34,11 @@ public partial class LevelManager
         private set;
     }
     
-    public bool IsRecovery(out bool isWaiting)
+    public bool IsRecovery(out bool isWaitingForUser)
     {
         if (isRestart)
         {
-            isWaiting = false;
+            isWaitingForUser = false;
             
             __recoveredStatus = RecoveryStatus.None;
 
@@ -46,12 +46,12 @@ public partial class LevelManager
         }
         else
         {
-            isWaiting = false;
+            isWaitingForUser = false;
             switch (__recoveredStatus)
             {
-                case RecoveryStatus.WaitingForTime:
+                //case RecoveryStatus.WaitingForTime:
                 case RecoveryStatus.WaitingForUser:
-                    isWaiting = true;
+                    isWaitingForUser = true;
                     break;
                 case RecoveryStatus.Recovering:
                     __recoveredStatus = RecoveryStatus.None;
@@ -74,11 +74,16 @@ public partial class LevelManager
 
             return;
         }
-        
-        if(RecoveryStatus.WaitingForUser != __recoveredStatus)
-            return;
 
-        __recoveredStatus = RecoveryStatus.UserConfirmed;
+        switch (__recoveredStatus)
+        {
+            case RecoveryStatus.WaitingForTime:
+                __recoveredStatus = RecoveryStatus.None;
+                break;
+            case RecoveryStatus.WaitingForUser:
+                __recoveredStatus = RecoveryStatus.UserConfirmed;
+                break;
+        }
     }
 
     public void ScheduleRecovery(System.Action<bool> waitingForTime)
