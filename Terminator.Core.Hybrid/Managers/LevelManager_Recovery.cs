@@ -36,13 +36,15 @@ public partial class LevelManager
     
     public bool IsRecovery(out bool isWaiting)
     {
-        /*if (isRestart)
+        if (isRestart)
         {
+            isWaiting = false;
+            
             __recoveredStatus = RecoveryStatus.None;
 
             hasBeenRecovered = false;
         }
-        else*/
+        else
         {
             isWaiting = false;
             switch (__recoveredStatus)

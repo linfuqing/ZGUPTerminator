@@ -54,7 +54,7 @@ public struct ClientHeader
     public FixedString32Bytes userIcon;
 }
 
-public struct ClientMessageChat : IClientMessageToRead
+public struct ClientMessageChatToRead : IClientMessageToRead
 {
     public ClientChannel channel;
     public FixedString512Bytes value;
