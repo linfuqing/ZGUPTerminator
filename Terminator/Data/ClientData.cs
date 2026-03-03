@@ -69,9 +69,20 @@ public struct ClientMessageChatToSend : IClientMessageToSend
     public ClientMessageType messageType => ClientMessageType.Chat;
 }
 
-public struct ClientMessageSquadInvite : IClientMessageToRead, IClientMessageToSend
+public struct ClientMessageSquadInviteToRead : IClientMessageToRead
 {
     public uint squadInviteID;
+    public uint levelID;
+    public int stage;
+    
+    /// <summary>
+    /// 邀请描述
+    /// </summary>
+    public FixedString512Bytes text;
+}
+
+public struct ClientMessageSquadInviteToSend : IClientMessageToSend
+{
     public uint levelID;
     public int stage;
     
