@@ -597,6 +597,25 @@ public sealed class LoginManager : MonoBehaviour
         StartCoroutine(__CollectAndQueryLevels());
     }
 
+    public void MoveTo(int chapterIndex, int stage)
+    {
+        var scrollRect = _style.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
+        if (scrollRect != null)
+        {
+            if (scrollRect.selectedIndex[scrollRect.axis] == chapterIndex)
+            {
+                var submitHandlers = scrollRect.submitHandlers;
+                var submitHandler = submitHandlers != null && submitHandlers.Count > chapterIndex
+                    ? submitHandlers[chapterIndex]
+                    : null;
+                if(submitHandler != null)
+                    submitHandler.OnSubmit(null);
+            }
+            
+            scrollRect.MoveTo(chapterIndex);
+        }
+    }
+
     public void ApplyStart(
         bool isRestart, 
         uint userLevelID, 
