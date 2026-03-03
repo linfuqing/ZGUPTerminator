@@ -240,9 +240,11 @@ public partial class LevelManager
                                         yield return null;
                                 }
                             }
+                            
+                            yield break;
                         }
-                        else
-                            recoveryStatus = RecoveryStatus.TheLastTime;
+                        
+                        recoveryStatus = RecoveryStatus.TheLastTime;
                     }
                     else
                     {
