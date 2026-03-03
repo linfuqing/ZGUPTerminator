@@ -195,7 +195,7 @@ public partial class LevelManager
 
                     while (RecoveryStatus.WaitingForUser == __recoveredStatus)
                     {
-                        if (isRestart)
+                        if (isRestart || __isQuitting)
                         {
                             __recoveredStatus = RecoveryStatus.None;
 
@@ -223,7 +223,7 @@ public partial class LevelManager
 
                                 while (RecoveryStatus.WaitingForTime == __recoveredStatus)
                                 {
-                                    if (isRestart)
+                                    if (isRestart || __isQuitting)
                                     {
                                         __recoveredStatus = RecoveryStatus.None;
 
@@ -247,7 +247,7 @@ public partial class LevelManager
 
                             do
                             {
-                                if (isRestart)
+                                if (isRestart || __isQuitting)
                                 {
                                     __recoveredStatus = RecoveryStatus.None;
 
@@ -293,7 +293,7 @@ public partial class LevelManager
 
                             while (RecoveryStatus.WaitingForTime == __recoveredStatus)
                             {
-                                if (isRestart)
+                                if (isRestart || __isQuitting)
                                 {
                                     __recoveredStatus = RecoveryStatus.None;
 
@@ -316,7 +316,7 @@ public partial class LevelManager
 
                     do
                     {
-                        if (isRestart)
+                        if (isRestart || __isQuitting)
                         {
                             __recoveredStatus = RecoveryStatus.None;
 

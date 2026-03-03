@@ -107,6 +107,8 @@ public partial class LevelManager : MonoBehaviour
 
     [SerializeField] 
     internal Stage[] _stages;
+    
+    private bool __isQuitting;
 
     private int __restartFrameCount;
     private int __submitCount;
@@ -303,6 +305,8 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Quit()
     {
+        __isQuitting = true;
+        
         var levelData = ILevelData.instance;
         if (levelData == null)
             __OnQuit(false);
@@ -347,7 +351,6 @@ public partial class LevelManager : MonoBehaviour
     
     private IEnumerator __Coroutine()
     {
-        IEnumerator enumerator;
         while (__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
         {
             print($"Level manager waiting for coroutine {coroutineEnumerator.name}");
