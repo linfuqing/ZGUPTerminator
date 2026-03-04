@@ -212,12 +212,20 @@ public partial class LevelManager
 
     private IEnumerator __SelectSkills(int styleIndex, LevelSkillData[] skills)
     {
-        __skillSelectionStatus |= SkillSelectionStatus.Selecting;
-        
         do
         {
             //等待队列
             yield return null;
+
+            if (__isQuitting)
+            {
+                __skillSelectionStatus &= ~SkillSelectionStatus.Selecting;
+                
+                yield break;
+            }
+            
+            __skillSelectionStatus |= SkillSelectionStatus.Selecting;
+
         } while ((SkillSelectionStatus.Start & __skillSelectionStatus) != SkillSelectionStatus.Start);
             
         bool result = false;
@@ -649,10 +657,10 @@ public partial class LevelManager
         //不行
         //if (__coroutine != null)
         //    yield return __coroutine;
-        while (!isRestart && (SkillSelectionStatus.Selecting != __skillSelectionStatus || selectedSkillSelectionIndex != -1))
+        while (!__isQuitting && !isRestart && (SkillSelectionStatus.Selecting != __skillSelectionStatus || selectedSkillSelectionIndex != -1))
             yield return null;
         
-        if(isRestart)
+        if(__isQuitting || isRestart)
             yield break;
 
         UnityEngine.Assertions.Assert.AreEqual(-1, selectedSkillSelectionIndex);
@@ -748,6 +756,9 @@ public partial class LevelManager
         do
         {
             yield return null;
+            
+            if(__isQuitting)
+                yield break;
         }
         while ((__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start);
 
