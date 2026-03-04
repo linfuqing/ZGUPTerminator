@@ -166,6 +166,10 @@ public partial class LevelManager : MonoBehaviour
             {
                 __restartFrameCount = 0;
 
+                __coroutineEnumerators.Clear();
+                
+                __ClearSubmit();
+                
                 return;
             }
 
@@ -329,34 +333,15 @@ public partial class LevelManager : MonoBehaviour
         }
     }
 
-    public IEnumerator __Coroutine(IEnumerator enumerator)
-    {
-        IEnumerator childEnumerator;
-        while (enumerator.MoveNext())
-        {
-            childEnumerator = enumerator.Current as IEnumerator;
-            if(childEnumerator == null)
-                yield return null;
-            else
-                yield return __Coroutine(childEnumerator);
-            
-            if (isRestart)
-            {
-                __coroutineEnumerators.Clear();
-                
-                __ClearSubmit();
-            }
-        }
-    }
-    
     private IEnumerator __Coroutine()
     {
+        int restartVersion;
         while (__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
         {
             print($"Level manager waiting for coroutine {coroutineEnumerator.name}");
 
-            yield return __Coroutine(coroutineEnumerator.value);
-            
+            yield return coroutineEnumerator.value;
+
             print($"Level manager end of coroutine {coroutineEnumerator.name}");
         }
 
