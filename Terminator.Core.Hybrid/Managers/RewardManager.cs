@@ -105,11 +105,11 @@ public class RewardManager : MonoBehaviour
 
                 rewardStyle.onSprite?.Invoke(reward.sprite);
                 rewardStyle.onTitle?.Invoke(reward.title);
-                rewardStyle.onCount?.Invoke(rewardValue.count.ToString());
+                rewardStyle.onCount?.Invoke(reward.rank == -1 ? "1" : rewardValue.count.ToString());
 
                 numRanks = rewardStyle.ranks == null ? 0 : rewardStyle.ranks.Length;
                 for(int i = 0; i < numRanks; ++i)
-                    rewardStyle.ranks[i].SetActive(i == reward.rank);
+                    rewardStyle.ranks[i].SetActive(i == (reward.rank == -1 ? rewardValue.count : reward.rank));
 
                 rewardStyle.gameObject.SetActive(true);
 
