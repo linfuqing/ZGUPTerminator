@@ -14,7 +14,9 @@ public struct UserProduct
     public enum Type
     {
         Normal, 
-        Day
+        Day, 
+        Week,
+        Month
     }
 
     [Flags]

@@ -168,50 +168,15 @@ public partial class UserDataMain
     internal string _productsPath;
 #endif
 
-    public const string NAME_SPACE_USER_PRODUCT_SEED = "UserProductSeed";
-
     public IEnumerator QueryProducts(uint userID, Action<Memory<UserProduct>> onComplete)
     {
         yield return __CreateEnumerator();
 
-        var seed = new Active<ProductSeed>(PlayerPrefs.GetString(NAME_SPACE_USER_PRODUCT_SEED), ProductSeed.Parse).ToDay();
-        if (seed.value == 0)
-        {
-            seed.value = DateTimeUtility.GetSeconds();
-            
-            PlayerPrefs.SetString(NAME_SPACE_USER_PRODUCT_SEED, new Active<ProductSeed>(seed).ToString());
-        }
-        
         List<UserProduct> results = null;
-        UserProduct userProduct;
-        Product product;
-        var random = new Unity.Mathematics.Random(seed.value);
-        var randomSelector = new RandomSelector(ref random);
-        int numProducts = _products.Length, bitIndex = 0, chapter = UserData.chapter;
-        for (int i = 0; i < numProducts; ++i)
-        {
-            product = _products[i];
-
-            if(product.minChapter > chapter ||
-               product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
-               !randomSelector.Select(ref random, product.chance))
-                continue;
-
-            userProduct.name = product.name;
-            userProduct.id = __ToID(bitIndex);
-            userProduct.flag = (seed.bits & (1 << bitIndex)) == 0 ? 0 : UserProduct.Flag.Collected;
-            userProduct.productType = product.productType;
-            userProduct.currencyType = product.currencyType;
-            userProduct.price = product.price;
-            userProduct.rewards = product.rewards;
-            
-            if(results == null)
-                results = new List<UserProduct>();
-            
-            results.Add(userProduct);
-
-            ++bitIndex;
-        }
+        __CollectProducts(ref results, UserProduct.Type.Normal);
+        __CollectProducts(ref results, UserProduct.Type.Day);
+        __CollectProducts(ref results, UserProduct.Type.Week);
+        __CollectProducts(ref results, UserProduct.Type.Normal);
         
         onComplete(results.ToArray());
     }
@@ -222,15 +187,8 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
-        var seed = new Active<ProductSeed>(PlayerPrefs.GetString(NAME_SPACE_USER_PRODUCT_SEED), ProductSeed.Parse).ToDay();
-        if (seed.value == 0)
-        {
-            seed.value = DateTimeUtility.GetSeconds();
-            
-            PlayerPrefs.SetString(NAME_SPACE_USER_PRODUCT_SEED, new Active<ProductSeed>(seed).ToString());
-        }
-        
-        int index = __ToIndex(productID);
+        int index = __ProductIDToBitIndex(productID, out var type);
+        var seed = __GetProductSeed(type, out string key);
         if ((seed.bits & (1 << index)) == 0)
         {
             Product product;
@@ -280,7 +238,7 @@ public partial class UserDataMain
                         if(UserProduct.Type.Normal != product.productType)
                             seed.bits |= 1 << index;
                         
-                        PlayerPrefs.SetString(NAME_SPACE_USER_PRODUCT_SEED, new Active<ProductSeed>(seed).ToString());
+                        PlayerPrefs.SetString(key, new Active<ProductSeed>(seed).ToString());
 
                         onComplete(__ApplyRewards(product.rewards).ToArray());
 
@@ -295,6 +253,92 @@ public partial class UserDataMain
         }
 
         onComplete(null);
+    }
+
+    public const string NAME_SPACE_USER_PRODUCT_SEED = "UserProductSeed";
+    public const string NAME_SPACE_USER_PRODUCT_SEED_DAY = "UserProductSeedDay";
+    public const string NAME_SPACE_USER_PRODUCT_SEED_WEEK = "UserProductSeedWeek";
+    public const string NAME_SPACE_USER_PRODUCT_SEED_MONTH = "UserProductSeedMonth";
+
+    private uint __ProductBitIndexToID(UserProduct.Type type, int bitIndex)
+    {
+        return __ToID(bitIndex | (int)type << 30);
+    }
+
+    private int __ProductIDToBitIndex(uint id, out UserProduct.Type type)
+    {
+        int result = __ToIndex(id);
+        type = (UserProduct.Type)(result >> 30);
+        return result & 0x3FFFFFFF;
+    }
+
+    private ProductSeed __GetProductSeed(UserProduct.Type type, out string key)
+    {
+        ProductSeed seed;
+        switch (type)
+        {
+            case UserProduct.Type.Day:
+                key = NAME_SPACE_USER_PRODUCT_SEED_DAY;
+                
+                seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).ToDay();
+                break;
+            case  UserProduct.Type.Week:
+                key = NAME_SPACE_USER_PRODUCT_SEED_WEEK;
+                seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).ToWeek();
+                break;
+            case  UserProduct.Type.Month:
+                key = NAME_SPACE_USER_PRODUCT_SEED_MONTH;
+                seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).ToMonth();
+                break;
+            default:
+                key = NAME_SPACE_USER_PRODUCT_SEED;
+                seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).value;
+                break;
+        }
+        
+        if (seed.value == 0)
+        {
+            seed.value = DateTimeUtility.GetSeconds();
+            
+            PlayerPrefs.SetString(key, new Active<ProductSeed>(seed).ToString());
+        }
+
+        return seed;
+    }
+
+    private void __CollectProducts(ref List<UserProduct> results, UserProduct.Type type)
+    {
+        UserProduct userProduct;
+        Product product;
+        var seed = __GetProductSeed(type, out _);
+        var random = new Unity.Mathematics.Random(seed.value);
+        var randomSelector = new RandomSelector(ref random);
+        int numProducts = _products.Length, bitIndex = 0, chapter = UserData.chapter;
+        for (int i = 0; i < numProducts; ++i)
+        {
+            product = _products[i];
+            if(product.productType != type || 
+               product.minChapter > chapter ||
+               product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
+               !randomSelector.Select(ref random, product.chance))
+                continue;
+
+            userProduct.name = product.name;
+            userProduct.id = __ProductBitIndexToID(type, bitIndex);
+            userProduct.flag = (seed.bits & (1 << bitIndex)) == 0 ? 0 : UserProduct.Flag.Collected;
+            userProduct.productType = product.productType;
+            userProduct.currencyType = product.currencyType;
+            userProduct.price = product.price;
+            userProduct.rewards = product.rewards;
+            
+            if(results == null)
+                results = new List<UserProduct>();
+            
+            results.Add(userProduct);
+
+            ++bitIndex;
+        }
+
     }
 }
 
