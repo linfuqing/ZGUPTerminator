@@ -176,7 +176,7 @@ public partial class UserDataMain
         __CollectProducts(ref results, UserProduct.Type.Normal);
         __CollectProducts(ref results, UserProduct.Type.Day);
         __CollectProducts(ref results, UserProduct.Type.Week);
-        __CollectProducts(ref results, UserProduct.Type.Normal);
+        __CollectProducts(ref results, UserProduct.Type.Month);
         
         onComplete(results.ToArray());
     }
@@ -200,7 +200,8 @@ public partial class UserDataMain
             {
                 product = _products[i];
                 
-                if(product.minChapter > chapter ||
+                if(product.productType != type || 
+                   product.minChapter > chapter ||
                    product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
                    !randomSelector.Select(ref random, product.chance))
                     continue;
