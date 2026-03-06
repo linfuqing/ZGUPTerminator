@@ -182,6 +182,7 @@ public class ClientData : MonoBehaviour, IClientData
     };
 
     private int __identityIndex;
+    private int __channel;
     private int __frameCount;
     private int __pipelineIndex;
     private NetworkClient.MessageIterator __messageIterator;
@@ -404,7 +405,7 @@ public class ClientData : MonoBehaviour, IClientData
                         writer.WritePackedInt((int)ClientMessageType.SquadInvite, streamCompressionModel);
                         writer.WritePackedInt((int)NetworkRelayType.All, streamCompressionModel);
                         header.Write(ref writer, streamCompressionModel);
-                        //writer.WritePackedInt(__channel, streamCompressionModel);
+                        writer.WritePackedInt(__channel, streamCompressionModel);
                         writer.WritePackedUInt(temp.levelID, streamCompressionModel);
                         writer.WritePackedInt(temp.stage, streamCompressionModel);
                         writer.WriteFixedString512(temp.text);
