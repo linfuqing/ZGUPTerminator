@@ -263,14 +263,14 @@ public partial class UserDataMain
 
     private uint __ProductBitIndexToID(UserProduct.Type type, int bitIndex)
     {
-        return __ToID(bitIndex | (int)type << 30);
+        return __ToID(bitIndex) | (uint)type << 30;
     }
 
     private int __ProductIDToBitIndex(uint id, out UserProduct.Type type)
     {
-        int result = __ToIndex(id);
-        type = (UserProduct.Type)(result >> 30);
-        return result & 0x3FFFFFFF;
+        int result = __ToIndex(id & 0x3FFFFFFF);
+        type = (UserProduct.Type)(id >> 30);
+        return result;
     }
 
     private ProductSeed __GetProductSeed(UserProduct.Type type, out string key)
