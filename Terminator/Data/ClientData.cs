@@ -182,11 +182,11 @@ public class ClientData : MonoBehaviour, IClientData
     };
 
     private int __identityIndex;
-    private int __channel;
     private int __frameCount;
     private int __pipelineIndex;
     private NetworkClient.MessageIterator __messageIterator;
     private NativeList<byte> __bytes;
+    private ClientMessageSquadInviteToSend __squadInviteMessage;
 
     private static Entity __entity;
     
@@ -273,13 +273,29 @@ public class ClientData : MonoBehaviour, IClientData
                                 channel = reader.ReadPackedInt(streamCompressionModel);
                             if (identityIndex == __identityIndex)
                             {
-                                __channel = channel;
-
                                 header = this.header;
+
+                                if ((int)NetworkRelayMessageType.Create == type)
+                                {
+                                    var driver = this.driver;
+                                    if (driver.BeginWrite(__pipelineIndex, out var writer))
+                                    {
+                                        writer.WritePackedInt((int)ClientMessageType.SquadInvite,
+                                            streamCompressionModel);
+                                        writer.WritePackedInt((int)NetworkRelayType.All, streamCompressionModel);
+                                        header.Write(ref writer, streamCompressionModel);
+                                        writer.WritePackedInt(channel, streamCompressionModel);
+                                        writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
+                                        writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
+                                        writer.WriteFixedString512(__squadInviteMessage.text);
+
+                                        driver.EndWrite(writer);
+                                    }
+                                }
                             }
                             else
                                 header = new ClientHeader(ref reader, streamCompressionModel);
-
+                            
                             if ((int)NetworkRelayMessageType.Leave == type)
                                 return (int)ClientMessageType.SquadLeave;
                             
@@ -343,6 +359,7 @@ public class ClientData : MonoBehaviour, IClientData
                 }
                     break;
                 case NetworkClientMessageType.Connect:
+                {
                     header = this.header;
                     var driver = this.driver;
                     if (driver.BeginWrite(__pipelineIndex, out var writer))
@@ -352,7 +369,9 @@ public class ClientData : MonoBehaviour, IClientData
                         header.Write(ref writer, streamCompressionModel);
                         driver.EndWrite(writer);
                     }
+
                     break;
+                }
                 case NetworkClientMessageType.Disconnect:
                     break;
             }
@@ -364,7 +383,7 @@ public class ClientData : MonoBehaviour, IClientData
 
     public T ReadMessage<T>() where T : unmanaged, IClientMessageToRead
     {
-        return __bytes.AsArray().Reinterpret<T>()[0];
+        return __bytes.AsArray().Reinterpret<T>(1)[0];
     }
 
     public void SendMessage<T>(in T message) where T : unmanaged, IClientMessageToSend
@@ -380,7 +399,7 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Join, streamCompressionModel);
-                    writer.WritePackedInt((int)__bytes.AsArray().Reinterpret<ClientMessageSquadJoin>()[0].squadInviteID, streamCompressionModel);
+                    writer.WritePackedInt((int)__bytes.AsArray().Reinterpret<ClientMessageSquadJoin>(1)[0].squadInviteID, streamCompressionModel);
                     driver.EndWrite(writer);
                 }
                 break;
@@ -399,25 +418,13 @@ public class ClientData : MonoBehaviour, IClientData
                     writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
                     driver.EndWrite(writer);
 
-                    if (driver.BeginWrite(__pipelineIndex, out writer))
-                    {
-                        var temp = __bytes.AsArray().Reinterpret<ClientMessageSquadInviteToSend>()[0];
-                        writer.WritePackedInt((int)ClientMessageType.SquadInvite, streamCompressionModel);
-                        writer.WritePackedInt((int)NetworkRelayType.All, streamCompressionModel);
-                        header.Write(ref writer, streamCompressionModel);
-                        writer.WritePackedInt(__channel, streamCompressionModel);
-                        writer.WritePackedUInt(temp.levelID, streamCompressionModel);
-                        writer.WritePackedInt(temp.stage, streamCompressionModel);
-                        writer.WriteFixedString512(temp.text);
-
-                        driver.EndWrite(writer);
-                    }
+                    __squadInviteMessage = __bytes.AsArray().Reinterpret<ClientMessageSquadInviteToSend>(1)[0];
                 }
                 break;
             case ClientMessageType.Chat:
                 if (driver.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var temp = __bytes.AsArray().Reinterpret<ClientMessageChatToSend>()[0];
+                    var temp = __bytes.AsArray().Reinterpret<ClientMessageChatToSend>(1)[0];
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)ClientMessageType.Chat, streamCompressionModel);
                     writer.WritePackedInt((int)temp.channel, streamCompressionModel);
@@ -437,7 +444,7 @@ public class ClientData : MonoBehaviour, IClientData
 
         __bytes.ResizeUninitialized(UnsafeUtility.SizeOf<T>());
         
-        var messages = __bytes.AsArray().Reinterpret<T>();
+        var messages = __bytes.AsArray().Reinterpret<T>(1);
         messages[0] = message;
     }
 
@@ -446,8 +453,30 @@ public class ClientData : MonoBehaviour, IClientData
         ClientMessageType type;
         while ((type = (ClientMessageType)ReadMessageType(out var clientHeader)) != ClientMessageType.None)
         {
+            print(type);
             
+            switch (type)
+            {
+                case ClientMessageType.SquadJoin:
+                    ReadMessage<ClientMessageSquadJoin>();
+                    break;
+                case ClientMessageType.SquadLeave:
+                    //ReadMessage<ClientMessageSquadLeave>();
+                    break;
+                case ClientMessageType.SquadInvite:
+                    ReadMessage<ClientMessageSquadInviteToRead>();
+                    break;
+                case ClientMessageType.Chat:
+                    ReadMessage<ClientMessageChatToRead>();
+                    break;
+            }
         }
+
+        ClientMessageSquadInviteToSend messageSquadInvite;
+        messageSquadInvite.levelID = 111;
+        messageSquadInvite.stage = 0;
+        messageSquadInvite.text = "hehe";
+        SendMessage(messageSquadInvite);
     }
 
     void OnDestroy()
