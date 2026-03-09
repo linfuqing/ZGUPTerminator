@@ -448,7 +448,12 @@ public class ClientData : MonoBehaviour, IClientData
         messages[0] = message;
     }
 
-    void Update()
+    void Start()
+    {
+        IClientData.instance = this;
+    }
+
+    /*void Update()
     {
         ClientMessageType type;
         while ((type = (ClientMessageType)ReadMessageType(out var clientHeader)) != ClientMessageType.None)
@@ -477,7 +482,7 @@ public class ClientData : MonoBehaviour, IClientData
         messageSquadInvite.stage = 0;
         messageSquadInvite.text = "hehe";
         SendMessage(messageSquadInvite);
-    }
+    }*/
 
     void OnDestroy()
     {
