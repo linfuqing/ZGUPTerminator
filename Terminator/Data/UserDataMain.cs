@@ -217,6 +217,9 @@ public sealed partial class UserDataMain : MonoBehaviour
         if (IAdvertisementData.instance == null)
             gameObject.AddComponent<AdvertisementData>();
 
+        if(IClientData.instance == null)
+            gameObject.AddComponent<ClientData>();
+
         instance = this;
     }
 }
