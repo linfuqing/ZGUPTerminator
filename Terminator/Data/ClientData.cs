@@ -172,6 +172,8 @@ public struct ClientMessagePlayerProperty : IClientMessageToSend
     public LevelPlayerProperty value;
     
     public ClientMessageType messageType => ClientMessageType.PlayerProperty;
+    
+    public int capacity => UnsafeUtility.SizeOf<ClientMessagePlayerProperty>();
 
     public ClientMessagePlayerProperty(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
@@ -242,6 +244,10 @@ public interface IClientData
     T ReadMessage<T>() where T : unmanaged, IClientMessageToRead;
 
     void SendMessage<T>(in T message) where T : unmanaged, IClientMessageToSend;
+    
+    DataStreamWriter BeginSend(ClientMessageType type, int capacity);
+    
+    void EndSend(in DataStreamWriter writer);
 }
 
 public class ClientData : MonoBehaviour, IClientData
@@ -495,9 +501,34 @@ public class ClientData : MonoBehaviour, IClientData
     {
         __Save(message);
 
+        __Send(message.messageType);
+    }
+
+    public DataStreamWriter BeginSend(ClientMessageType type, int capacity)
+    {
+        if(!__bytes.IsCreated)
+            __bytes = new NativeList<byte>(Allocator.Persistent);
+
+        __bytes.ResizeUninitialized(capacity);
+
+        var writer = new DataStreamWriter(__bytes.AsArray());
+        writer.m_SendHandleData = (IntPtr)type;
+        
+        return writer;
+    }
+
+    public void EndSend(in DataStreamWriter writer)
+    {
+        __bytes.ResizeUninitialized(writer.Length);
+
+        __Send((ClientMessageType)writer.m_SendHandleData);
+    }
+
+    private void __Send(ClientMessageType type)
+    {
         DataStreamWriter writer;
         var driver = this.driver;
-        switch (message.messageType)
+        switch (type)
         {
             case ClientMessageType.SquadJoin:
                 if (driver.BeginWrite(__pipelineIndex, out writer))

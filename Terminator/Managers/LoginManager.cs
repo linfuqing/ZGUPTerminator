@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Scripting;
@@ -1489,7 +1490,9 @@ public sealed class LoginManager : MonoBehaviour
         {
             ClientMessagePlayerProperty playerPropertyMessage;
             playerPropertyMessage.value = playerProperty;
-            clientData.SendMessage(playerPropertyMessage);
+            var writer = clientData.BeginSend(playerPropertyMessage.messageType, playerPropertyMessage.capacity);
+            playerPropertyMessage.Write(ref writer, StreamCompressionModel.Default);
+            clientData.EndSend(writer);
         }
 
         uint userID = LoginManager.userID.Value;
