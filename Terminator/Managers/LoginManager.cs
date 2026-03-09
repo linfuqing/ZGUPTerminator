@@ -1490,7 +1490,7 @@ public sealed class LoginManager : MonoBehaviour
         {
             ClientMessagePlayerProperty playerPropertyMessage;
             playerPropertyMessage.value = playerProperty;
-            var writer = clientData.BeginSend(playerPropertyMessage.messageType, playerPropertyMessage.capacity);
+            var writer = clientData.BeginSend(ClientMessagePlayerProperty.messageType, ClientMessagePlayerProperty.capacity);
             playerPropertyMessage.Write(ref writer, StreamCompressionModel.Default);
             clientData.EndSend(writer);
         }
@@ -1731,7 +1731,9 @@ public sealed class LoginManager : MonoBehaviour
                 play.stage = stageIndex;
                 play.levelName = levelName;
                 play.sceneName = sceneName;
-                clientData.SendMessage(play);
+                var writer = clientData.BeginSend(ClientMessageType.Play, ClientMessagePlay.capacity);
+                play.Write(ref writer, StreamCompressionModel.Default);
+                clientData.EndSend(writer);
             }
 
             if (clientData.remotePlayerCount > 0)

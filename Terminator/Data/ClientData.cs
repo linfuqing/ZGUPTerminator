@@ -167,13 +167,13 @@ public struct ClientMessageLevelChapter : IClientMessageToSend
     }
 }
 
-public struct ClientMessagePlayerProperty : IClientMessageToSend
+public struct ClientMessagePlayerProperty
 {
     public LevelPlayerProperty value;
     
-    public ClientMessageType messageType => ClientMessageType.PlayerProperty;
+    public static ClientMessageType messageType => ClientMessageType.PlayerProperty;
     
-    public int capacity => UnsafeUtility.SizeOf<ClientMessagePlayerProperty>();
+    public static int capacity => UnsafeUtility.SizeOf<ClientMessagePlayerProperty>();
 
     public ClientMessagePlayerProperty(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
@@ -186,7 +186,7 @@ public struct ClientMessagePlayerProperty : IClientMessageToSend
     }
 }
 
-public struct ClientMessagePlay : IClientMessageToSend
+public struct ClientMessagePlay
 {
     public bool isRestart;
     public uint levelID;
@@ -194,7 +194,9 @@ public struct ClientMessagePlay : IClientMessageToSend
     public FixedString32Bytes levelName;
     public FixedString32Bytes sceneName;
     
-    public ClientMessageType messageType => ClientMessageType.Play;
+    public static ClientMessageType messageType => ClientMessageType.Play;
+
+    public static int capacity => UnsafeUtility.SizeOf<ClientMessagePlay>();
 
     public ClientMessagePlay(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
