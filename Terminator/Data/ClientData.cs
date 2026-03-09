@@ -575,10 +575,12 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.PlayerProperty:
                 if (driver.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var temp = __Load<ClientMessagePlayerProperty>();
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)ClientMessageType.PlayerProperty, streamCompressionModel);
                     writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                    
+                    var reader = new DataStreamReader(__bytes.AsArray());
+                    var temp = new ClientMessagePlayerProperty(ref reader, streamCompressionModel);
                     temp.Write(ref writer, streamCompressionModel);
                     
                     driver.EndWrite(writer);
@@ -587,10 +589,12 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.Play:
                 if (driver.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var temp = __Load<ClientMessagePlay>();
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)ClientMessageType.PlayerProperty, streamCompressionModel);
                     writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                    
+                    var reader = new DataStreamReader(__bytes.AsArray());
+                    var temp = new ClientMessagePlay(ref reader, streamCompressionModel);
                     temp.Write(ref writer, streamCompressionModel);
                     
                     driver.EndWrite(writer);
