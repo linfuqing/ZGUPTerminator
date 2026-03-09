@@ -2,7 +2,12 @@ using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
 
-public struct RemotePlayer : IComponentData
+public interface ILevelPlayer
+{
+    
+}
+
+public struct RemotePlayer : IComponentData, ILevelPlayer
 {
     private static readonly SharedStatic<bool> Active = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
 
@@ -14,7 +19,7 @@ public struct RemotePlayer : IComponentData
     }
 }
 
-public struct LevelPlayer : IComponentData
+public struct LevelPlayer : IComponentData, ILevelPlayer
 {
     private static readonly SharedStatic<int> InstanceID = SharedStatic<int>.GetOrCreate<LevelPlayer>();
 
@@ -49,7 +54,7 @@ public struct LevelPlayerSkillOpcode
     public float value;
 }
 
-public static class LevelPlayerShared
+public static class LevelPlayerShared<T> where T : ILevelPlayer
 {
     private class Value<TChildClass, TValue> where TValue : unmanaged
     {

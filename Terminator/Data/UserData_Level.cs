@@ -134,10 +134,12 @@ public partial interface IUserData
         
         public bool isVail => skills != null || attributes != null;
 
-        public void Apply()
+        public void Apply<T>(int rage) where T : ILevelPlayer
         {
             SpawnerShared.layerMaskAndTags = spawnerLayerMaskAndTags;
-
+            
+            LevelPlayerShared<T>.effectRage = rage;
+            
             float effectTargetHPScale = 0.0f,
                 effectTargetRecovery = 0.0f,
                 effectTargetDamageScale = 0.0f,
@@ -164,21 +166,21 @@ public partial interface IUserData
                 }
             }
 
-            LevelPlayerShared.effectTargetHP = hpMax;
-            LevelPlayerShared.effectTargetHPScale = effectTargetHPScale;
-            LevelPlayerShared.effectTargetRecovery = effectTargetRecovery;
-            LevelPlayerShared.effectTargetDamageScale = effectTargetDamageScale;
-            LevelPlayerShared.effectDamageScale = effectDamageScale;
+            LevelPlayerShared<T>.effectTargetHP = hpMax;
+            LevelPlayerShared<T>.effectTargetHPScale = effectTargetHPScale;
+            LevelPlayerShared<T>.effectTargetRecovery = effectTargetRecovery;
+            LevelPlayerShared<T>.effectTargetDamageScale = effectTargetDamageScale;
+            LevelPlayerShared<T>.effectDamageScale = effectDamageScale;
 
-            LevelPlayerShared.instanceName = name;
+            LevelPlayerShared<T>.instanceName = name;
 
-            ref var activeSkills = ref LevelPlayerShared.activeSkills;
+            ref var activeSkills = ref LevelPlayerShared<T>.activeSkills;
             activeSkills.Clear();
 
-            ref var skillGroups = ref LevelPlayerShared.skillGroups;
+            ref var skillGroups = ref LevelPlayerShared<T>.skillGroups;
             skillGroups.Clear();
 
-            ref var skillOpcodes = ref LevelPlayerShared.skillOpcodes;
+            ref var skillOpcodes = ref LevelPlayerShared<T>.skillOpcodes;
             skillOpcodes.Clear();
 
             if (skills != null)

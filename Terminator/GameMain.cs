@@ -846,19 +846,17 @@ public class GameMain : GameUser
     {
         LevelShared.stage = property.stage;
 
-        property.value.Apply();
+        property.value.Apply<LevelPlayer>(0);
     }
 
     private void __ApplyStage(IUserData.StageProperty property)
     {
-        LevelPlayerShared.effectRage = property.cache.rage;
-
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
         
         LevelShared.stage = property.stage;
         
-        property.value.Apply();
+        property.value.Apply<LevelPlayer>(property.cache.rage);
     }
 
     private void __OnConfirmCancel()

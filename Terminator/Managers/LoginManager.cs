@@ -1382,8 +1382,6 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
         
-        LevelPlayerShared.effectRage = 0;
-
         LevelShared.items.Clear();
 
         LevelShared.stages.Clear();
@@ -1404,7 +1402,7 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.exp = 0;
         LevelShared.expMax = 0;
         
-        __SubmitStage(property.value, property.stage, property.purchaseFlag);
+        __SubmitStage(property.value, 0, property.stage, property.purchaseFlag);
     }
     
     private void __ApplyStage(IUserData.StageProperty property)
@@ -1420,8 +1418,6 @@ public sealed class LoginManager : MonoBehaviour
             
             return;
         }
-
-        LevelPlayerShared.effectRage = property.cache.rage;
 
         LevelShared.items.Clear();
         if (property.cache.items != null)
@@ -1454,10 +1450,14 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.exp = property.cache.exp;
         LevelShared.expMax = property.cache.expMax;
         
-        __SubmitStage(property.value, property.stage, property.purchaseFlag);
+        __SubmitStage(property.value, property.cache.rage, property.stage, property.purchaseFlag);
     }
 
-    private void __SubmitStage(IUserData.Property property, int stage, IUserData.PurchaseFlag purchaseFlag)
+    private void __SubmitStage(
+        IUserData.Property property, 
+        int rage, 
+        int stage, 
+        IUserData.PurchaseFlag purchaseFlag)
     {
         if (!property.isVail)
         {
@@ -1466,12 +1466,12 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
         
-        property.Apply();
-
         LevelShared.stage = stage;
 
+        property.Apply<LevelPlayer>(rage);
+
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
-        LevelPlayerShared.effectTargetRecoveryTimes = hasSweepCard ? 2 : 1;
+        LevelPlayerShared<LevelPlayer>.effectTargetRecoveryTimes = hasSweepCard ? 2 : 1;
         EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
                                         IUserData.PurchaseFlag.AdvertisingFreeCard;
         

@@ -81,6 +81,11 @@ public struct ClientMessageSquadJoin : IClientMessageToRead, IClientMessageToSen
     public uint squadInviteID;
     
     public ClientMessageType messageType => ClientMessageType.SquadJoin;
+    
+    public override string ToString()
+    {
+        return $"ClientMessageSquadJoin({squadInviteID})";
+    }
 }
 
 public struct ClientMessageSquadLeave : IClientMessageToSend
@@ -98,6 +103,11 @@ public struct ClientMessageSquadInviteToRead : IClientMessageToRead
     /// 邀请描述
     /// </summary>
     public FixedString512Bytes text;
+
+    public override string ToString()
+    {
+        return $"ClientMessageSquadInviteToRead({squadInviteID}:{levelID}:{stage}:{text})";
+    }
 }
 
 public struct ClientMessageSquadInviteToSend : IClientMessageToSend
@@ -117,6 +127,11 @@ public struct ClientMessageChatToRead : IClientMessageToRead
 {
     public ClientChannel channel;
     public FixedString512Bytes value;
+    
+    public override string ToString()
+    {
+        return $"ClientMessageChatToRead({channel}:{value})";
+    }
 }
 
 public struct ClientMessageChatToSend : IClientMessageToSend
@@ -189,40 +204,8 @@ public class ClientData : MonoBehaviour, IClientData
     private ClientMessageSquadInviteToSend __squadInviteMessage;
 
     private static Entity __entity;
-    
-    public NetworkClientDriver driver
-    {
-        get
-        {
-            var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-            if (__entity == Entity.Null)
-            {
-                __entity = entityManager.CreateSingleton<NetworkClientDriver>();
 
-                var driver = new NetworkClientDriver(
-                    Allocator.Persistent, 
-                    _connectTimeoutMS,
-                    _maxConnectAttempts,
-                    _disconnectTimeoutMS,
-                    _reconnectionTimeoutMS,
-                    _maxFrameTimeMS, 
-                    _fixedFrameTimeMS, 
-                    _receiveQueueCapacity, 
-                    _sendQueueCapacity);
-
-                using (var stages = new NativeArray<NetworkPipelineStage>(_stages, Allocator.Temp))
-                    __pipelineIndex = driver.CreatePipeline(stages);
-                
-                driver.Connect(_address, _port);
-                
-                entityManager.SetComponentData(__entity, driver);
-
-                return driver;
-            }
-
-            return entityManager.GetComponentData<NetworkClientDriver>(__entity);
-        }
-    }
+    public NetworkClientDriver driver => __GetOrCreateDriver(out _);
     
     public ClientHeader header
     {
@@ -246,7 +229,7 @@ public class ClientData : MonoBehaviour, IClientData
             
             //__messageIterator.Dispose();
 
-            __messageIterator = driver.AsMessages().CreateIterator(Allocator.Temp);
+            __messageIterator = __GetOrCreateDriver(out var entityManager).AsMessages().CreateIterator(entityManager.World.UpdateAllocator.ToAllocator);
         }
 
         NetworkClient.MessageIterator.Element element;
@@ -260,6 +243,7 @@ public class ClientData : MonoBehaviour, IClientData
                     var streamCompressionModel = StreamCompressionModel.Default;
                     var reader = element.reader;
                     int type = reader.ReadPackedInt(streamCompressionModel);
+                    print((NetworkRelayMessageType)type);
                     switch ((NetworkRelayMessageType)type)
                     {
                         case NetworkRelayMessageType.Init:
@@ -291,6 +275,8 @@ public class ClientData : MonoBehaviour, IClientData
 
                                         driver.EndWrite(writer);
                                     }
+
+                                    break;
                                 }
                             }
                             else
@@ -360,7 +346,7 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 case NetworkClientMessageType.Connect:
                 {
-                    header = this.header;
+                    /*header = this.header;
                     var driver = this.driver;
                     if (driver.BeginWrite(__pipelineIndex, out var writer))
                     {
@@ -368,7 +354,7 @@ public class ClientData : MonoBehaviour, IClientData
                         writer.WritePackedInt((int)NetworkRelayMessageType.Init, streamCompressionModel);
                         header.Write(ref writer, streamCompressionModel);
                         driver.EndWrite(writer);
-                    }
+                    }*/
 
                     break;
                 }
@@ -448,9 +434,54 @@ public class ClientData : MonoBehaviour, IClientData
         messages[0] = message;
     }
 
+    private NetworkClientDriver __GetOrCreateDriver(out EntityManager entityManager)
+    {
+        entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+        if (__entity == Entity.Null)
+        {
+            __entity = entityManager.CreateSingleton<NetworkClientDriver>();
+
+            var driver = new NetworkClientDriver(
+                Allocator.Persistent, 
+                _connectTimeoutMS,
+                _maxConnectAttempts,
+                _disconnectTimeoutMS,
+                _reconnectionTimeoutMS,
+                _maxFrameTimeMS, 
+                _fixedFrameTimeMS, 
+                _receiveQueueCapacity, 
+                _sendQueueCapacity);
+
+            using (var stages = new NativeArray<NetworkPipelineStage>(_stages, Allocator.Temp))
+                __pipelineIndex = driver.CreatePipeline(stages);
+
+            using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
+            {
+                var writer = new DataStreamWriter(bytes);
+                var streamCompressionModel = StreamCompressionModel.Default;
+                writer.WritePackedInt((int)NetworkRelayMessageType.Init, streamCompressionModel);
+                header.Write(ref writer, streamCompressionModel);
+                driver.Connect(_address, _port, bytes.GetSubArray(0, writer.Length));
+            }
+
+            entityManager.SetComponentData(__entity, driver);
+
+            return driver;
+        }
+
+        return entityManager.GetComponentData<NetworkClientDriver>(__entity);
+    }
+
     void Start()
     {
         IClientData.instance = this;
+
+        /*ClientMessageSquadInviteToSend squadInviteToSend;
+        squadInviteToSend.levelID = 1;
+        squadInviteToSend.stage = 0;
+        squadInviteToSend.text = "hehe";
+        
+        SendMessage(squadInviteToSend);*/
     }
 
     /*void Update()
@@ -458,30 +489,23 @@ public class ClientData : MonoBehaviour, IClientData
         ClientMessageType type;
         while ((type = (ClientMessageType)ReadMessageType(out var clientHeader)) != ClientMessageType.None)
         {
-            print(type);
-            
             switch (type)
             {
                 case ClientMessageType.SquadJoin:
-                    ReadMessage<ClientMessageSquadJoin>();
+                    print(ReadMessage<ClientMessageSquadJoin>());
                     break;
                 case ClientMessageType.SquadLeave:
                     //ReadMessage<ClientMessageSquadLeave>();
+                    print("ClientMessageSquadLeave");
                     break;
                 case ClientMessageType.SquadInvite:
-                    ReadMessage<ClientMessageSquadInviteToRead>();
+                    print(ReadMessage<ClientMessageSquadInviteToRead>());
                     break;
                 case ClientMessageType.Chat:
-                    ReadMessage<ClientMessageChatToRead>();
+                    print(ReadMessage<ClientMessageChatToRead>());
                     break;
             }
         }
-
-        ClientMessageSquadInviteToSend messageSquadInvite;
-        messageSquadInvite.levelID = 111;
-        messageSquadInvite.stage = 0;
-        messageSquadInvite.text = "hehe";
-        SendMessage(messageSquadInvite);
     }*/
 
     void OnDestroy()
