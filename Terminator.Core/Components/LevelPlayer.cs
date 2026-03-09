@@ -90,7 +90,7 @@ public struct LevelPlayerProperty
         effectTargetRecoveryTimes = reader.ReadPackedInt(streamCompressionModel);
         effectRage = reader.ReadPackedInt(streamCompressionModel);
         effectTargetHP = reader.ReadPackedInt(streamCompressionModel);
-        effectTargetHPScale = reader.ReadPackedInt(streamCompressionModel);
+        effectTargetHPScale = reader.ReadPackedFloat(streamCompressionModel);
         effectTargetDamageScale = reader.ReadPackedFloat(streamCompressionModel);
         effectDamageScale = reader.ReadPackedFloat(streamCompressionModel);
         effectTargetRecovery = reader.ReadPackedFloat(streamCompressionModel);

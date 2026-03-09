@@ -175,14 +175,14 @@ public struct ClientMessagePlayerProperty
     
     public static int capacity => UnsafeUtility.SizeOf<ClientMessagePlayerProperty>();
 
-    public ClientMessagePlayerProperty(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    public ClientMessagePlayerProperty(ref DataStreamReader reader)
     {
-        value = new LevelPlayerProperty(ref reader, streamCompressionModel);
+        value = new LevelPlayerProperty(ref reader, StreamCompressionModel.Default);
     }
 
-    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+    public void Write(ref DataStreamWriter writer)
     {
-        value.Write(ref writer, streamCompressionModel);
+        value.Write(ref writer, StreamCompressionModel.Default);
     }
 }
 
@@ -198,8 +198,9 @@ public struct ClientMessagePlay
 
     public static int capacity => UnsafeUtility.SizeOf<ClientMessagePlay>();
 
-    public ClientMessagePlay(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    public ClientMessagePlay(ref DataStreamReader reader)
     {
+        var streamCompressionModel = StreamCompressionModel.Default;
         isRestart = reader.ReadRawBits(1) == 1;
         levelID = reader.ReadPackedUInt(streamCompressionModel);
         stage = reader.ReadPackedInt(streamCompressionModel);
@@ -207,8 +208,9 @@ public struct ClientMessagePlay
         sceneName = reader.ReadFixedString32();
     }
 
-    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+    public void Write(ref DataStreamWriter writer)
     {
+        var streamCompressionModel = StreamCompressionModel.Default;
         writer.WriteRawBits(isRestart ? 1u : 0, 1);
         writer.WritePackedUInt(levelID, streamCompressionModel);
         writer.WritePackedInt(stage, streamCompressionModel);
@@ -456,13 +458,13 @@ public class ClientData : MonoBehaviour, IClientData
                                     return (int)ClientMessageType.Chat;
                                 }
                                 case ClientMessageType.PlayerProperty:
-                                    var playerProperty = new ClientMessagePlayerProperty(ref reader, streamCompressionModel);
+                                    var playerProperty = new ClientMessagePlayerProperty(ref reader);
                                     LevelPlayerShared<RemotePlayer>.property = playerProperty.value;
 
                                     RemotePlayer.status = RemotePlayer.Status.Joined;
                                     break;
                                 case ClientMessageType.Play:
-                                    new ClientMessagePlay(ref reader, streamCompressionModel).Apply();
+                                    new ClientMessagePlay(ref reader).Apply();
                                     break;
                             }
 
@@ -580,8 +582,8 @@ public class ClientData : MonoBehaviour, IClientData
                     writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
                     
                     var reader = new DataStreamReader(__bytes.AsArray());
-                    var temp = new ClientMessagePlayerProperty(ref reader, streamCompressionModel);
-                    temp.Write(ref writer, streamCompressionModel);
+                    var temp = new ClientMessagePlayerProperty(ref reader);
+                    temp.Write(ref writer);
                     
                     driver.EndWrite(writer);
                 }
@@ -594,8 +596,8 @@ public class ClientData : MonoBehaviour, IClientData
                     writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
                     
                     var reader = new DataStreamReader(__bytes.AsArray());
-                    var temp = new ClientMessagePlay(ref reader, streamCompressionModel);
-                    temp.Write(ref writer, streamCompressionModel);
+                    var temp = new ClientMessagePlay(ref reader);
+                    temp.Write(ref writer);
                     
                     driver.EndWrite(writer);
                 }
