@@ -897,7 +897,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                 var styleScene = style.scenes[sceneIndex];
 
-                                {
+                                /*{
                                     ref var levelScene = ref level.scenes[sceneIndex];
 
                                     if (styleScene.onTitle != null)
@@ -905,7 +905,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                     if (styleScene.onDescription != null)
                                         styleScene.onDescription.Invoke(levelScene.description);
-                                }
+                                }*/
                                 
                                 numStageStyles = styleScene.stageStyles == null ? 0 : styleScene.stageStyles.Length;
                                 if (numStageStyles > 0)
@@ -1009,6 +1009,12 @@ public sealed class LoginManager : MonoBehaviour
                                                             ref var levelScene = ref level.scenes[sceneIndex];
                                                             __sceneName = levelScene.name;
 
+                                                            if (styleScene.onTitle != null)
+                                                                styleScene.onTitle.Invoke(levelScene.title);
+
+                                                            if (styleScene.onDescription != null)
+                                                                styleScene.onDescription.Invoke(levelScene.description);
+                                                            
                                                             if (onStageChanged != null)
                                                             {
                                                                 Stage result;
@@ -1474,10 +1480,18 @@ public sealed class LoginManager : MonoBehaviour
 
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
         
-        property.Apply<LevelPlayer>(hasSweepCard ? 2 : 1, rage, out _);
+        property.Apply<LevelPlayer>(hasSweepCard ? 2 : 1, rage, out var playerProperty);
         EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
                                         IUserData.PurchaseFlag.AdvertisingFreeCard;
-        
+
+        var clientData = IClientData.instance;
+        if (clientData != null)
+        {
+            ClientMessagePlayerProperty playerPropertyMessage;
+            playerPropertyMessage.value = playerProperty;
+            clientData.SendMessage(playerPropertyMessage);
+        }
+
         uint userID = LoginManager.userID.Value;
         
         ILevelData.instance = new GameLevelData(userID, hasSweepCard);
@@ -1663,7 +1677,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private IEnumerator __Start(
         bool isRestart, 
-        uint userLevelID, 
+        uint levelID, 
         int stageIndex,
         string levelName, 
         string sceneName)
@@ -1688,9 +1702,9 @@ public sealed class LoginManager : MonoBehaviour
         __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : -1;
         
         if (isRestart)
-            yield return userData.ApplyLevel(userID, userLevelID, stageIndex, __ApplyLevel);
+            yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
         else
-            yield return userData.ApplyStage(userID, userLevelID, stageIndex, __ApplyStage);
+            yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
             
         if (!__isStart)
         {
@@ -1699,6 +1713,26 @@ public sealed class LoginManager : MonoBehaviour
             _onEnd?.Invoke();
 
             yield break;
+        }
+
+        RemotePlayer.status = RemotePlayer.Status.Disabled;
+
+        var clientData = IClientData.instance;
+        if (clientData != null)
+        {
+            if (clientData.isHost)
+            {
+                ClientMessagePlay play;
+                play.isRestart = isRestart;
+                play.levelID = levelID;
+                play.stage = stageIndex;
+                play.levelName = levelName;
+                play.sceneName = sceneName;
+                clientData.SendMessage(play);
+            }
+
+            if (clientData.remotePlayerCount > 0)
+                RemotePlayer.status = RemotePlayer.Status.Waiting;
         }
 
         var analytics = IAnalytics.instance as IAnalyticsEx;

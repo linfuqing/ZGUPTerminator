@@ -20,6 +20,9 @@ public partial struct LevelPlayerSystem : ISystem
         [ReadOnly, DeallocateOnJobCompletion] 
         public NativeArray<Entity> players;
 
+        [ReadOnly, DeallocateOnJobCompletion] 
+        public NativeArray<Entity> remotePlayers;
+
         [ReadOnly] 
         public ComponentLookup<LevelSkillNameDefinitionData> levelSkillNameDefinitions;
 
@@ -69,6 +72,9 @@ public partial struct LevelPlayerSystem : ISystem
             thirdPersonPlayer.ControlledCamera = Entity.Null;
             thirdPersonPlayer.ControlledCharacter = player;
             thirdPersonPlayers[entityArray[index]] = thirdPersonPlayer;
+
+            if (RemotePlayer.Status.Joined == RemotePlayer.status)
+                __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayers[index]);
         }
 
         private void __Apply(in LevelPlayerProperty property, in Entity player)
@@ -307,7 +313,11 @@ public partial struct LevelPlayerSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        NativeArray<Entity> entityArray = __group.ToEntityArray(Allocator.TempJob), players;
+        var remotePlayerStatus = RemotePlayer.status;
+        if (RemotePlayer.Status.Waiting == remotePlayerStatus)
+            return;
+        
+        NativeArray<Entity> entityArray = __group.ToEntityArray(Allocator.TempJob), players, remotePlayers;
         using (var prefabLoadResults = __group.ToComponentDataArray<PrefabLoadResult>(Allocator.Temp))
         {
             var entityManager = state.EntityManager;
@@ -320,6 +330,18 @@ public partial struct LevelPlayerSystem : ISystem
             for(int i = 0; i < count; ++i)
                 players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
             
+            remotePlayers = new NativeArray<Entity>(count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            if (RemotePlayer.Status.Joined == remotePlayerStatus)
+            {
+                for (int i = 0; i < count; ++i)
+                    remotePlayers[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
+
+                entityManager.AddComponent<RemotePlayer>(remotePlayers);
+                
+                if(LevelPlayerShared<RemotePlayer>.property.skillOpcodes.Length > 0)
+                    entityManager.AddComponent<LevelSkillOpcode>(players);
+            }
+
             if(LevelPlayerShared<LevelPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(players);
 
@@ -343,6 +365,7 @@ public partial struct LevelPlayerSystem : ISystem
         Apply apply;
         apply.entityArray = entityArray;
         apply.players = players;
+        apply.remotePlayers = remotePlayers;
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
         //apply.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         apply.instances = __instances;

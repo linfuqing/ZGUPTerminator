@@ -287,7 +287,8 @@ public partial class UserDataMain
                 break;
             case UserRewardType.Tip:
                 id = 1;
-                key = $"{NAME_SPACE_USER_TIP}{reward.name}";
+                tip += reward.count;
+                key = null;
                 break;
             default:
                 return false;

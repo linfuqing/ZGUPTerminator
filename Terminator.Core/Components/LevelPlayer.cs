@@ -9,13 +9,20 @@ public interface ILevelPlayer
 
 public struct RemotePlayer : IComponentData, ILevelPlayer
 {
-    private static readonly SharedStatic<bool> Active = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
-
-    public static bool active
+    public enum Status
     {
-        get => Active.Data;
+        Disabled, 
+        Waiting,
+        Joined
+    }
+    
+    private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<RemotePlayer>();
 
-        set => Active.Data = value;
+    public static Status status
+    {
+        get => StatusValue.Data;
+
+        set => StatusValue.Data = value;
     }
 }
 

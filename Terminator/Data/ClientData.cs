@@ -44,6 +44,7 @@ public enum ClientMessageType
     /// </summary>
     Chat, 
     
+    LevelChapter, 
     PlayerProperty,
     Play
 }
@@ -146,29 +147,46 @@ public struct ClientMessageChatToSend : IClientMessageToSend
     public ClientMessageType messageType => ClientMessageType.Chat;
 }
 
+public struct ClientMessageLevelChapter : IClientMessageToSend
+{
+    public uint levelID;
+    public int stage;
+
+    public ClientMessageType messageType => ClientMessageType.LevelChapter;
+
+    public ClientMessageLevelChapter(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    {
+        levelID = reader.ReadPackedUInt(streamCompressionModel);
+        stage = reader.ReadPackedInt(streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedUInt(levelID, streamCompressionModel);
+        writer.WritePackedInt(stage, streamCompressionModel);
+    }
+}
+
 public struct ClientMessagePlayerProperty : IClientMessageToSend
 {
-    public int identityIndex;
     public LevelPlayerProperty value;
     
     public ClientMessageType messageType => ClientMessageType.PlayerProperty;
 
     public ClientMessagePlayerProperty(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
-        identityIndex = reader.ReadPackedInt(streamCompressionModel);
-
         value = new LevelPlayerProperty(ref reader, streamCompressionModel);
     }
 
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
-        writer.WritePackedInt(identityIndex, streamCompressionModel);
         value.Write(ref writer, streamCompressionModel);
     }
 }
 
-public struct ClientMessagePlay
+public struct ClientMessagePlay : IClientMessageToSend
 {
+    public bool isRestart;
     public uint levelID;
     public int stage;
     public FixedString32Bytes levelName;
@@ -178,6 +196,7 @@ public struct ClientMessagePlay
 
     public ClientMessagePlay(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
+        isRestart = reader.ReadRawBits(1) == 1;
         levelID = reader.ReadPackedUInt(streamCompressionModel);
         stage = reader.ReadPackedInt(streamCompressionModel);
         levelName = reader.ReadFixedString32();
@@ -186,16 +205,26 @@ public struct ClientMessagePlay
 
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
+        writer.WriteRawBits(isRestart ? 1u : 0, 1);
         writer.WritePackedUInt(levelID, streamCompressionModel);
         writer.WritePackedInt(stage, streamCompressionModel);
         writer.WriteFixedString32(levelName);
         writer.WriteFixedString32(sceneName);
+    }
+
+    public void Apply()
+    {
+        LoginManager.instance.ApplyStart(isRestart, levelID, stage, levelName.ToString(), sceneName.ToString());
     }
 }
 
 public interface IClientData
 {
     public static IClientData instance;
+
+    bool isHost { get; }
+    
+    int remotePlayerCount { get; }
     
     /// <summary>
     /// int messageType;
@@ -254,6 +283,20 @@ public class ClientData : MonoBehaviour, IClientData
     private ClientMessageSquadInviteToSend __squadInviteMessage;
 
     private static Entity __entity;
+
+    public bool isHost
+    {
+        get;
+
+        private set;
+    }
+
+    public int remotePlayerCount
+    {
+        get;
+
+        private set;
+    }
 
     public NetworkClientDriver driver => __GetOrCreateDriver(out _);
     
@@ -326,15 +369,32 @@ public class ClientData : MonoBehaviour, IClientData
                                         driver.EndWrite(writer);
                                     }
 
+                                    isHost = true;
+
                                     break;
                                 }
                             }
                             else
+                            {
+                                if ((int)NetworkRelayMessageType.Leave == type)
+                                {
+                                    //对面离开
+                                    --remotePlayerCount;
+
+                                    ClientMessageSquadLeave temp;
+                                    SendMessage(temp);
+                                }
+                                else
+                                    ++remotePlayerCount;
+                                
                                 header = new ClientHeader(ref reader, streamCompressionModel);
-                            
+                            }
+
+                            isHost = false;
+
                             if ((int)NetworkRelayMessageType.Leave == type)
                                 return (int)ClientMessageType.SquadLeave;
-                            
+
                             ClientMessageSquadJoin message;
                             message.squadInviteID = (uint)channel;
 
@@ -387,6 +447,15 @@ public class ClientData : MonoBehaviour, IClientData
                                     __Save(message);
                                     return (int)ClientMessageType.Chat;
                                 }
+                                case ClientMessageType.PlayerProperty:
+                                    var playerProperty = new ClientMessagePlayerProperty(ref reader, streamCompressionModel);
+                                    LevelPlayerShared<RemotePlayer>.property = playerProperty.value;
+
+                                    RemotePlayer.status = RemotePlayer.Status.Joined;
+                                    break;
+                                case ClientMessageType.Play:
+                                    new ClientMessagePlay(ref reader, streamCompressionModel).Apply();
+                                    break;
                             }
 
                             break;
