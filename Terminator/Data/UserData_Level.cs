@@ -134,11 +134,12 @@ public partial interface IUserData
         
         public bool isVail => skills != null || attributes != null;
 
-        public void Apply<T>(int rage) where T : ILevelPlayer
+        public void Apply<T>(int effectTargetRecoveryTimes, int rage, out LevelPlayerProperty playerProperty) where T : ILevelPlayer
         {
             SpawnerShared.layerMaskAndTags = spawnerLayerMaskAndTags;
-            
-            LevelPlayerShared<T>.effectRage = rage;
+
+            playerProperty.effectTargetRecoveryTimes = effectTargetRecoveryTimes;
+            playerProperty.effectRage = rage;
             
             float effectTargetHPScale = 0.0f,
                 effectTargetRecovery = 0.0f,
@@ -166,22 +167,17 @@ public partial interface IUserData
                 }
             }
 
-            LevelPlayerShared<T>.effectTargetHP = hpMax;
-            LevelPlayerShared<T>.effectTargetHPScale = effectTargetHPScale;
-            LevelPlayerShared<T>.effectTargetRecovery = effectTargetRecovery;
-            LevelPlayerShared<T>.effectTargetDamageScale = effectTargetDamageScale;
-            LevelPlayerShared<T>.effectDamageScale = effectDamageScale;
+            playerProperty.effectTargetHP = hpMax;
+            playerProperty.effectTargetHPScale = effectTargetHPScale;
+            playerProperty.effectTargetRecovery = effectTargetRecovery;
+            playerProperty.effectTargetDamageScale = effectTargetDamageScale;
+            playerProperty.effectDamageScale = effectDamageScale;
 
-            LevelPlayerShared<T>.instanceName = name;
+            playerProperty.instanceName = name;
 
-            ref var activeSkills = ref LevelPlayerShared<T>.activeSkills;
-            activeSkills.Clear();
-
-            ref var skillGroups = ref LevelPlayerShared<T>.skillGroups;
-            skillGroups.Clear();
-
-            ref var skillOpcodes = ref LevelPlayerShared<T>.skillOpcodes;
-            skillOpcodes.Clear();
+            playerProperty.activeSkills = default;
+            playerProperty.skillGroups = default;
+            playerProperty.skillOpcodes = default;
 
             if (skills != null)
             {
@@ -195,29 +191,30 @@ public partial interface IUserData
                         case UserSkillType.Individual:
                             activeSkill.name = skill.name;
                             activeSkill.damageScale = skill.damage; // + effectDamageScale;
-                            activeSkills.Add(activeSkill);
+                            playerProperty.activeSkills.Add(activeSkill);
                             break;
                         case UserSkillType.Group:
                             skillGroup.name = skill.name;
                             skillGroup.damageScale = skill.damage; // + effectDamageScale;
-                            skillGroups.Add(skillGroup);
+                            playerProperty.skillGroups.Add(skillGroup);
                             break;
                         case UserSkillType.OpAdd:
                             skillOpcode.name = skill.name;
                             skillOpcode.type = LevelSkillOpcode.Type.Add;
                             skillOpcode.value = skill.damage;
-                            skillOpcodes.Add(skillOpcode);
+                            playerProperty.skillOpcodes.Add(skillOpcode);
                             break;
                         case UserSkillType.OpMul:
                             skillOpcode.name = skill.name;
                             skillOpcode.type = LevelSkillOpcode.Type.Mul;
                             skillOpcode.value = skill.damage;
-                            skillOpcodes.Add(skillOpcode);
+                            playerProperty.skillOpcodes.Add(skillOpcode);
                             break;
                     }
                 }
             }
 
+            LevelPlayerShared<T>.property = playerProperty;
         }
     }
 

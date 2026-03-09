@@ -54,136 +54,114 @@ public struct LevelPlayerSkillOpcode
     public float value;
 }
 
-public static class LevelPlayerShared<T> where T : ILevelPlayer
+public struct LevelPlayerProperty
 {
-    private class Value<TChildClass, TValue> where TValue : unmanaged
+    public int effectTargetRecoveryTimes;
+
+    public int effectRage;
+
+    public int effectTargetHP;
+
+    public float effectTargetHPScale;
+
+    public float effectTargetDamageScale;
+
+    public float effectDamageScale;
+
+    public float effectTargetRecovery;
+
+    public FixedString32Bytes instanceName;
+
+    public FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills;
+    
+    public FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups;
+    
+    public FixedList4096Bytes<LevelPlayerSkillOpcode> skillOpcodes;
+
+    public LevelPlayerProperty(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
-        private static readonly SharedStatic<TValue> Result = SharedStatic<TValue>.GetOrCreate<TChildClass>();
-
-        public static TValue value
+        effectTargetRecoveryTimes = reader.ReadPackedInt(streamCompressionModel);
+        effectRage = reader.ReadPackedInt(streamCompressionModel);
+        effectTargetHP = reader.ReadPackedInt(streamCompressionModel);
+        effectTargetHPScale = reader.ReadPackedInt(streamCompressionModel);
+        effectTargetDamageScale = reader.ReadPackedFloat(streamCompressionModel);
+        effectDamageScale = reader.ReadPackedFloat(streamCompressionModel);
+        effectTargetRecovery = reader.ReadPackedFloat(streamCompressionModel);
+        instanceName = reader.ReadFixedString32();
+        
+        activeSkills = new FixedList4096Bytes<LevelPlayerActiveSkill>();
+        LevelPlayerActiveSkill activeSkill;
+        int numActiveSkills = reader.ReadByte();
+        for (int i = 0; i < numActiveSkills; ++i)
         {
-            get => Result.Data;
-
-            set => Result.Data = value;
+            activeSkill.name = reader.ReadFixedString32();
+            activeSkill.damageScale = reader.ReadPackedFloat(streamCompressionModel);
+            activeSkills.Add(activeSkill);
+        }
+        
+        skillGroups = new FixedList4096Bytes<LevelPlayerSkillGroup>();
+        LevelPlayerSkillGroup skillGroup;
+        int numSkillGroups = reader.ReadByte();
+        for (int i = 0; i < numSkillGroups; ++i)
+        {
+            skillGroup.name = reader.ReadFixedString32();
+            skillGroup.damageScale = reader.ReadPackedFloat(streamCompressionModel);
+            skillGroups.Add(skillGroup);
+        }
+        
+        skillOpcodes = new FixedList4096Bytes<LevelPlayerSkillOpcode>();
+        LevelPlayerSkillOpcode skillOpcode;
+        int numSkillOpcodes = reader.ReadByte();
+        for (int i = 0; i < numSkillOpcodes; ++i)
+        {
+            skillOpcode.name = reader.ReadFixedString32();
+            skillOpcode.type = (LevelSkillOpcode.Type)reader.ReadByte();
+            skillOpcode.value = reader.ReadPackedFloat(streamCompressionModel);
+            skillOpcodes.Add(skillOpcode);
         }
     }
 
-    private class EffectTargetRecoveryTimes : Value<EffectTargetRecoveryTimes, int>
+    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
-    }
-
-    private class EffectRage : Value<EffectRage, int>
-    {
+        writer.WritePackedInt(effectTargetRecoveryTimes, streamCompressionModel);
+        writer.WritePackedInt(effectRage, streamCompressionModel);
+        writer.WritePackedInt(effectTargetHP, streamCompressionModel);
+        writer.WritePackedFloat(effectTargetHPScale, streamCompressionModel);
+        writer.WritePackedFloat(effectTargetDamageScale, streamCompressionModel);
+        writer.WritePackedFloat(effectDamageScale, streamCompressionModel);
+        writer.WritePackedFloat(effectTargetRecovery, streamCompressionModel);
+        writer.WriteFixedString32(instanceName);
         
-    }
-    
-    private class EffectTargetHP : Value<EffectTargetHP, int>
-    {
-    }
-
-    private class EffectTargetHPScale : Value<EffectTargetHPScale, float>
-    {
-    }
-
-    private class EffectTargetRecovery : Value<EffectTargetRecovery, float>
-    {
-    }
-
-    private class EffectTargetDamageScale : Value<EffectTargetDamageScale, float>
-    {
-    }
-
-    private class EffectDamageScale : Value<EffectDamageScale, float>
-    {
-    }
-
-    private class InstanceName : Value<InstanceName, FixedString32Bytes>
-    {
-    }
-    
-    private struct ActiveSkills
-    {
-        private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerActiveSkill>> Values =
-            SharedStatic<FixedList4096Bytes<LevelPlayerActiveSkill>>.GetOrCreate<ActiveSkills>();
-
-        public static ref FixedList4096Bytes<LevelPlayerActiveSkill> values => ref Values.Data;
-    }
-    
-    private struct SkillGroup
-    {
-        private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerSkillGroup>> Values =
-            SharedStatic<FixedList4096Bytes<LevelPlayerSkillGroup>>.GetOrCreate<SkillGroup>();
-
-        public static ref FixedList4096Bytes<LevelPlayerSkillGroup> values => ref Values.Data;
-    }
-
-    private struct SkillOpcode
-    {
-        private static readonly SharedStatic<FixedList4096Bytes<LevelPlayerSkillOpcode>> Values =
-            SharedStatic<FixedList4096Bytes<LevelPlayerSkillOpcode>>.GetOrCreate<SkillOpcode>();
-
-        public static ref FixedList4096Bytes<LevelPlayerSkillOpcode> values => ref Values.Data;
-    }
-
-    public static int effectTargetRecoveryTimes
-    {
-        get => EffectTargetRecoveryTimes.value;
-
-        set => EffectTargetRecoveryTimes.value = value;
-    }
-
-    public static int effectRage
-    {
-        get => EffectRage.value;
+        writer.WriteByte((byte)activeSkills.Length);
+        foreach (var activeSkill in activeSkills)
+        {
+            writer.WriteFixedString32(activeSkill.name);
+            writer.WritePackedFloat(activeSkill.damageScale, streamCompressionModel);
+        }
         
-        set => EffectRage.value = value;
+        writer.WriteByte((byte)skillGroups.Length);
+        foreach (var skillGroup in skillGroups)
+        {
+            writer.WriteFixedString32(skillGroup.name);
+            writer.WritePackedFloat(skillGroup.damageScale, streamCompressionModel);
+        }
+        
+        writer.WriteByte((byte)skillOpcodes.Length);
+        foreach (var skillOpcode in skillOpcodes)
+        {
+            writer.WriteFixedString32(skillOpcode.name);
+            writer.WriteByte((byte)skillOpcode.type);
+            writer.WritePackedFloat(skillOpcode.value, streamCompressionModel);
+        }
     }
-    
-    public static int effectTargetHP
+}
+
+public static class LevelPlayerShared<T> where T : ILevelPlayer
+{
+    private class Property
     {
-        get => EffectTargetHP.value;
-
-        set => EffectTargetHP.value = value;
+        public static readonly SharedStatic<LevelPlayerProperty> Value = SharedStatic<LevelPlayerProperty>.GetOrCreate<Property>();
     }
 
-    public static float effectTargetHPScale
-    {
-        get => EffectTargetHPScale.value;
-
-        set => EffectTargetHPScale.value = value;
-    }
-
-    public static float effectTargetDamageScale
-    {
-        get => EffectTargetDamageScale.value;
-
-        set => EffectTargetDamageScale.value = value;
-    }
-
-    public static float effectDamageScale
-    {
-        get => EffectDamageScale.value;
-
-        set => EffectDamageScale.value = value;
-    }
-    
-    public static float effectTargetRecovery
-    {
-        get => EffectTargetRecovery.value;
-
-        set => EffectTargetRecovery.value = value;
-    }
-
-    public static FixedString32Bytes instanceName
-    {
-        get => InstanceName.value;
-
-        set => InstanceName.value = value;
-    }
-
-    public static ref FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills => ref ActiveSkills.values;
-    
-    public static ref FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups => ref SkillGroup.values;
-    
-    public static ref FixedList4096Bytes<LevelPlayerSkillOpcode> skillOpcodes => ref SkillOpcode.values;
+    public static ref LevelPlayerProperty property => ref Property.Value.Data;
 }

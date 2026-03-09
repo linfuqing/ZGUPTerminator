@@ -63,7 +63,7 @@ public partial struct LevelPlayerSystem : ISystem
         {
             var player = players[index];
             
-            __Apply<LevelPlayer>(player);
+            __Apply(LevelPlayerShared<LevelPlayer>.property, player);
 
             ThirdPersonPlayer thirdPersonPlayer;
             thirdPersonPlayer.ControlledCamera = Entity.Null;
@@ -71,26 +71,26 @@ public partial struct LevelPlayerSystem : ISystem
             thirdPersonPlayers[entityArray[index]] = thirdPersonPlayer;
         }
 
-        private void __Apply<T>(in Entity player) where T : ILevelPlayer
+        private void __Apply(in LevelPlayerProperty property, in Entity player)
         {
-            if (!LevelPlayerShared<T>.instanceName.IsEmpty && instances.TryGetComponent(player, out Instance instance))
+            if (!property.instanceName.IsEmpty && instances.TryGetComponent(player, out Instance instance))
             {
-                instance.name = LevelPlayerShared<T>.instanceName;
+                instance.name = property.instanceName;
                 
                 instances[player] = instance;
             }
 
-            if ((LevelPlayerShared<T>.activeSkills.Length > 0 || LevelPlayerShared<T>.skillGroups.Length > 0) && 
+            if ((property.activeSkills.Length > 0 || property.skillGroups.Length > 0) && 
                 levelSkillNameDefinitions.TryGetComponent(player, out var levelSkillNameDefinition))
             {
                 ref var definition = ref levelSkillNameDefinition.definition.Value;
-                if (LevelPlayerShared<T>.activeSkills.Length > 0 &&
+                if (property.activeSkills.Length > 0 &&
                     this.skillActiveIndices.TryGetBuffer(player, out var skillActiveIndices))
                 {
                     SkillActiveIndex skillActiveIndex;
                     int numSkills = definition.skills.Length, i;
                     bool isClear = true;
-                    foreach (var activeSkill in LevelPlayerShared<T>.activeSkills)
+                    foreach (var activeSkill in property.activeSkills)
                     {
                         for (i = 0; i < numSkills; ++i)
                         {
@@ -108,7 +108,7 @@ public partial struct LevelPlayerSystem : ISystem
                             }
 
                             skillActiveIndex.value = i;
-                            skillActiveIndex.damageScale = 1.0f + activeSkill.damageScale + LevelPlayerShared<T>.effectDamageScale;
+                            skillActiveIndex.damageScale = 1.0f + activeSkill.damageScale + property.effectDamageScale;
                             skillActiveIndices.Add(skillActiveIndex);
                         }
                         else
@@ -116,13 +116,13 @@ public partial struct LevelPlayerSystem : ISystem
                     }
                 }
 
-                if (LevelPlayerShared<T>.skillGroups.Length > 0 &&
+                if (property.skillGroups.Length > 0 &&
                     this.levelSkillGroups.TryGetBuffer(player, out var levelSkillGroups))
                 {
                     LevelSkillGroup levelSkillGroup;
                     int numGroups = definition.groups.Length, i;
                     bool isClear = true;
-                    foreach (var skillGroup in LevelPlayerShared<T>.skillGroups)
+                    foreach (var skillGroup in property.skillGroups)
                     {
                         for (i = 0; i < numGroups; ++i)
                         {
@@ -140,7 +140,7 @@ public partial struct LevelPlayerSystem : ISystem
                             }
 
                             levelSkillGroup.value = i;
-                            levelSkillGroup.damageScale = 1.0f + skillGroup.damageScale + LevelPlayerShared<T>.effectDamageScale;
+                            levelSkillGroup.damageScale = 1.0f + skillGroup.damageScale + property.effectDamageScale;
                             levelSkillGroups.Add(levelSkillGroup);
                         }
                         else
@@ -148,13 +148,13 @@ public partial struct LevelPlayerSystem : ISystem
                     }
                 }
                 
-                if (LevelPlayerShared<T>.skillOpcodes.Length > 0 &&
+                if (property.skillOpcodes.Length > 0 &&
                     this.levelSkillOpcodes.TryGetBuffer(player, out var levelSkillOpcodes))
                 {
                     LevelSkillOpcode levelSkillOpcode;
                     int numSkills = definition.skills.Length, i;
                     bool isClear = true;
-                    foreach (var skillOpcode in LevelPlayerShared<T>.skillOpcodes)
+                    foreach (var skillOpcode in property.skillOpcodes)
                     {
                         for (i = 0; i < numSkills; ++i)
                         {
@@ -184,8 +184,8 @@ public partial struct LevelPlayerSystem : ISystem
 
             if (effectTargets.TryGetComponent(player, out var effectTarget))
             {
-                int hp = LevelPlayerShared<T>.effectTargetHP == 0 ? effectTarget.hp : LevelPlayerShared<T>.effectTargetHP;
-                hp = effectTarget.hp + (int)math.round(hp * LevelPlayerShared<T>.effectTargetHPScale);
+                int hp = property.effectTargetHP == 0 ? effectTarget.hp : property.effectTargetHP;
+                hp = effectTarget.hp + (int)math.round(hp * property.effectTargetHPScale);
                 if (this.messageParameters.TryGetBuffer(player, out var messageParameters))
                 {
                     int numMessageParameters = messageParameters.Length;
@@ -205,30 +205,30 @@ public partial struct LevelPlayerSystem : ISystem
                 
                 effectTarget.hp = hp;
                 
-                if(LevelPlayerShared<T>.effectTargetRecovery > math.FLT_MIN_NORMAL)
-                    effectTarget.times = (int)math.floor(LevelPlayerShared<T>.effectTargetRecovery);
+                if(property.effectTargetRecovery > math.FLT_MIN_NORMAL)
+                    effectTarget.times = (int)math.floor(property.effectTargetRecovery);
 
                 effectTargets[player] = effectTarget;
                 
                 if (effectTargetDatas.TryGetComponent(player, out var effectTargetData))
                 {
-                    float recoveryChance = LevelPlayerShared<T>.effectTargetRecovery - effectTarget.times;
+                    float recoveryChance = property.effectTargetRecovery - effectTarget.times;
                     if (recoveryChance > math.FLT_MIN_NORMAL)
                         effectTargetData.recoveryChance = recoveryChance;
 
                     effectTargetData.recoveryTimeBeenKeptOfMaxTimes =
-                        effectTarget.times - LevelPlayerShared<T>.effectTargetRecoveryTimes;
+                        effectTarget.times - property.effectTargetRecoveryTimes;
                     effectTargetData.hpMax = hp;
                     effectTargetDatas[player] = effectTargetData;
                 }
             }
             
             //float effectTargetDamageScaleValue = 1.0f + this.effectTargetDamageScale;
-            if (math.abs(LevelPlayerShared<T>.effectTargetDamageScale) > math.FLT_MIN_NORMAL && 
+            if (math.abs(property.effectTargetDamageScale) > math.FLT_MIN_NORMAL && 
                 effectTargetDamageScales.TryGetComponent(player, out var effectTargetDamageScale))
             {
-                float hpScale = 1.0f + LevelPlayerShared<T>.effectTargetHPScale;
-                effectTargetDamageScale.value = hpScale / (hpScale + LevelPlayerShared<T>.effectTargetDamageScale);//1.0f / effectTargetDamageScaleValue;
+                float hpScale = 1.0f + property.effectTargetHPScale;
+                effectTargetDamageScale.value = hpScale / (hpScale + property.effectTargetDamageScale);//1.0f / effectTargetDamageScaleValue;
 
                 effectTargetDamageScales[player] = effectTargetDamageScale;
             }
@@ -244,7 +244,7 @@ public partial struct LevelPlayerSystem : ISystem
             if (effectRages.HasComponent(player))
             {
                 EffectRage effectRage;
-                effectRage.value = LevelPlayerShared<T>.effectRage;
+                effectRage.value = property.effectRage;
                 effectRages[player] = effectRage;
             }
         }
@@ -320,7 +320,7 @@ public partial struct LevelPlayerSystem : ISystem
             for(int i = 0; i < count; ++i)
                 players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
             
-            if(LevelPlayerShared<LevelPlayer>.skillOpcodes.Length > 0)
+            if(LevelPlayerShared<LevelPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(players);
 
             //entityManager.AddComponent<EffectDamage>(players);

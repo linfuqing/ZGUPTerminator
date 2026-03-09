@@ -15,6 +15,7 @@ public sealed class LoginManager : MonoBehaviour
         public string name;
         public string levelName;
         public uint id;
+        public int index;
     }
 
     [Serializable]
@@ -55,6 +56,7 @@ public sealed class LoginManager : MonoBehaviour
     [Serializable]
     internal struct Level
     {
+        [Flags]
         public enum Flag
         {
             Chapter = 0x01
@@ -924,8 +926,9 @@ public sealed class LoginManager : MonoBehaviour
                                         stageStyle = styleScene.stageStyles[j];
                                         stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
+                                        string stageName = (stageIndex /*sceneStageIndex*/ + 1).ToString();
                                         if (stageStyle.onTitle != null)
-                                            stageStyle.onTitle.Invoke((stageIndex/*sceneStageIndex*/ + 1).ToString());
+                                            stageStyle.onTitle.Invoke(stageName);
 
                                         if (stage.rewardFlags == null)
                                         {
@@ -1009,9 +1012,10 @@ public sealed class LoginManager : MonoBehaviour
                                                             if (onStageChanged != null)
                                                             {
                                                                 Stage result;
-                                                                result.name = (sceneStageIndex + 1).ToString();
+                                                                result.name = stageName;//(sceneStageIndex + 1).ToString();
                                                                 result.levelName = levelScene.title;
                                                                 result.id = stage.id;
+                                                                result.index = stageIndex;
                                                                 onStageChanged.Invoke(result);
                                                             }
 
@@ -1301,7 +1305,7 @@ public sealed class LoginManager : MonoBehaviour
             __levelStyles[index] = style;
         }
 
-        var scrollRect = parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
+        var scrollRect = parent.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
             movedLevelIndex = Mathf.Max(0, movedLevelIndex);
@@ -1468,10 +1472,9 @@ public sealed class LoginManager : MonoBehaviour
         
         LevelShared.stage = stage;
 
-        property.Apply<LevelPlayer>(rage);
-
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
-        LevelPlayerShared<LevelPlayer>.effectTargetRecoveryTimes = hasSweepCard ? 2 : 1;
+        
+        property.Apply<LevelPlayer>(hasSweepCard ? 2 : 1, rage, out _);
         EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
                                         IUserData.PurchaseFlag.AdvertisingFreeCard;
         
@@ -1633,7 +1636,7 @@ public sealed class LoginManager : MonoBehaviour
         _onNoticeCodesFail?.Invoke();
     }
 
-    private IEnumerator __LoadScene(float time, string levelName, string sceneName)
+    private IEnumerator __LoadScene(float time, string sceneName)
     {
         yield return new WaitForSeconds(time);
         
@@ -1701,7 +1704,7 @@ public sealed class LoginManager : MonoBehaviour
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.StartLevel(sceneName/*_levels[__selectedLevelIndex].name*/);
 
-        yield return __LoadScene(_startTime, levelName, sceneName);
+        yield return __LoadScene(_startTime, sceneName);
     }
     
     /*private IEnumerator __Start(bool isRestart)

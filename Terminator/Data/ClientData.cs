@@ -43,6 +43,9 @@ public enum ClientMessageType
     /// 聊天
     /// </summary>
     Chat, 
+    
+    PlayerProperty,
+    Play
 }
 
 public interface IClientMessageToRead
@@ -143,6 +146,53 @@ public struct ClientMessageChatToSend : IClientMessageToSend
     public ClientMessageType messageType => ClientMessageType.Chat;
 }
 
+public struct ClientMessagePlayerProperty : IClientMessageToSend
+{
+    public int identityIndex;
+    public LevelPlayerProperty value;
+    
+    public ClientMessageType messageType => ClientMessageType.PlayerProperty;
+
+    public ClientMessagePlayerProperty(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    {
+        identityIndex = reader.ReadPackedInt(streamCompressionModel);
+
+        value = new LevelPlayerProperty(ref reader, streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedInt(identityIndex, streamCompressionModel);
+        value.Write(ref writer, streamCompressionModel);
+    }
+}
+
+public struct ClientMessagePlay
+{
+    public uint levelID;
+    public int stage;
+    public FixedString32Bytes levelName;
+    public FixedString32Bytes sceneName;
+    
+    public ClientMessageType messageType => ClientMessageType.Play;
+
+    public ClientMessagePlay(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    {
+        levelID = reader.ReadPackedUInt(streamCompressionModel);
+        stage = reader.ReadPackedInt(streamCompressionModel);
+        levelName = reader.ReadFixedString32();
+        sceneName = reader.ReadFixedString32();
+    }
+
+    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedUInt(levelID, streamCompressionModel);
+        writer.WritePackedInt(stage, streamCompressionModel);
+        writer.WriteFixedString32(levelName);
+        writer.WriteFixedString32(sceneName);
+    }
+}
+
 public interface IClientData
 {
     public static IClientData instance;
@@ -196,7 +246,7 @@ public class ClientData : MonoBehaviour, IClientData
         NetworkPipelineStage.UnreliableSequenced,
     };
 
-    private int __identityIndex;
+    private int __identityIndex = -1;
     private int __frameCount;
     private int __pipelineIndex;
     private NetworkClient.MessageIterator __messageIterator;
@@ -385,7 +435,7 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Join, streamCompressionModel);
-                    writer.WritePackedInt((int)__bytes.AsArray().Reinterpret<ClientMessageSquadJoin>(1)[0].squadInviteID, streamCompressionModel);
+                    writer.WritePackedInt((int)__Load<ClientMessageSquadJoin>().squadInviteID, streamCompressionModel);
                     driver.EndWrite(writer);
                 }
                 break;
@@ -404,18 +454,42 @@ public class ClientData : MonoBehaviour, IClientData
                     writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
                     driver.EndWrite(writer);
 
-                    __squadInviteMessage = __bytes.AsArray().Reinterpret<ClientMessageSquadInviteToSend>(1)[0];
+                    __squadInviteMessage = __Load<ClientMessageSquadInviteToSend>();
                 }
                 break;
             case ClientMessageType.Chat:
                 if (driver.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var temp = __bytes.AsArray().Reinterpret<ClientMessageChatToSend>(1)[0];
+                    var temp = __Load<ClientMessageChatToSend>();
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)ClientMessageType.Chat, streamCompressionModel);
                     writer.WritePackedInt((int)temp.channel, streamCompressionModel);
                     header.Write(ref writer, streamCompressionModel);
                     writer.WriteFixedString512(temp.value);
+                    
+                    driver.EndWrite(writer);
+                }
+                break;
+            case ClientMessageType.PlayerProperty:
+                if (driver.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var temp = __Load<ClientMessagePlayerProperty>();
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)ClientMessageType.PlayerProperty, streamCompressionModel);
+                    writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                    temp.Write(ref writer, streamCompressionModel);
+                    
+                    driver.EndWrite(writer);
+                }
+                break;
+            case ClientMessageType.Play:
+                if (driver.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var temp = __Load<ClientMessagePlay>();
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)ClientMessageType.PlayerProperty, streamCompressionModel);
+                    writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                    temp.Write(ref writer, streamCompressionModel);
                     
                     driver.EndWrite(writer);
                 }
@@ -432,6 +506,11 @@ public class ClientData : MonoBehaviour, IClientData
         
         var messages = __bytes.AsArray().Reinterpret<T>(1);
         messages[0] = message;
+    }
+
+    private T __Load<T>() where T : unmanaged
+    {
+        return __bytes.AsArray().Reinterpret<T>(1)[0];
     }
 
     private NetworkClientDriver __GetOrCreateDriver(out EntityManager entityManager)
