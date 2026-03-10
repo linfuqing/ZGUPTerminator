@@ -118,7 +118,7 @@ public partial class LevelSystemManaged
         {
             if (!__removePlayerGroup.IsEmpty)
             {
-                if (clientMessages.values.TryGetFirstValue((int)ClientMessageType.SelectSkill, out var message,
+                if (clientMessages.values.TryGetFirstValue((int)ClientMessages.MessageType.SelectSkill, out var message,
                         out var iterator))
                 {
                     __skills.Clear();
@@ -131,7 +131,7 @@ public partial class LevelSystemManaged
                     {
                         reader = new NetworkClient.MessageElement(message, networkClient).reader;
                         temp = reader.ReadPackedInt(streamCompressionModel);
-                        UnityEngine.Assertions.Assert.AreEqual((int)ClientMessageType.SelectSkill, temp);
+                        UnityEngine.Assertions.Assert.AreEqual((int)ClientMessages.MessageType.SelectSkill, temp);
                         temp = reader.ReadPackedInt(streamCompressionModel);
                         UnityEngine.Assertions.Assert.AreEqual((int)NetworkRelayType.Channel, temp);
                         temp = reader.ReadPackedInt(streamCompressionModel);
@@ -316,7 +316,7 @@ public partial class LevelSystemManaged
                                 if (sendBuffer.BeginWrite(0, out var writer))
                                 {
                                     var streamCompressionModel = StreamCompressionModel.Default;
-                                    writer.WritePackedInt((int)ClientMessageType.SelectSkill, streamCompressionModel);
+                                    writer.WritePackedInt((int)ClientMessages.MessageType.SelectSkill, streamCompressionModel);
                                     writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
                                     writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
                                     for(int i = 0; i < numSelectedSkillIndices; ++i)

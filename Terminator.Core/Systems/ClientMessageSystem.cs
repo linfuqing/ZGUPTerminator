@@ -4,13 +4,13 @@ using Unity.Entities;
 using Unity.Jobs;
 using ZG;
 
-public enum ClientMessageType
-{
-    SelectSkill = 100
-}
-
 public struct ClientMessages : IComponentData
 {
+    public enum MessageType
+    {
+        SelectSkill = 100
+    }
+
     public NativeParallelMultiHashMap<int, NetworkClient.Message> values;
 }
 
