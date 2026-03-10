@@ -125,6 +125,9 @@ public class PlayerEvents : MonoBehaviour
 
     private static void __SetTimeScale()
     {
+        if(__instances == null || __instances.Count < 1)
+            return;;
+        
         if (__timeScaleIndex == -1)
             __timeScaleIndex = TimeScaleUtility.Add(0.0f);
     }

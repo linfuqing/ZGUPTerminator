@@ -18,16 +18,16 @@ public partial struct LevelPlayerSystem : ISystem
         public NativeArray<Entity> entityArray;
 
         [ReadOnly, DeallocateOnJobCompletion] 
-        public NativeArray<Entity> players;
+        public NativeArray<Entity> localPlayerEntities;
 
         [ReadOnly, DeallocateOnJobCompletion] 
-        public NativeArray<Entity> remotePlayers;
+        public NativeArray<Entity> remotePlayerEntities;
 
         [ReadOnly] 
         public ComponentLookup<LevelSkillNameDefinitionData> levelSkillNameDefinitions;
 
-        //[ReadOnly] 
-        //public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<RemotePlayer> remotePlayers;
 
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<Instance> instances;
@@ -64,17 +64,25 @@ public partial struct LevelPlayerSystem : ISystem
         
         public void Execute(int index)
         {
-            var player = players[index];
+            var localplayerEntity = localPlayerEntities[index];
             
-            __Apply(LevelPlayerShared<LocalPlayer>.property, player);
+            __Apply(LevelPlayerShared<LocalPlayer>.property, localplayerEntity);
 
             ThirdPersonPlayer thirdPersonPlayer;
             thirdPersonPlayer.ControlledCamera = Entity.Null;
-            thirdPersonPlayer.ControlledCharacter = player;
+            thirdPersonPlayer.ControlledCharacter = localplayerEntity;
             thirdPersonPlayers[entityArray[index]] = thirdPersonPlayer;
 
             if (RemotePlayer.Status.Joined == RemotePlayer.status)
-                __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayers[index]);
+            {
+                Entity remotePlayerEntity = remotePlayerEntities[index];
+                __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayerEntity);
+
+                RemotePlayer remotePlayer;
+                remotePlayer.identity = LevelPlayerShared<RemotePlayer>.identityIndex;
+
+                remotePlayers[remotePlayerEntity] = remotePlayer;
+            }
         }
 
         private void __Apply(in LevelPlayerProperty property, in Entity player)
@@ -258,7 +266,7 @@ public partial struct LevelPlayerSystem : ISystem
     
     private ComponentLookup<LevelSkillNameDefinitionData> __levelSkillNameDefinitions;
 
-    //private ComponentLookup<BulletLayerMaskAndTags> __bulletLayerMaskAndTags;
+    private ComponentLookup<RemotePlayer> __remotePlayers;
 
     private ComponentLookup<Instance> __instances;
 
@@ -288,7 +296,7 @@ public partial struct LevelPlayerSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __levelSkillNameDefinitions = state.GetComponentLookup<LevelSkillNameDefinitionData>(true);
-        //__bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
+        __remotePlayers =  state.GetComponentLookup<RemotePlayer>();
         __instances = state.GetComponentLookup<Instance>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
         __levelSkillOpcodes = state.GetBufferLookup<LevelSkillOpcode>();
@@ -317,7 +325,7 @@ public partial struct LevelPlayerSystem : ISystem
         if (RemotePlayer.Status.Waiting == remotePlayerStatus)
             return;
         
-        NativeArray<Entity> entityArray = __group.ToEntityArray(Allocator.TempJob), players, remotePlayers;
+        NativeArray<Entity> entityArray = __group.ToEntityArray(Allocator.TempJob), localPlayers, remotePlayers;
         using (var prefabLoadResults = __group.ToComponentDataArray<PrefabLoadResult>(Allocator.Temp))
         {
             var entityManager = state.EntityManager;
@@ -326,9 +334,9 @@ public partial struct LevelPlayerSystem : ISystem
                 ComponentType.ReadWrite<ThirdPersonPlayerInputs>()));
 
             int count = entityArray.Length;
-            players = new NativeArray<Entity>(count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            localPlayers = new NativeArray<Entity>(count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             for(int i = 0; i < count; ++i)
-                players[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
+                localPlayers[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
             
             remotePlayers = new NativeArray<Entity>(count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             if (RemotePlayer.Status.Joined == remotePlayerStatus)
@@ -339,17 +347,17 @@ public partial struct LevelPlayerSystem : ISystem
                 entityManager.AddComponent<RemotePlayer>(remotePlayers);
                 
                 if(LevelPlayerShared<RemotePlayer>.property.skillOpcodes.Length > 0)
-                    entityManager.AddComponent<LevelSkillOpcode>(players);
+                    entityManager.AddComponent<LevelSkillOpcode>(remotePlayers);
             }
 
             if(LevelPlayerShared<LocalPlayer>.property.skillOpcodes.Length > 0)
-                entityManager.AddComponent<LevelSkillOpcode>(players);
+                entityManager.AddComponent<LevelSkillOpcode>(localPlayers);
 
             //entityManager.AddComponent<EffectDamage>(players);
         }
         
         __levelSkillNameDefinitions.Update(ref state);
-        //__bulletLayerMaskAndTags.Update(ref state);
+        __remotePlayers.Update(ref state);
         __instances.Update(ref state);
         __levelSkillGroups.Update(ref state);
         __levelSkillOpcodes.Update(ref state);
@@ -358,16 +366,15 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargetDatas.Update(ref state);
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
-        //__effectDamages.Update(ref state);
         __effectRages.Update(ref state);
         __thirdPersonPlayers.Update(ref state);
             
         Apply apply;
         apply.entityArray = entityArray;
-        apply.players = players;
-        apply.remotePlayers = remotePlayers;
+        apply.localPlayerEntities = localPlayers;
+        apply.remotePlayerEntities = remotePlayers;
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
-        //apply.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
+        apply.remotePlayers = __remotePlayers;
         apply.instances = __instances;
         apply.levelSkillOpcodes = __levelSkillOpcodes;
         apply.levelSkillGroups = __levelSkillGroups;

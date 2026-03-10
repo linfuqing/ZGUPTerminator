@@ -38,23 +38,171 @@ public partial class LevelSystemManaged
         }
     }
 
+    [BurstCompile]
+    private struct RemotePlayerSelectSkillsEx : IJobChunk
+    {
+        public BlobAssetReference<SkillDefinition> definition;
+        
+        [ReadOnly]
+        public EntityTypeHandle entityType;
+        
+        [ReadOnly]
+        public ComponentTypeHandle<RemotePlayer> remotePlayerType;
+        
+        [ReadOnly]
+        public NativeParallelMultiHashMap<int, LevelSkill> skills;
+        
+        public NativeParallelMultiHashMap<Entity, int> skillIndices;
+
+        public BufferTypeHandle<SkillActiveIndex> activeIndexType;
+        
+        public BufferTypeHandle<BulletStatus> bulletStatusType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            SelectSkills selectSkills;
+            selectSkills.definition = definition;
+            selectSkills.entityArray = chunk.GetNativeArray(entityType);
+            selectSkills.remotePlayers = chunk.GetNativeArray(ref remotePlayerType);
+            selectSkills.skills = skills;
+            selectSkills.skillIndices = skillIndices;
+            selectSkills.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
+            selectSkills.bulletStates = chunk.GetBufferAccessor(ref bulletStatusType);
+
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+                selectSkills.Execute(i);
+        }
+    }
+
+    private struct SkillSelectionRemotePlayer
+    {
+        private EntityQuery __removePlayerGroup;
+
+        private ComponentTypeHandle<RemotePlayer> __remotePlayerType;
+
+        private BufferTypeHandle<BulletStatus> __bulletStatusType;
+        private BufferTypeHandle<SkillActiveIndex> __activeIndexType;
+        
+        private NativeParallelMultiHashMap<int, LevelSkill> __skills;
+        
+        private NativeParallelMultiHashMap<Entity, int> __skillIndices;
+
+        public SkillSelectionRemotePlayer(SystemBase system)
+        {
+            using (var builder = new EntityQueryBuilder(Allocator.Temp))
+                __removePlayerGroup = builder.WithAll<RemotePlayer, SkillActiveIndex, BulletStatus>().Build(system);
+
+            system.RequireForUpdate<ClientMessages>();
+            system.RequireForUpdate<NetworkClientDriver>();
+
+            __remotePlayerType = system.GetComponentTypeHandle<RemotePlayer>(true);
+            __bulletStatusType = system.GetBufferTypeHandle<BulletStatus>(true);
+            __activeIndexType = system.GetBufferTypeHandle<SkillActiveIndex>(true);
+
+            __skills = new NativeParallelMultiHashMap<int, LevelSkill>(1, Allocator.Persistent);
+            __skillIndices = new NativeParallelMultiHashMap<Entity, int>(1, Allocator.Persistent);
+        }
+
+        public void Dispose()
+        {
+            __skills.Dispose();
+            __skillIndices.Dispose();
+        }
+
+        public void Apply(
+            in BlobAssetReference<SkillDefinition> definition, 
+            in NetworkClient networkClient, 
+            in ClientMessages clientMessages, 
+            LevelSystemManaged system)
+        {
+            if (!__removePlayerGroup.IsEmpty)
+            {
+                if (clientMessages.values.TryGetFirstValue((int)ClientMessageType.SelectSkill, out var message,
+                        out var iterator))
+                {
+                    __skills.Clear();
+                    __skillIndices.Clear();
+                    
+                    int temp;
+                    DataStreamReader reader;
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    do
+                    {
+                        reader = new NetworkClient.MessageElement(message, networkClient).reader;
+                        temp = reader.ReadPackedInt(streamCompressionModel);
+                        UnityEngine.Assertions.Assert.AreEqual((int)ClientMessageType.SelectSkill, temp);
+                        temp = reader.ReadPackedInt(streamCompressionModel);
+                        UnityEngine.Assertions.Assert.AreEqual((int)NetworkRelayType.Channel, temp);
+                        temp = reader.ReadPackedInt(streamCompressionModel);
+                        __skills.Add(temp, new LevelSkill(ref reader, streamCompressionModel));
+                    } while (clientMessages.values.TryGetNextValue(out message, ref iterator));
+                    
+                    system.__entityType.Update(system);
+                    __remotePlayerType.Update(system);
+                    __bulletStatusType.Update(system);
+                    __activeIndexType.Update(system);
+
+                    RemotePlayerSelectSkillsEx remotePlayerSelectSkills;
+                    remotePlayerSelectSkills.definition = definition;
+                    remotePlayerSelectSkills.entityType = system.__entityType;
+                    remotePlayerSelectSkills.remotePlayerType = __remotePlayerType;
+                    remotePlayerSelectSkills.skills = __skills;
+                    remotePlayerSelectSkills.skillIndices = __skillIndices;
+                    remotePlayerSelectSkills.bulletStatusType = __bulletStatusType;
+                    remotePlayerSelectSkills.activeIndexType = __activeIndexType;
+
+                    remotePlayerSelectSkills.RunByRef(__removePlayerGroup);
+
+                    if (!__skillIndices.IsEmpty)
+                    {
+                        var skillIndices = new NativeList<int>(Allocator.Temp);
+                        var remotePlayers = __skillIndices.GetKeyArray(Allocator.Temp);
+                        remotePlayers.Sort();
+                        
+                        int numRemotePlayers = remotePlayers.Unique();
+                        Entity remotePlayer;
+                        for (int i = 0; i < numRemotePlayers; ++i)
+                        {
+                            remotePlayer = remotePlayers[i];
+                            
+                            skillIndices.Clear();
+                            foreach (var skillIndex in __skillIndices.GetValuesForKey(remotePlayer))
+                                skillIndices.Add(skillIndex);
+                            
+                            system.__UpdateBullets(
+                                remotePlayer,
+                                skillIndices.AsArray());
+                        }
+
+                        skillIndices.Dispose();
+                        remotePlayers.Dispose();
+                    }
+
+                }
+            }
+        }
+    }
+
     private struct SkillSelection
     {
         public SkillSelectionStatus status;
         
         public SkillVersion version;
 
+        public SkillSelectionRemotePlayer remotePlayer;
         //private int __stage;
     
         public SkillSelection(SystemBase system)
         {
             status = SkillSelectionStatus.None;
             version = default;
-            //__stage = 0;
+            remotePlayer = new SkillSelectionRemotePlayer(system);
         }
 
         public void Dispose()
         {
+            remotePlayer.Dispose();
             //__spriteRefCounts.Dispose();
         }
 
@@ -66,6 +214,42 @@ public partial class LevelSystemManaged
         public void Release()
         {
             status = SkillSelectionStatus.None;
+        }
+    }
+
+    private struct SelectSkills
+    {
+        public BlobAssetReference<SkillDefinition> definition;
+        [ReadOnly]
+        public NativeArray<Entity> entityArray;
+        [ReadOnly]
+        public NativeArray<RemotePlayer> remotePlayers;
+        [ReadOnly]
+        public NativeParallelMultiHashMap<int, LevelSkill> skills;
+
+        public NativeParallelMultiHashMap<Entity, int> skillIndices;
+
+        public BufferAccessor<SkillActiveIndex> activeIndices;
+        
+        public BufferAccessor<BulletStatus> bulletStates;
+        
+        public void Execute(int index)
+        {
+            if (!skills.TryGetFirstValue(remotePlayers[index].identity, out var skill, out var iterator))
+                return;
+            
+            Entity entity = entityArray[index];
+            var bulletStates = this.bulletStates[index];
+            var activeIndices = this.activeIndices[index];
+            ref var definition = ref this.definition.Value;
+
+            do
+            {
+                if (skill.activeIndex != -1)
+                    skillIndices.Add(entity, activeIndices[skill.activeIndex].value);
+                
+                skill.Apply(ref activeIndices, ref bulletStates, ref definition);
+            } while (skills.TryGetNextValue(out skill, ref iterator));
         }
     }
 
@@ -89,6 +273,11 @@ public partial class LevelSystemManaged
             return;
         }
 
+        var networkClientDriver = SystemAPI.GetSingleton<NetworkClientDriver>();
+        __skillSelection.remotePlayer.Apply(
+            definition,
+            networkClientDriver.instance,
+            SystemAPI.GetSingleton<ClientMessages>(), this);
         //__skillSelection.SetStage(stage, this);
         
         if (SystemAPI.HasComponent<LevelSkillVersion>(player))
@@ -123,6 +312,19 @@ public partial class LevelSystemManaged
                             int numSelectedSkillIndices = selectedSkillIndices == null ? 0 : selectedSkillIndices.Length;
                             if (numSelectedSkillIndices > 0)
                             {
+                                var sendBuffer = networkClientDriver.sendBuffer;
+                                if (sendBuffer.BeginWrite(0, out var writer))
+                                {
+                                    var streamCompressionModel = StreamCompressionModel.Default;
+                                    writer.WritePackedInt((int)ClientMessageType.SelectSkill, streamCompressionModel);
+                                    writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                                    writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
+                                    for(int i = 0; i < numSelectedSkillIndices; ++i)
+                                        skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
+                                    
+                                    sendBuffer.EndWrite(writer);
+                                }
+                                
                                 var skillIndices = new NativeList<int>(
                                     numSelectedSkillIndices * (activeIndices.Length + 1),
                                     Allocator.TempJob);
@@ -130,7 +332,6 @@ public partial class LevelSystemManaged
 
                                 var bulletStates = SystemAPI.GetBuffer<BulletStatus>(player);
                                 LevelSkill.Apply(
-                                    SystemAPI.Time.ElapsedTime,
                                     skillIndices,
                                     skills,
                                     ref activeIndices,

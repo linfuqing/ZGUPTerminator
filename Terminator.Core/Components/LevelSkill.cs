@@ -442,6 +442,22 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
     public int activeIndex;
     public float damageScale;
 
+    public LevelSkill(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    {
+        index = reader.ReadPackedInt(streamCompressionModel);
+        originIndex = reader.ReadPackedInt(streamCompressionModel);
+        activeIndex = reader.ReadPackedInt(streamCompressionModel);
+        damageScale = reader.ReadPackedFloat(streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedInt(index, streamCompressionModel);
+        writer.WritePackedInt(originIndex, streamCompressionModel);
+        writer.WritePackedInt(activeIndex, streamCompressionModel);
+        writer.WritePackedFloat(damageScale, streamCompressionModel);
+    }
+
     public void Apply(ref NativeList<SkillActiveIndex> activeIndices)
     {
         if (activeIndex == -1)
@@ -464,7 +480,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
     }
 
     public void Apply(
-        double time, 
+        //double time, 
         ref DynamicBuffer<SkillActiveIndex> activeIndices, 
         ref DynamicBuffer<BulletStatus> bulletStates,
         //ref BulletDefinition bulletDefinition, 
@@ -505,7 +521,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
     }
 
     public static void Apply(
-        double time, 
+        //double time, 
         in NativeList<int> selectedIndices, 
         in DynamicBuffer<LevelSkill> instances, 
         ref DynamicBuffer<SkillActiveIndex> activeIndices, 
@@ -514,15 +530,16 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         ref SkillDefinition skillDefinition, 
         ref NativeList<int> originSkillIndices)
     {
+        int numSelectedIndices = selectedIndices.Length;
         LevelSkill instance;
-        foreach (var selectedIndex in selectedIndices)
+        for(int i = 0; i < numSelectedIndices; ++i)
         {
-            instance = instances[selectedIndex];
+            instance = instances[selectedIndices[i]];
             
             if (instance.activeIndex != -1)
                 originSkillIndices.Add(activeIndices[instance.activeIndex].value);
 
-            instance.Apply(time, ref activeIndices, ref bulletStates, /*ref bulletDefinition, */ref skillDefinition);
+            instance.Apply(/*time, */ref activeIndices, ref bulletStates, /*ref bulletDefinition, */ref skillDefinition);
         }
 
     }
