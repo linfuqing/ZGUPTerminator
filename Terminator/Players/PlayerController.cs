@@ -22,7 +22,6 @@ public class PlayerController : MonoBehaviour
 
     private bool __isLocal;
     private Status __status;
-    private int __timeScaleIndex = -1;
     private int __instanceID;
     
     private AttributeEventReceiver __attributeEventReceiver;
@@ -99,22 +98,31 @@ public class PlayerController : MonoBehaviour
         switch ((EffectAttributeID)id)
         {
             case EffectAttributeID.HPMax:
-                (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHPMax(value);
+                if (__isLocal)
+                {
+                    (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHPMax(value);
 
-                LevelManager.instance.hpPercentage = __attributeEventReceiver[(int)EffectAttributeID.HP] * 100 / value;
+                    LevelManager.instance.hpPercentage =
+                        __attributeEventReceiver[(int)EffectAttributeID.HP] * 100 / value;
+                }
+
                 break;
             case EffectAttributeID.HP:
-                (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHP(value);
-
                 if(value > 0)
                     __SetStatus(0);
 
-                int max = __attributeEventReceiver[(int)EffectAttributeID.HPMax];
-                LevelManager.instance.hpPercentage = max > 0 ? value * 100 / max : 100;
-                
+                if (__isLocal)
+                {
+                    (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHP(value);
+
+                    int max = __attributeEventReceiver[(int)EffectAttributeID.HPMax];
+                    LevelManager.instance.hpPercentage = max > 0 ? value * 100 / max : 100;
+                }
+
                 break;
             case EffectAttributeID.Rage:
-                LevelManager.instance.rage = value;
+                if (__isLocal)
+                    LevelManager.instance.rage = value;
                 break;
         }
     }
@@ -145,10 +153,6 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
-                TimeScaleUtility.Remove(__timeScaleIndex);
-
-                __timeScaleIndex = -1;
-                
                 if(levelManager != null)
                     levelManager.ConfirmRecovery();
             
@@ -171,44 +175,33 @@ public class PlayerController : MonoBehaviour
             PlayerEvents.isActive = false;
     }
     
-
-    void Awake()
+    void OnEnable()
     {
         if (__attributeEventReceiver == null)
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
-    }
-
-    /*void OnEnable()
-    {
-        __SetStatus(0);
         
-        PlayerEvents.isActive = true;
-    }*/
+        if (__attributeEventReceiver != null)
+            __attributeEventReceiver.onChanged += __OnChanged;
+
+        ++PlayerEvents.survivingCount;
+
+        __SetStatus(0);
+    }
 
     void OnDisable()
     {
-        if (!__isLocal)
-            return;
-
-        __isLocal = false;
-        
-        if ((__status & Status.Dead) == Status.Dead)
+        if (__isLocal)
         {
-            if(__timeScaleIndex == -1)
-                __timeScaleIndex = TimeScaleUtility.Add(0.0f);
-            
-            PlayerEvents.isActive = false;
+            __isLocal = false;
+
+            if ((__status & Status.Dead) == Status.Dead)
+                PlayerEvents.isActive = false;
         }
         
+        --PlayerEvents.survivingCount;
+
         if ((object)__attributeEventReceiver != null)
             __attributeEventReceiver.onChanged -= __OnChanged;
-    }
-
-    void OnDestroy()
-    {
-        TimeScaleUtility.Remove(__timeScaleIndex);
-
-        __timeScaleIndex = -1;
     }
 
     void Update()
@@ -228,11 +221,6 @@ public class PlayerController : MonoBehaviour
             
             __isLocal = true;
             
-            if (__attributeEventReceiver != null)
-                __attributeEventReceiver.onChanged += __OnChanged;
-            
-            __SetStatus(0);
-        
             PlayerEvents.Restart();
             
             PlayerEvents.isActive = true;

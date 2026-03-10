@@ -90,6 +90,8 @@ public struct UserReward
 
 public struct User
 {
+    public string name;
+    public string avatar;
     public uint id;
     public int gold;
     //public int level;
@@ -164,6 +166,10 @@ public partial interface IUserData : IGameUserData
         string channelName, 
         string channelUser, 
         Action<User, UserEnergy> onComplete);
+
+    IEnumerator Rename(uint userID, string name, Action<bool> onComplete);
+    
+    IEnumerator ReplaceAvatar(uint userID, string avatar, Action<bool> onComplete);
 }
 
 public partial class UserData : MonoBehaviour, IUserData

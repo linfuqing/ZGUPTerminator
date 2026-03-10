@@ -16,6 +16,7 @@ public sealed class LoginManager : MonoBehaviour
         public string name;
         public string levelName;
         public uint id;
+        public uint levelID;
         public int index;
     }
 
@@ -1022,6 +1023,7 @@ public sealed class LoginManager : MonoBehaviour
                                                                 result.name = stageName;//(sceneStageIndex + 1).ToString();
                                                                 result.levelName = levelScene.title;
                                                                 result.id = stage.id;
+                                                                result.levelID = selectedLevel.id;
                                                                 result.index = stageIndex;
                                                                 onStageChanged.Invoke(result);
                                                             }
@@ -1532,7 +1534,18 @@ public sealed class LoginManager : MonoBehaviour
             nameof(__IncreaseEnergy), 
             __energyNextTime,
             __energyUnitTime);
-        
+
+        var clientData = IClientData.instance;
+        if (clientData != null)
+        {
+            ClientHeader header;
+            header.userID = user.id;
+            header.userName = user.name;
+            header.userAvatar = user.avatar;
+            
+            clientData.header = header;
+        }
+
         GameMain.Login(user.id);
         
         _onLogin?.Invoke(user.id.ToString());

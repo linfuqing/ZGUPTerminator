@@ -55,7 +55,25 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         private set;
     }
+    
+    private const string NAME_SPACE_USER_NICKNAME = "UserNickname";
+
+    public static string nickname
+    {
+        get => NAME_SPACE_USER_NICKNAME;
+        
+        set => PlayerPrefs.SetString(NAME_SPACE_USER_NICKNAME, value);
+    }
    
+    private const string NAME_SPACE_USER_AVATAR = "UserAvatar";
+    
+    public static string avatar
+    {
+        get => NAME_SPACE_USER_AVATAR;
+        
+        set => PlayerPrefs.SetString(NAME_SPACE_USER_AVATAR, value);
+    }
+
     [Serializable]
     internal struct Energy
     {
@@ -135,6 +153,8 @@ public sealed partial class UserDataMain : MonoBehaviour
         yield return __CreateEnumerator();
         
         User user;
+        user.name = nickname;
+        user.avatar = avatar;
         user.id = UserData.id;
         user.gold = gold;
         //user.level = UserData.level;
@@ -142,6 +162,24 @@ public sealed partial class UserDataMain : MonoBehaviour
         onComplete(user, userEnergy);
     }
 
+    public IEnumerator Rename(uint userID, string name, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        nickname = name;
+        
+        onComplete(true);
+    }
+
+    public IEnumerator ReplaceAvatar(uint userID, string avatar, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+        
+        UserDataMain.avatar = avatar;
+        
+        onComplete(true);
+    }
+    
     private int __GetEnergy(out uint now, out uint time)
     {
         now = DateTimeUtility.GetSeconds();
@@ -391,5 +429,16 @@ public partial class UserData
         Action<User, UserEnergy> onComplete)
     {
         return UserDataMain.instance.QueryUser(channelName, channelUser, onComplete);
+    }
+
+    public IEnumerator Rename(uint userID, string name, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.Rename(userID, name, onComplete);
+    }
+
+
+    public IEnumerator ReplaceAvatar(uint userID, string name, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.ReplaceAvatar(userID, name, onComplete);
     }
 }

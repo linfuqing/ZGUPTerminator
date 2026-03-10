@@ -5,6 +5,8 @@ using UnityEngine.Events;
 public class PlayerEvents : MonoBehaviour
 {
     [SerializeField]
+    internal UnityEvent _onAllDead;
+    [SerializeField]
     internal UnityEvent _onEnable;
     [SerializeField]
     internal UnityEvent _onDisable;
@@ -14,11 +16,17 @@ public class PlayerEvents : MonoBehaviour
     internal UnityEvent _noRecoveryExtra;
     [SerializeField]
     internal UnityEvent _dontKeepRecoveryTime;
+    [SerializeField]
+    internal UnityEvent _multiplayer;
 
     private static HashSet<PlayerEvents> __instances;
 
-    private static bool __isActive;
+    private static int __timeScaleIndex = -1;
+    
+    private static int __survivingCount;
 
+    private static bool __isActive;
+    
     public static bool isActive
     {
         get => __isActive;
@@ -37,9 +45,14 @@ public class PlayerEvents : MonoBehaviour
                         if(instance._onEnable != null)
                             instance._onEnable.Invoke();
                     }
+
+                    __ClearTimeScale();
                 }
                 else
                 {
+                    if(__survivingCount < 2)
+                        __SetTimeScale();
+
                     foreach (var instance in __instances)
                     {
                         if(instance._onDisable != null)
@@ -49,6 +62,27 @@ public class PlayerEvents : MonoBehaviour
             }
 
             __isActive = value;
+        }
+    }
+
+    public static int survivingCount
+    {
+        get => __survivingCount;
+        
+        set
+        {
+            if (value == __survivingCount)
+                return;
+
+            if (value == 0)
+            {
+                __SetTimeScale();
+                
+                foreach (var instance in __instances)
+                    instance._onAllDead?.Invoke();
+            }
+
+            __survivingCount = value;
         }
     }
 
@@ -69,15 +103,37 @@ public class PlayerEvents : MonoBehaviour
             foreach (var instance in __instances)
                 instance._dontKeepRecoveryTime?.Invoke();
         }
+        
+        if (RemotePlayer.Status.Disabled != RemotePlayer.status)
+        {
+            foreach (var instance in __instances)
+                instance._multiplayer?.Invoke();
+        }
     }
 
     public static void Respawn()
     {
+        if(__survivingCount < 2)
+            __SetTimeScale();
+
         if (__instances != null)
         {
             foreach (var instance in __instances)
                 instance._onRespawn?.Invoke();
         }
+    }
+
+    private static void __SetTimeScale()
+    {
+        if (__timeScaleIndex == -1)
+            __timeScaleIndex = TimeScaleUtility.Add(0.0f);
+    }
+
+    private static void __ClearTimeScale()
+    {
+        TimeScaleUtility.Remove(__timeScaleIndex);
+
+        __timeScaleIndex = -1;
     }
 
     void OnEnable()
@@ -91,6 +147,7 @@ public class PlayerEvents : MonoBehaviour
 
     void OnDisable()
     {
-        __instances.Remove(this);
+        if (__instances.Remove(this) && __instances.Count == 0)
+            __ClearTimeScale();
     }
 }

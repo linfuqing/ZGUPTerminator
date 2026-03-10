@@ -59,24 +59,29 @@ public interface IClientMessageToSend
     ClientMessageType messageType { get; }
 }
 
-public struct ClientHeader
+public struct ClientHeader : IEquatable<ClientHeader>
 {
     public uint userID;
     public FixedString32Bytes userName;
-    public FixedString32Bytes userIcon;
+    public FixedString32Bytes userAvatar;
 
     public ClientHeader(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
         userID = reader.ReadPackedUInt(streamCompressionModel);
         userName = reader.ReadFixedString32();
-        userIcon = reader.ReadFixedString32();
+        userAvatar = reader.ReadFixedString32();
     }
     
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
         writer.WritePackedUInt(userID, streamCompressionModel);
         writer.WriteFixedString32(userName);
-        writer.WriteFixedString32(userIcon);
+        writer.WriteFixedString32(userAvatar);
+    }
+
+    public bool Equals(ClientHeader other)
+    {
+        return userID == other.userID && userName == other.userName && userAvatar == other.userAvatar;
     }
 }
 
@@ -231,6 +236,8 @@ public interface IClientData
     bool isHost { get; }
     
     int remotePlayerCount { get; }
+
+    ClientHeader header { get; set; }
     
     /// <summary>
     /// int messageType;
@@ -292,6 +299,7 @@ public class ClientData : MonoBehaviour, IClientData
     private NativeList<byte> __bytes;
     private ClientMessageSquadInviteToSend __squadInviteMessage;
 
+    private static ClientHeader __header;
     private static Entity __entity;
 
     public bool isHost
@@ -312,14 +320,14 @@ public class ClientData : MonoBehaviour, IClientData
     
     public ClientHeader header
     {
-        get
-        {
-            ClientHeader header;
-            header.userID = GameMain.userID;
-            header.userName = GameUser.Shared.channelUsername ?? string.Empty;
-            header.userIcon = default;
+        get => __header;
 
-            return header;
+        set
+        {
+            if (__header.Equals(value))
+                return;
+
+            __header = value;
         }
     }
     
