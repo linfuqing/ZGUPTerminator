@@ -60,7 +60,7 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     public static string nickname
     {
-        get => NAME_SPACE_USER_NICKNAME;
+        get => PlayerPrefs.GetString(NAME_SPACE_USER_NICKNAME, UnityEngine.Random.value > 0.5f ? "大里海的龙大瞎" : "杀鱼格格");
         
         set => PlayerPrefs.SetString(NAME_SPACE_USER_NICKNAME, value);
     }

@@ -26,7 +26,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
     }
 }
 
-public struct LevelPlayer : IComponentData, ILevelPlayer
+public struct LocalPlayer : IComponentData, ILevelPlayer
 {
     private static readonly SharedStatic<int> InstanceID = SharedStatic<int>.GetOrCreate<LevelPlayer>();
 
@@ -36,6 +36,10 @@ public struct LevelPlayer : IComponentData, ILevelPlayer
 
         set => InstanceID.Data = value;
     }
+}
+
+public struct LevelPlayer : IComponentData
+{
 }
 
 public struct LevelPlayerActiveSkill

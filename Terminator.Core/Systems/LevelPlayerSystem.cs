@@ -66,7 +66,7 @@ public partial struct LevelPlayerSystem : ISystem
         {
             var player = players[index];
             
-            __Apply(LevelPlayerShared<LevelPlayer>.property, player);
+            __Apply(LevelPlayerShared<LocalPlayer>.property, player);
 
             ThirdPersonPlayer thirdPersonPlayer;
             thirdPersonPlayer.ControlledCamera = Entity.Null;
@@ -342,7 +342,7 @@ public partial struct LevelPlayerSystem : ISystem
                     entityManager.AddComponent<LevelSkillOpcode>(players);
             }
 
-            if(LevelPlayerShared<LevelPlayer>.property.skillOpcodes.Length > 0)
+            if(LevelPlayerShared<LocalPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(players);
 
             //entityManager.AddComponent<EffectDamage>(players);

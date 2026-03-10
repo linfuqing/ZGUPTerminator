@@ -201,13 +201,13 @@ public partial class LevelSystemManaged : SystemBase
 
                 __statusStage = -1;
                 
-                LevelPlayer.instanceID = 0;
+                LocalPlayer.instanceID = 0;
             }
         }
         else 
         {
-            if (LevelPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
-                LevelPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
+            if (LocalPlayer.instanceID == 0 && SystemAPI.HasComponent<CopyMatrixToTransformInstanceID>(player))
+                LocalPlayer.instanceID = SystemAPI.GetComponent<CopyMatrixToTransformInstanceID>(player).value;
 
             if (isRecovery)
             {

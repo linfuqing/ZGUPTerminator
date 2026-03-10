@@ -1483,7 +1483,7 @@ public sealed class LoginManager : MonoBehaviour
 
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
         
-        property.Apply<LevelPlayer>(hasSweepCard ? 2 : 1, rage, out var playerProperty);
+        property.Apply<LocalPlayer>(hasSweepCard ? 2 : 1, rage, out var playerProperty);
         EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
                                         IUserData.PurchaseFlag.AdvertisingFreeCard;
 

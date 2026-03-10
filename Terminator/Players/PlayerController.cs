@@ -206,7 +206,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        int instanceID = LevelPlayer.instanceID;
+        int instanceID = LocalPlayer.instanceID;
         if (instanceID == 0)
             return;
 
