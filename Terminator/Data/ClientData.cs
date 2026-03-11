@@ -2,8 +2,10 @@ using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
+using Unity.Networking.Transport;
 using UnityEngine;
 using ZG;
+using NetworkPipelineStage = ZG.NetworkPipelineStage;
 
 public enum ClientChannel
 {
@@ -367,15 +369,6 @@ public class ClientData : MonoBehaviour, IClientData
                 using (var stages = new NativeArray<NetworkPipelineStage>(_stages, Allocator.Temp))
                     __pipelineIndex = driver.CreatePipeline(stages);
 
-                using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
-                {
-                    var writer = new DataStreamWriter(bytes);
-                    var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)NetworkRelayMessageType.Init, streamCompressionModel);
-                    header.Write(ref writer, streamCompressionModel);
-                    driver.Connect(_address, _port, bytes.GetSubArray(0, writer.Length));
-                }
-
                 entityManager.SetComponentData(__entity, driver);
 
                 return driver;
@@ -396,6 +389,16 @@ public class ClientData : MonoBehaviour, IClientData
 
             LevelPlayerShared<LocalPlayer>.id = value.userID;
 
+            if (NetworkConnection.State.Disconnected == driver.instance.connectionState)
+            {
+                using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
+                {
+                    var writer = new DataStreamWriter(bytes);
+                    header.Write(ref writer, StreamCompressionModel.Default);
+                    driver.Connect(_address, _port, bytes.GetSubArray(0, writer.Length));
+                }
+            }
+            
             __header = value;
         }
     }
