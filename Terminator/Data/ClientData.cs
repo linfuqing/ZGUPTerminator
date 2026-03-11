@@ -276,6 +276,14 @@ public interface IClientData
 
 public class ClientData : MonoBehaviour, IClientData
 {
+    public enum SquadInviteStatus
+    {
+        None,
+        SquadCreating, 
+        SquadInviting, 
+        SquadInvited
+    }
+    
     [SerializeField]
     internal int _connectTimeoutMS = 1000;
     [SerializeField]
@@ -323,6 +331,13 @@ public class ClientData : MonoBehaviour, IClientData
     }
 
     public int remotePlayerCount
+    {
+        get;
+
+        private set;
+    }
+
+    public SquadInviteStatus squadInviteStatus
     {
         get;
 
@@ -435,23 +450,36 @@ public class ClientData : MonoBehaviour, IClientData
                             {
                                 header = this.header;
 
-                                if ((int)NetworkRelayMessageType.Create == type)
+                                switch ((NetworkRelayMessageType)type)
                                 {
-                                    var sendBuffer = driver.sendBuffer;
-                                    if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
-                                    {
-                                        header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite, NetworkRelayType.All);
-                                        writer.WritePackedInt(channel, streamCompressionModel);
-                                        writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
-                                        writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
-                                        writer.WriteFixedString512(__squadInviteMessage.text);
+                                    case NetworkRelayMessageType.Create:
+                                        var sendBuffer = driver.sendBuffer;
+                                        if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
+                                        {
+                                            header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite, NetworkRelayType.All);
+                                            writer.WritePackedInt(channel, streamCompressionModel);
+                                            writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
+                                            writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
+                                            writer.WriteFixedString512(__squadInviteMessage.text);
 
-                                        sendBuffer.EndWrite(writer);
-                                    }
+                                            sendBuffer.EndWrite(writer);
+                                        }
 
-                                    isHost = true;
+                                        squadInviteStatus = SquadInviteStatus.SquadInviting;
 
-                                    break;
+                                        isHost = true;
+
+                                        break;
+                                    case NetworkRelayMessageType.Join:
+                                        squadInviteStatus = SquadInviteStatus.SquadInvited;
+                                        
+                                        isHost = false;
+                                        break;
+                                    case NetworkRelayMessageType.Leave:
+                                        squadInviteStatus = SquadInviteStatus.None;
+                                        
+                                        isHost = false;
+                                        break;
                                 }
                             }
                             else
@@ -471,8 +499,6 @@ public class ClientData : MonoBehaviour, IClientData
                                 
                                 header = new ClientHeader(ref reader, streamCompressionModel);
                             }
-
-                            isHost = false;
 
                             if ((int)NetworkRelayMessageType.Leave == type)
                                 return (int)ClientMessageType.SquadLeave;
@@ -557,9 +583,27 @@ public class ClientData : MonoBehaviour, IClientData
                         driver.EndWrite(writer);
                     }*/
 
+                    if (SquadInviteStatus.None != squadInviteStatus)
+                    {
+                        var sendBuffer = driver.sendBuffer;
+                        if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
+                        {
+                            var streamCompressionModel = StreamCompressionModel.Default;
+                            writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
+                            sendBuffer.EndWrite(writer);
+                        }
+                    }
+
                     break;
                 }
                 case NetworkClientMessageType.Disconnect:
+                    if (SquadInviteStatus.None != squadInviteStatus)
+                    {
+                        header = default;
+                        
+                        return (int)ClientMessageType.SquadLeave;
+                    }
+
                     break;
             }
         }
@@ -631,6 +675,8 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
 
                     __squadInviteMessage = __Load<ClientMessageSquadInviteToSend>();
+                    
+                    squadInviteStatus = SquadInviteStatus.SquadCreating;
                 }
                 break;
             case ClientMessageType.Chat:
