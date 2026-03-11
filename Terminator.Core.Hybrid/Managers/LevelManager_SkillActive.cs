@@ -222,6 +222,13 @@ public partial class LevelManager
         return false;
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="index"></param>
+    /// <param name="level"></param>
+    /// <param name="name"></param>
+    /// <returns>返回true时流派被更新，需要重建技能</returns>
     public void SetActiveSkill(int index, int level, in FixedString128Bytes name)
     {
         if (__skillActiveNames == null)
@@ -407,6 +414,7 @@ public partial class LevelManager
         ++result.count;
         int rank = result.rank;
 
+        bool isChanged = false;
         if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
         {
             result.rank = asset.BinarySearch(result.count);

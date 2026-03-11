@@ -427,9 +427,7 @@ public class ClientData : MonoBehaviour, IClientData
                                     var sendBuffer = driver.sendBuffer;
                                     if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
                                     {
-                                        writer.WritePackedInt((int)ClientMessageType.SquadInvite,
-                                            streamCompressionModel);
-                                        writer.WritePackedInt((int)NetworkRelayType.All, streamCompressionModel);
+                                        writer.WriteReplyHeader((int)ClientMessageType.SquadInvite, NetworkRelayType.All);
                                         header.Write(ref writer, streamCompressionModel);
                                         writer.WritePackedInt(channel, streamCompressionModel);
                                         writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
@@ -479,8 +477,8 @@ public class ClientData : MonoBehaviour, IClientData
                         default:
                         {
                             ClientChannel channel = ClientChannel.Private;
-                            int relayType = reader.ReadPackedInt(streamCompressionModel);
-                            switch ((NetworkRelayType)relayType)
+                            reader.ReadReplyHeader(out NetworkRelayType relayType, out int identityIndex);
+                            switch (relayType)
                             {
                                 case NetworkRelayType.All:
                                     channel = ClientChannel.Public;
@@ -489,12 +487,9 @@ public class ClientData : MonoBehaviour, IClientData
                                     channel = ClientChannel.Squad;
                                     break;
                                 default:
-                                    
-                                    UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.identityIndex, relayType);
+                                    UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.identityIndex, (int)relayType);
                                     break;
                             }
-                            int identityIndex = reader.ReadPackedInt(streamCompressionModel);
-                            
                             header = new ClientHeader(ref reader, streamCompressionModel);
 
                             switch ((ClientMessageType)type)
@@ -640,8 +635,7 @@ public class ClientData : MonoBehaviour, IClientData
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)ClientMessageType.PlayerProperty, streamCompressionModel);
-                    writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                    writer.WriteReplyHeader((int)ClientMessageType.PlayerProperty, NetworkRelayType.Channel);
                     
                     var reader = new DataStreamReader(__bytes.AsArray());
                     var temp = new ClientMessagePlayerProperty(ref reader);
@@ -653,9 +647,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.Play:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)ClientMessageType.PlayerProperty, streamCompressionModel);
-                    writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                    writer.WriteReplyHeader((int)ClientMessageType.Play, NetworkRelayType.Channel);
                     
                     var reader = new DataStreamReader(__bytes.AsArray());
                     var temp = new ClientMessagePlay(ref reader);

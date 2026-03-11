@@ -170,7 +170,7 @@ public partial class LevelSystemManaged
                             foreach (var skillIndex in __skillIndices.GetValuesForKey(remotePlayer))
                                 skillIndices.Add(skillIndex);
                             
-                            system.__UpdateBullets(
+                            system.__DestroyBullets(
                                 remotePlayer,
                                 skillIndices.AsArray());
                         }
@@ -241,12 +241,17 @@ public partial class LevelSystemManaged
             Entity entity = entityArray[index];
             var bulletStates = this.bulletStates[index];
             var activeIndices = this.activeIndices[index];
+
+
+            foreach (var activeIndex in activeIndices)
+                skillIndices.Add(entity, activeIndex.value);
+            
             ref var definition = ref this.definition.Value;
 
             do
             {
-                if (skill.activeIndex != -1)
-                    skillIndices.Add(entity, activeIndices[skill.activeIndex].value);
+                /*if (skill.activeIndex != -1)
+                    skillIndices.Add(entity, activeIndices[skill.activeIndex].value);*/
                 
                 skill.Apply(ref activeIndices, ref bulletStates, ref definition);
             } while (skills.TryGetNextValue(out skill, ref iterator));
@@ -284,7 +289,7 @@ public partial class LevelSystemManaged
         {
             var skillVersion = SystemAPI.GetComponent<LevelSkillVersion>(player);
 
-            bool isWaiting = false;
+            bool isWaiting;
             switch (__skillSelection.status)
             {
                 case SkillSelectionStatus.End:
@@ -316,8 +321,7 @@ public partial class LevelSystemManaged
                                 if (sendBuffer.BeginWrite(0, out var writer))
                                 {
                                     var streamCompressionModel = StreamCompressionModel.Default;
-                                    writer.WritePackedInt((int)ClientMessages.MessageType.SelectSkill, streamCompressionModel);
-                                    writer.WritePackedInt((int)NetworkRelayType.Channel, streamCompressionModel);
+                                    writer.WriteReplyHeader((int)ClientMessages.MessageType.SelectSkill, NetworkRelayType.Channel);
                                     writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
                                     for(int i = 0; i < numSelectedSkillIndices; ++i)
                                         skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
@@ -342,7 +346,7 @@ public partial class LevelSystemManaged
 
                                 int numActiveSkillIndices = skillIndices.Length;
                                 if (numActiveSkillIndices > numSelectedSkillIndices)
-                                    __UpdateBullets(
+                                    __DestroyBullets(
                                         player,
                                         skillIndices.AsArray()
                                             .GetSubArray(numSelectedSkillIndices,

@@ -521,25 +521,26 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
     }
 
     public static void Apply(
-        //double time, 
         in NativeList<int> selectedIndices, 
         in DynamicBuffer<LevelSkill> instances, 
         ref DynamicBuffer<SkillActiveIndex> activeIndices, 
         ref DynamicBuffer<BulletStatus> bulletStates,
-        //ref BulletDefinition bulletDefinition, 
         ref SkillDefinition skillDefinition, 
         ref NativeList<int> originSkillIndices)
     {
         int numSelectedIndices = selectedIndices.Length;
+        foreach (var activeIndex in activeIndices)
+            originSkillIndices.Add(activeIndex.value);
+        
         LevelSkill instance;
         for(int i = 0; i < numSelectedIndices; ++i)
         {
             instance = instances[selectedIndices[i]];
             
-            if (instance.activeIndex != -1)
-                originSkillIndices.Add(activeIndices[instance.activeIndex].value);
+            /*if (instance.activeIndex != -1)
+                originSkillIndices.Add(activeIndices[instance.activeIndex].value);*/
 
-            instance.Apply(/*time, */ref activeIndices, ref bulletStates, /*ref bulletDefinition, */ref skillDefinition);
+            instance.Apply(ref activeIndices, ref bulletStates, ref skillDefinition);
         }
 
     }

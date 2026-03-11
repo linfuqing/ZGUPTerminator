@@ -85,8 +85,6 @@ public partial class LevelSystemManaged
 
         public NativeList<Entity> entities;
 
-        //public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
-
         public void Execute(int index)
         {
             var bulletEntity = bulletEntities[index];
@@ -106,30 +104,11 @@ public partial class LevelSystemManaged
                         var entity = entityArray[index];
                         entities.Add(entity);
 
-                        //Disable(entity);
-
-                        /*if (index <　linkedEntityGroups.Length)
-                        {
-                            var linkedEntityGroups = this.linkedEntityGroups[index];
-                            foreach (var linkedEntityGroup in linkedEntityGroups)
-                                Disable(linkedEntityGroup.Value);
-                        }*/
-
                         return;
                     }
                 }
             }
         }
-
-        /*public void Disable(in Entity entity)
-        {
-            if (copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID))
-            {
-                copyMatrixToTransformInstanceID.isSendMessageOnDestroy = false;
-                
-                copyMatrixToTransformInstanceIDs[entity] = copyMatrixToTransformInstanceID;
-            }
-        }*/
     }
 
     [BurstCompile]
@@ -275,7 +254,7 @@ public partial class LevelSystemManaged
         __DestroyEntities(__bulletGroupUnmanaged);
     }
 
-    private void __UpdateBullets(in Entity parent, in NativeArray<int> skillIndices)
+    private void __DestroyBullets(in Entity parent, in NativeArray<int> skillIndices)
     {
         __bulletEntityType.Update(this);
         __skills.Update(this);

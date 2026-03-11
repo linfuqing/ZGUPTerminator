@@ -6,6 +6,13 @@ using Unity.Mathematics;
 using Unity.Profiling;
 using ZG;
 
+public enum LevelBulletStatus
+{
+    Normal,
+    DestroyLocalPlayer, 
+    DestroyAll
+}
+
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class LevelSystemManaged : SystemBase
 {
@@ -161,7 +168,7 @@ public partial class LevelSystemManaged : SystemBase
             return;
         }
 
-        bool isRecovery = manager.IsRecovery(out bool isWaiting);
+        bool isRecovery = manager.IsRecovery();
         Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
@@ -197,7 +204,7 @@ public partial class LevelSystemManaged : SystemBase
                     entityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
                 
                 __DestroyEntities();
-                __DestroyBulletEntities();
+                //__DestroyBulletEntities();
 
                 __statusStage = -1;
                 
@@ -238,16 +245,25 @@ public partial class LevelSystemManaged : SystemBase
                     SystemAPI.SetBufferEnabled<Message>(player, true);
                 }
             }
-            else if(isWaiting)
-                __DestroyBulletEntities(true);
         }
         
-        int version = SystemAPI.GetSingleton<LevelVersion>().value;
-        if (version != __version)
+        switch (manager.bulletStatus)
         {
-            __version = version;
+            case LevelBulletStatus.DestroyLocalPlayer:
+                
+                break;
+            case LevelBulletStatus.DestroyAll:
+                __DestroyBulletEntities(!manager.isRestart);
+                break;
+            default:
+                int version = SystemAPI.GetSingleton<LevelVersion>().value;
+                if (version != __version)
+                {
+                    __version = version;
             
-            __DestroyBulletEntitiesUnmanaged();
+                    __DestroyBulletEntitiesUnmanaged();
+                }
+                break;
         }
         
         if (__statusStage != status.stage)
