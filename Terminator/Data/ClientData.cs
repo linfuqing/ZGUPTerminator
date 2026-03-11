@@ -394,7 +394,7 @@ public class ClientData : MonoBehaviour, IClientData
                 using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
                 {
                     var writer = new DataStreamWriter(bytes);
-                    header.Write(ref writer, StreamCompressionModel.Default);
+                    value.Write(ref writer, StreamCompressionModel.Default);
                     driver.Connect(_address, _port, bytes.GetSubArray(0, writer.Length));
                 }
             }
