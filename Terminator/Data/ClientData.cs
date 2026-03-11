@@ -78,6 +78,19 @@ public struct ClientHeader : IEquatable<ClientHeader>
         writer.WriteFixedString32(userName);
         writer.WriteFixedString32(userAvatar);
     }
+    
+    public void Write(
+        ref DataStreamWriter writer, 
+        StreamCompressionModel streamCompressionModel, 
+        int messageType, 
+        NetworkRelayType relayType)
+    {
+        writer.WriteReplyHeader(messageType, relayType);
+        
+        writer.WritePackedUInt(userID, streamCompressionModel);
+        writer.WriteFixedString32(userName);
+        writer.WriteFixedString32(userAvatar);
+    }
 
     public bool Equals(ClientHeader other)
     {
@@ -427,8 +440,7 @@ public class ClientData : MonoBehaviour, IClientData
                                     var sendBuffer = driver.sendBuffer;
                                     if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
                                     {
-                                        writer.WriteReplyHeader((int)ClientMessageType.SquadInvite, NetworkRelayType.All);
-                                        header.Write(ref writer, streamCompressionModel);
+                                        header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite, NetworkRelayType.All);
                                         writer.WritePackedInt(channel, streamCompressionModel);
                                         writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
                                         writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
@@ -490,14 +502,15 @@ public class ClientData : MonoBehaviour, IClientData
                                     UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.identityIndex, (int)relayType);
                                     break;
                             }
-                            header = new ClientHeader(ref reader, streamCompressionModel);
-
+                            
                             switch ((ClientMessageType)type)
                             {
                                 case ClientMessageType.SquadInvite:
                                 {
                                     UnityEngine.Assertions.Assert.AreEqual(ClientChannel.Public, channel);
                                     
+                                    header = new ClientHeader(ref reader, streamCompressionModel);
+
                                     ClientMessageSquadInviteToRead message;
                                     message.squadInviteID = (uint)reader.ReadPackedInt(streamCompressionModel);
                                     message.levelID = reader.ReadPackedUInt(streamCompressionModel);
@@ -508,6 +521,8 @@ public class ClientData : MonoBehaviour, IClientData
                                 }
                                 case ClientMessageType.Chat:
                                 {
+                                    header = new ClientHeader(ref reader, streamCompressionModel);
+
                                     ClientMessageChatToRead message;
                                     message.channel = channel;
                                     message.value = reader.ReadFixedString512();
@@ -622,10 +637,11 @@ public class ClientData : MonoBehaviour, IClientData
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var temp = __Load<ClientMessageChatToSend>();
-                    var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)ClientMessageType.Chat, streamCompressionModel);
-                    writer.WritePackedInt((int)temp.channel, streamCompressionModel);
-                    header.Write(ref writer, streamCompressionModel);
+                    header.Write(
+                        ref writer, 
+                        StreamCompressionModel.Default, 
+                        (int)ClientMessageType.Chat, (NetworkRelayType)temp.channel);
+
                     writer.WriteFixedString512(temp.value);
                     
                     sendBuffer.EndWrite(writer);
@@ -634,7 +650,6 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.PlayerProperty:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WriteReplyHeader((int)ClientMessageType.PlayerProperty, NetworkRelayType.Channel);
                     
                     var reader = new DataStreamReader(__bytes.AsArray());
