@@ -394,6 +394,8 @@ public class ClientData : MonoBehaviour, IClientData
             if (__header.Equals(value))
                 return;
 
+            LevelPlayerShared<LocalPlayer>.id = value.userID;
+
             __header = value;
         }
     }
@@ -438,15 +440,35 @@ public class ClientData : MonoBehaviour, IClientData
                     switch ((NetworkRelayMessageType)type)
                     {
                         case NetworkRelayMessageType.Init:
-                            LevelPlayerShared<LocalPlayer>.identityIndex = reader.ReadPackedInt(streamCompressionModel);
+                            
+                            //reset
                             break;
                         case NetworkRelayMessageType.Create:
                         case NetworkRelayMessageType.Join:
                         case NetworkRelayMessageType.Leave:
                         {
-                            int identityIndex = reader.ReadPackedInt(streamCompressionModel),
-                                channel = reader.ReadPackedInt(streamCompressionModel);
-                            if (identityIndex == LevelPlayerShared<LocalPlayer>.identityIndex)
+                            int channel = reader.ReadPackedInt(streamCompressionModel);
+                            if (reader.GetBytesRead() < reader.Length)
+                            {
+                                reader.Flush();
+                                header = new ClientHeader(ref reader, streamCompressionModel);
+                                
+                                if ((int)NetworkRelayMessageType.Leave == type)
+                                {
+                                    //对面离开
+                                    --remotePlayerCount;
+
+                                    ClientMessageSquadLeave temp;
+                                    SendMessage(temp);
+                                }
+                                else
+                                {
+                                    ++remotePlayerCount;
+                                    
+                                    LevelPlayerShared<RemotePlayer>.id = header.userID;
+                                }
+                            }
+                            else
                             {
                                 header = this.header;
 
@@ -482,23 +504,6 @@ public class ClientData : MonoBehaviour, IClientData
                                         break;
                                 }
                             }
-                            else
-                            {
-                                LevelPlayerShared<RemotePlayer>.identityIndex = identityIndex;
-                                
-                                if ((int)NetworkRelayMessageType.Leave == type)
-                                {
-                                    //对面离开
-                                    --remotePlayerCount;
-
-                                    ClientMessageSquadLeave temp;
-                                    SendMessage(temp);
-                                }
-                                else
-                                    ++remotePlayerCount;
-                                
-                                header = new ClientHeader(ref reader, streamCompressionModel);
-                            }
 
                             if ((int)NetworkRelayMessageType.Leave == type)
                                 return (int)ClientMessageType.SquadLeave;
@@ -515,7 +520,7 @@ public class ClientData : MonoBehaviour, IClientData
                         default:
                         {
                             ClientChannel channel = ClientChannel.Private;
-                            reader.ReadReplyHeader(out NetworkRelayType relayType, out int identityIndex);
+                            reader.ReadReplyHeader(out NetworkRelayType relayType, out uint id);
                             switch (relayType)
                             {
                                 case NetworkRelayType.All:
@@ -525,7 +530,7 @@ public class ClientData : MonoBehaviour, IClientData
                                     channel = ClientChannel.Squad;
                                     break;
                                 default:
-                                    UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.identityIndex, (int)relayType);
+                                    UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.id, relayType.RelayID());
                                     break;
                             }
                             
@@ -686,7 +691,7 @@ public class ClientData : MonoBehaviour, IClientData
                     header.Write(
                         ref writer, 
                         StreamCompressionModel.Default, 
-                        (int)ClientMessageType.Chat, (NetworkRelayType)temp.channel);
+                        (int)ClientMessageType.Chat, ClientChannel.Squad == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);
 
                     writer.WriteFixedString512(temp.value);
                     

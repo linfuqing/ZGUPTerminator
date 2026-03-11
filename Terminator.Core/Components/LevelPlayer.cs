@@ -25,7 +25,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         set => StatusValue.Data = value;
     }
 
-    public int identity;
+    public uint id;
 }
 
 public struct LocalPlayer : IComponentData, ILevelPlayer
@@ -176,14 +176,12 @@ public static class LevelPlayerShared<T> where T : ILevelPlayer
         public static readonly SharedStatic<LevelPlayerProperty> Value = SharedStatic<LevelPlayerProperty>.GetOrCreate<Property>();
     }
 
-    private class Identity
+    private class ID
     {
-        public static readonly SharedStatic<int> Index = SharedStatic<int>.GetOrCreate<Identity>();
-        
-        public static ref int index => ref Index.Data;
+        public static readonly SharedStatic<uint> Value = SharedStatic<uint>.GetOrCreate<ID>();
     }
 
     public static ref LevelPlayerProperty property => ref Property.Value.Data;
     
-    public static ref int identityIndex => ref Identity.Index.Data;
+    public static ref uint id => ref ID.Value.Data;
 }

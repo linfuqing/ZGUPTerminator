@@ -50,7 +50,7 @@ public partial class LevelSystemManaged
         public ComponentTypeHandle<RemotePlayer> remotePlayerType;
         
         [ReadOnly]
-        public NativeParallelMultiHashMap<int, LevelSkill> skills;
+        public NativeParallelMultiHashMap<uint, LevelSkill> skills;
         
         public NativeParallelMultiHashMap<Entity, int> skillIndices;
 
@@ -84,7 +84,7 @@ public partial class LevelSystemManaged
         private BufferTypeHandle<BulletStatus> __bulletStatusType;
         private BufferTypeHandle<SkillActiveIndex> __activeIndexType;
         
-        private NativeParallelMultiHashMap<int, LevelSkill> __skills;
+        private NativeParallelMultiHashMap<uint, LevelSkill> __skills;
         
         private NativeParallelMultiHashMap<Entity, int> __skillIndices;
 
@@ -100,7 +100,7 @@ public partial class LevelSystemManaged
             __bulletStatusType = system.GetBufferTypeHandle<BulletStatus>(true);
             __activeIndexType = system.GetBufferTypeHandle<SkillActiveIndex>(true);
 
-            __skills = new NativeParallelMultiHashMap<int, LevelSkill>(1, Allocator.Persistent);
+            __skills = new NativeParallelMultiHashMap<uint, LevelSkill>(1, Allocator.Persistent);
             __skillIndices = new NativeParallelMultiHashMap<Entity, int>(1, Allocator.Persistent);
         }
 
@@ -125,6 +125,7 @@ public partial class LevelSystemManaged
                     __skillIndices.Clear();
                     
                     int temp;
+                    uint id;
                     DataStreamReader reader;
                     var streamCompressionModel = StreamCompressionModel.Default;
                     do
@@ -134,8 +135,8 @@ public partial class LevelSystemManaged
                         UnityEngine.Assertions.Assert.AreEqual((int)ClientMessages.MessageType.SelectSkill, temp);
                         temp = reader.ReadPackedInt(streamCompressionModel);
                         UnityEngine.Assertions.Assert.AreEqual((int)NetworkRelayType.Channel, temp);
-                        temp = reader.ReadPackedInt(streamCompressionModel);
-                        __skills.Add(temp, new LevelSkill(ref reader, streamCompressionModel));
+                        id = reader.ReadPackedUInt(streamCompressionModel);
+                        __skills.Add(id, new LevelSkill(ref reader, streamCompressionModel));
                     } while (clientMessages.values.TryGetNextValue(out message, ref iterator));
                     
                     system.__entityType.Update(system);
@@ -225,7 +226,7 @@ public partial class LevelSystemManaged
         [ReadOnly]
         public NativeArray<RemotePlayer> remotePlayers;
         [ReadOnly]
-        public NativeParallelMultiHashMap<int, LevelSkill> skills;
+        public NativeParallelMultiHashMap<uint, LevelSkill> skills;
 
         public NativeParallelMultiHashMap<Entity, int> skillIndices;
 
@@ -235,7 +236,7 @@ public partial class LevelSystemManaged
         
         public void Execute(int index)
         {
-            if (!skills.TryGetFirstValue(remotePlayers[index].identity, out var skill, out var iterator))
+            if (!skills.TryGetFirstValue(remotePlayers[index].id, out var skill, out var iterator))
                 return;
             
             Entity entity = entityArray[index];

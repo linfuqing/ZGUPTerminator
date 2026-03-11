@@ -79,7 +79,7 @@ public partial struct LevelPlayerSystem : ISystem
                 __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayerEntity);
 
                 RemotePlayer remotePlayer;
-                remotePlayer.identity = LevelPlayerShared<RemotePlayer>.identityIndex;
+                remotePlayer.id = LevelPlayerShared<RemotePlayer>.id;
 
                 remotePlayers[remotePlayerEntity] = remotePlayer;
             }
