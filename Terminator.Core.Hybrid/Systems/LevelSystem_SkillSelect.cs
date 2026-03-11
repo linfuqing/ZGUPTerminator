@@ -94,7 +94,7 @@ public partial class LevelSystemManaged
                 __removePlayerGroup = builder.WithAll<RemotePlayer, SkillActiveIndex, BulletStatus>().Build(system);
 
             system.RequireForUpdate<ClientMessages>();
-            system.RequireForUpdate<NetworkClientDriver>();
+            //system.RequireForUpdate<NetworkClientDriver>();
 
             __remotePlayerType = system.GetComponentTypeHandle<RemotePlayer>(true);
             __bulletStatusType = system.GetBufferTypeHandle<BulletStatus>(true);
@@ -116,7 +116,7 @@ public partial class LevelSystemManaged
             in ClientMessages clientMessages, 
             LevelSystemManaged system)
         {
-            if (!__removePlayerGroup.IsEmpty)
+            if (networkClient.isCreated && !__removePlayerGroup.IsEmpty)
             {
                 if (clientMessages.values.TryGetFirstValue((int)ClientMessages.MessageType.SelectSkill, out var message,
                         out var iterator))
@@ -240,8 +240,9 @@ public partial class LevelSystemManaged
             
             Entity entity = entityArray[index];
             var bulletStates = this.bulletStates[index];
+            bulletStates.Clear();
+            
             var activeIndices = this.activeIndices[index];
-
 
             foreach (var activeIndex in activeIndices)
                 skillIndices.Add(entity, activeIndex.value);
@@ -278,11 +279,11 @@ public partial class LevelSystemManaged
             return;
         }
 
-        var networkClientDriver = SystemAPI.GetSingleton<NetworkClientDriver>();
-        __skillSelection.remotePlayer.Apply(
-            definition,
-            networkClientDriver.instance,
-            SystemAPI.GetSingleton<ClientMessages>(), this);
+        if(SystemAPI.TryGetSingleton<NetworkClientDriver>(out var networkClientDriver))
+            __skillSelection.remotePlayer.Apply(
+                definition,
+                networkClientDriver.instance,
+                SystemAPI.GetSingleton<ClientMessages>(), this);
         //__skillSelection.SetStage(stage, this);
         
         if (SystemAPI.HasComponent<LevelSkillVersion>(player))
@@ -318,7 +319,7 @@ public partial class LevelSystemManaged
                             if (numSelectedSkillIndices > 0)
                             {
                                 var sendBuffer = networkClientDriver.sendBuffer;
-                                if (sendBuffer.BeginWrite(0, out var writer))
+                                if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
                                 {
                                     var streamCompressionModel = StreamCompressionModel.Default;
                                     writer.WriteReplyHeader((int)ClientMessages.MessageType.SelectSkill, NetworkRelayType.Channel);
