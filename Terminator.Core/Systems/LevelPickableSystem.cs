@@ -148,7 +148,7 @@ public partial struct LevelPickableSystem : ISystem
     private struct Select : IJob
     {
         public double time;
-        public Entity entity;
+        public Entity localPlayer;
 
         [ReadOnly]
         public ComponentLookup<LevelSkillDefinitionData> definitions;
@@ -170,18 +170,18 @@ public partial struct LevelPickableSystem : ISystem
 
         public void Execute()
         {
-            if (!this.skills.TryGetBuffer(entity, out var skills) || 
-                !definitions.TryGetComponent(entity, out var definition))
+            if (!this.skills.TryGetBuffer(localPlayer, out var skills) || 
+                !definitions.TryGetComponent(localPlayer, out var definition))
             {
                 results.Clear();
 
                 return;
             }
 
-            if (this.skills.IsBufferEnabled(entity))
+            if (this.skills.IsBufferEnabled(localPlayer))
                 return;
 
-            versions.TryGetComponent(entity, out var version);
+            versions.TryGetComponent(localPlayer, out var version);
             
             skills.Clear();
 
@@ -189,18 +189,22 @@ public partial struct LevelPickableSystem : ISystem
             var hash = math.aslong(time);
             var random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32));
             LevelSkill skill;
-            DynamicBuffer<LevelSkillGroup> skillGroups;
-            DynamicBuffer<LevelSkillOpcode> skillOpcodes;
-            DynamicBuffer<SkillActiveIndex> skillActiveIndices;
+            var skillGroups = this.skillGroups.TryGetBuffer(localPlayer, out var skillGroupList)
+                ? skillGroupList.AsNativeArray()
+                : default;
+            var skillOpcodes = this.skillOpcodes.TryGetBuffer(localPlayer, out var skillOpcodeList)
+                ? skillOpcodeList.AsNativeArray()
+                : default;
+            var skillActiveIndices = this.skillActiveIndices[localPlayer];
             while (results.TryDequeue(out Result result))
             {
-                if(!this.skillActiveIndices.TryGetBuffer(result.entity, out skillActiveIndices))
-                    continue;
+                /*if(!this.skillActiveIndices.TryGetBuffer(localPlayer, out skillActiveIndices))
+                    continue;*/
 
                 definition.definition.Value.Select(
                     skillActiveIndices.AsNativeArray(), 
-                    this.skillGroups.TryGetBuffer(result.entity, out skillGroups) ? skillGroups.AsNativeArray() : default,
-                    this.skillOpcodes.TryGetBuffer(result.entity, out skillOpcodes) ? skillOpcodes.AsNativeArray() : default,
+                    skillGroups,
+                    skillOpcodes,
                     ref skills, 
                     ref random, 
                     out version.priority, 
@@ -234,9 +238,9 @@ public partial struct LevelPickableSystem : ISystem
                 version.timeScale = 0.0f;
                 version.entity = result.version;
 
-                versions[entity] = version;
+                versions[localPlayer] = version;
                 
-                this.skills.SetBufferEnabled(entity, true);
+                this.skills.SetBufferEnabled(localPlayer, true);
                 
                 break;
             }
@@ -289,7 +293,7 @@ public partial struct LevelPickableSystem : ISystem
                 .WithNone<Pickable>()
                 .Build(ref state);
         
-        //state.RequireForUpdate<LevelSkillDefinitionData>();
+        state.RequireForUpdate<ThirdPersonPlayer>();
 
         __results = new NativeQueue<Result>(Allocator.Persistent);
     }
@@ -333,7 +337,7 @@ public partial struct LevelPickableSystem : ISystem
         
         Select select;
         select.time = time;
-        select.entity = SystemAPI.TryGetSingletonEntity<LevelSkillDefinitionData>(out Entity entity) ? entity : Entity.Null;
+        select.localPlayer = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
         select.definitions = __definitions;
         select.skillActiveIndices = __skillActiveIndices;
         select.skillGroups = __skillGroups;
