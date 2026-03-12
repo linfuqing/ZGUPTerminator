@@ -27,9 +27,6 @@ public partial struct LevelPlayerSystem : ISystem
         public ComponentLookup<LevelSkillNameDefinitionData> levelSkillNameDefinitions;
 
         [NativeDisableParallelForRestriction] 
-        public ComponentLookup<RemotePlayer> remotePlayers;
-
-        [NativeDisableParallelForRestriction] 
         public ComponentLookup<Instance> instances;
 
         [NativeDisableParallelForRestriction]
@@ -47,6 +44,9 @@ public partial struct LevelPlayerSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTargetData> effectTargetDatas;
 
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<EffectTargetRemote> effectTargetRemotes;
+        
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTarget> effectTargets;
 
@@ -78,10 +78,10 @@ public partial struct LevelPlayerSystem : ISystem
                 Entity remotePlayerEntity = remotePlayerEntities[index];
                 __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayerEntity);
 
-                RemotePlayer remotePlayer;
-                remotePlayer.id = LevelPlayerShared<RemotePlayer>.id;
+                EffectTargetRemote effectTargetRemote;
+                effectTargetRemote.id = LevelPlayerShared<RemotePlayer>.id;
 
-                remotePlayers[remotePlayerEntity] = remotePlayer;
+                effectTargetRemotes[remotePlayerEntity] = effectTargetRemote;
             }
         }
 
@@ -266,8 +266,6 @@ public partial struct LevelPlayerSystem : ISystem
     
     private ComponentLookup<LevelSkillNameDefinitionData> __levelSkillNameDefinitions;
 
-    private ComponentLookup<RemotePlayer> __remotePlayers;
-
     private ComponentLookup<Instance> __instances;
 
     private BufferLookup<LevelSkillGroup> __levelSkillGroups;
@@ -280,11 +278,11 @@ public partial struct LevelPlayerSystem : ISystem
 
     private ComponentLookup<EffectTargetData> __effectTargetDatas;
 
+    private ComponentLookup<EffectTargetRemote> __effectTargetRemotes;
+
     private ComponentLookup<EffectTarget> __effectTargets;
 
     private ComponentLookup<EffectTargetDamageScale> __effectTargetDamageScales;
-
-    //private ComponentLookup<EffectDamage> __effectDamages;
 
     private ComponentLookup<EffectRage> __effectRages;
 
@@ -296,13 +294,13 @@ public partial struct LevelPlayerSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         __levelSkillNameDefinitions = state.GetComponentLookup<LevelSkillNameDefinitionData>(true);
-        __remotePlayers =  state.GetComponentLookup<RemotePlayer>();
         __instances = state.GetComponentLookup<Instance>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
         __levelSkillOpcodes = state.GetBufferLookup<LevelSkillOpcode>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
         __effectTargetDatas = state.GetComponentLookup<EffectTargetData>();
+        __effectTargetRemotes =  state.GetComponentLookup<EffectTargetRemote>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         //__effectDamages = state.GetComponentLookup<EffectDamage>();
@@ -344,12 +342,22 @@ public partial struct LevelPlayerSystem : ISystem
                 for (int i = 0; i < count; ++i)
                     remotePlayers[i] = entityManager.Instantiate(prefabLoadResults[i].PrefabRoot);
 
-                entityManager.AddComponent<RemotePlayer>(remotePlayers);
+                entityManager.AddComponent(remotePlayers, 
+                    new ComponentTypeSet(
+                        ComponentType.ReadWrite<RemotePlayer>(), 
+                        ComponentType.ReadWrite<EffectTargetRemote>(), 
+                        ComponentType.ReadWrite<EffectTargetDamageRemote>(), 
+                        ComponentType.ReadWrite<EffectTargetHPRemote>()));
                 
                 if(LevelPlayerShared<RemotePlayer>.property.skillOpcodes.Length > 0)
                     entityManager.AddComponent<LevelSkillOpcode>(remotePlayers);
             }
 
+            entityManager.AddComponent(localPlayers,
+                new ComponentTypeSet(
+                    ComponentType.ReadWrite<EffectTargetDamageRemote>(),
+                    ComponentType.ReadWrite<EffectTargetHPRemote>()));
+            
             if(LevelPlayerShared<LocalPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(localPlayers);
 
@@ -357,13 +365,13 @@ public partial struct LevelPlayerSystem : ISystem
         }
         
         __levelSkillNameDefinitions.Update(ref state);
-        __remotePlayers.Update(ref state);
         __instances.Update(ref state);
         __levelSkillGroups.Update(ref state);
         __levelSkillOpcodes.Update(ref state);
         __skillActiveIndices.Update(ref state);
         __messageParameters.Update(ref state);
         __effectTargetDatas.Update(ref state);
+        __effectTargetRemotes.Update(ref state);
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
         __effectRages.Update(ref state);
@@ -374,13 +382,13 @@ public partial struct LevelPlayerSystem : ISystem
         apply.localPlayerEntities = localPlayers;
         apply.remotePlayerEntities = remotePlayers;
         apply.levelSkillNameDefinitions = __levelSkillNameDefinitions;
-        apply.remotePlayers = __remotePlayers;
         apply.instances = __instances;
         apply.levelSkillOpcodes = __levelSkillOpcodes;
         apply.levelSkillGroups = __levelSkillGroups;
         apply.skillActiveIndices = __skillActiveIndices;
         apply.messageParameters = __messageParameters;
         apply.effectTargetDatas = __effectTargetDatas;
+        apply.effectTargetRemotes = __effectTargetRemotes;
         apply.effectTargets = __effectTargets;
         apply.effectTargetDamageScales = __effectTargetDamageScales;
         //apply.effectDamages = __effectDamages;

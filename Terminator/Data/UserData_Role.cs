@@ -43,6 +43,11 @@ public struct UserPropertyData
 
     public Skill[] skills;
     public Attribute[] attributes;
+    
+    public static float Mul(float x, float y)
+    {
+        return (1.0f + x) * y - 1.0f;
+    }
 }
 
 public struct UserRole

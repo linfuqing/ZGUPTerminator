@@ -444,7 +444,7 @@ public partial class UserDataMain
                             attribute.value += propertyAttribute.value;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            attribute.value = (1.0f + attribute.value) * propertyAttribute.value - 1.0f;
+                            attribute.value = UserPropertyData.Mul(attribute.value, propertyAttribute.value);
                             break;
                     }
 
@@ -542,7 +542,7 @@ public partial class UserDataMain
                             skill.damage += propertySkill.damage;
                             break;
                         case UserPropertyData.Opcode.Mul:
-                            skill.damage = (1.0f + skill.damage) * propertySkill.damage - 1.0f;
+                            skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
                             break;
                     }
 
@@ -718,8 +718,80 @@ public partial class UserDataMain
                 attribute.value += accessory.attributeValue;
             }
 
+            if (accessoryInfo.stage > 0)
+            {
+                indices = __GetAccessoryStageIndices(accessoryInfo.index);
+
+                property = _accessoryStages[indices[accessoryInfo.stage - 1]].property;
+            }
+            else
+                property = accessory.property;
+            
+            if (property.attributes != null && property.attributes.Length > 0)
+            {
+                foreach (var propertyAttribute in property.attributes)
+                {
+                    switch (propertyAttribute.opcode)
+                    {
+                        case UserPropertyData.Opcode.Mul:
+                            if (propertyAttribute.type == attribute.type)
+                            {
+                                attribute.value = UserPropertyData.Mul(attribute.value, propertyAttribute.value);
+                                
+                                continue;
+                            }
+                            break;
+                    }
+                    
+                    if (attributeResults == null)
+                        attributeResults = new List<UserPropertyData.Attribute>();
+
+                    attributeResults.Add(propertyAttribute);
+                }
+            }
+
             attributes[j] = attribute;
 
+            if (property.skills != null && property.skills.Length > 0)
+            {
+                foreach (var propertySkill in property.skills)
+                {
+                    switch (propertySkill.opcode)
+                    {
+                        case UserPropertyData.Opcode.Mul:
+                            switch (propertySkill.type)
+                            {
+                                case UserSkillType.Individual:
+                                    if (propertySkill.name == accessory.skillName)
+                                    {
+                                        skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
+                                        
+                                        continue;
+                                    }
+                                    
+                                    break;
+                                case UserSkillType.Group:
+                                    if (propertySkill.name == accessory.skillName || 
+                                        propertySkill.name == __GetSkillGroupName(accessory.skillName))
+                                    {
+                                        skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
+                                        
+                                        continue;
+                                    }
+                                    
+                                    break;
+                            }
+                                
+                            break;
+                    }
+                    
+                    if (skillResults == null)
+                        skillResults = new List<UserPropertyData.Skill>();
+
+                    skillResults.Add(propertySkill);
+                }
+            }
+            
             if (!string.IsNullOrEmpty(accessory.skillName))
             {
                 skill.name = accessory.skillName;
@@ -735,31 +807,6 @@ public partial class UserDataMain
                 
                     //++numSkills;
                 }
-            }
-            
-            if (accessoryInfo.stage > 0)
-            {
-                indices = __GetAccessoryStageIndices(accessoryInfo.index);
-
-                property = _accessoryStages[indices[accessoryInfo.stage - 1]].property;
-            }
-            else
-                property = accessory.property;
-            
-            if (property.attributes != null && property.attributes.Length > 0)
-            {
-                if (attributeResults == null)
-                    attributeResults = new List<UserPropertyData.Attribute>();
-
-                attributeResults.AddRange(property.attributes);
-            }
-
-            if (property.skills != null && property.skills.Length > 0)
-            {
-                if (skillResults == null)
-                    skillResults = new List<UserPropertyData.Skill>();
-
-                skillResults.AddRange(property.skills);
             }
         }
         
@@ -1390,14 +1437,6 @@ public partial class UserDataMain
                             skill.damage = accessory.skillDamage;
                         }
 
-                        attributes[j] = attribute;
-                        skills.Add(skill);
-
-                        skill.type = UserSkillType.Group;
-                        skill.name = __GetSkillGroupName(cacheSkill);
-                        if (!string.IsNullOrEmpty(skill.name))
-                            skills.Add(skill);
-
                         indices = __GetAccessoryStageIndices(skillInfo.index);
                         int numIndices = indices.Count;
                         string userAccessoryIDs;
@@ -1415,19 +1454,75 @@ public partial class UserDataMain
                         property = j > 0 ? _accessoryStages[indices[j - 1]].property : accessory.property;
                         if (property.attributes != null && property.attributes.Length > 0)
                         {
-                            if (attributeResults == null)
-                                attributeResults = new List<UserPropertyData.Attribute>();
+                            foreach (var propertyAttribute in property.attributes)
+                            {
+                                switch (propertyAttribute.opcode)
+                                {
+                                    case UserPropertyData.Opcode.Mul:
+                                        if (propertyAttribute.type == attribute.type)
+                                        {
+                                            attribute.value = UserPropertyData.Mul(attribute.value, propertyAttribute.value);
+                            
+                                            continue;
+                                        }
+                                        break;
+                                }
+                
+                                if (attributeResults == null)
+                                    attributeResults = new List<UserPropertyData.Attribute>();
 
-                            attributeResults.AddRange(property.attributes);
+                                attributeResults.Add(propertyAttribute);
+                            }
                         }
 
+                        attributes[j] = attribute;
+                        
                         if (property.skills != null && property.skills.Length > 0)
                         {
-                            if (skillResults == null)
-                                skillResults = new List<UserPropertyData.Skill>();
+                            foreach (var propertySkill in property.skills)
+                            {
+                                switch (propertySkill.opcode)
+                                {
+                                    case UserPropertyData.Opcode.Mul:
+                                        switch (propertySkill.type)
+                                        {
+                                            case UserSkillType.Individual:
+                                                if (propertySkill.name == accessory.skillName)
+                                                {
+                                                    skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
+                                        
+                                                    continue;
+                                                }
+                                    
+                                                break;
+                                            case UserSkillType.Group:
+                                                if (propertySkill.name == accessory.skillName || 
+                                                    propertySkill.name == __GetSkillGroupName(accessory.skillName))
+                                                {
+                                                    skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
+                                        
+                                                    continue;
+                                                }
+                                    
+                                                break;
+                                        }
+                                
+                                        break;
+                                }
+                    
+                                if (skillResults == null)
+                                    skillResults = new List<UserPropertyData.Skill>();
 
-                            skillResults.AddRange(property.skills);
+                                skillResults.Add(propertySkill);
+                            }
                         }
+
+                        skills.Add(skill);
+
+                        skill.type = UserSkillType.Group;
+                        skill.name = __GetSkillGroupName(cacheSkill);
+                        if (!string.IsNullOrEmpty(skill.name))
+                            skills.Add(skill);
 
                         break;
                 }

@@ -277,6 +277,8 @@ public struct EffectTargetHP : IComponentData, IEnableableComponent
     public int value;
     public int shield;
     public int messageLayerMask;
+
+    public bool isEmpty => value == 0 && shield == 0;
     
     public void Add(int value, int shield, int messageLayerMask)
     {
@@ -308,6 +310,8 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
     public int layerMask;
     public int messageLayerMask;
     
+    public bool isEmpty => value == 0 && valueImmunized == 0;
+
     public int Add(int value, int valueImmunized, int layerMask, int messageLayerMask)
     {
         int result = Interlocked.Add(ref this.value, value);
@@ -358,6 +362,51 @@ public struct EffectTargetDamage : IComponentData, IEnableableComponent
 public struct EffectTargetDamageScale : IComponentData
 {
     public float value;
+}
+
+public struct EffectTargetHPRemote : IComponentData
+{
+    public EffectTargetHP value;
+
+    public EffectTargetHPRemote(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
+    {
+        value.value = reader.ReadPackedInt(streamCompressionModel);
+        value.shield = reader.ReadPackedInt(streamCompressionModel);
+        value.messageLayerMask = reader.ReadPackedInt(streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedInt(value.value,  streamCompressionModel);
+        writer.WritePackedInt(value.shield, streamCompressionModel);
+        writer.WritePackedInt(value.messageLayerMask, streamCompressionModel);
+    }
+}
+
+public struct EffectTargetDamageRemote : IComponentData
+{
+    public EffectTargetDamage value;
+    
+    public EffectTargetDamageRemote(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
+    {
+        value.value = reader.ReadPackedInt(streamCompressionModel);
+        value.valueImmunized = reader.ReadPackedInt(streamCompressionModel);
+        value.layerMask = reader.ReadPackedInt(streamCompressionModel);
+        value.messageLayerMask = reader.ReadPackedInt(streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedInt(value.value,  streamCompressionModel);
+        writer.WritePackedInt(value.valueImmunized, streamCompressionModel);
+        writer.WritePackedInt(value.layerMask, streamCompressionModel);
+        writer.WritePackedInt(value.messageLayerMask, streamCompressionModel);
+    }
+}
+
+public struct EffectTargetRemote : IComponentData
+{
+    public uint id;
 }
 
 public struct EffectTargetLevel : IComponentData

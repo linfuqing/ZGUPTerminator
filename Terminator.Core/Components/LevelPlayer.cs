@@ -24,8 +24,6 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
         set => StatusValue.Data = value;
     }
-
-    public uint id;
 }
 
 public struct LocalPlayer : IComponentData, ILevelPlayer
