@@ -4,11 +4,33 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using ZG;
 
 public struct RemotePosition : IBufferElementData
 {
-    public uint id;
+    public enum Type
+    {
+        Normal, 
+        Key, 
+    }
+
+    public Type type;
+    public float2 value;
+
+    public RemotePosition(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
+    {
+        type = (Type)reader.ReadPackedInt(streamCompressionModel);
+        value.x = reader.ReadPackedFloat(streamCompressionModel);
+        value.y = reader.ReadPackedFloat(streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedInt((int)type, streamCompressionModel);
+        writer.WritePackedFloat(value.x, streamCompressionModel);
+        writer.WritePackedFloat(value.y, streamCompressionModel);
+    }
 }
 
 public struct ClientMessages : IComponentData
@@ -41,6 +63,11 @@ public struct ClientMessages : IComponentData
     }
 
     private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message> __values;
+
+    public static void WriteHeader(ref DataStreamWriter writer, MessageType messageType)
+    {
+        writer.WriteReplyHeader((int)messageType, NetworkRelayType.Channel);
+    }
 
     public ClientMessages(in AllocatorManager.AllocatorHandle allocator)
     {

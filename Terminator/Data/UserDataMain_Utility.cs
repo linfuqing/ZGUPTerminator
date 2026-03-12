@@ -766,21 +766,22 @@ public partial class UserDataMain
                                     {
                                         if(string.IsNullOrEmpty(propertySkill.name))
                                         {
-                                            UserPropertyData.Skill skillResult;
-                                            int numSkillResults = skillResults.Count;
-                                            for(int k = 0; k < numSkillResults; ++k)
+                                            IUserData.Skill temp;
+                                            int numSkills = skills.Count;
+                                            for(int k = 0; k < numSkills; ++k)
                                             {
-                                                skillResult = skillResults[k];
-                                                if(UserSkillType.Individual != skillResult.type)
+                                                temp = skills[k];
+                                                if(temp.type != UserSkillType.Individual || 
+                                                   Array.IndexOf(role.skillNames, temp.name) == -1)
                                                     continue;
                                                 
-                                                if(Array.IndexOf(role.skillNames, skillResult.name) == -1)
-                                                    continue;
-                                                
-                                                skillResult.damage = UserPropertyData.Mul(skillResult.damage, propertySkill.damage);
-                                                skillResults[k] = skillResult;
+                                                temp.damage = UserPropertyData.Mul(temp.damage, propertySkill.damage);
+                                                skills[k] = temp;
                                             }
                                         }
+                                        else
+                                            skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
+
                                         continue;
                                     }
                                     
@@ -791,19 +792,17 @@ public partial class UserDataMain
                                     {
                                         if (string.IsNullOrEmpty(propertySkill.name))
                                         {
-                                            UserPropertyData.Skill skillResult;
-                                            int numSkillResults = skillResults.Count;
-                                            for(int k = 0; k < numSkillResults; ++k)
+                                            IUserData.Skill temp;
+                                            int numSkills = skills.Count;
+                                            for(int k = 0; k < numSkills; ++k)
                                             {
-                                                skillResult = skillResults[k];
-                                                if(UserSkillType.Group != skillResult.type)
+                                                temp = skills[k];
+                                                if(UserSkillType.Group != temp.type || 
+                                                   Array.IndexOf(role.skillNames, temp.name) == -1)
                                                     continue;
                                                 
-                                                if(Array.IndexOf(role.skillNames, skillResult.name) == -1)
-                                                    continue;
-                                                
-                                                skillResult.damage = UserPropertyData.Mul(skillResult.damage, propertySkill.damage);
-                                                skillResults[k] = skillResult;
+                                                temp.damage = UserPropertyData.Mul(temp.damage, propertySkill.damage);
+                                                skills[k] = temp;
                                             }
                                         }
                                         else
@@ -1524,23 +1523,24 @@ public partial class UserDataMain
                                                 {
                                                     if (string.IsNullOrEmpty(propertySkill.name))
                                                     {
-                                                        UserPropertyData.Skill skillResult;
-                                                        int numSkillResults = skillResults.Count;
-                                                        for (int k = 0; k < numSkillResults; ++k)
+                                                        IUserData.Skill temp;
+                                                        int numSkills = skills.Count;
+                                                        for (int k = 0; k < numSkills; ++k)
                                                         {
-                                                            skillResult = skillResults[k];
-                                                            if (UserSkillType.Individual != skillResult.type)
+                                                            temp = skills[k];
+                                                            if (temp.type != UserSkillType.Individual ||
+                                                                Array.IndexOf(roleSkillNames, temp.name) == -1)
                                                                 continue;
 
-                                                            if (Array.IndexOf(roleSkillNames, skillResult.name) == -1)
-                                                                continue;
-
-                                                            skillResult.damage =
-                                                                UserPropertyData.Mul(skillResult.damage,
-                                                                    propertySkill.damage);
-                                                            skillResults[k] = skillResult;
+                                                            temp.damage = UserPropertyData.Mul(temp.damage,
+                                                                propertySkill.damage);
+                                                            
+                                                            skills[k] = temp;
                                                         }
                                                     }
+                                                    else
+                                                        skill.damage = UserPropertyData.Mul(skill.damage,
+                                                            propertySkill.damage);
 
                                                     continue;
                                                 }
@@ -1553,21 +1553,18 @@ public partial class UserDataMain
                                                 {
                                                     if (string.IsNullOrEmpty(propertySkill.name))
                                                     {
-                                                        UserPropertyData.Skill skillResult;
-                                                        int numSkillResults = skillResults.Count;
-                                                        for (int k = 0; k < numSkillResults; ++k)
+                                                        IUserData.Skill temp;
+                                                        int numSkills = skills.Count;
+                                                        for (int k = 0; k < numSkills; ++k)
                                                         {
-                                                            skillResult = skillResults[k];
-                                                            if (UserSkillType.Group != skillResult.type)
+                                                            temp = skills[k];
+                                                            if (UserSkillType.Group != temp.type ||
+                                                                Array.IndexOf(roleSkillNames, temp.name) == -1)
                                                                 continue;
 
-                                                            if (Array.IndexOf(roleSkillNames, skillResult.name) == -1)
-                                                                continue;
-
-                                                            skillResult.damage =
-                                                                UserPropertyData.Mul(skillResult.damage,
-                                                                    propertySkill.damage);
-                                                            skillResults[k] = skillResult;
+                                                            temp.damage = UserPropertyData.Mul(temp.damage,
+                                                                propertySkill.damage);
+                                                            skills[k] = temp;
                                                         }
                                                     }
                                                     else
