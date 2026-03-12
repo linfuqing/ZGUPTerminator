@@ -796,8 +796,11 @@ public partial class UserDataMain
                                                     break;
                                             }
                                         }
+                                        
+                                        continue;
                                     }
-                                    else if (propertySkill.name == accessory.skillName)
+                                    
+                                    if (propertySkill.name == accessory.skillName)
                                     {
                                         skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
 
@@ -849,8 +852,11 @@ public partial class UserDataMain
                                                     break;
                                             }
                                         }
+                                        
+                                        continue;
                                     }
-                                    else if (propertySkill.name == __GetSkillGroupName(accessory.skillName))
+                                    
+                                    if (propertySkill.name == __GetSkillGroupName(accessory.skillName))
                                     {
                                         skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
                                         
@@ -1645,8 +1651,11 @@ public partial class UserDataMain
                                                                 break;
                                                         }
                                                     }
+                                                    
+                                                    continue;
                                                 }
-                                                else if (propertySkill.name == accessory.skillName)
+                                                
+                                                if (propertySkill.name == accessory.skillName)
                                                 {
                                                     skill.damage = UserPropertyData.Mul(skill.damage,
                                                         propertySkill.damage);
@@ -1704,8 +1713,11 @@ public partial class UserDataMain
                                                                 break;
                                                         }
                                                     }
+                                                    
+                                                    continue;
                                                 }
-                                                else if (propertySkill.name ==
+                                                
+                                                if (propertySkill.name ==
                                                          __GetSkillGroupName(accessory.skillName))
                                                 {
                                                     skill.damage = UserPropertyData.Mul(skill.damage,
