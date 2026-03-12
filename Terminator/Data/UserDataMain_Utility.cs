@@ -661,6 +661,7 @@ public partial class UserDataMain
             numAttributes = 0, 
             numAccessorySlots = _accessorySlots.Length;
         uint accessoryID;
+        float roleSkillDamage;
         AccessoryInfo accessoryInfo;
         UserAttributeData attribute;
         List<UserAttributeData> attributes = null;
@@ -709,11 +710,15 @@ public partial class UserDataMain
                 ref var accessoryLevel = ref _accessoryLevels[indices[level - 1]];
                 attribute.value += accessoryLevel.attributeValue;
 
-                skill.damage = accessoryLevel.skillDamage;
+                skill.damage  = accessoryLevel.skillDamage;
+                
+                roleSkillDamage = accessoryLevel.roleSkillGroupDamage;
             }
             else
             {
-                skill.damage = accessory.skillDamage;
+                roleSkillDamage = accessory.roleSkillGroupDamage;
+                
+                skill.damage  = accessory.skillDamage;
 
                 attribute.value += accessory.attributeValue;
             }
@@ -762,7 +767,37 @@ public partial class UserDataMain
                             switch (propertySkill.type)
                             {
                                 case UserSkillType.Individual:
-                                    if (propertySkill.name == accessory.skillName)
+                                    if (string.IsNullOrEmpty(propertySkill.name))
+                                    {
+                                        int numSkills = skills.Count;
+                                        string tempSkillGroupName;
+                                        IUserData.Skill tempSkill;
+                                        for(int k = 0; k < numSkills; ++k)
+                                        {
+                                            tempSkill = skills[k];
+                                            switch (tempSkill.type)
+                                            {
+                                                case UserSkillType.Individual:
+                                                    tempSkillGroupName = __GetSkillGroupName(tempSkill.name);
+                                                    foreach (var roleSkillName in role.skillNames)
+                                                    {
+                                                        if (roleSkillName == tempSkill.name || 
+                                                            !string.IsNullOrEmpty(tempSkillGroupName) && 
+                                                            __GetSkillGroupName(roleSkillName) == tempSkillGroupName)
+                                                        {
+                                                            tempSkill.damage += UserPropertyData.Mul(roleSkillDamage, 
+                                                                propertySkill.damage) - roleSkillDamage;
+                                                            
+                                                            skills[k] = tempSkill;
+                                                            break;
+                                                        }
+                                                    }
+
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    else if (propertySkill.name == accessory.skillName)
                                     {
                                         skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
 
@@ -771,8 +806,51 @@ public partial class UserDataMain
                                     
                                     break;
                                 case UserSkillType.Group:
-                                    if (propertySkill.name == accessory.skillName || 
-                                       !string.IsNullOrEmpty(propertySkill.name)  && propertySkill.name == __GetSkillGroupName(accessory.skillName))
+                                    if (string.IsNullOrEmpty(propertySkill.name))
+                                    {
+                                        int numSkills = skills.Count;
+                                        string tempSkillGroupName;
+                                        IUserData.Skill tempSkill;
+                                        for(int k = 0; k < numSkills; ++k)
+                                        {
+                                            tempSkill = skills[k];
+                                            switch (tempSkill.type)
+                                            {
+                                                case UserSkillType.Individual:
+                                                    tempSkillGroupName = __GetSkillGroupName(tempSkill.name);
+                                                    foreach (var roleSkillName in role.skillNames)
+                                                    {
+                                                        if (roleSkillName == tempSkill.name || 
+                                                            !string.IsNullOrEmpty(tempSkillGroupName) && 
+                                                            __GetSkillGroupName(roleSkillName) == tempSkillGroupName)
+                                                        {
+                                                            tempSkill.damage += UserPropertyData.Mul(roleSkillDamage, 
+                                                                propertySkill.damage) - roleSkillDamage;
+                                                            
+                                                            skills[k] = tempSkill;
+                                                            break;
+                                                        }
+                                                    }
+
+                                                    break;
+                                                case UserSkillType.Group:
+                                                    foreach (var roleSkillName in role.skillNames)
+                                                    {
+                                                        if (__GetSkillGroupName(roleSkillName) ==
+                                                            tempSkill.name)
+                                                        {
+                                                            tempSkill.damage += UserPropertyData.Mul(roleSkillDamage, 
+                                                                propertySkill.damage) - roleSkillDamage;
+
+                                                            skills[k] = tempSkill;
+                                                            break;
+                                                        }
+                                                    }
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    else if (propertySkill.name == __GetSkillGroupName(accessory.skillName))
                                     {
                                         skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
                                         
@@ -792,8 +870,11 @@ public partial class UserDataMain
                 }
             }
 
-            if (string.IsNullOrEmpty(accessory.skillName))
-            {
+            if (!string.IsNullOrEmpty(accessory.skillName))
+                //装备技能名为空时候表示无技能，角色技能伤害用accessory.roleSkillDamage
+            /*{
+                skill.damage -= levelDamage;
+                
                 int numSkills = skills.Count;
                 string tempSkillGroupName;
                 IUserData.Skill tempSkill;
@@ -835,7 +916,7 @@ public partial class UserDataMain
                     }
                 }
             }
-            else
+            else*/
             {
                 skill.name = accessory.skillName;
                 skill.type = UserSkillType.Individual;
@@ -1464,6 +1545,7 @@ public partial class UserDataMain
                             attributes.Add(attribute);
                         }
 
+                        float roleSkillDamage;
                         if (level > 0)
                         {
                             indices = __GetAccessoryStyleLevelIndices(accessoryStyleIndex);
@@ -1472,12 +1554,16 @@ public partial class UserDataMain
                             attribute.value += accessoryLevel.attributeValue;
 
                             skill.damage = accessoryLevel.skillDamage;
+
+                            roleSkillDamage = accessoryLevel.roleSkillGroupDamage;
                         }
                         else
                         {
-                            attribute.value += accessory.attributeValue;
+                            roleSkillDamage = accessory.roleSkillGroupDamage;
 
                             skill.damage = accessory.skillDamage;
+                            
+                            attribute.value += accessory.attributeValue;
                         }
 
                         indices = __GetAccessoryStageIndices(skillInfo.index);
@@ -1530,22 +1616,100 @@ public partial class UserDataMain
                                         switch (propertySkill.type)
                                         {
                                             case UserSkillType.Individual:
-                                                if (propertySkill.name == accessory.skillName)
+                                                if (string.IsNullOrEmpty(propertySkill.name))
+                                                {
+                                                    int numSkills = skills.Count;
+                                                    string tempSkillGroupName;
+                                                    IUserData.Skill tempSkill;
+                                                    for(int k = 0; k < numSkills; ++k)
+                                                    {
+                                                        tempSkill = skills[k];
+                                                        switch (tempSkill.type)
+                                                        {
+                                                            case UserSkillType.Individual:
+                                                                tempSkillGroupName = __GetSkillGroupName(tempSkill.name);
+                                                                foreach (var roleSkillName in roleSkillNames)
+                                                                {
+                                                                    if (roleSkillName == tempSkill.name || 
+                                                                        !string.IsNullOrEmpty(tempSkillGroupName) && 
+                                                                        __GetSkillGroupName(roleSkillName) == tempSkillGroupName)
+                                                                    {
+                                                                        tempSkill.damage += UserPropertyData.Mul(roleSkillDamage, 
+                                                                            propertySkill.damage) - roleSkillDamage;
+                                                                        
+                                                                        skills[k] = tempSkill;
+                                                                        break;
+                                                                    }
+                                                                }
+
+                                                                break;
+                                                        }
+                                                    }
+                                                }
+                                                else if (propertySkill.name == accessory.skillName)
                                                 {
                                                     skill.damage = UserPropertyData.Mul(skill.damage,
-                                                            propertySkill.damage);
+                                                        propertySkill.damage);
 
                                                     continue;
                                                 }
 
                                                 break;
                                             case UserSkillType.Group:
-                                                if (propertySkill.name == accessory.skillName ||
-                                                    !string.IsNullOrEmpty(propertySkill.name) && propertySkill.name ==
-                                                    __GetSkillGroupName(accessory.skillName))
+                                                if (string.IsNullOrEmpty(propertySkill.name))
+                                                {
+                                                    int numSkills = skills.Count;
+                                                    string tempSkillGroupName;
+                                                    IUserData.Skill tempSkill;
+                                                    for (int k = 0; k < numSkills; ++k)
+                                                    {
+                                                        tempSkill = skills[k];
+                                                        switch (tempSkill.type)
+                                                        {
+                                                            case UserSkillType.Individual:
+                                                                tempSkillGroupName =
+                                                                    __GetSkillGroupName(tempSkill.name);
+                                                                foreach (var roleSkillName in roleSkillNames)
+                                                                {
+                                                                    if (roleSkillName == tempSkill.name ||
+                                                                        !string.IsNullOrEmpty(tempSkillGroupName) &&
+                                                                        __GetSkillGroupName(roleSkillName) ==
+                                                                        tempSkillGroupName)
+                                                                    {
+                                                                        tempSkill.damage += UserPropertyData.Mul(
+                                                                            roleSkillDamage,
+                                                                            propertySkill.damage) - roleSkillDamage;
+
+                                                                        skills[k] = tempSkill;
+                                                                        break;
+                                                                    }
+                                                                }
+
+                                                                break;
+                                                            case UserSkillType.Group:
+                                                                foreach (var roleSkillName in roleSkillNames)
+                                                                {
+                                                                    if (__GetSkillGroupName(roleSkillName) ==
+                                                                        tempSkill.name)
+                                                                    {
+                                                                        tempSkill.damage += UserPropertyData.Mul(
+                                                                            roleSkillDamage,
+                                                                            propertySkill.damage) - roleSkillDamage;
+
+                                                                        skills[k] = tempSkill;
+                                                                        break;
+                                                                    }
+                                                                }
+
+                                                                break;
+                                                        }
+                                                    }
+                                                }
+                                                else if (propertySkill.name ==
+                                                         __GetSkillGroupName(accessory.skillName))
                                                 {
                                                     skill.damage = UserPropertyData.Mul(skill.damage,
-                                                            propertySkill.damage);
+                                                        propertySkill.damage);
 
                                                     continue;
                                                 }
@@ -1564,8 +1728,10 @@ public partial class UserDataMain
                         }
 
                         
-                        if (string.IsNullOrEmpty(accessory.skillName))
-                        {
+                        if (!string.IsNullOrEmpty(accessory.skillName))
+                        /*{
+                            skill.damage -= levelDamage;
+
                             int numSkills = skills.Count;
                             string tempSkillGroupName;
                             IUserData.Skill tempSkill;
@@ -1607,7 +1773,7 @@ public partial class UserDataMain
                                 }
                             }
                         }
-                        else
+                        else*/
                         {
                             skills.Add(skill);
 
