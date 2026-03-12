@@ -65,26 +65,28 @@ public partial class LevelSystemManaged
             
             Entity entity = entityArray[index];
             var bulletStates = this.bulletStates[index];
-            bulletStates.Clear();
+            //bulletStates.Clear();
             
             var activeIndices = this.activeIndices[index];
 
-            foreach (var activeIndex in activeIndices)
-                skillIndices.Add(entity, activeIndex.value);
+            /*foreach (var activeIndex in activeIndices)
+                skillIndices.Add(entity, activeIndex.value);*/
             
             ref var definition = ref this.definition.Value;
 
+            LevelSkill skill;
             NetworkClient.MessageElement element;
             DataStreamReader reader;
             StreamCompressionModel streamCompressionModel = StreamCompressionModel.Default;
             do
             {
-                /*if (skill.activeIndex != -1)
-                    skillIndices.Add(entity, activeIndices[skill.activeIndex].value);*/
-
                 element = new NetworkClient.MessageElement(enumerator.Current, client);
                 reader = element.reader;
-                new LevelSkill(ref reader, streamCompressionModel).Apply(ref activeIndices, ref bulletStates, ref definition);
+                skill = new LevelSkill(ref reader, streamCompressionModel);
+                if (skill.activeIndex != -1)
+                    skillIndices.Add(entity, activeIndices[skill.activeIndex].value);
+
+                skill.Apply(ref activeIndices, ref bulletStates, ref definition);
             } while (enumerator.MoveNext());
         }
     }

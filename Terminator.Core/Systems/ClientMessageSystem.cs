@@ -6,6 +6,11 @@ using Unity.Entities;
 using Unity.Jobs;
 using ZG;
 
+public struct RemotePosition : IBufferElementData
+{
+    public uint id;
+}
+
 public struct ClientMessages : IComponentData
 {
     public enum MessageType
@@ -115,6 +120,7 @@ public partial struct ClientMessageSystem : ISystem
         [ReadOnly] 
         public ClientMessages messages;
         
+        [ReadOnly] 
         public NativeArray<EffectTargetRemote> effectTargets;
 
         public NativeArray<EffectTargetDamageRemote> effectTargetDamages;
@@ -179,6 +185,7 @@ public partial struct ClientMessageSystem : ISystem
         [ReadOnly] 
         public ClientMessages messages;
         
+        [ReadOnly] 
         public ComponentTypeHandle<EffectTargetRemote> effectTargetType;
 
         public ComponentTypeHandle<EffectTargetDamageRemote> effectTargetDamageType;
@@ -198,6 +205,41 @@ public partial struct ClientMessageSystem : ISystem
             while (iterator.NextEntityIndex(out int i))
                 readEffectTargets.Execute(i);
         }
+    }
+
+    private struct ReadPlayers
+    {
+        [ReadOnly]
+        public NetworkClient.Messages client;
+        
+        [ReadOnly] 
+        public ClientMessages messages;
+
+        [ReadOnly] 
+        public NativeArray<EffectTargetRemote> effectTargets;
+
+        public NativeArray<RemotePlayer> remotePlayers;
+
+        public NativeArray<ThirdPersonPlayerInputs> thirdPersonPlayerInputs;
+
+        public void Execute(int index)
+        {
+            DataStreamReader reader;
+            foreach (var message in messages.GetValues(ClientMessages.MessageType.Move, effectTargets[index].id))
+            {
+                reader = new NetworkClient.MessageElement(message, client).reader;
+                
+                
+            }
+        }
+    }
+
+    private struct SubmitPlayer
+    {
+        [ReadOnly]
+        public NativeArray<LocalPlayer> localPlayers;
+        
+        public NativeArray<EffectTargetDamageRemote> damageTargets;
     }
 
     [BurstCompile]

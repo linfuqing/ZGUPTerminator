@@ -764,17 +764,50 @@ public partial class UserDataMain
                                 case UserSkillType.Individual:
                                     if (propertySkill.name == accessory.skillName)
                                     {
-                                        skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
-                                        
+                                        if(string.IsNullOrEmpty(propertySkill.name))
+                                        {
+                                            UserPropertyData.Skill skillResult;
+                                            int numSkillResults = skillResults.Count;
+                                            for(int k = 0; k < numSkillResults; ++k)
+                                            {
+                                                skillResult = skillResults[k];
+                                                if(UserSkillType.Individual != skillResult.type)
+                                                    continue;
+                                                
+                                                if(Array.IndexOf(role.skillNames, skillResult.name) == -1)
+                                                    continue;
+                                                
+                                                skillResult.damage = UserPropertyData.Mul(skillResult.damage, propertySkill.damage);
+                                                skillResults[k] = skillResult;
+                                            }
+                                        }
                                         continue;
                                     }
                                     
                                     break;
                                 case UserSkillType.Group:
                                     if (propertySkill.name == accessory.skillName || 
-                                        propertySkill.name == __GetSkillGroupName(accessory.skillName))
+                                       !string.IsNullOrEmpty(propertySkill.name)  && propertySkill.name == __GetSkillGroupName(accessory.skillName))
                                     {
-                                        skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
+                                        if (string.IsNullOrEmpty(propertySkill.name))
+                                        {
+                                            UserPropertyData.Skill skillResult;
+                                            int numSkillResults = skillResults.Count;
+                                            for(int k = 0; k < numSkillResults; ++k)
+                                            {
+                                                skillResult = skillResults[k];
+                                                if(UserSkillType.Group != skillResult.type)
+                                                    continue;
+                                                
+                                                if(Array.IndexOf(role.skillNames, skillResult.name) == -1)
+                                                    continue;
+                                                
+                                                skillResult.damage = UserPropertyData.Mul(skillResult.damage, propertySkill.damage);
+                                                skillResults[k] = skillResult;
+                                            }
+                                        }
+                                        else
+                                            skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
                                         
                                         continue;
                                     }
@@ -791,7 +824,7 @@ public partial class UserDataMain
                     skillResults.Add(propertySkill);
                 }
             }
-            
+
             if (!string.IsNullOrEmpty(accessory.skillName))
             {
                 skill.name = accessory.skillName;
@@ -1489,24 +1522,64 @@ public partial class UserDataMain
                                             case UserSkillType.Individual:
                                                 if (propertySkill.name == accessory.skillName)
                                                 {
-                                                    skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
-                                        
+                                                    if (string.IsNullOrEmpty(propertySkill.name))
+                                                    {
+                                                        UserPropertyData.Skill skillResult;
+                                                        int numSkillResults = skillResults.Count;
+                                                        for (int k = 0; k < numSkillResults; ++k)
+                                                        {
+                                                            skillResult = skillResults[k];
+                                                            if (UserSkillType.Individual != skillResult.type)
+                                                                continue;
+
+                                                            if (Array.IndexOf(roleSkillNames, skillResult.name) == -1)
+                                                                continue;
+
+                                                            skillResult.damage =
+                                                                UserPropertyData.Mul(skillResult.damage,
+                                                                    propertySkill.damage);
+                                                            skillResults[k] = skillResult;
+                                                        }
+                                                    }
+
                                                     continue;
                                                 }
-                                    
+
                                                 break;
                                             case UserSkillType.Group:
-                                                if (propertySkill.name == accessory.skillName || 
-                                                    propertySkill.name == __GetSkillGroupName(accessory.skillName))
+                                                if (propertySkill.name == accessory.skillName ||
+                                                    !string.IsNullOrEmpty(propertySkill.name) && propertySkill.name ==
+                                                    __GetSkillGroupName(accessory.skillName))
                                                 {
-                                                    skill.damage = UserPropertyData.Mul(skill.damage, propertySkill.damage);
-                                        
+                                                    if (string.IsNullOrEmpty(propertySkill.name))
+                                                    {
+                                                        UserPropertyData.Skill skillResult;
+                                                        int numSkillResults = skillResults.Count;
+                                                        for (int k = 0; k < numSkillResults; ++k)
+                                                        {
+                                                            skillResult = skillResults[k];
+                                                            if (UserSkillType.Group != skillResult.type)
+                                                                continue;
+
+                                                            if (Array.IndexOf(roleSkillNames, skillResult.name) == -1)
+                                                                continue;
+
+                                                            skillResult.damage =
+                                                                UserPropertyData.Mul(skillResult.damage,
+                                                                    propertySkill.damage);
+                                                            skillResults[k] = skillResult;
+                                                        }
+                                                    }
+                                                    else
+                                                        skill.damage = UserPropertyData.Mul(skill.damage,
+                                                            propertySkill.damage);
+
                                                     continue;
                                                 }
-                                    
+
                                                 break;
                                         }
-                                
+
                                         break;
                                 }
                     

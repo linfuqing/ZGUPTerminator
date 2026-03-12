@@ -531,16 +531,16 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         bulletStates.Clear();
         
         int numSelectedIndices = selectedIndices.Length;
-        foreach (var activeIndex in activeIndices)
-            originSkillIndices.Add(activeIndex.value);
+        /*foreach (var activeIndex in activeIndices)
+            originSkillIndices.Add(activeIndex.value);*/
         
         LevelSkill instance;
         for(int i = 0; i < numSelectedIndices; ++i)
         {
             instance = instances[selectedIndices[i]];
             
-            /*if (instance.activeIndex != -1)
-                originSkillIndices.Add(activeIndices[instance.activeIndex].value);*/
+            if (instance.activeIndex != -1)
+                originSkillIndices.Add(activeIndices[instance.activeIndex].value);
 
             instance.Apply(ref activeIndices, ref bulletStates, ref skillDefinition);
         }

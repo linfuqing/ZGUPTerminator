@@ -6,12 +6,12 @@ using Unity.Mathematics;
 using Unity.Profiling;
 using ZG;
 
-public enum LevelBulletStatus
+/* enum LevelBulletStatus
 {
     Normal,
     DestroyLocalPlayer, 
     DestroyAll
-}
+}*/
 
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial class LevelSystemManaged : SystemBase
@@ -168,7 +168,7 @@ public partial class LevelSystemManaged : SystemBase
             return;
         }
 
-        bool isRecovery = manager.IsRecovery();
+        bool isRecovery = manager.IsRecovery(out bool isWaiting);
         Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 
             SystemAPI.GetComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity).ControlledCharacter : Entity.Null;
         if (manager.isRestart)
@@ -204,7 +204,7 @@ public partial class LevelSystemManaged : SystemBase
                     entityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
                 
                 __DestroyEntities();
-                //__DestroyBulletEntities();
+                __DestroyBulletEntities();
 
                 __statusStage = -1;
                 
@@ -245,9 +245,18 @@ public partial class LevelSystemManaged : SystemBase
                     SystemAPI.SetBufferEnabled<Message>(player, true);
                 }
             }
+            else if(isWaiting)
+                __DestroyBulletEntities(true);
         }
         
-        switch (manager.bulletStatus)
+        int version = SystemAPI.GetSingleton<LevelVersion>().value;
+        if (version != __version)
+        {
+            __version = version;
+            
+            __DestroyBulletEntitiesUnmanaged();
+        }
+        /*switch (manager.bulletStatus)
         {
             case LevelBulletStatus.DestroyLocalPlayer:
                 
@@ -264,7 +273,7 @@ public partial class LevelSystemManaged : SystemBase
                     __DestroyBulletEntitiesUnmanaged();
                 }
                 break;
-        }
+        }*/
         
         if (__statusStage != status.stage)
         {

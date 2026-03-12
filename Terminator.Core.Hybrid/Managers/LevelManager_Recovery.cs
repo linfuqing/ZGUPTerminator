@@ -34,11 +34,11 @@ public partial class LevelManager
         private set;
     }
     
-    public bool IsRecovery()
+    public bool IsRecovery(out bool isWaitingForUser)
     {
         if (isRestart)
         {
-            //isWaitingForUser = false;
+            isWaitingForUser = false;
             
             __recoveredStatus = RecoveryStatus.None;
 
@@ -46,13 +46,13 @@ public partial class LevelManager
         }
         else
         {
-            //isWaitingForUser = false;
+            isWaitingForUser = false;
             switch (__recoveredStatus)
             {
                 //case RecoveryStatus.WaitingForTime:
                 case RecoveryStatus.WaitingForUser:
-                    bulletStatus = LevelBulletStatus.DestroyAll;
-                    //isWaitingForUser = true;
+                    //bulletStatus = LevelBulletStatus.DestroyAll;
+                    isWaitingForUser = true;
                     break;
                 case RecoveryStatus.Recovering:
                     __recoveredStatus = RecoveryStatus.None;

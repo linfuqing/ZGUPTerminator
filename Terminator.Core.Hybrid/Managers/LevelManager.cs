@@ -110,8 +110,8 @@ public partial class LevelManager : MonoBehaviour
     
     private bool __isQuitting;
 
-    private LevelBulletStatus __bulletStatusThisFrame;
-    private int __bulletStatusFrameCount;
+    //private LevelBulletStatus __bulletStatusThisFrame;
+    //private int __bulletStatusFrameCount;
 
     private int __restartFrameCount;
     private int __submitCount;
@@ -188,14 +188,14 @@ public partial class LevelManager : MonoBehaviour
         set => __dataFlag = (ILevelData.Flag)value;
     }*/
 
-    public LevelBulletStatus bulletStatus
+    /*public LevelBulletStatus bulletStatus
     {
         get
         {
             if (isRestart)
                 return LevelBulletStatus.DestroyAll;
             
-            return Time.frameCount == __bulletStatusFrameCount ? LevelBulletStatus.Normal : __bulletStatusThisFrame;
+            return Time.frameCount == __bulletStatusFrameCount ? __bulletStatusThisFrame : LevelBulletStatus.Normal;
         }
         
         private set
@@ -204,7 +204,7 @@ public partial class LevelManager : MonoBehaviour
             
             __bulletStatusFrameCount = Time.frameCount;
         }
-    }
+    }*/
     
     public int rage
     {

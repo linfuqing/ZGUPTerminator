@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Mathematics;
 
 public interface ILevelPlayer
 {
