@@ -528,7 +528,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         ref SkillDefinition skillDefinition, 
         ref NativeList<int> originSkillIndices)
     {
-        bulletStates.Clear();
+        //bulletStates.Clear();
         
         int numSelectedIndices = selectedIndices.Length;
         /*foreach (var activeIndex in activeIndices)

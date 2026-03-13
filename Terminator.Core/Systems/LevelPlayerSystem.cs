@@ -41,12 +41,12 @@ public partial struct LevelPlayerSystem : ISystem
         [NativeDisableParallelForRestriction]
         public BufferLookup<MessageParameter> messageParameters;
 
+        [NativeDisableParallelForRestriction] 
+        public ComponentLookup<RemoteIdentity> remoteIdentities;
+
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTargetData> effectTargetDatas;
 
-        [NativeDisableParallelForRestriction] 
-        public ComponentLookup<EffectTargetRemote> effectTargetRemotes;
-        
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectTarget> effectTargets;
 
@@ -78,10 +78,10 @@ public partial struct LevelPlayerSystem : ISystem
                 Entity remotePlayerEntity = remotePlayerEntities[index];
                 __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayerEntity);
 
-                EffectTargetRemote effectTargetRemote;
-                effectTargetRemote.id = LevelPlayerShared<RemotePlayer>.id;
+                RemoteIdentity remoteIdentity;
+                remoteIdentity.id = LevelPlayerShared<RemotePlayer>.id;
 
-                effectTargetRemotes[remotePlayerEntity] = effectTargetRemote;
+                remoteIdentities[remotePlayerEntity] = remoteIdentity;
             }
         }
 
@@ -276,9 +276,9 @@ public partial struct LevelPlayerSystem : ISystem
 
     private BufferLookup<MessageParameter> __messageParameters;
 
-    private ComponentLookup<EffectTargetData> __effectTargetDatas;
+    private ComponentLookup<RemoteIdentity> __remoteIdentities;
 
-    private ComponentLookup<EffectTargetRemote> __effectTargetRemotes;
+    private ComponentLookup<EffectTargetData> __effectTargetDatas;
 
     private ComponentLookup<EffectTarget> __effectTargets;
 
@@ -299,8 +299,8 @@ public partial struct LevelPlayerSystem : ISystem
         __levelSkillOpcodes = state.GetBufferLookup<LevelSkillOpcode>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
+        __remoteIdentities =  state.GetComponentLookup<RemoteIdentity>();
         __effectTargetDatas = state.GetComponentLookup<EffectTargetData>();
-        __effectTargetRemotes =  state.GetComponentLookup<EffectTargetRemote>();
         __effectTargets = state.GetComponentLookup<EffectTarget>();
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         //__effectDamages = state.GetComponentLookup<EffectDamage>();
@@ -345,9 +345,10 @@ public partial struct LevelPlayerSystem : ISystem
                 entityManager.AddComponent(remotePlayers, 
                     new ComponentTypeSet(
                         ComponentType.ReadWrite<RemotePlayer>(), 
-                        ComponentType.ReadWrite<EffectTargetRemote>(), 
-                        ComponentType.ReadWrite<EffectTargetDamageRemote>(), 
-                        ComponentType.ReadWrite<EffectTargetHPRemote>()));
+                        ComponentType.ReadWrite<RemoteIdentity>(), 
+                        ComponentType.ReadWrite<RemotePosition>(), 
+                        ComponentType.ReadWrite<RemoteEffectTargetDamage>(), 
+                        ComponentType.ReadWrite<RemoteEffectTargetHP>()));
                 
                 if(LevelPlayerShared<RemotePlayer>.property.skillOpcodes.Length > 0)
                     entityManager.AddComponent<LevelSkillOpcode>(remotePlayers);
@@ -355,8 +356,9 @@ public partial struct LevelPlayerSystem : ISystem
 
             entityManager.AddComponent(localPlayers,
                 new ComponentTypeSet(
-                    ComponentType.ReadWrite<EffectTargetDamageRemote>(),
-                    ComponentType.ReadWrite<EffectTargetHPRemote>()));
+                    ComponentType.ReadWrite<RemotePosition>(), 
+                    ComponentType.ReadWrite<RemoteEffectTargetDamage>(),
+                    ComponentType.ReadWrite<RemoteEffectTargetHP>()));
             
             if(LevelPlayerShared<LocalPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(localPlayers);
@@ -370,8 +372,8 @@ public partial struct LevelPlayerSystem : ISystem
         __levelSkillOpcodes.Update(ref state);
         __skillActiveIndices.Update(ref state);
         __messageParameters.Update(ref state);
+        __remoteIdentities.Update(ref state);
         __effectTargetDatas.Update(ref state);
-        __effectTargetRemotes.Update(ref state);
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
         __effectRages.Update(ref state);
@@ -387,8 +389,8 @@ public partial struct LevelPlayerSystem : ISystem
         apply.levelSkillGroups = __levelSkillGroups;
         apply.skillActiveIndices = __skillActiveIndices;
         apply.messageParameters = __messageParameters;
+        apply.remoteIdentities = __remoteIdentities;
         apply.effectTargetDatas = __effectTargetDatas;
-        apply.effectTargetRemotes = __effectTargetRemotes;
         apply.effectTargets = __effectTargets;
         apply.effectTargetDamageScales = __effectTargetDamageScales;
         //apply.effectDamages = __effectDamages;

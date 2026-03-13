@@ -29,6 +29,8 @@ public partial struct LevelSystem : ISystem
 
         public RefRW<LevelVersion> version;
 
+        public DynamicBuffer<RemotePosition> remotePositions;
+
         public Random random;
         
         public LevelSpawners.ReadOnly spawners;
@@ -323,7 +325,19 @@ public partial struct LevelSystem : ISystem
                 this.spawnerLayerMaskAndTagsInclude.ValueRW = spawnerLayerMaskAndTagsInclude;
                 this.spawnerLayerMaskAndTagsExclude.ValueRW = spawnerLayerMaskAndTagsExclude;
 
-                playerTransform.ValueRW.Position = playerPosition;
+                if (!playerTransform.ValueRW.Position.Equals(playerPosition))
+                {
+                    playerTransform.ValueRW.Position = playerPosition;
+
+                    if (remotePositions.IsCreated)
+                    {
+                        RemotePosition remotePosition;
+                        remotePosition.type = RemotePosition.Type.Wrap;
+                        remotePosition.value = math.float2(playerPosition.x, playerPosition.z);
+
+                        remotePositions.Add(remotePosition);
+                    }
+                }
             }
 
             states[index] = status;
@@ -363,6 +377,9 @@ public partial struct LevelSystem : ISystem
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<SpawnerTime> spawnerTimes;
+
+        [NativeDisableParallelForRestriction]
+        public BufferLookup<RemotePosition> remotePositions;
 
         [ReadOnly]
         public ComponentLookup<SpawnerLayerMaskAndTagsOverride> spawnerLayerMaskAndTagsOverrides;
@@ -419,6 +436,7 @@ public partial struct LevelSystem : ISystem
             update.spawnerLayerMaskAndTagsExclude = spawnerLayerMaskAndTagsExcludes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
+            remotePositions.TryGetBuffer(playerEntity, out update.remotePositions);
             update.version = versions.GetRefRW(levelEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
@@ -541,6 +559,8 @@ public partial struct LevelSystem : ISystem
 
     private ComponentLookup<SpawnerTime> __spawnerTimes;
 
+    private BufferLookup<RemotePosition> __remotePositions;
+
     private BufferLookup<SpawnerStatus> __spawnerStates;
 
     private BufferLookup<SpawnerPrefab> __spawnerPrefabs;
@@ -582,6 +602,7 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskAndTagsIncludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsInclude>();
         __spawnerLayerMaskAndTagsExcludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsExclude>();
         __spawnerTimes = state.GetComponentLookup<SpawnerTime>();
+        __remotePositions = state.GetBufferLookup<RemotePosition>();
         __spawnerStates = state.GetBufferLookup<SpawnerStatus>();
         __spawnerPrefabs = state.GetBufferLookup<SpawnerPrefab>(true);
         __prefabType = state.GetBufferTypeHandle<LevelPrefab>(true);
@@ -633,6 +654,7 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskAndTagsIncludes.Update(ref state);
         __spawnerLayerMaskAndTagsExcludes.Update(ref state);
         __spawnerTimes.Update(ref state);
+        __remotePositions.Update(ref state);
         __spawnerPrefabs.Update(ref state);
         __prefabType.Update(ref state);
         __instanceType.Update(ref state);
@@ -661,6 +683,7 @@ public partial struct LevelSystem : ISystem
         update.spawnerLayerMaskAndTagsIncludes = __spawnerLayerMaskAndTagsIncludes;
         update.spawnerLayerMaskAndTagsExcludes = __spawnerLayerMaskAndTagsExcludes;
         update.spawnerTimes = __spawnerTimes;
+        update.remotePositions = __remotePositions;
         update.spawnerPrefabs = __spawnerPrefabs;
         update.spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         update.spawnerDefinitions = __spawnerDefinitions;

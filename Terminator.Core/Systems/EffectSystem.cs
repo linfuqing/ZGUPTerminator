@@ -1393,11 +1393,11 @@ public partial struct EffectSystem : ISystem
 
         public NativeArray<EffectTargetDamage> targetDamages;
 
-        public NativeArray<EffectTargetDamageRemote> targetDamageRemotes;
+        public NativeArray<RemoteEffectTargetDamage> targetDamageRemotes;
 
         public NativeArray<EffectTargetHP> targetHPs;
 
-        public NativeArray<EffectTargetHPRemote> targetHPRemotes;
+        public NativeArray<RemoteEffectTargetHP> targetHPRemotes;
 
         public NativeArray<EffectTarget> targets;
 
@@ -1441,14 +1441,14 @@ public partial struct EffectSystem : ISystem
             {
                 if (index < targetDamageRemotes.Length)
                 {
-                    EffectTargetDamageRemote targetDamageRemote;
+                    RemoteEffectTargetDamage targetDamageRemote;
                     targetDamageRemote.value = targetDamage;
                     targetDamageRemotes[index] = targetDamageRemote;
                 }
                 
                 if (index < targetHPRemotes.Length)
                 {
-                    EffectTargetHPRemote targetHPRemote;
+                    RemoteEffectTargetHP targetHPRemote;
                     targetHPRemote.value = targetHP;
                     targetHPRemotes[index] = targetHPRemote;
                 }
@@ -1936,6 +1936,9 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
         [ReadOnly]
+        public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
+
+        [ReadOnly]
         public ComponentTypeHandle<FallToDestroy> fallToDestroyType;
 
         [ReadOnly]
@@ -1943,9 +1946,6 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly]
         public ComponentTypeHandle<EffectDefinitionData> instanceType;
-
-        [ReadOnly]
-        public ComponentTypeHandle<EffectTargetRemote> targetRemoteType;
 
         [ReadOnly]
         public ComponentTypeHandle<EffectTargetData> targetInstanceType;
@@ -1963,11 +1963,11 @@ public partial struct EffectSystem : ISystem
 
         public ComponentTypeHandle<EffectTargetDamage> targetDamageType;
 
-        public ComponentTypeHandle<EffectTargetDamageRemote> targetDamageRemoteType;
+        public ComponentTypeHandle<RemoteEffectTargetDamage> targetDamageRemoteType;
 
         public ComponentTypeHandle<EffectTargetHP> targetHPType;
 
-        public ComponentTypeHandle<EffectTargetHPRemote> targetHPRemoteType;
+        public ComponentTypeHandle<RemoteEffectTargetHP> targetHPRemoteType;
 
         public ComponentTypeHandle<EffectTarget> targetType;
 
@@ -1997,7 +1997,7 @@ public partial struct EffectSystem : ISystem
             ulong hash = math.asulong(time);
 
             Apply apply;
-            apply.isRemote = chunk.Has(ref targetRemoteType);
+            apply.isRemote = chunk.Has(ref remoteIdentityType);
             apply.isFallToDestroy = chunk.Has(ref fallToDestroyType);
             apply.deltaTime = deltaTime;
             apply.time = time;
@@ -2098,6 +2098,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
+    private ComponentTypeHandle<RemoteIdentity> __remoteIdentityType;
+
     private ComponentTypeHandle<FallToDestroy> __fallToDestroyType;
 
     private ComponentTypeHandle<EffectDamageParent> __damageParentType;
@@ -2128,8 +2130,6 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<EffectStatus> __statusType;
 
-    private ComponentTypeHandle<EffectTargetRemote> __targetRemoteType;
-
     private ComponentTypeHandle<EffectTargetLevel> __targetLevelType;
 
     private ComponentTypeHandle<EffectTargetImmunityDefinitionData> __targetImmunityType;
@@ -2139,9 +2139,9 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<EffectTargetDamageScale> __targetDamageScaleType;
 
     private ComponentTypeHandle<EffectTargetDamage> __targetDamageType;
-    private ComponentTypeHandle<EffectTargetDamageRemote> __targetDamageRemoteType;
+    private ComponentTypeHandle<RemoteEffectTargetDamage> __targetDamageRemoteType;
     private ComponentTypeHandle<EffectTargetHP> __targetHPType;
-    private ComponentTypeHandle<EffectTargetHPRemote> __targetHPRemoteType;
+    private ComponentTypeHandle<RemoteEffectTargetHP> __targetHPRemoteType;
 
     private ComponentTypeHandle<EffectTarget> __targetType;
 
@@ -2206,6 +2206,7 @@ public partial struct EffectSystem : ISystem
         __entityType = state.GetEntityTypeHandle();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
+        __remoteIdentityType = state.GetComponentTypeHandle<RemoteIdentity>(true);
         __fallToDestroyType = state.GetComponentTypeHandle<FallToDestroy>(true);
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
         __instanceType = state.GetComponentTypeHandle<EffectDefinitionData>(true);
@@ -2221,15 +2222,14 @@ public partial struct EffectSystem : ISystem
         __prefabType = state.GetBufferTypeHandle<EffectPrefab>(true);
         __statusTargetType = state.GetBufferTypeHandle<EffectStatusTarget>();
         __statusType = state.GetComponentTypeHandle<EffectStatus>();
-        __targetRemoteType = state.GetComponentTypeHandle<EffectTargetRemote>(true);
         __targetLevelType = state.GetComponentTypeHandle<EffectTargetLevel>(true);
         __targetImmunityType = state.GetComponentTypeHandle<EffectTargetImmunityDefinitionData>(true);
         __targetImmunityStatusType = state.GetComponentTypeHandle<EffectTargetImmunityStatus>();
         __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
-        __targetDamageRemoteType = state.GetComponentTypeHandle<EffectTargetDamageRemote>();
+        __targetDamageRemoteType = state.GetComponentTypeHandle<RemoteEffectTargetDamage>();
         __targetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
-        __targetHPRemoteType = state.GetComponentTypeHandle<EffectTargetHPRemote>();
+        __targetHPRemoteType = state.GetComponentTypeHandle<RemoteEffectTargetHP>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
@@ -2440,11 +2440,11 @@ public partial struct EffectSystem : ISystem
         
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
+        __remoteIdentityType.Update(ref state);
         __fallToDestroyType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
         __delayDestroyType.Update(ref state);
         __targetInstanceType.Update(ref state);
-        __targetRemoteType.Update(ref state);
         __targetLevelType.Update(ref state);
         __targetImmunityType.Update(ref state);
         __targetImmunityStatusType.Update(ref state);
@@ -2480,11 +2480,11 @@ public partial struct EffectSystem : ISystem
         apply.targetMessageType = __targetMessageType;
         apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
+        apply.remoteIdentityType = __remoteIdentityType;
         apply.fallToDestroyType = __fallToDestroyType;
         apply.damageParentType = __damageParentType;
         apply.instanceType = __instanceType;
         apply.targetInstanceType = __targetInstanceType;
-        apply.targetRemoteType = __targetRemoteType;
         apply.targetLevelType = __targetLevelType;
         apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;

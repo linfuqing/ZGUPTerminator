@@ -44,11 +44,11 @@ public partial class LevelSystemManaged
         [ReadOnly] 
         public NetworkClient.Messages client;
         [ReadOnly] 
-        public ClientMessages messages;
+        public ReplyMessages messages;
         [ReadOnly]
         public NativeArray<Entity> entityArray;
         [ReadOnly]
-        public NativeArray<EffectTargetRemote> effectTargetRemotes;
+        public NativeArray<RemoteIdentity> remoteIdentities;
         
         public NativeParallelMultiHashMap<Entity, int> skillIndices;
 
@@ -58,7 +58,7 @@ public partial class LevelSystemManaged
         
         public void Execute(int index)
         {
-            var enumerator = messages.GetValues(ClientMessages.MessageType.SelectSkill, effectTargetRemotes[index].id);
+            var enumerator = messages.GetValues(ReplyMessageType.SelectSkill, remoteIdentities[index].id);
             
             if (!enumerator.MoveNext())
                 return;
@@ -99,13 +99,13 @@ public partial class LevelSystemManaged
         [ReadOnly] 
         public NetworkClient.Messages client;
         [ReadOnly] 
-        public ClientMessages messages;
+        public ReplyMessages messages;
         
         [ReadOnly]
         public EntityTypeHandle entityType;
         
         [ReadOnly]
-        public ComponentTypeHandle<EffectTargetRemote> effectTargetRemoteType;
+        public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
         
         public NativeParallelMultiHashMap<Entity, int> skillIndices;
 
@@ -120,7 +120,7 @@ public partial class LevelSystemManaged
             selectSkills.client = client;
             selectSkills.messages = messages;
             selectSkills.entityArray = chunk.GetNativeArray(entityType);
-            selectSkills.effectTargetRemotes = chunk.GetNativeArray(ref effectTargetRemoteType);
+            selectSkills.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
             selectSkills.skillIndices = skillIndices;
             selectSkills.activeIndices = chunk.GetBufferAccessor(ref activeIndexType);
             selectSkills.bulletStates = chunk.GetBufferAccessor(ref bulletStatusType);
@@ -135,7 +135,7 @@ public partial class LevelSystemManaged
     {
         private EntityQuery __removePlayerGroup;
 
-        private ComponentTypeHandle<EffectTargetRemote> __effectTargetRemoteType;
+        private ComponentTypeHandle<RemoteIdentity> __remoteIdentityType;
 
         private BufferTypeHandle<BulletStatus> __bulletStatusType;
         private BufferTypeHandle<SkillActiveIndex> __activeIndexType;
@@ -147,10 +147,10 @@ public partial class LevelSystemManaged
             using (var builder = new EntityQueryBuilder(Allocator.Temp))
                 __removePlayerGroup = builder.WithAll<RemotePlayer, SkillActiveIndex, BulletStatus>().Build(system);
 
-            system.RequireForUpdate<ClientMessages>();
+            system.RequireForUpdate<ReplyMessages>();
             //system.RequireForUpdate<NetworkClientDriver>();
 
-            __effectTargetRemoteType = system.GetComponentTypeHandle<EffectTargetRemote>(true);
+            __remoteIdentityType = system.GetComponentTypeHandle<RemoteIdentity>(true);
             __bulletStatusType = system.GetBufferTypeHandle<BulletStatus>(true);
             __activeIndexType = system.GetBufferTypeHandle<SkillActiveIndex>(true);
 
@@ -165,7 +165,7 @@ public partial class LevelSystemManaged
         public void Apply(
             in BlobAssetReference<SkillDefinition> definition, 
             in NetworkClient networkClient, 
-            in ClientMessages clientMessages, 
+            in ReplyMessages clientMessages, 
             LevelSystemManaged system)
         {
             if (networkClient.isCreated && !__removePlayerGroup.IsEmpty)
@@ -173,7 +173,7 @@ public partial class LevelSystemManaged
                 __skillIndices.Clear();
 
                 system.__entityType.Update(system);
-                __effectTargetRemoteType.Update(system);
+                __remoteIdentityType.Update(system);
                 __bulletStatusType.Update(system);
                 __activeIndexType.Update(system);
 
@@ -182,7 +182,7 @@ public partial class LevelSystemManaged
                 remotePlayerSelectSkills.client = networkClient.AsMessages();
                 remotePlayerSelectSkills.messages = clientMessages;
                 remotePlayerSelectSkills.entityType = system.__entityType;
-                remotePlayerSelectSkills.effectTargetRemoteType = __effectTargetRemoteType;
+                remotePlayerSelectSkills.remoteIdentityType = __remoteIdentityType;
                 remotePlayerSelectSkills.skillIndices = __skillIndices;
                 remotePlayerSelectSkills.bulletStatusType = __bulletStatusType;
                 remotePlayerSelectSkills.activeIndexType = __activeIndexType;
@@ -274,7 +274,7 @@ public partial class LevelSystemManaged
             __skillSelection.remotePlayer.Apply(
                 definition,
                 networkClientDriver.instance,
-                SystemAPI.GetSingleton<ClientMessages>(), this);
+                SystemAPI.GetSingleton<ReplyMessages>(), this);
         //__skillSelection.SetStage(stage, this);
         
         if (SystemAPI.HasComponent<LevelSkillVersion>(player))
@@ -313,7 +313,7 @@ public partial class LevelSystemManaged
                                 if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
                                 {
                                     var streamCompressionModel = StreamCompressionModel.Default;
-                                    writer.WriteReplyHeader((int)ClientMessages.MessageType.SelectSkill, NetworkRelayType.Channel);
+                                    writer.WriteReplyHeader((int)ReplyMessageType.SelectSkill, NetworkRelayType.Channel);
                                     writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
                                     for(int i = 0; i < numSelectedSkillIndices; ++i)
                                         skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
