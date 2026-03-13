@@ -153,6 +153,8 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
+                PlayerEvents.RespawnEnd();
+                
                 if(levelManager != null)
                     levelManager.ConfirmRecovery();
             
@@ -167,7 +169,7 @@ public class PlayerController : MonoBehaviour
     {
         if (result)
         {
-            PlayerEvents.Respawn();
+            PlayerEvents.RespawnStart();
 
             (IAnalytics.instance as IAnalyticsEx)?.RespawnPlayer();
         }

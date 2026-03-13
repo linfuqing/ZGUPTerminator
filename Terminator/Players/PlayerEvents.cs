@@ -25,6 +25,8 @@ public class PlayerEvents : MonoBehaviour
     
     private static int __survivingCount;
 
+    private static bool __isRespawning;
+
     private static bool __isActive;
     
     public static bool isActive
@@ -111,15 +113,29 @@ public class PlayerEvents : MonoBehaviour
         }
     }
 
-    public static void Respawn()
+    public static void RespawnStart()
     {
-        if(__survivingCount < 2)
+        if (__survivingCount < 2)
+        {
+            __isRespawning = true;
+
             __SetTimeScale();
+        }
 
         if (__instances != null)
         {
             foreach (var instance in __instances)
                 instance._onRespawn?.Invoke();
+        }
+    }
+
+    public static void RespawnEnd()
+    {
+        if (__isRespawning)
+        {
+            __isRespawning = false;
+            
+            __ClearTimeScale();
         }
     }
 
