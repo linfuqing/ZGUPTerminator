@@ -99,14 +99,19 @@ public struct UserQuest
         Purchases = 26, 
 
         /// <summary>
-        /// 游荡
+        /// 领取工坊奖励
         /// </summary>
         Tip = 27, 
         
         /// <summary>
+        /// 挑战非主线关卡次数
+        /// </summary>
+        Ticket = AchievementTipLevel + 256, 
+        
+        /// <summary>
         /// 挑战主线关卡次数
         /// </summary>
-        Stage = 28, 
+        Chapter = 28, 
         
         /// <summary>
         /// 击杀怪物数
@@ -186,7 +191,12 @@ public struct UserQuest
         /// </summary>
         AchievementRoles = 44, 
 
-        Unknown
+        /// <summary>
+        /// 升级工坊
+        /// </summary>
+        AchievementTipLevel = 45,
+
+        Unknown = Ticket + 64
     }
 
     public string name;

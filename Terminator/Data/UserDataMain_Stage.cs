@@ -356,7 +356,12 @@ public partial class UserDataMain
 
         __SubmitStageFlag();
 
-        __AppendQuest(UserQuest.Type.Stage, 1);
+        if (__GetLevelTicketIndex(level.name, out _, out int levelTicketIndex))
+            __AppendQuest(UserQuest.Type.Ticket + levelTicketIndex, 1);
+        else
+            __AppendQuest(UserQuest.Type.Chapter, 1);
+            
+        //__AppendQuest(UserQuest.Type.Stage, 1);
 
         //UserData.StartStage(level.name, stageIndex);
 

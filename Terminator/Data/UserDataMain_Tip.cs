@@ -496,8 +496,6 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
 
-    private const string NAME_SPACE_USER_TIP_LEVEL = "UserTipLevel";
-    
     public IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<UserTipLevel.Next?> onComplete)
     {
         yield return __CreateEnumerator();
@@ -510,10 +508,7 @@ public partial class UserDataMain
             yield break;
         }
         
-        var levelNamesString = PlayerPrefs.GetString(NAME_SPACE_USER_TIP_LEVEL);
-        var levelNames = string.IsNullOrEmpty(levelNamesString)
-            ? _tipLevelNames
-            : levelNamesString.Split(UserData.SEPARATOR);
+        var levelNames = __GetTipLevelNames();
         
         int index = Array.IndexOf(levelNames, level.name);
         if (index == -1)
@@ -523,7 +518,8 @@ public partial class UserDataMain
             yield break;
         }
 
-        level = _tipLevels[__GetTipLevelIndex(level.nextLevel)];
+        int tipLevelIndex = __GetTipLevelIndex(level.nextLevel);
+        level = _tipLevels[tipLevelIndex];
 
         int tip = UserDataMain.tip;
         if (tip < level.cost)
@@ -532,6 +528,8 @@ public partial class UserDataMain
             
             yield break;
         }
+        
+        //__AppendQuest(UserQuest.Type.TipLevel + tipLevelIndex, 1);
 
         tip -= level.cost;
         UserDataMain.tip = tip;
@@ -546,11 +544,11 @@ public partial class UserDataMain
             next = default;
         else
         {
-            index = __GetTipLevelIndex(level.nextLevel);
-            level = _tipLevels[index];
+            tipLevelIndex = __GetTipLevelIndex(level.nextLevel);
+            level = _tipLevels[tipLevelIndex];
             
             next.name = level.name;
-            next.id = __ToID(index);
+            next.id = __ToID(tipLevelIndex);
             next.cost = level.cost;
             next.chapter = level.chapter;
 
@@ -596,6 +594,60 @@ public partial class UserDataMain
         return __tipLevelIndices[name];
     }
 
+    private Dictionary<int, int> __tipLevelPreviousIndices;
+
+    private int __GetTipLevelPreviousIndex(int index)
+    {
+        if (__tipLevelPreviousIndices == null)
+        {
+            __tipLevelPreviousIndices = new Dictionary<int, int>();
+
+            string next;
+            int numTipLevels = _tipLevels == null ? 0 : _tipLevels.Length;
+            for(int i = 0; i < numTipLevels; ++i)
+            {
+                next = _tipLevels[i].nextLevel;
+                if(string.IsNullOrEmpty(next))
+                    continue;
+
+                __tipLevelPreviousIndices[__GetTipLevelIndex(next)] = i;
+            }
+        }
+
+        return __tipLevelPreviousIndices.TryGetValue(index, out int previousIndex)
+            ? previousIndex
+            : -1;
+    }
+
+    private const string NAME_SPACE_USER_TIP_LEVEL = "UserTipLevel";
+
+    private string[] __GetTipLevelNames()
+    {
+        var levelNamesString = PlayerPrefs.GetString(NAME_SPACE_USER_TIP_LEVEL);
+        return string.IsNullOrEmpty(levelNamesString)
+            ? _tipLevelNames
+            : levelNamesString.Split(UserData.SEPARATOR);
+    }
+
+    private bool __IsUpgradeTipLevel(int index)
+    {
+        int tipLevelIndex;
+        var levelNames = __GetTipLevelNames();
+        foreach (var levelName in levelNames)
+        {
+            tipLevelIndex = __GetTipLevelIndex(levelName);
+            do
+            {
+                if (tipLevelIndex == index)
+                    return true;
+                
+                tipLevelIndex = __GetTipLevelPreviousIndex(tipLevelIndex);
+            } while (tipLevelIndex != -1);
+        }
+
+        return false;
+    }
+
     private IUserData.Tip __CreateTip(in Tip.Used used, out string[] levelNames)
     {
         int time = PlayerPrefs.GetInt(NAME_SPACE_USER_TIP_TIME);
@@ -605,10 +657,7 @@ public partial class UserDataMain
             PlayerPrefs.SetInt(NAME_SPACE_USER_TIP_TIME, time);
         }
         
-        var levelNamesString = PlayerPrefs.GetString(NAME_SPACE_USER_TIP_LEVEL);
-        levelNames = string.IsNullOrEmpty(levelNamesString)
-            ? _tipLevelNames
-            : levelNamesString.Split(UserData.SEPARATOR);
+        levelNames = __GetTipLevelNames();
         
         List<string> levelRewardNames = null;
         foreach (var levelName in levelNames)

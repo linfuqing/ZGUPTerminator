@@ -805,6 +805,11 @@ public partial class UserDataMain
                 
                 return numRoles;
             default:
+                int tipLevelIndex = UserQuest.Type.AchievementTipLevel - questType;
+                if (tipLevelIndex >= 0 &&
+                    tipLevelIndex < 256)
+                    return __IsUpgradeTipLevel(tipLevelIndex) ? 1 : 0;
+                
                 return __GetQuest(questType, activeType, out _);
         }
     }

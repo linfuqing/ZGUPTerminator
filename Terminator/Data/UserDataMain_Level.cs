@@ -237,7 +237,7 @@ public partial class UserDataMain
         
         __SubmitStageFlag();
 
-        __AppendQuest(UserQuest.Type.Stage, 1);
+        //__AppendQuest(UserQuest.Type.Stage, 1);
 
         UserData.StartStage(level.name, stage);
 
@@ -799,6 +799,8 @@ public partial class UserDataMain
                 UserData.DeleteStageCache(levelName, i);
             
             levelTicket.count = count - 1;
+            
+            __AppendQuest(UserQuest.Type.Ticket + levelTicketIndex, 1);
         }
         else
         {
@@ -807,6 +809,8 @@ public partial class UserDataMain
                 _levelChapters[chapterIndex].stageRewardCount > __GetChapterStageRewardCount() || 
                 energy > 0 && !__ApplyEnergy(energy))
                 return false;
+            
+            __AppendQuest(UserQuest.Type.Chapter, 1);
         }
 
         return true;
