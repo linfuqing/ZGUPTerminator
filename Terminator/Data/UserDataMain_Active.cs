@@ -807,9 +807,29 @@ public partial class UserDataMain
             default:
                 int tipLevelIndex = questType - UserQuest.Type.AchievementTipLevel;
                 if (tipLevelIndex >= 0 &&
-                    tipLevelIndex < 256)
+                    tipLevelIndex < _tipLevels.Length)
                     return __IsUpgradeTipLevel(tipLevelIndex) ? 1 : 0;
                 
+                int ticketLevelIndex = questType - UserQuest.Type.AchievementTicketLevel;
+                if (ticketLevelIndex >= 0 &&
+                    ticketLevelIndex < _levels.Length)
+                {
+                    if (__GetLevelTicketIndex(_levels[ticketLevelIndex].name, out int levelIndexOfTicket,
+                            out int levelTicketIndex))
+                    {
+                        ref var levelTicket = ref _levelTickets[levelTicketIndex];
+                        ref var ticketLevel = ref levelTicket.levels[levelIndexOfTicket];
+                        return ticketLevel.chapter > UserData.chapter ||
+                               levelIndexOfTicket > 0 &&
+                               PlayerPrefs.GetInt(
+                                   $"{NAME_SPACE_USER_LEVEL_FLAG}{levelTicket.levels[levelIndexOfTicket].name}") == 0
+                            ? 0
+                            : 1;
+                    }
+                    
+                    return 0;
+                }
+
                 return __GetQuest(questType, activeType, out _);
         }
     }

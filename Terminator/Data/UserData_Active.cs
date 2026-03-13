@@ -196,7 +196,12 @@ public struct UserQuest
         /// </summary>
         AchievementTipLevel = 45,
 
-        Unknown = Ticket + 64
+        /// <summary>
+        /// 达到副本关卡
+        /// </summary>
+        AchievementTicketLevel = Ticket + 64,
+
+        Unknown = AchievementTicketLevel + 1024
     }
 
     public string name;

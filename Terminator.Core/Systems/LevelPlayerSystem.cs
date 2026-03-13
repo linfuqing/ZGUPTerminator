@@ -315,8 +315,9 @@ public partial struct LevelPlayerSystem : ISystem
         
         state.RequireForUpdate(__group);
     }
-
+#if !DEBUG
     [BurstCompile]
+#endif
     public void OnUpdate(ref SystemState state)
     {
         var remotePlayerStatus = RemotePlayer.status;
