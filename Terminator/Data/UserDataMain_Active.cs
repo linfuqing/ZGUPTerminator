@@ -822,7 +822,7 @@ public partial class UserDataMain
                         return ticketLevel.chapter > UserData.chapter ||
                                levelIndexOfTicket > 0 &&
                                PlayerPrefs.GetInt(
-                                   $"{NAME_SPACE_USER_LEVEL_FLAG}{levelTicket.levels[levelIndexOfTicket].name}") == 0
+                                   $"{NAME_SPACE_USER_LEVEL_FLAG}{levelTicket.levels[levelIndexOfTicket - 1].name}") == 0
                             ? 0
                             : 1;
                     }
