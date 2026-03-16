@@ -334,6 +334,8 @@ public partial class UserDataMain
         }
 
         int startStage = UserData.EndStage(level.name, levelCache.stage);
+        if (startStage == -1)
+            startStage = __GetDontCacheStage(level, Mathf.Min(levelCache.stage, stageCount - 1));
         
         var rewards = new List<UserReward>();
 
