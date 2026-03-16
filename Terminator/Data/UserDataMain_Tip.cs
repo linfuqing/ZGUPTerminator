@@ -306,6 +306,7 @@ public partial class UserDataMain
         
         public string[] rewardNames;
         
+        public UserRewardData[] rewards;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -357,6 +358,26 @@ public partial class UserDataMain
                 }
                 
                 rewardNames = value.Split('/');
+            }
+        }
+        
+        [CSVField]
+        public string 游荡等级升级奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewards = null;
+
+                    return;
+                }
+                
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                rewards = new UserRewardData[numParameters];
+                for(int i = 0; i < numParameters; ++i)
+                    rewards[i] =  new UserRewardData(parameters[i]);
             }
         }
 #endif
@@ -496,14 +517,14 @@ public partial class UserDataMain
         onComplete(results == null ? null : results.ToArray());
     }
 
-    public IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<UserTipLevel.Next?> onComplete)
+    public IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<IUserData.TipLevel> onComplete)
     {
         yield return __CreateEnumerator();
 
         var level = _tipLevels[__ToIndex(tipLevelID)];
         if (string.IsNullOrEmpty(level.nextLevel))
         {
-            onComplete(null);
+            onComplete(default);
             
             yield break;
         }
@@ -513,10 +534,13 @@ public partial class UserDataMain
         int index = Array.IndexOf(levelNames, level.name);
         if (index == -1)
         {
-            onComplete(null);
+            onComplete(default);
             
             yield break;
         }
+
+        IUserData.TipLevel result;
+        result.rewards = __ApplyRewards(level.rewards).ToArray();
 
         int tipLevelIndex = __GetTipLevelIndex(level.nextLevel);
         level = _tipLevels[tipLevelIndex];
@@ -524,7 +548,7 @@ public partial class UserDataMain
         int tip = UserDataMain.tip;
         if (tip < level.cost)
         {
-            onComplete(null);
+            onComplete(default);
             
             yield break;
         }
@@ -574,8 +598,10 @@ public partial class UserDataMain
         }
 
         PlayerPrefs.SetString(NAME_SPACE_USER_TIP_LEVEL, string.Join(UserData.SEPARATOR, levelNames));
+
+        result.next = next;
         
-        onComplete(next);
+        onComplete(result);
     }
 
     private Dictionary<string, int> __tipLevelIndices;
@@ -707,7 +733,7 @@ public partial class UserData
         return UserDataMain.instance.UseTip(userID, onComplete);
     }
 
-    public IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<UserTipLevel.Next?> onComplete)
+    public IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<IUserData.TipLevel> onComplete)
     {
         return UserDataMain.instance.UpgradeTip(userID, tipLevelID, onComplete);
     }

@@ -166,6 +166,12 @@ public partial interface IUserData
         public UserTipLevel[] levels;
     }
 
+    public struct TipLevel
+    {
+        public UserReward[] rewards;
+        public UserTipLevel.Next? next;
+    }
+
     IEnumerator QueryTip(
         uint userID, 
         Action<TipData> onComplete);
@@ -178,5 +184,5 @@ public partial interface IUserData
         uint userID,
         Action<Memory<UserReward>> onComplete);
 
-    IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<UserTipLevel.Next?> onComplete);
+    IEnumerator UpgradeTip(uint userID, uint tipLevelID, Action<TipLevel> onComplete);
 }

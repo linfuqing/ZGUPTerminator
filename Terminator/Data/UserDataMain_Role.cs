@@ -271,7 +271,6 @@ public partial class UserDataMain
         }
 
         int numRoles = _roles.Length;
-        string skillGroupName;
         UserRole userRole;
         List<uint> userRoleGroupIDs = null;
         List<string> skillNames = null;
@@ -325,7 +324,7 @@ public partial class UserDataMain
         int l, 
             numAccessoryStages, 
             numAccessories = _accessories.Length;
-        string userAccessoryGroupKey;
+        string userAccessoryGroupKey, skillGroupName;
         string[] ids;
         AccessoryStage accessoryStage;
         UserAccessory.Group userAccessoryGroup;

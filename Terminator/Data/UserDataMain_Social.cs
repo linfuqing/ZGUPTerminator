@@ -1,0 +1,423 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using UnityEngine;
+
+public partial class UserDataMain
+{
+    public static UserFriend friend
+    {
+        get
+        {
+            UserFriend result;
+            result.id = (uint)UnityEngine.Random.Range(1, int.MaxValue);
+            result.name = "客户端测试";
+            result.avatar = string.Empty;
+
+            return result;
+        }
+    }
+    
+    public IEnumerator QueryFriend(uint userID, Action<IUserData.Friend> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        //客户端没有这种信息，取自己的做展示
+        IUserData.Friend result;
+
+        result.chapter = UserData.chapter;
+        
+        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+        int groupID = __GetRoleGroupIndex(groupName);
+
+        result.role = default;
+        
+        int i, numRoles = _roles.Length;
+        UserRole userRole;
+        List<uint> userRoleGroupIDs = null;
+        List<string> skillNames = null;
+        for (i = 0; i < numRoles; ++i)
+        {
+            if(!__ToUserRole(groupName, i, out userRole, ref userRoleGroupIDs, ref skillNames) || 
+               userRole.groupIDs == null || Array.IndexOf(userRole.groupIDs, groupID) == -1)
+                continue;
+
+            result.role = userRole;
+
+            break;
+        }
+
+        Card card;
+        UserCard userCard;
+        UserCard.Group userCardGroup;
+        var userCards = new List<UserCard>();
+        var userCardGroups = new List<UserCard.Group>();
+        int j, numCards = _cards.Length, numCardGroups = _cardGroups.Length;
+        for (i = 0; i < numCards; ++i)
+        {
+            card = _cards[i];
+
+            userCard.level = __GetCardLevel(card.name, out _);
+            if (userCard.level == -1)
+                continue;
+            
+            userCardGroups.Clear();
+            for (j = 0; j < numCardGroups; ++j)
+            {
+                userCardGroup.position =
+                    PlayerPrefs.GetInt(
+                        $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{card.name}",
+                        -1);
+                
+                if(userCardGroup.position == -1)
+                    continue;
+
+                userCardGroup.groupID = __ToID(j);
+                
+                userCardGroups.Add(userCardGroup);
+            }
+            
+            if(userCardGroups.Count < 1)
+                continue;
+            
+            userCard.groups = userCardGroups.ToArray();
+
+            userCard.name = card.name;
+            userCard.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
+            
+            userCard.id = __ToID(i);
+            userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
+            
+            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+
+            userCard.skillGroupDamage = card.skillGroupDamage;
+            
+            userCards.Add(userCard);
+        }
+        
+        result.cards = userCards.ToArray();
+
+        int k, l,  
+            numAccessoryStages, 
+            numAccessorySlots = _accessorySlots.Length, 
+            numAccessories = _accessories.Length, 
+            numRoleGroups = _roleGroups.Length;
+        string userAccessoryGroupKey, skillGroupName, key;
+        string[] ids;
+        AccessoryStage accessoryStage;
+        UserAccessory.Group userAccessoryGroup;
+        UserAccessory userAccessory;
+        Accessory accessory;
+        List<int> accessoryStageIndices;
+        var userAccessories = new List<UserAccessory>();
+        var userAccessoryGroups = new List<UserAccessory.Group>();
+        for (i = 0; i < numAccessories; ++i)
+        {
+            accessory = _accessories[i];
+
+            userAccessory.name = accessory.name;
+
+            if (string.IsNullOrEmpty(accessory.skillName))
+                userAccessory.skillNames = null;
+            else
+            {
+                skillGroupName = __GetSkillGroupName(accessory.skillName);
+                if (string.IsNullOrEmpty(skillGroupName))
+                {
+                    userAccessory.skillNames = new string[1];
+                    userAccessory.skillNames[0] = accessory.skillName;
+                }
+                else
+                    userAccessory.skillNames = __GetSkillGroupSkillNames(skillGroupName).ToArray();
+            }
+
+            userAccessory.styleID = __ToID(__GetAccessoryStyleIndex(accessory.styleName));
+
+            userAccessory.attributeValue = accessory.attributeValue;
+
+            userAccessory.skillDamage = accessory.skillDamage;
+
+            userAccessory.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
+
+            userAccessory.property = accessory.property;
+            
+            accessoryStageIndices = __GetAccessoryStageIndices(i);
+            numAccessoryStages = accessoryStageIndices.Count;
+            for (j = 0; j <= numAccessoryStages; ++j)
+            {
+                key =
+                    $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{j}";
+                key = PlayerPrefs.GetString(key);
+                ids = string.IsNullOrEmpty(key) ? null : key.Split(UserData.SEPARATOR);
+                if (ids == null || ids.Length < 1)
+                    continue;
+
+                userAccessory.stage = j;
+
+                accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
+
+                userAccessory.stageDesc.name = accessoryStage.name;
+                //userAccessory.stageDesc.count = accessoryStage.count;
+                userAccessory.stageDesc.property = accessoryStage.property;
+                userAccessory.stageDesc.materials = accessoryStage.materials;
+                
+                foreach (var id in ids)
+                {
+                    userAccessory.id = uint.Parse(id);
+                    
+                    userAccessoryGroups.Clear();
+                    for (k = 0; k < numRoleGroups; ++k)
+                    {
+                        userAccessoryGroup.groupID = __ToID(k);
+                        if(userAccessoryGroup.groupID != groupID)
+                            continue;
+                        
+                        userAccessoryGroupKey =
+                            $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[k].name}{UserData.SEPARATOR}";
+                        for (l = 0; l < numAccessorySlots; ++l)
+                        {
+                            if ((uint)PlayerPrefs.GetInt(
+                                    $"{userAccessoryGroupKey}{_accessorySlots[l].name}") ==
+                                userAccessory.id)
+                                break;
+                        }
+
+                        if (l == numAccessorySlots)
+                            continue;
+
+                        userAccessoryGroup.slotID = __ToID(l);
+                        userAccessoryGroups.Add(userAccessoryGroup);
+                    }
+
+                    userAccessory.groups = userAccessoryGroups.ToArray();
+                    userAccessories.Add(userAccessory);
+                }
+            }
+        }
+        
+        result.accessories = userAccessories.ToArray();
+        
+        result.accessorySlots = new UserAccessorySlot[numAccessorySlots];
+
+        AccessorySlot accessorySlot;
+        UserAccessorySlot userAccessorySlot;
+        for (i = 0; i < numAccessorySlots; ++i)
+        {
+            accessorySlot = _accessorySlots[i];
+            userAccessorySlot.name = accessorySlot.name;
+            userAccessorySlot.id = __ToID(i);
+            userAccessorySlot.level =
+                PlayerPrefs.GetInt($"{NAME_SPACE_USER_ACCESSORY_SLOT_LEVEL}{accessorySlot.name}");
+
+            userAccessorySlot.styleID = __ToID(__GetAccessoryStyleIndex(accessorySlot.styleName));
+            
+            result.accessorySlots[i] = userAccessorySlot;
+        }
+
+        onComplete(result);
+    }
+    
+    private const string NAME_SPACE_USER_FRIENDS = "UserFriends";
+
+    public IEnumerator QueryFriends(uint userID, Action<Memory<UserFriend>> onComplete)
+    {
+        yield return __CreateEnumerator();
+        
+        var friends = PlayerPrefs.GetString(NAME_SPACE_USER_FRIENDS);
+        if (string.IsNullOrEmpty(friends))
+        {
+            onComplete(Array.Empty<UserFriend>());
+            
+            yield break;
+        }
+        
+        var parameters = friends.Split(UserData.SEPARATOR);
+        int numFriends = parameters.Length;
+        var results = new UserFriend[numFriends];
+        for (int i = 0; i < numFriends; ++i)
+            results[i] = new UserFriend(parameters[i], out _);
+        
+        onComplete(results);
+    }
+
+    public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        int count = UnityEngine.Random.Range(5, 10);
+        
+        var friends = new UserFriend[count];
+        for (int i = 0; i < count; ++i)
+            friends[i] = friend;
+        
+        onComplete(friends);
+    }
+    
+    private const string NAME_SPACE_USER_FRIEND_MESSAGE = "UserFriendMessage";
+    
+    public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<string>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        var friendMessages = PlayerPrefs.GetString($"{NAME_SPACE_USER_FRIEND_MESSAGE}{targetUserID}");
+        if (string.IsNullOrEmpty(friendMessages))
+        {
+            onComplete(Array.Empty<string>());
+            
+            yield break;
+        }
+
+        var values = friendMessages.Split($"\"{UserData.SEPARATOR}\"");
+        values[0] = values[0].Substring(1);
+        
+        int length = values.Length - 1;
+        string value = values[length];
+        values[length] = value.Remove(value.Length - 1);
+        
+        onComplete(values);
+    }
+
+    public IEnumerator QueryFriendRequests(uint userID, Action<Memory<IUserData.FriendRequest>> onComplete)
+    {
+        yield return __CreateEnumerator();
+        
+        IUserData.FriendRequest friendRequest;
+        friendRequest.friend.id = 1;
+        friendRequest.friend.name = "客户端测试";
+        friendRequest.friend.avatar = string.Empty;
+        friendRequest.description = "客户端无数据，服务器自己实现";
+        
+        var results = new IUserData.FriendRequest[1];
+        results[0] = friendRequest;
+        
+        onComplete(results);
+    }
+    
+    public IEnumerator FriendRequestApply(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+        
+        //客户端没有这些数据，服务器自己实现，注意特殊符号的筛选
+        onComplete(true);
+    }
+
+    public IEnumerator FriendRequestAgree(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+        
+        var friend = UserDataMain.friend;
+        friend.id = targetUserID;
+        
+        var friends = PlayerPrefs.GetString(NAME_SPACE_USER_FRIENDS);
+        PlayerPrefs.SetString(NAME_SPACE_USER_FRIENDS, string.IsNullOrEmpty(friends) ? friend.ToString() :  $"{friends}{UserData.SEPARATOR}{friend}");
+        
+        onComplete(true);
+    }
+    
+    public IEnumerator FriendRequestDisagree(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        //客户端没有这些数据，服务器自己实现
+        onComplete(true);
+    }
+    
+    public IEnumerator FriendMessageSend(uint userID, uint targetUserID, string value, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        string key = $"{NAME_SPACE_USER_FRIEND_MESSAGE}{targetUserID}";
+        var friendMessages = PlayerPrefs.GetString(key);
+        
+        PlayerPrefs.SetString(key, string.IsNullOrEmpty(friendMessages) ? value :  $"{friendMessages}{UserData.SEPARATOR}\"{value}\"");
+
+        onComplete(true);
+    }
+
+    public IEnumerator FriendDelete(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+        
+        var friends = PlayerPrefs.GetString(NAME_SPACE_USER_FRIENDS);
+        if (string.IsNullOrEmpty(friends))
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+        
+        var parameters = friends.Split(UserData.SEPARATOR);
+        int numFriends = parameters.Length;
+        var results = new UserFriend[numFriends];
+        for (int i = 0; i < numFriends; ++i)
+            results[i] = new UserFriend(parameters[i], out _);
+
+        var stringBuilder = new StringBuilder();
+        UserFriend result;
+        int numResults = results.Length;
+        for(int i = 0; i < numResults; ++i)
+        {
+            result = results[i];
+            if (result.id == targetUserID)
+                continue;
+
+            stringBuilder.Append(i > 0 ? $"{UserData.SEPARATOR}{result}" : result.ToString());
+        }
+
+        PlayerPrefs.SetString(NAME_SPACE_USER_FRIENDS, stringBuilder.ToString());
+    }
+}
+
+public partial class UserData
+{
+    public IEnumerator QueryFriend(uint userID, Action<IUserData.Friend> onComplete)
+    {
+        return UserDataMain.instance.QueryFriend(userID, onComplete);
+    }
+    
+    public IEnumerator QueryFriends(uint userID, Action<Memory<UserFriend>> onComplete)
+    {
+        return UserDataMain.instance.QueryFriends(userID, onComplete);
+    }
+    
+    public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)
+    {
+        return UserDataMain.instance.QueryFriendRecommendations(userID, onComplete);
+    }
+    
+    public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<string>> onComplete)
+    {
+        return UserDataMain.instance.QueryFriendMessages(userID, targetUserID, onComplete);
+    }
+    
+    public IEnumerator QueryFriendRequests(uint userID, Action<Memory<IUserData.FriendRequest>> onComplete)
+    {
+        return UserDataMain.instance.QueryFriendRequests(userID, onComplete);
+    }
+    
+    public IEnumerator FriendRequestApply(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.FriendRequestApply(userID, targetUserID, onComplete);
+    }
+    
+    public IEnumerator FriendRequestAgree(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.FriendRequestAgree(userID, targetUserID, onComplete);
+    }
+    
+    public IEnumerator FriendRequestDisagree(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.FriendRequestDisagree(userID, targetUserID, onComplete);
+    }
+    
+    public IEnumerator FriendMessageSend(uint userID, uint targetUserID, string value, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.FriendMessageSend(userID, targetUserID,  value, onComplete);
+    }
+    
+    public IEnumerator FriendDelete(uint userID, uint targetUserID, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.FriendDelete(userID, targetUserID, onComplete);
+    }
+}
