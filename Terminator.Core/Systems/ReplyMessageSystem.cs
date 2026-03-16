@@ -304,7 +304,7 @@ public partial struct ReplyMessageSystem : ISystem
                 for (i = 0; i < numRemotePositions; ++i)
                 {
                     remotePosition = new RemotePosition(ref reader, streamCompressionModel);
-                    if (maxRemotePositionIndex >= 0 &&
+                    if (maxRemotePositionIndex < 0 || maxRemotePositionIndex >= 0 &&
                         remotePositions[maxRemotePositionIndex].type == RemotePosition.Type.Key)
                     {
                         remotePositions.Add(remotePosition);
@@ -375,29 +375,37 @@ public partial struct ReplyMessageSystem : ISystem
 
         public void Execute(int index)
         {
-            if (sendBuffer.BeginWrite(0, out var writer))
+            RemotePosition remotePosition;
+            var characterBody = index < characterBodies.Length ? characterBodies[index] : default;
+            remotePosition.type =
+                math.dot(characterBody.GroundingUp, characterBody.RelativeVelocity) > math.FLT_MIN_NORMAL
+                    ? RemotePosition.Type.Key
+                    : RemotePosition.Type.Normal;
+            var localTransform = localTransforms[index];
+            remotePosition.value = math.float2(localTransform.Position.x, localTransform.Position.z);
+            
+            var remotePositions = this.remotePositions[index];
+            int numRemotePositions = remotePositions.Length;
+            if (numRemotePositions < 1 ||
+                !ZG.Mathematics.Math.Approximately(remotePositions[numRemotePositions - 1].value, remotePosition.value))
+            {
+                remotePositions.Add(remotePosition);
+                
+                ++numRemotePositions;
+            }
+            
+            if (numRemotePositions > 0 && sendBuffer.BeginWrite(0, out var writer))
             {
                 writer.WriteReplyHeader((int)ReplyMessageType.Move, NetworkRelayType.Channel);
                 var streamCompressionModel = StreamCompressionModel.Default;
 
-                var remotePositions = this.remotePositions[index];
-                int numRemotePositions = remotePositions.Length;
-                writer.WritePackedInt(numRemotePositions + 1, streamCompressionModel);
+                writer.WritePackedInt(numRemotePositions, streamCompressionModel);
                 for(int i = 0; i < numRemotePositions; ++i)
                     remotePositions[i].Write(ref writer, streamCompressionModel);
-                remotePositions.Clear();
                 
-                RemotePosition remotePosition;
-                var characterBody = index < characterBodies.Length ? characterBodies[index] : default;
-                remotePosition.type =
-                    math.dot(characterBody.GroundingUp, characterBody.RelativeVelocity) > math.FLT_MIN_NORMAL
-                        ? RemotePosition.Type.Key
-                        : RemotePosition.Type.Normal;
-                var localTransform = localTransforms[index];
-                remotePosition.value = math.float2(localTransform.Position.x, localTransform.Position.z);
-                remotePosition.Write(ref writer, streamCompressionModel);
-                    
                 sendBuffer.EndWrite(writer);
+                
+                remotePositions.Clear();
             }
         }
     }
