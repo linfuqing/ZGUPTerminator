@@ -296,8 +296,8 @@ public class ClientData : MonoBehaviour, IClientData
     internal int _heartbeatTimeoutMS = 500;
     [SerializeField]
     internal int _reconnectionTimeoutMS = 2000;
-    [SerializeField]
-    internal int _maxFrameTimeMS = 0;
+    //[SerializeField]
+    //internal int _maxFrameTimeMS = 0;
     [SerializeField]
     internal int _fixedFrameTimeMS = 0;
     [SerializeField]
@@ -361,7 +361,7 @@ public class ClientData : MonoBehaviour, IClientData
                     _maxConnectAttempts,
                     _disconnectTimeoutMS,
                     _reconnectionTimeoutMS,
-                    _maxFrameTimeMS, 
+                    Mathf.CeilToInt(Time.maximumDeltaTime * 1000), //_maxFrameTimeMS, 
                     _fixedFrameTimeMS, 
                     _receiveQueueCapacity, 
                     _sendQueueCapacity);
