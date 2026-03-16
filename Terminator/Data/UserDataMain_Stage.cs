@@ -15,6 +15,7 @@ public partial class UserDataMain
             DontCache = 0x01
         }
 
+        [Serializable]
         public struct RewardPool
         {
             public string name;
