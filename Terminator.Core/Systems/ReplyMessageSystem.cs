@@ -80,7 +80,7 @@ public struct ReplyMessages : IComponentData
             reader = element.reader;
 
             key.type = (ReplyMessageType)reader.ReadPackedInt(streamCompressionModel);
-            if(key.type < ReplyMessageType.Move || key.type >= ReplyMessageType.PlayerProperty)
+            if(key.type < ReplyMessageType.Move || key.type > ReplyMessageType.PlayerProperty)
                 continue;
                 
             replayType = reader.ReadPackedInt(streamCompressionModel);
