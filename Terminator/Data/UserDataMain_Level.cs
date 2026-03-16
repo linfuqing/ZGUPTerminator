@@ -350,41 +350,36 @@ public partial class UserDataMain
         rewards.Add(reward);
 
         Stage stage;
-        string key;
+        string key, rewardPoolKey;
+        int rewardPoolTimes;
         stageCount = Mathf.Min(stageCount, levelCache.stage);
-        for(int i = 0; i < stageCount; ++i)
+        for(int i = startStage; i < stageCount; ++i)
         {
             stage = __GetStage(level, i);
             
             key = $"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{stage.name}";
-            if(PlayerPrefs.GetInt(key) != 0)
-                continue;
-
-            PlayerPrefs.SetInt(key, 1);
-            
-            __ApplyRewards(stage.directRewards, rewards);
-        }
-
-        string rewardPoolKey;
-        int rewardPoolTimes;
-        for (int i = startStage; i < levelCache.stage; ++i)
-        {
-            stage = __GetStage(level, i);
-            if(stage.rewardPools == null)
-                continue;
-
-            foreach (var rewardPool in stage.rewardPools)
+            if (PlayerPrefs.GetInt(key) == 0)
             {
-                rewardPoolKey =
-                    $"{NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES}{stage.name}{UserData.SEPARATOR}{rewardPool.name}";
-                rewardPoolTimes = new Active<int>(PlayerPrefs.GetString(rewardPoolKey), __Parse).ToDay();
-                if (rewardPoolTimes < rewardPool.timesPerDay)
-                {
-                    __ApplyReward(rewardPool.name, _rewardPools);
+                PlayerPrefs.SetInt(key, 1);
 
-                    __ApplyRewards(rewards);
+                __ApplyRewards(stage.directRewards, rewards);
+            }
+
+            if (stage.rewardPools != null)
+            {
+                foreach (var rewardPool in stage.rewardPools)
+                {
+                    rewardPoolKey =
+                        $"{NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES}{stage.name}{UserData.SEPARATOR}{rewardPool.name}";
+                    rewardPoolTimes = new Active<int>(PlayerPrefs.GetString(rewardPoolKey), __Parse).ToDay();
+                    if (rewardPoolTimes < rewardPool.timesPerDay)
+                    {
+                        __ApplyReward(rewardPool.name, _rewardPools);
+
+                        __ApplyRewards(rewards);
                     
-                    PlayerPrefs.SetString(rewardPoolKey, new Active<int>(rewardPoolTimes + 1).ToString());
+                        PlayerPrefs.SetString(rewardPoolKey, new Active<int>(rewardPoolTimes + 1).ToString());
+                    }
                 }
             }
         }
