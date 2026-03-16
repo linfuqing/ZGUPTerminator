@@ -360,6 +360,7 @@ public class ClientData : MonoBehaviour, IClientData
                     _connectTimeoutMS,
                     _maxConnectAttempts,
                     _disconnectTimeoutMS,
+                    _heartbeatTimeoutMS, 
                     _reconnectionTimeoutMS,
                     Mathf.CeilToInt(Time.maximumDeltaTime * 1000), //_maxFrameTimeMS, 
                     _fixedFrameTimeMS, 
