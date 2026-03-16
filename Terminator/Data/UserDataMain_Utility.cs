@@ -1367,7 +1367,7 @@ public partial class UserDataMain
             UserPropertyData property;
             IUserData.Skill skill;
             string instanceName = null;
-            int level, styleIndex, hpMax = 0, numAttributes = 0;
+            int k, level, styleIndex, hpMax = 0, numAttributes = 0;
             for (i = 0; i < numCacheSkills; ++i)
             {
                 cacheSkill = cacheSkills[i];
@@ -1575,10 +1575,10 @@ public partial class UserDataMain
                         indices = __GetAccessoryStageIndices(skillInfo.index);
                         int numIndices = indices.Count;
                         string userAccessoryIDs;
-                        for (j = numIndices; j >= 0; --j)
+                        for (k = numIndices; k >= 0; --k)
                         {
                             userAccessoryIDs = PlayerPrefs.GetString(
-                                $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{j}");
+                                $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessory.name}{UserData.SEPARATOR}{k}");
 
                             if (string.IsNullOrEmpty(userAccessoryIDs))
                                 continue;
@@ -1586,7 +1586,7 @@ public partial class UserDataMain
                             break;
                         }
 
-                        property = j > 0 ? _accessoryStages[indices[j - 1]].property : accessory.property;
+                        property = k > 0 ? _accessoryStages[indices[k - 1]].property : accessory.property;
                         if (property.attributes != null && property.attributes.Length > 0)
                         {
                             foreach (var propertyAttribute in property.attributes)
@@ -1627,7 +1627,7 @@ public partial class UserDataMain
                                                     int numSkills = skills.Count;
                                                     string tempSkillGroupName;
                                                     IUserData.Skill tempSkill;
-                                                    for(int k = 0; k < numSkills; ++k)
+                                                    for(k = 0; k < numSkills; ++k)
                                                     {
                                                         tempSkill = skills[k];
                                                         switch (tempSkill.type)
@@ -1670,7 +1670,7 @@ public partial class UserDataMain
                                                     int numSkills = skills.Count;
                                                     string tempSkillGroupName;
                                                     IUserData.Skill tempSkill;
-                                                    for (int k = 0; k < numSkills; ++k)
+                                                    for (k = 0; k < numSkills; ++k)
                                                     {
                                                         tempSkill = skills[k];
                                                         switch (tempSkill.type)

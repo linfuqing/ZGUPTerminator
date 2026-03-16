@@ -1736,13 +1736,15 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
-        RemotePlayer.status = RemotePlayer.Status.Disabled;
-
         var clientData = IClientData.instance;
         if (clientData != null)
         {
             if (clientData.isHost)
             {
+                RemotePlayer.status = clientData.remotePlayerCount > 0
+                    ? RemotePlayer.Status.Waiting
+                    : RemotePlayer.Status.Disabled;
+
                 ClientMessagePlay play;
                 play.isRestart = isRestart;
                 play.levelID = levelID;
@@ -1753,10 +1755,15 @@ public sealed class LoginManager : MonoBehaviour
                 play.Write(ref writer);
                 clientData.EndSend(writer);
             }
-
-            if (clientData.remotePlayerCount > 0)
-                RemotePlayer.status = RemotePlayer.Status.Waiting;
+            else
+            {
+                RemotePlayer.status = clientData.remotePlayerCount > 0
+                    ? RemotePlayer.Status.Joined
+                    : RemotePlayer.Status.Disabled;
+            }
         }
+        else
+            RemotePlayer.status = RemotePlayer.Status.Disabled;
 
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.StartLevel(sceneName/*_levels[__selectedLevelIndex].name*/);

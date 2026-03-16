@@ -16,7 +16,7 @@ public enum ReplyMessageType
     HP, 
         
     SelectSkill, 
-    Total
+    PlayerProperty
 }
 
 public struct ReplyMessages : IComponentData
@@ -80,7 +80,7 @@ public struct ReplyMessages : IComponentData
             reader = element.reader;
 
             key.type = (ReplyMessageType)reader.ReadPackedInt(streamCompressionModel);
-            if(key.type < ReplyMessageType.Move || key.type >= ReplyMessageType.Total)
+            if(key.type < ReplyMessageType.Move || key.type >= ReplyMessageType.PlayerProperty)
                 continue;
                 
             replayType = reader.ReadPackedInt(streamCompressionModel);
@@ -93,7 +93,17 @@ public struct ReplyMessages : IComponentData
             value = element.Message;
             value.offset += size;
             value.size -= size;
-            __values.Add(key, value);
+            
+            if (ReplyMessageType.PlayerProperty == key.type)
+            {
+                reader = new NetworkClient.MessageElement(value, messages).reader;
+
+                LevelPlayerShared<RemotePlayer>.property = new LevelPlayerProperty(ref reader, streamCompressionModel);
+
+                RemotePlayer.status = RemotePlayer.Status.Joined;
+            }
+            else
+                __values.Add(key, value);
         }
     }
 }

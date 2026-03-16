@@ -47,7 +47,6 @@ public enum ClientMessageType
     Chat, 
     
     LevelChapter, 
-    PlayerProperty,
     Play
 }
 
@@ -191,7 +190,7 @@ public struct ClientMessagePlayerProperty
 {
     public LevelPlayerProperty value;
     
-    public static ClientMessageType messageType => ClientMessageType.PlayerProperty;
+    public static ClientMessageType messageType => (ClientMessageType)ReplyMessageType.PlayerProperty;
     
     public static int capacity => UnsafeUtility.SizeOf<ClientMessagePlayerProperty>();
 
@@ -564,12 +563,12 @@ public class ClientData : MonoBehaviour, IClientData
                                     __Save(message);
                                     return (int)ClientMessageType.Chat;
                                 }
-                                case ClientMessageType.PlayerProperty:
+                                /*case ClientMessageType.PlayerProperty:
                                     var playerProperty = new ClientMessagePlayerProperty(ref reader);
                                     LevelPlayerShared<RemotePlayer>.property = playerProperty.value;
 
                                     RemotePlayer.status = RemotePlayer.Status.Joined;
-                                    break;
+                                    break;*/
                                 case ClientMessageType.Play:
                                     new ClientMessagePlay(ref reader).Apply();
                                     break;
@@ -702,19 +701,17 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
-            case ClientMessageType.PlayerProperty:
+            default:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    writer.WriteReplyHeader((int)ClientMessageType.PlayerProperty, NetworkRelayType.Channel);
+                    writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
                     
-                    var reader = new DataStreamReader(__bytes.AsArray());
-                    var temp = new ClientMessagePlayerProperty(ref reader);
-                    temp.Write(ref writer);
+                    writer.WriteBytes(__bytes.AsArray());
                     
                     sendBuffer.EndWrite(writer);
                 }
                 break;
-            case ClientMessageType.Play:
+            /*case ClientMessageType.Play:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     writer.WriteReplyHeader((int)ClientMessageType.Play, NetworkRelayType.Channel);
@@ -726,6 +723,18 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
+            case (ClientMessageType)ReplyMessageType.PlayerProperty:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    writer.WriteReplyHeader((int)ReplyMessageType.PlayerProperty, NetworkRelayType.Channel);
+                    
+                    var reader = new DataStreamReader(__bytes.AsArray());
+                    var temp = new ClientMessagePlayerProperty(ref reader);
+                    temp.Write(ref writer);
+                    
+                    sendBuffer.EndWrite(writer);
+                }
+                break;*/
         }
     }
     
