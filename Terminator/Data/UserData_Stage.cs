@@ -57,39 +57,11 @@ public struct UserStage
         Cached = 0x02
     }
     
-    [Serializable]
-    public struct RewardPool
-    {
-        public string name;
-        
-        public UserRewardOptionData[] options;
-        
-#if UNITY_EDITOR
-        [CSVField]
-        public string 奖池名字
-        {
-            set => name = value;
-        }
-
-        [CSVField]
-        public string 奖池选项
-        {
-            set
-            {
-                var parameters = value.Split('/');
-                
-                int numParameters = parameters.Length;
-                options = new UserRewardOptionData[numParameters];
-                for (int i = 0; i < numParameters; ++i)
-                    options[i] = new UserRewardOptionData(parameters[i]);
-            }
-        }
-#endif
-    }
-    
     public string name;
     public uint id;
     public int energy;
+    public int rewardPoolTimes;
+    public int rewardPoolTimesPerDay;
     public Flag flag;
     public UserRewardData[] rewards;
     public UserStageReward.Flag[] rewardFlags;
@@ -350,21 +322,6 @@ public partial class UserData
         }
     }
 
-    public static void ApplyReward(
-        string poolName, 
-        UserStage.RewardPool[] rewardPools)
-    {
-        foreach (var rewardPool in rewardPools)
-        {
-            if (rewardPool.name == poolName)
-            {
-                ApplyRewards(rewardPool.options);
-                
-                break;
-            }
-        }
-    }
-    
     private const string NAME_SPACE_USER_STAGE_FLAG = "UserStageFlag";
     private const string NAME_SPACE_USER_LEVEL_START_STAGE = "UserLevelStartStage";
     
@@ -388,16 +345,18 @@ public partial class UserData
         PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}", stage);
     }
 
-    public static void EndStage(string levelName, int stage)
+    public static int EndStage(string levelName, int stage)
     {
-        __SubmitStageFlag(levelName, stage, out string levelStartStageKey);
+        __SubmitStageFlag(levelName, stage, out int startStage, out string levelStartStageKey);
         
         PlayerPrefs.DeleteKey(levelStartStageKey);
+
+        return startStage;
     }
 
-    private static void __SubmitStageFlag(string levelName, int stage, out string levelStartStageKey)
+    private static void __SubmitStageFlag(string levelName, int stage, out int startStage, out string levelStartStageKey)
     {
-        int startStage = GetStartStage(levelName, out levelStartStageKey);
+        startStage = GetStartStage(levelName, out levelStartStageKey);
         if (startStage == -1)
             return;
          

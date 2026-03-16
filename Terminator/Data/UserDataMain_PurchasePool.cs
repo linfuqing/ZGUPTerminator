@@ -6,9 +6,39 @@ using ZG;
 
 public partial class UserDataMain
 {
+    [Serializable]
+    internal struct RewardPool
+    {
+        public string name;
+        
+        public UserRewardOptionData[] options;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 奖池名字
+        {
+            set => name = value;
+        }
+
+        [CSVField]
+        public string 奖池选项
+        {
+            set
+            {
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                options = new UserRewardOptionData[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    options[i] = new UserRewardOptionData(parameters[i]);
+            }
+        }
+#endif
+    }
+    
     [Header("PurchasePool")]
     [SerializeField]
-    internal UserStage.RewardPool[] _rewardPools;
+    internal RewardPool[] _rewardPools;
     
 #if UNITY_EDITOR
     [SerializeField, CSV("_rewardPools", guidIndex = -1, nameIndex = 0)] 
@@ -19,7 +49,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        UserData.ApplyReward(poolName, _rewardPools);
+        __ApplyReward(poolName, _rewardPools);
 
         var rewards = new List<UserReward>();
         
@@ -513,6 +543,22 @@ public partial class UserDataMain
 
         return __purchasePoolNameToIndices.TryGetValue(name, out int index) ? index : -1;
     }
+    
+    private static void __ApplyReward(
+        string poolName, 
+        RewardPool[] rewardPools)
+    {
+        foreach (var rewardPool in rewardPools)
+        {
+            if (rewardPool.name == poolName)
+            {
+                UserData.ApplyRewards(rewardPool.options);
+                
+                break;
+            }
+        }
+    }
+
 }
 
 public partial class UserData

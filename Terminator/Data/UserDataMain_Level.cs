@@ -333,17 +333,24 @@ public partial class UserDataMain
             }
         }
 
-        UserData.EndStage(level.name, levelCache.stage);
-
-        gold += levelCache.gold;
+        int startStage = UserData.EndStage(level.name, levelCache.stage);
         
+        var rewards = new List<UserReward>();
+
         __AppendQuest(UserQuest.Type.KillCount, levelCache.killCount);
         __AppendQuest(UserQuest.Type.KillBoss, levelCache.killBossCount);
 
-        var rewards = new List<UserReward>();
+        gold += levelCache.gold;
+        
+        UserReward reward;
+        reward.name = null;
+        reward.id = 0;
+        reward.type = UserRewardType.Gold;
+        reward.count = levelCache.gold;
+        rewards.Add(reward);
 
-        string key;
         Stage stage;
+        string key;
         stageCount = Mathf.Min(stageCount, levelCache.stage);
         for(int i = 0; i < stageCount; ++i)
         {
@@ -358,12 +365,29 @@ public partial class UserDataMain
             __ApplyRewards(stage.directRewards, rewards);
         }
 
-        UserReward reward;
-        reward.name = null;
-        reward.id = 0;
-        reward.type = UserRewardType.Gold;
-        reward.count = levelCache.gold;
-        rewards.Add(reward);
+        string rewardPoolKey;
+        int rewardPoolTimes;
+        for (int i = startStage; i < levelCache.stage; ++i)
+        {
+            stage = __GetStage(level, i);
+            if(stage.rewardPools == null)
+                continue;
+
+            foreach (var rewardPool in stage.rewardPools)
+            {
+                rewardPoolKey =
+                    $"{NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES}{stage.name}{UserData.SEPARATOR}{rewardPool.name}";
+                rewardPoolTimes = new Active<int>(PlayerPrefs.GetString(rewardPoolKey), __Parse).ToDay();
+                if (rewardPoolTimes < rewardPool.timesPerDay)
+                {
+                    __ApplyReward(rewardPool.name, _rewardPools);
+
+                    __ApplyRewards(rewards);
+                    
+                    PlayerPrefs.SetString(rewardPoolKey, new Active<int>(rewardPoolTimes + 1).ToString());
+                }
+            }
+        }
 
         IUserData.LevelStage result;
         result.levelID = selectedLevelID;
@@ -714,6 +738,8 @@ public partial class UserDataMain
         return result;
     }
     
+    private const string NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES = "UserLevelStageRewardPoolTimes";
+    
     private UserLevel __ToUserLevel(int levelIndex, ref bool isUnlock)
     {
         ref var level = ref _levels[levelIndex];
@@ -724,7 +750,9 @@ public partial class UserDataMain
         userLevel.cacheType = level.cacheType;
         //userLevel.energy = level.energy;
             
-        int i, j, numStageRewards, numStages = __GetStageCount(level);
+        int i, j, numRewardPools, numStageRewards, numStages = __GetStageCount(level);
+        string rewardPoolKey;
+        Active<int> rewardPoolTimes;
         StageReward stageReward;
         Stage stage;
         UserStage userStage;
@@ -736,6 +764,23 @@ public partial class UserDataMain
             userStage.id = __GetLevelStageID(levelIndex, i);
             userStage.energy = stage.energy;
             userStage.flag = 0;
+
+            userStage.rewardPoolTimes = 0;
+            userStage.rewardPoolTimesPerDay = 0;
+            if (stage.rewardPools != null)
+            {
+                foreach (var rewardPool in stage.rewardPools)
+                {
+                    userStage.rewardPoolTimesPerDay =
+                        Mathf.Max(userStage.rewardPoolTimesPerDay, rewardPool.timesPerDay);
+                    
+                    rewardPoolKey = $"{NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES}{stage.name}{UserData.SEPARATOR}{rewardPool.name}";
+                    rewardPoolTimes = new Active<int>(PlayerPrefs.GetString(rewardPoolKey), __Parse);
+
+                    userStage.rewardPoolTimes = Mathf.Max(userStage.rewardPoolTimes,
+                        rewardPool.timesPerDay - rewardPoolTimes.ToDay());
+                }
+            }
                 
             if (isUnlock)
             {

@@ -6,6 +6,14 @@ public struct UserFriend
     public string name;
     public string avatar;
     public uint id;
+    /// <summary>
+    /// 战力
+    /// </summary>
+    public int power;
+    /// <summary>
+    /// 最后登录时间
+    /// </summary>
+    public long ticks;
 
     public UserFriend(string text, out string[] parameters)
     {
@@ -14,6 +22,8 @@ public struct UserFriend
         name = string.Empty;
         avatar = string.Empty;
         id = uint.Parse(parameters[0]);
+        power = 0;
+        ticks = DateTime.UtcNow.Ticks;
     }
 
     public override string ToString()
@@ -57,7 +67,7 @@ public partial interface IUserData
     /// <param name="userID"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryFriend(uint userID, Action<Friend> onComplete);
+    IEnumerator QueryFriend(uint userID, uint targetUserID, Action<Friend> onComplete);
     
     /// <summary>
     /// 查询
@@ -137,4 +147,15 @@ public partial interface IUserData
     /// <param name="onComplete"></param>
     /// <returns></returns>
     IEnumerator FriendDelete(uint userID, uint targetUserID, Action<bool> onComplete);
+
+    /// <summary>
+    /// 更新自己的信息
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="name"></param>
+    /// <param name="avatar"></param>
+    /// <param name="power"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator UpdateSelfForFriends(uint userID, string name, string avatar, int power, Action<bool> onComplete);
 }

@@ -16,7 +16,7 @@ public class StageStyle : MonoBehaviour
 
     //public StageRewardStyle rewardStyle;
     
-    public ZG.UI.Progressbar progressbar;
+    public ZG.UI.Progressbar rewardPoolProgressbar;
     
     public GameObject[] ranks;
 }

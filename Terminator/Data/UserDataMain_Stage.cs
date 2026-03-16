@@ -14,6 +14,21 @@ public partial class UserDataMain
         {
             DontCache = 0x01
         }
+
+        public struct RewardPool
+        {
+            public string name;
+
+            public int timesPerDay;
+
+            public RewardPool(string text)
+            {
+                var parameters = text.Split(':');
+                
+                name = parameters[0];
+                timesPerDay = int.Parse(parameters[1]);
+            }
+        }
         
         public string name;
 
@@ -26,6 +41,8 @@ public partial class UserDataMain
         public UserRewardData[] directRewards;
         
         public StageReward[] indirectRewards;
+
+        public RewardPool[] rewardPools;
 
         public UserLevelStageData ToLevel(string levelName, int stage, bool isForce)
         {
@@ -221,6 +238,26 @@ public partial class UserDataMain
                     for (j = 0; j < numValues; ++j)
                         indirectReward.values[j] = new UserRewardData(values[j]);
                 }
+            }
+        }
+        
+        [CSVField]
+        public string 小关奖池
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewardPools = null;
+                    
+                    return;
+                }
+                
+                var parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                rewardPools = new RewardPool[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                    rewardPools[i] = new RewardPool(parameters[i]);
             }
         }
 #endif
@@ -810,7 +847,7 @@ public partial class UserData
             }
         }
 
-        __SubmitStageFlag(temp.name, stage, out _);
+        __SubmitStageFlag(temp.name, stage, out _, out _);
 
         __SetStageKillCount(temp.name, oldStage, killCount - temp.killCount);
 

@@ -929,8 +929,13 @@ public sealed class LoginManager : MonoBehaviour
                                         stageStyle = Instantiate(stageStyle, stageStyle.transform.parent);
 
                                         string stageName = (stageIndex /*sceneStageIndex*/ + 1).ToString();
+                                        
                                         if (stageStyle.onTitle != null)
                                             stageStyle.onTitle.Invoke(stageName);
+
+                                        if (stageStyle.rewardPoolProgressbar != null)
+                                            stageStyle.rewardPoolProgressbar.value = stage.rewardPoolTimes * 1.0f /
+                                                stage.rewardPoolTimesPerDay;
 
                                         if (stage.rewardFlags == null)
                                         {

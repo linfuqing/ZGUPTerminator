@@ -14,12 +14,14 @@ public partial class UserDataMain
             result.id = (uint)UnityEngine.Random.Range(1, int.MaxValue);
             result.name = "客户端测试";
             result.avatar = string.Empty;
+            result.power = UnityEngine.Random.Range(10000, 20000);
+            result.ticks = DateTime.UtcNow.Ticks;
 
             return result;
         }
     }
     
-    public IEnumerator QueryFriend(uint userID, Action<IUserData.Friend> onComplete)
+    public IEnumerator QueryFriend(uint userID, uint targetUserID, Action<IUserData.Friend> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -283,9 +285,7 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
         
         IUserData.FriendRequest friendRequest;
-        friendRequest.friend.id = 1;
-        friendRequest.friend.name = "客户端测试";
-        friendRequest.friend.avatar = string.Empty;
+        friendRequest.friend = friend;
         friendRequest.description = "客户端无数据，服务器自己实现";
         
         var results = new IUserData.FriendRequest[1];
@@ -367,13 +367,24 @@ public partial class UserDataMain
 
         PlayerPrefs.SetString(NAME_SPACE_USER_FRIENDS, stringBuilder.ToString());
     }
+    
+    public IEnumerator UpdateSelfForFriends(uint userID, string name, string avatar, int power, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        UserDataMain.nickname = name;
+        UserDataMain.avatar = avatar;
+
+        onComplete(true);
+    }
+
 }
 
 public partial class UserData
 {
-    public IEnumerator QueryFriend(uint userID, Action<IUserData.Friend> onComplete)
+    public IEnumerator QueryFriend(uint userID, uint targetUserID, Action<IUserData.Friend> onComplete)
     {
-        return UserDataMain.instance.QueryFriend(userID, onComplete);
+        return UserDataMain.instance.QueryFriend(userID, targetUserID, onComplete);
     }
     
     public IEnumerator QueryFriends(uint userID, Action<Memory<UserFriend>> onComplete)
@@ -419,5 +430,10 @@ public partial class UserData
     public IEnumerator FriendDelete(uint userID, uint targetUserID, Action<bool> onComplete)
     {
         return UserDataMain.instance.FriendDelete(userID, targetUserID, onComplete);
+    }
+
+    public IEnumerator UpdateSelfForFriends(uint userID, string name, string avatar, int power, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.UpdateSelfForFriends(userID, name, avatar, power, onComplete);
     }
 }
