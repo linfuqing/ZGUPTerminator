@@ -172,8 +172,6 @@ public partial interface IUserData
     /// 更新自己的信息
     /// </summary>
     /// <param name="userID"></param>
-    /// <param name="name"></param>
-    /// <param name="avatar"></param>
     /// <param name="power"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>

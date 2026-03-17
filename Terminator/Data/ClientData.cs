@@ -69,15 +69,18 @@ public struct ClientHeader : IEquatable<ClientHeader>
     public ClientHeader(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
         userID = reader.ReadPackedUInt(streamCompressionModel);
+        int position = reader.GetBytesRead();
         userName = reader.ReadFixedString32();
+        reader.SeekSet(position + 32);
         userAvatar = reader.ReadFixedString32();
+        reader.SeekSet(position + 64);
     }
     
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
         writer.WritePackedUInt(userID, streamCompressionModel);
-        writer.WriteFixedString32(userName);
-        writer.WriteFixedString32(userAvatar);
+        writer.WriteBytes(userName.AsFixedList().ToArray());
+        writer.WriteBytes(userAvatar.AsFixedList().ToArray());
     }
     
     public void Write(
@@ -87,10 +90,7 @@ public struct ClientHeader : IEquatable<ClientHeader>
         NetworkRelayType relayType)
     {
         writer.WriteReplyHeader(messageType, relayType);
-        
-        writer.WritePackedUInt(userID, streamCompressionModel);
-        writer.WriteFixedString32(userName);
-        writer.WriteFixedString32(userAvatar);
+        Write(ref writer, streamCompressionModel);
     }
 
     public bool Equals(ClientHeader other)

@@ -14,7 +14,7 @@ public static class CollectionUtility
         fixed(void* ptr = &list)
             list[Interlocked.Increment(ref *((int*)ptr)) - 1] = item;
     }
-    
+
     [GenerateTestsForBurstCompatibility(GenericTypeArguments = new [] { typeof(int), typeof(int) })]
     [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS"), Conditional("UNITY_DOTS_DEBUG")]
     private static void __CheckResize<T, U>(in U list, int newLength) 
