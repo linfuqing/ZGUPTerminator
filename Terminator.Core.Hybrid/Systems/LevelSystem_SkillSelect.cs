@@ -199,7 +199,7 @@ public partial class LevelSystemManaged
 
                 if (!__skillIndices.IsEmpty)
                 {
-                    var skillIndices = new NativeList<int>(Allocator.Temp);
+                    var skillIndices = new NativeList<int>(Allocator.TempJob);
                     var remotePlayers = __skillIndices.GetKeyArray(Allocator.Temp);
                     remotePlayers.Sort();
 
