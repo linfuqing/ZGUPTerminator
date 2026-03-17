@@ -74,6 +74,7 @@ public partial class LevelSystemManaged
             
             ref var definition = ref this.definition.Value;
 
+            int i, numSkills;
             LevelSkill skill;
             NetworkClient.MessageElement element;
             DataStreamReader reader;
@@ -82,11 +83,15 @@ public partial class LevelSystemManaged
             {
                 element = new NetworkClient.MessageElement(enumerator.Current, client);
                 reader = element.reader;
-                skill = new LevelSkill(ref reader, streamCompressionModel);
-                if (skill.activeIndex != -1)
-                    skillIndices.Add(entity, activeIndices[skill.activeIndex].value);
+                numSkills = reader.ReadPackedInt(streamCompressionModel);
+                for (i = 0; i < numSkills; ++i)
+                {
+                    skill = new LevelSkill(ref reader, streamCompressionModel);
+                    if (skill.activeIndex != -1)
+                        skillIndices.Add(entity, activeIndices[skill.activeIndex].value);
 
-                skill.Apply(ref activeIndices, ref bulletStates, ref definition);
+                    skill.Apply(ref activeIndices, ref bulletStates, ref definition);
+                }
             } while (enumerator.MoveNext());
         }
     }
