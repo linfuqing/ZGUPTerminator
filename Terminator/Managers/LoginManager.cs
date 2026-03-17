@@ -933,9 +933,14 @@ public sealed class LoginManager : MonoBehaviour
                                         if (stageStyle.onTitle != null)
                                             stageStyle.onTitle.Invoke(stageName);
 
-                                        if (stageStyle.rewardPoolProgressbar != null)
-                                            stageStyle.rewardPoolProgressbar.value = stage.rewardPoolTimes * 1.0f /
-                                                stage.rewardPoolTimesPerDay;
+                                        if (stage.rewardPoolTimesPerDay > 0)
+                                        {
+                                            stageStyle.hasRewardPool?.Invoke();
+                                            
+                                            if (stageStyle.rewardPoolProgressbar != null)
+                                                stageStyle.rewardPoolProgressbar.value = stage.rewardPoolTimes * 1.0f /
+                                                    stage.rewardPoolTimesPerDay;
+                                        }
 
                                         if (stage.rewardFlags == null)
                                         {

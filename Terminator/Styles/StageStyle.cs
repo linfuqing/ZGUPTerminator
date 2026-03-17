@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 public class StageStyle : MonoBehaviour
 {
+    public UnityEvent hasRewardPool;
+    
     public UnityEvent onSelected;
 
     public UnityEvent onDestroy;
