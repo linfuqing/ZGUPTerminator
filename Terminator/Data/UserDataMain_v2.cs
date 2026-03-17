@@ -137,7 +137,7 @@ public partial class UserDataMain
             int numTalents = _talents.Length;
             Talent talent;
             UserTalent userTalent;
-            var userTalents = new UserTalent[numTalents];
+            var userTalents = new List<UserTalent>();
             for (int i = 0; i < numTalents; ++i)
             {
                 talent = _talents[i];
@@ -151,10 +151,10 @@ public partial class UserDataMain
                 userTalent.exp = talent.exp;
                 userTalent.skillGroupDamage = talent.skillGroupDamage;
                 userTalent.attribute = talent.attribute;
-                userTalents[i] = userTalent;
+                userTalents.Add(userTalent);
             }
 
-            result.talents = userTalents;
+            result.talents = userTalents.ToArray();
         }
 
         onComplete(result);

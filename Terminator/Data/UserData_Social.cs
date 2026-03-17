@@ -41,6 +41,7 @@ public partial interface IUserData
         public UserCard[] cards;
         public UserAccessory[] accessories;
         public UserAccessorySlot[] accessorySlots;
+        public UserTalent[] talents;
     }
     
     public struct FriendRequest

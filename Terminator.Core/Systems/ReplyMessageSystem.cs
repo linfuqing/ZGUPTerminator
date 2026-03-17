@@ -304,8 +304,7 @@ public partial struct ReplyMessageSystem : ISystem
                 for (i = 0; i < numRemotePositions; ++i)
                 {
                     remotePosition = new RemotePosition(ref reader, streamCompressionModel);
-                    if (maxRemotePositionIndex < 0 || maxRemotePositionIndex >= 0 &&
-                        remotePositions[maxRemotePositionIndex].type == RemotePosition.Type.Key)
+                    if (maxRemotePositionIndex < 0 || remotePositions[maxRemotePositionIndex].type == RemotePosition.Type.Key)
                     {
                         remotePositions.Add(remotePosition);
 
@@ -407,10 +406,13 @@ public partial struct ReplyMessageSystem : ISystem
                         ++numRemotePositions;
                     }
                 }
-                else if (temp.type == RemotePosition.Type.Normal && temp.type != remotePosition.type)
-                    remotePositions[numRemotePositions - 1] = remotePosition;
-                else
-                    return;
+                else if (RemotePosition.Type.Normal == temp.type)
+                {
+                    if (RemotePosition.Type.Normal == remotePosition.type)
+                        return;
+                    
+                    remotePositions[endIndex] = remotePosition;
+                }
             }
             
             if (sendBuffer.BeginWrite(0, out var writer))

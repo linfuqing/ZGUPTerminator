@@ -32,7 +32,7 @@ public partial class UserDataMain
         
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
         int groupID = __GetRoleGroupIndex(groupName);
-
+        
         result.role = default;
         
         int i, numRoles = _roles.Length;
@@ -215,6 +215,27 @@ public partial class UserDataMain
             userAccessorySlot.styleID = __ToID(__GetAccessoryStyleIndex(accessorySlot.styleName));
             
             result.accessorySlots[i] = userAccessorySlot;
+        }
+        
+        
+        int numTalents = _talents.Length;
+        Talent talent;
+        UserTalent userTalent;
+        result.talents = new UserTalent[numTalents];
+        for (i = 0; i < numTalents; ++i)
+        {
+            talent = _talents[i];
+            //if (!string.IsNullOrEmpty(talent.roleName))
+            //    continue;
+
+            userTalent.name = talent.name;
+            userTalent.id = __ToID(i);
+            userTalent.flag = (UserTalent.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_TALENT_FLAG}{talent.name}");
+            userTalent.gold = talent.gold;
+            userTalent.exp = talent.exp;
+            userTalent.skillGroupDamage = talent.skillGroupDamage;
+            userTalent.attribute = talent.attribute;
+            result.talents[i] = userTalent;
         }
 
         onComplete(result);

@@ -496,7 +496,7 @@ public partial class UserDataMain
     {
         var level = _levels[__ToIndex(levelID)];
         int numStages = __GetStageCount(level), i;
-        for (i = stage; i < numStages; ++i)
+        for (i = Mathf.Min(stage, numStages); i < numStages; ++i)
         {
             if ((__GetStage(level, i).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
                 break;
