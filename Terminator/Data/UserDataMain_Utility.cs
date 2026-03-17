@@ -476,9 +476,10 @@ public partial class UserDataMain
         string skillGroupName;
         IUserData.Skill skill;
         int i, numSkills = skills.Count;
-        bool result, isContains = false;
+        bool result, isContains;
         foreach (var propertySkill in propertySkills)
         {
+            isContains = false;
             for (i = 0; i < numSkills; ++i)
             {
                 skill = skills[i];
