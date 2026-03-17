@@ -258,26 +258,25 @@ public partial class UserDataMain
     
     private const string NAME_SPACE_USER_FRIEND_MESSAGE = "UserFriendMessage";
     
-    public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<string>> onComplete)
+    public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<IUserData.FriendMessage>> onComplete)
     {
         yield return __CreateEnumerator();
 
         var friendMessages = PlayerPrefs.GetString($"{NAME_SPACE_USER_FRIEND_MESSAGE}{targetUserID}");
         if (string.IsNullOrEmpty(friendMessages))
         {
-            onComplete(Array.Empty<string>());
+            onComplete(Array.Empty<IUserData.FriendMessage>());
             
             yield break;
         }
 
-        var values = friendMessages.Split($"\"{UserData.SEPARATOR}\"");
-        values[0] = values[0].Substring(1);
+        var values = friendMessages.Split(UserData.SEPARATOR);
+        int numValues = values.Length;
+        var results = new IUserData.FriendMessage[numValues];
+        for(int i = 0; i < numValues; ++i)
+            results[i] = new IUserData.FriendMessage(values[i]);
         
-        int length = values.Length - 1;
-        string value = values[length];
-        values[length] = value.Remove(value.Length - 1);
-        
-        onComplete(values);
+        onComplete(results);
     }
 
     public IEnumerator QueryFriendRequests(uint userID, Action<Memory<IUserData.FriendRequest>> onComplete)
@@ -323,14 +322,17 @@ public partial class UserDataMain
         onComplete(true);
     }
     
-    public IEnumerator FriendMessageSend(uint userID, uint targetUserID, string value, Action<bool> onComplete)
+    public IEnumerator FriendMessageSend(uint userID, uint targetUserID, uint senderUserID, string value, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
 
         string key = $"{NAME_SPACE_USER_FRIEND_MESSAGE}{targetUserID}";
         var friendMessages = PlayerPrefs.GetString(key);
-        
-        PlayerPrefs.SetString(key, string.IsNullOrEmpty(friendMessages) ? value :  $"{friendMessages}{UserData.SEPARATOR}\"{value}\"");
+
+        IUserData.FriendMessage message;
+        message.userID = senderUserID;
+        message.value = value;
+        PlayerPrefs.SetString(key, string.IsNullOrEmpty(friendMessages) ? message.ToString() :  $"{friendMessages}{UserData.SEPARATOR}{message}");
 
         onComplete(true);
     }
@@ -397,7 +399,7 @@ public partial class UserData
         return UserDataMain.instance.QueryFriendRecommendations(userID, onComplete);
     }
     
-    public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<string>> onComplete)
+    public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<IUserData.FriendMessage>> onComplete)
     {
         return UserDataMain.instance.QueryFriendMessages(userID, targetUserID, onComplete);
     }
@@ -422,9 +424,9 @@ public partial class UserData
         return UserDataMain.instance.FriendRequestDisagree(userID, targetUserID, onComplete);
     }
     
-    public IEnumerator FriendMessageSend(uint userID, uint targetUserID, string value, Action<bool> onComplete)
+    public IEnumerator FriendMessageSend(uint userID, uint targetUserID, uint senderUserID, string value, Action<bool> onComplete)
     {
-        return UserDataMain.instance.FriendMessageSend(userID, targetUserID,  value, onComplete);
+        return UserDataMain.instance.FriendMessageSend(userID, targetUserID, senderUserID, value, onComplete);
     }
     
     public IEnumerator FriendDelete(uint userID, uint targetUserID, Action<bool> onComplete)

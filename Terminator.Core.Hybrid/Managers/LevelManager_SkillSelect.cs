@@ -379,14 +379,15 @@ public partial class LevelManager
                         }
                     }
 
-                    if (style.button != null && source.selectIndex != -1)
+                    var button = style.button;
+                    if (button != null && source.selectIndex != -1)
                     {
                         result = true;
 
-                        style.button.onClick.RemoveAllListeners();
-                        style.button.onClick.AddListener(() =>
+                        button.onClick.RemoveAllListeners();
+                        button.onClick.AddListener(() =>
                         {
-                            style.button.interactable = false;
+                            button.interactable = false;
                             
                             if (__skillSelectionGuideNames == null)
                                 __skillSelectionGuideNames = new HashSet<string>();

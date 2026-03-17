@@ -61,6 +61,25 @@ public partial interface IUserData
         }
     }
 
+    public struct FriendMessage
+    {
+        public uint userID;
+        public string value;
+
+        public FriendMessage(string text)
+        {
+            var parameters = text.Split(':');
+            userID = uint.Parse(parameters[0]);
+            value = parameters[1];
+            value = value.Substring(1, value.Length - 2);
+        }
+
+        public override string ToString()
+        {
+            return $"{userID}:\"{value}\"";
+        }
+    }
+
     /// <summary>
     /// 查询好友信息
     /// </summary>
@@ -92,7 +111,7 @@ public partial interface IUserData
     /// <param name="targetUserID"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<string>> onComplete);
+    IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<FriendMessage>> onComplete);
     
     /// <summary>
     /// 好友申请列表
@@ -133,11 +152,12 @@ public partial interface IUserData
     /// 发送好友消息并记录
     /// </summary>
     /// <param name="userID"></param>
-    /// <param name="targetUserID"></param>
+    /// <param name="targetUserID">聊天目标ID</param>
+    /// <param name="senderUserID">发消息的人的ID</param>
     /// <param name="value"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator FriendMessageSend(uint userID, uint targetUserID, string value, Action<bool> onComplete);
+    IEnumerator FriendMessageSend(uint userID, uint targetUserID, uint senderUserID, string value, Action<bool> onComplete);
     
     /// <summary>
     /// 删除好友
