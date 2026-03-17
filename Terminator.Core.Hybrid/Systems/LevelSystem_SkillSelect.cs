@@ -150,14 +150,17 @@ public partial class LevelSystemManaged
         public SkillSelectionRemotePlayer(SystemBase system)
         {
             using (var builder = new EntityQueryBuilder(Allocator.Temp))
-                __removePlayerGroup = builder.WithAll<RemotePlayer, SkillActiveIndex, BulletStatus>().Build(system);
+                __removePlayerGroup = builder
+                    .WithAll<RemoteIdentity>()
+                    .WithAllRW<SkillActiveIndex, BulletStatus>()
+                    .Build(system);
 
             system.RequireForUpdate<ReplyMessages>();
             //system.RequireForUpdate<NetworkClientDriver>();
 
             __remoteIdentityType = system.GetComponentTypeHandle<RemoteIdentity>(true);
-            __bulletStatusType = system.GetBufferTypeHandle<BulletStatus>(true);
-            __activeIndexType = system.GetBufferTypeHandle<SkillActiveIndex>(true);
+            __bulletStatusType = system.GetBufferTypeHandle<BulletStatus>();
+            __activeIndexType = system.GetBufferTypeHandle<SkillActiveIndex>();
 
             __skillIndices = new NativeParallelMultiHashMap<Entity, int>(1, Allocator.Persistent);
         }
