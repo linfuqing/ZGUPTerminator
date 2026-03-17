@@ -79,8 +79,16 @@ public struct ClientHeader : IEquatable<ClientHeader>
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
         writer.WritePackedUInt(userID, streamCompressionModel);
-        writer.WriteBytes(userName.AsFixedList().ToArray());
-        writer.WriteBytes(userAvatar.AsFixedList().ToArray());
+        
+        int position = writer.Length + 32;
+        writer.WriteFixedString32(userName);
+        while (writer.Length < position)
+            writer.WriteByte(0);
+        
+        position += 32;
+        writer.WriteFixedString32(userAvatar);
+        while (writer.Length < position)
+            writer.WriteByte(0);
     }
     
     public void Write(
