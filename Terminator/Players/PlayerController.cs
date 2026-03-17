@@ -20,9 +20,14 @@ public class PlayerController : MonoBehaviour
 
     private static readonly int RespawnStatusHash = Animator.StringToHash("RespawnStatus");
 
+    private static readonly int AxisXHash = Animator.StringToHash("AxisX");
+    private static readonly int AxisYHash = Animator.StringToHash("AxisY");
+
     private bool __isLocal;
     private Status __status;
     private int __instanceID;
+    
+    private Vector3 __position;
     
     private AttributeEventReceiver __attributeEventReceiver;
 
@@ -179,6 +184,8 @@ public class PlayerController : MonoBehaviour
     
     void OnEnable()
     {
+        __instanceID = 0;
+        
         if (__attributeEventReceiver == null)
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
         
@@ -213,49 +220,43 @@ public class PlayerController : MonoBehaviour
             return;
 
         var transform = this.transform;
-        if(__instanceID == 0)
-            __instanceID = transform.GetInstanceID();
+        var position = transform.position;
 
-        if (!__isLocal)
+        if (__instanceID == 0)
         {
-            if(__instanceID != instanceID)
-                return;
+            __instanceID = transform.GetInstanceID();
             
+            __position = position;
+        }
+
+        if (!__isLocal && __instanceID == instanceID)
+        {
             __isLocal = true;
-            
+
             PlayerEvents.Restart();
-            
+
             PlayerEvents.isActive = true;
         }
 
-        var position = transform.position;
-
-        var positionInstance = PlayerPosition.instance;
-        if(positionInstance != null)
-            positionInstance.transform.position = position;
-        
-        var rotationInstance = PlayerRotation.instance;
-        if(rotationInstance != null)
-            rotationInstance.transform.rotation = transform.rotation;
-
-        JoystickAnimatorController.Update(animator);
-
-        /*if (position.y > _minJumpHeight)
+        if (__isLocal)
         {
-            float velocity = position.y - __jumpHeight;
-            int sign = Mathf.Abs(velocity) > _minJumpVelocity ? (int)Mathf.Sign(velocity) : 0;
-            //Debug.LogError(sign);
-            animator.SetInteger(Jump, sign);
+            var positionInstance = PlayerPosition.instance;
+            if (positionInstance != null)
+                positionInstance.transform.position = position;
 
-            animator.SetInteger(Status, (int)AnimatorStatus.Jump);
-        }
-        else
-        {
-            animator.SetInteger(Jump, 0);
-            
-            animator.SetInteger(Status, (int)AnimatorStatus.Normal);
+            var rotationInstance = PlayerRotation.instance;
+            if (rotationInstance != null)
+                rotationInstance.transform.rotation = transform.rotation;
         }
 
-        __jumpHeight = position.y;*/
+        var axis =  position - __position;
+        axis.y = 0.0f;
+        axis.Normalize();
+        var axis3D = transform.InverseTransformVector(axis);
+        animator.SetFloat(AxisXHash, axis3D.x);
+        animator.SetFloat(AxisYHash, axis3D.z);
+        //JoystickAnimatorController.Update(animator);
+
+        __position = position;
     }
 }
