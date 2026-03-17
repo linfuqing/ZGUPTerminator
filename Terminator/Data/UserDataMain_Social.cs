@@ -370,12 +370,9 @@ public partial class UserDataMain
         PlayerPrefs.SetString(NAME_SPACE_USER_FRIENDS, stringBuilder.ToString());
     }
     
-    public IEnumerator UpdateSelfForFriends(uint userID, string name, string avatar, int power, Action<bool> onComplete)
+    public IEnumerator UpdatePowerForFriends(uint userID, int power, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
-
-        UserDataMain.nickname = name;
-        UserDataMain.avatar = avatar;
 
         onComplete(true);
     }
@@ -434,8 +431,8 @@ public partial class UserData
         return UserDataMain.instance.FriendDelete(userID, targetUserID, onComplete);
     }
 
-    public IEnumerator UpdateSelfForFriends(uint userID, string name, string avatar, int power, Action<bool> onComplete)
+    public IEnumerator UpdatePowerForFriends(uint userID, int power, Action<bool> onComplete)
     {
-        return UserDataMain.instance.UpdateSelfForFriends(userID, name, avatar, power, onComplete);
+        return UserDataMain.instance.UpdatePowerForFriends(userID, power, onComplete);
     }
 }

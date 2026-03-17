@@ -177,5 +177,5 @@ public partial interface IUserData
     /// <param name="power"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator UpdateSelfForFriends(uint userID, string name, string avatar, int power, Action<bool> onComplete);
+    IEnumerator UpdatePowerForFriends(uint userID, int power, Action<bool> onComplete);
 }
