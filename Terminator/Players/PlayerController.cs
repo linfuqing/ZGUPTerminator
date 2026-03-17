@@ -23,11 +23,15 @@ public class PlayerController : MonoBehaviour
     private static readonly int AxisXHash = Animator.StringToHash("AxisX");
     private static readonly int AxisYHash = Animator.StringToHash("AxisY");
 
+    [SerializeField] 
+    internal float _smoothTime = 0.1f;
+
     private bool __isLocal;
     private Status __status;
     private int __instanceID;
     
     private Vector3 __position;
+    private Vector3 __velocity;
     
     private AttributeEventReceiver __attributeEventReceiver;
 
@@ -249,9 +253,15 @@ public class PlayerController : MonoBehaviour
                 rotationInstance.transform.rotation = transform.rotation;
         }
 
-        var axis =  position - __position;
+        __position = Vector3.SmoothDamp(__position, position, ref __velocity, _smoothTime);
+        var axis =  __velocity;
         axis.y = 0.0f;
-        axis.Normalize();
+        float m = axis.magnitude;
+        if(m > 1.0f)
+            axis /= m;
+        else
+            axis = Vector3.zero;
+        
         var axis3D = transform.InverseTransformVector(axis);
         animator.SetFloat(AxisXHash, axis3D.x);
         animator.SetFloat(AxisYHash, axis3D.z);
