@@ -839,6 +839,8 @@ public partial class UserData
 
                     result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
                 }
+                
+                oldStage = Mathf.Min(oldStage, main.GetMaxStage(temp.id, stage));
             }
             else
             {

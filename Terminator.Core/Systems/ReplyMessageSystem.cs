@@ -386,15 +386,34 @@ public partial struct ReplyMessageSystem : ISystem
             
             var remotePositions = this.remotePositions[index];
             int numRemotePositions = remotePositions.Length;
-            if (numRemotePositions < 1 ||
-                !ZG.Mathematics.Math.Approximately(remotePositions[numRemotePositions - 1].value, remotePosition.value))
+            if (numRemotePositions < 1)
             {
                 remotePositions.Add(remotePosition);
                 
                 ++numRemotePositions;
             }
+            else
+            {
+                int endIndex = numRemotePositions - 1;
+                var temp = remotePositions[endIndex];
+                if (!ZG.Mathematics.Math.Approximately(temp.value, remotePosition.value))
+                {
+                    if (temp.type == remotePosition.type)
+                        remotePositions[endIndex] = remotePosition;
+                    else
+                    {
+                        remotePositions.Add(remotePosition);
+                
+                        ++numRemotePositions;
+                    }
+                }
+                else if (temp.type == RemotePosition.Type.Normal && temp.type != remotePosition.type)
+                    remotePositions[numRemotePositions - 1] = remotePosition;
+                else
+                    return;
+            }
             
-            if (numRemotePositions > 0 && sendBuffer.BeginWrite(0, out var writer))
+            if (sendBuffer.BeginWrite(0, out var writer))
             {
                 writer.WriteReplyHeader((int)ReplyMessageType.Move, NetworkRelayType.Channel);
                 var streamCompressionModel = StreamCompressionModel.Default;
@@ -406,6 +425,7 @@ public partial struct ReplyMessageSystem : ISystem
                 sendBuffer.EndWrite(writer);
                 
                 remotePositions.Clear();
+                remotePositions.Add(remotePosition);
             }
         }
     }
