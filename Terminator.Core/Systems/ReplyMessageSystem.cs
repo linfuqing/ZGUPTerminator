@@ -115,9 +115,11 @@ public struct ReplyMessages : IComponentData
         if (!isBuffer)
         {
             bool isClear = false;
+            NetworkClient.Message message;
             foreach (var pair in __values)
             {
-                if (pair.Value.offset >= bufferLength)
+                message = pair.Value;
+                if (message.offset + message.size > bufferLength)
                 {
                     isClear = true;
                     
