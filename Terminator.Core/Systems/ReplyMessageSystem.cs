@@ -115,9 +115,9 @@ public struct ReplyMessages : IComponentData
         if (!isBuffer)
         {
             bool isClear = false;
-            foreach (var element in messages)
+            foreach (var pair in __values)
             {
-                if (element.Message.offset >= bufferLength)
+                if (pair.Value.offset >= bufferLength)
                 {
                     isClear = true;
                     
