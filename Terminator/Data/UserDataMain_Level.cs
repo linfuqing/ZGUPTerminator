@@ -239,7 +239,7 @@ public partial class UserDataMain
 
         //__AppendQuest(UserQuest.Type.Stage, 1);
 
-        UserData.StartStage(level.name, stage);
+        UserData.StartStage(level.name, stage, IUserData.StageFlag.Once);
 
         IUserData.LevelProperty result;
         result.stage = stage;
@@ -334,8 +334,9 @@ public partial class UserDataMain
         }
 
         int startStage = UserData.EndStage(level.name, levelCache.stage);
-        if (startStage == -1)
-            startStage = __GetDontCacheStage(level, Mathf.Min(levelCache.stage, stageCount - 1));
+        UnityEngine.Assertions.Assert.AreNotEqual(-1, startStage);
+        /*if (startStage == -1)
+            startStage = __GetDontCacheStage(level, Mathf.Min(levelCache.stage, stageCount - 1));*/
         
         var rewards = new List<UserReward>();
 
@@ -875,7 +876,7 @@ public partial class UserData
             int chapterIndex = Chapter.IndexOf(_chapters, levelID);
             var chapter = _chapters[chapterIndex];
             
-            StartStage(chapter.name, closestStage);
+            StartStage(chapter.name, closestStage, IUserData.StageFlag.Once);
             
             LevelCache levelCache;
             levelCache.name = chapter.name;

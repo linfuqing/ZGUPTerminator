@@ -324,6 +324,7 @@ public partial class UserData
 
     private const string NAME_SPACE_USER_STAGE_FLAG = "UserStageFlag";
     private const string NAME_SPACE_USER_LEVEL_START_STAGE = "UserLevelStartStage";
+    private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
     
     public static IUserData.StageFlag GetStageFlag(string levelName, int stage)
     {
@@ -336,13 +337,14 @@ public partial class UserData
         return PlayerPrefs.GetInt(levelStartStageKey, -1);
     }
 
-    public static void StartStage(string levelName, int stage)
+    public static void StartStage(string levelName, int stage, IUserData.StageFlag stageFlag)
     {
         //string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_CACHE_TIMES, levelName, stage);
         //int times = PlayerPrefs.GetInt(key);
         //PlayerPrefs.SetInt(key, ++times);
         
         PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_START_STAGE}{levelName}", stage);
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{levelName}", (int)stageFlag);
     }
 
     public static int EndStage(string levelName, int stage)
@@ -359,14 +361,15 @@ public partial class UserData
         startStage = GetStartStage(levelName, out levelStartStageKey);
         if (startStage == -1)
             return;
-         
+        
+        int stageFlag = PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_STAGE_FLAG}{levelName}");
         string stageFlagKey;
         for (int i = startStage; i< stage; ++i)
         {
             stageFlagKey = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
 
             PlayerPrefs.SetInt(stageFlagKey,
-                PlayerPrefs.GetInt(stageFlagKey) | (int)IUserData.StageFlag.Once);
+                PlayerPrefs.GetInt(stageFlagKey) | stageFlag);
         }
     }
 

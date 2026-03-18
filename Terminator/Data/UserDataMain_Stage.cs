@@ -401,7 +401,7 @@ public partial class UserDataMain
             
         //__AppendQuest(UserQuest.Type.Stage, 1);
 
-        //UserData.StartStage(level.name, stageIndex);
+        UserData.StartStage(level.name, stage, 0);
 
         UserData.LevelCache levelCache;
         levelCache.name = level.name;
@@ -749,7 +749,7 @@ public partial class UserData
             var chapter = _chapters[chapterIndex];
             var stageCache = GetStageCache(chapter.name, stage);
             
-            StartStage(chapter.name, stage);
+            StartStage(chapter.name, stage, 0);
 
             LevelCache levelCache;
             levelCache.name = chapter.name;
