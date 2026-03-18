@@ -129,6 +129,8 @@ public struct ReplyMessages : IComponentData
             {
                 __buffer.Clear();
                 __values.Clear();
+
+                bufferLength = 0;
             }
         }
 
