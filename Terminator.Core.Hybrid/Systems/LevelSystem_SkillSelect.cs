@@ -95,6 +95,8 @@ public partial class LevelSystemManaged
             if (!messageElements.IsCreated)
                 return;
             
+            messageElements.Sort();
+            
             Entity entity = entityArray[index];
             var bulletStates = this.bulletStates[index];
             //bulletStates.Clear();
