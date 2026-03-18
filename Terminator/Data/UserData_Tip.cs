@@ -82,6 +82,9 @@ public partial interface IUserData
 
         public UserRewardData[] Generate(long deltaTicks = 0)
         {
+            if (rewards == null || rewards.Length < 1)
+                return null;
+            
             uint hash = (uint)this.ticks ^ (uint)(this.ticks >> 32);
             uint times = (uint)(timesFromAd + timesFromEnergy);
             if (times > 0)
