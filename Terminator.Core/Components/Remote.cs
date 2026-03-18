@@ -7,7 +7,7 @@ public struct RemoteIdentity : IComponentData
     public uint id;
 }
 
-public struct RemoteEffectTargetDamage : IComponentData
+public struct RemoteEffectTargetDamage : IBufferElementData
 {
     public EffectTargetDamage value;
     
@@ -28,7 +28,7 @@ public struct RemoteEffectTargetDamage : IComponentData
     }
 }
 
-public struct RemoteEffectTargetHP : IComponentData
+public struct RemoteEffectTargetHP : IBufferElementData
 {
     public EffectTargetHP value;
 

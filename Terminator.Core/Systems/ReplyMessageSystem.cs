@@ -38,6 +38,52 @@ public struct ReplyMessages : IComponentData
         }
     }
 
+    public struct Enumerator
+    {
+        private NativeArray<byte> __clientBuffer;
+        private NativeList<byte> __buffer;
+        private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>.Enumerator __instance;
+
+        public NetworkClient.MessageElement Current
+        {
+            get
+            {
+                int bufferLength = __buffer.Length;
+                var message = __instance.Current;
+                if(message.offset < bufferLength)
+                    return new NetworkClient.MessageElement(message, __buffer.AsArray());
+                        
+                message.offset -= bufferLength;
+                
+                return new NetworkClient.MessageElement(message, __clientBuffer);
+            }
+        }
+
+        internal Enumerator(
+            ReplyMessageType type, 
+            uint id, 
+            in ReplyMessages message, 
+            in NativeArray<byte> clientBuffer)
+        {
+            __clientBuffer = clientBuffer;
+            __buffer = message.__buffer;
+            
+            MessageKey key;
+            key.type = type;
+            key.id = id;
+
+            __instance = message.__values.GetValuesForKey(key);
+        }
+
+        public bool MoveNext() => __instance.MoveNext();
+
+        public Enumerator GetEnumerator()
+        {
+            return this;
+        }
+    }
+
+    private NativeList<byte> __buffer;
     private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message> __values;
 
     public static void WriteHeader(ref DataStreamWriter writer, ReplyMessageType messageType)
@@ -47,29 +93,48 @@ public struct ReplyMessages : IComponentData
 
     public ReplyMessages(in AllocatorManager.AllocatorHandle allocator)
     {
+        __buffer = new NativeList<byte>(allocator);
         __values = new NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>(1, allocator);
     }
 
     public void Dispose()
     {
+        __buffer.Dispose();
+
         __values.Dispose();
     }
 
-    public NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>.Enumerator GetValues(ReplyMessageType type, uint id)
+    public Enumerator GetValues(ReplyMessageType type, uint id, in NativeArray<byte> clientBuffer)
     {
-        MessageKey key;
-        key.type = type;
-        key.id = id;
-        return __values.GetValuesForKey(key);
+        return new Enumerator(type, id, this, clientBuffer);
     }
 
-    public void Collect(in NetworkClient.Messages messages)
+    public void Collect(bool isBuffer, in NetworkClient.Messages messages)
     {
-        __values.Clear();
+        int bufferLength = __buffer.Length;
+        if (!isBuffer)
+        {
+            bool isClear = false;
+            foreach (var element in messages)
+            {
+                if (element.Message.offset >= bufferLength)
+                {
+                    isClear = true;
+                    
+                    break;
+                }
+            }
+
+            if (isClear)
+            {
+                __buffer.Clear();
+                __values.Clear();
+            }
+        }
 
         int replayType, size;
         MessageKey key;
-        NetworkClient.Message value;
+        NetworkClient.Message value, temp;
         DataStreamReader reader;
         var streamCompressionModel = StreamCompressionModel.Default;
         foreach (var element in messages)
@@ -103,7 +168,22 @@ public struct ReplyMessages : IComponentData
                 RemotePlayer.status = RemotePlayer.Status.Joined;
             }
             else
+            {
+                if (isBuffer)
+                {
+                    temp.type = value.type;
+                    temp.size = value.size;
+                    temp.offset = __buffer.Length;
+
+                    __buffer.AddRange(new NetworkClient.MessageElement(value, messages).AsArray());
+
+                    value = temp;
+                }
+                else
+                    value.offset += bufferLength;
+
                 __values.Add(key, value);
+            }
         }
     }
 }
@@ -120,14 +200,25 @@ public partial struct ReplyMessageSystem : ISystem
 
         public void Execute()
         {
-            outputs.Collect(inputs);
+            bool isBuffer;
+            switch (RemotePlayer.status)
+            {
+                case RemotePlayer.Status.Disabled:
+                case RemotePlayer.Status.StandBy:
+                    isBuffer = false;
+                    break;
+                default:
+                    isBuffer = true;
+                    break;
+            }
+            outputs.Collect(isBuffer, inputs);
         }
     }
 
     private struct ReadEffectTargets
     {
         [ReadOnly]
-        public NetworkClient.Messages client;
+        public NativeArray<byte> clientBuffer;
         
         [ReadOnly] 
         public ReplyMessages messages;
@@ -135,56 +226,76 @@ public partial struct ReplyMessageSystem : ISystem
         [ReadOnly] 
         public NativeArray<RemoteIdentity> remoteIdentities;
 
-        public NativeArray<RemoteEffectTargetDamage> effectTargetDamages;
+        public BufferAccessor<RemoteEffectTargetDamage> effectTargetDamages;
 
-        public NativeArray<RemoteEffectTargetHP> effectTargetHPs;
+        public BufferAccessor<RemoteEffectTargetHP> effectTargetHPs;
 
         public void Execute(int index)
         {
             uint id = remoteIdentities[index].id;
 
+            NativeList<NetworkClient.MessageElement> messageElements = default;
+            DataStreamReader reader;
             StreamCompressionModel streamCompressionModel = StreamCompressionModel.Default;
             if (index < effectTargetDamages.Length)
             {
-                RemoteEffectTargetDamage effectTargetDamage = default;
-
-                int offset = 0;
-                DataStreamReader reader;
-                foreach (var message in messages.GetValues(ReplyMessageType.Damage, id))
+                foreach (var message in messages.GetValues(ReplyMessageType.Damage, id, clientBuffer))
                 {
-                    if (message.offset > offset)
+                    if(!messageElements.IsCreated)
+                        messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
+                    
+                    messageElements.Add(message);
+                }
+
+                if (messageElements.IsCreated)
+                {
+                    messageElements.Sort();
+                    
+                    var effectTargetDamages = this.effectTargetDamages[index];
+                    foreach (var messageElement in messageElements)
                     {
-                        offset = message.offset;
-
-                        reader = new NetworkClient.MessageElement(message, client).reader;
-
-                        effectTargetDamage = new RemoteEffectTargetDamage(ref reader, streamCompressionModel);
+                        reader = messageElement.reader;
+                        do
+                        {
+                            effectTargetDamages.Add(new RemoteEffectTargetDamage(ref reader,
+                                streamCompressionModel));
+                        } while (reader.GetBytesRead() < reader.Length);
                     }
                 }
-                
-                effectTargetDamages[index] = effectTargetDamage;
             }
             
             if (index < effectTargetHPs.Length)
             {
-                RemoteEffectTargetHP effectTargetHP = default;
+                if(messageElements.IsCreated)
+                    messageElements.Clear();
 
-                int offset = 0;
-                DataStreamReader reader;
-                foreach (var message in messages.GetValues(ReplyMessageType.Damage, id))
+                foreach (var message in messages.GetValues(ReplyMessageType.Damage, id, clientBuffer))
                 {
-                    if (message.offset > offset)
+                    if(!messageElements.IsCreated)
+                        messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
+                    
+                    messageElements.Add(message);
+                }
+
+                if (messageElements.IsCreated && messageElements.Length > 0)
+                {
+                    messageElements.Sort();
+                    
+                    var effectTargetHPs = this.effectTargetHPs[index];
+                    foreach (var messageElement in messageElements)
                     {
-                        offset = message.offset;
-
-                        reader = new NetworkClient.MessageElement(message, client).reader;
-
-                        effectTargetHP = new RemoteEffectTargetHP(ref reader, streamCompressionModel);
+                        reader = messageElement.reader;
+                        do
+                        {
+                            effectTargetHPs.Add(new RemoteEffectTargetHP(ref reader,
+                                streamCompressionModel));
+                        } while (reader.GetBytesRead() < reader.Length);
                     }
                 }
-                
-                effectTargetHPs[index] = effectTargetHP;
             }
+
+            if(messageElements.IsCreated)
+                messageElements.Dispose();
         }
     }
 
@@ -192,34 +303,42 @@ public partial struct ReplyMessageSystem : ISystem
     {
         public NetworkClientSendBuffer.ParallelWriter sendBuffer;
 
-        [ReadOnly]
-        public NativeArray<RemoteEffectTargetDamage> effectTargetDamages;
+        public BufferAccessor<RemoteEffectTargetDamage> effectTargetDamages;
 
-        [ReadOnly]
-        public NativeArray<RemoteEffectTargetHP> effectTargetHPs;
+        public BufferAccessor<RemoteEffectTargetHP> effectTargetHPs;
 
         public void Execute(int index)
         {
-            var effectTargetDamage = effectTargetDamages[index];
-            if (!effectTargetDamage.value.isEmpty)
+            var streamCompressionModel = StreamCompressionModel.Default;
+            
+            var effectTargetDamages = index < this.effectTargetDamages.Length ? this.effectTargetDamages[index] : default;
+            if (effectTargetDamages.IsCreated && effectTargetDamages.Length > 0)
             {
                 if (sendBuffer.BeginWrite(0, out var writer))
                 {
                     writer.WriteReplyHeader((int)ReplyMessageType.Damage, NetworkRelayType.Channel);
-                    effectTargetDamage.Write(ref writer, StreamCompressionModel.Default);
+                    
+                    foreach (var effectTargetDamage in effectTargetDamages)
+                        effectTargetDamage.Write(ref writer, streamCompressionModel);
+
+                    effectTargetDamages.Clear();
                     
                     sendBuffer.EndWrite(writer);
                 }
             }
             
-            var effectTargetHP = effectTargetHPs[index];
-            if (!effectTargetHP.value.isEmpty)
+            var effectTargetHPs = index < this.effectTargetHPs.Length ? this.effectTargetHPs[index] : default;
+            if (effectTargetHPs.IsCreated && effectTargetHPs.Length > 0)
             {
                 if (sendBuffer.BeginWrite(0, out var writer))
                 {
                     writer.WriteReplyHeader((int)ReplyMessageType.HP, NetworkRelayType.Channel);
-                    effectTargetHP.Write(ref writer, StreamCompressionModel.Default);
                     
+                    foreach (var effectTargetHP in effectTargetHPs)
+                        effectTargetHP.Write(ref writer, streamCompressionModel);
+
+                    effectTargetHPs.Clear();
+
                     sendBuffer.EndWrite(writer);
                 }
             }
@@ -232,7 +351,7 @@ public partial struct ReplyMessageSystem : ISystem
         public NetworkClientSendBuffer.ParallelWriter sendBuffer;
 
         [ReadOnly]
-        public NetworkClient.Messages client;
+        public NativeArray<byte> clientBuffer;
         
         [ReadOnly] 
         public ReplyMessages messages;
@@ -240,9 +359,9 @@ public partial struct ReplyMessageSystem : ISystem
         [ReadOnly] 
         public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
 
-        public ComponentTypeHandle<RemoteEffectTargetDamage> effectTargetDamageType;
+        public BufferTypeHandle<RemoteEffectTargetDamage> effectTargetDamageType;
 
-        public ComponentTypeHandle<RemoteEffectTargetHP> effectTargetHPType;
+        public BufferTypeHandle<RemoteEffectTargetHP> effectTargetHPType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
@@ -250,11 +369,11 @@ public partial struct ReplyMessageSystem : ISystem
             if (chunk.Has(ref remoteIdentityType))
             {
                 ReadEffectTargets readEffectTargets;
-                readEffectTargets.client = client;
+                readEffectTargets.clientBuffer = clientBuffer;
                 readEffectTargets.messages = messages;
                 readEffectTargets.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
-                readEffectTargets.effectTargetDamages = chunk.GetNativeArray(ref effectTargetDamageType);
-                readEffectTargets.effectTargetHPs = chunk.GetNativeArray(ref effectTargetHPType);
+                readEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref effectTargetDamageType);
+                readEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref effectTargetHPType);
 
                 while (iterator.NextEntityIndex(out int i))
                     readEffectTargets.Execute(i);
@@ -263,8 +382,8 @@ public partial struct ReplyMessageSystem : ISystem
             {
                 WriteEffectTargets writeEffectTargets;
                 writeEffectTargets.sendBuffer = sendBuffer;
-                writeEffectTargets.effectTargetDamages = chunk.GetNativeArray(ref effectTargetDamageType);
-                writeEffectTargets.effectTargetHPs = chunk.GetNativeArray(ref effectTargetHPType);
+                writeEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref effectTargetDamageType);
+                writeEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref effectTargetHPType);
 
                 while (iterator.NextEntityIndex(out int i))
                     writeEffectTargets.Execute(i);
@@ -275,8 +394,8 @@ public partial struct ReplyMessageSystem : ISystem
     private struct ReadPositions
     {
         [ReadOnly]
-        public NetworkClient.Messages client;
-        
+        public NativeArray<byte> clientBuffer;
+
         [ReadOnly] 
         public ReplyMessages messages;
 
@@ -291,14 +410,28 @@ public partial struct ReplyMessageSystem : ISystem
 
         public void Execute(int index)
         {
+            NativeList<NetworkClient.MessageElement> messageElements = default;
+            foreach (var messageElement in messages.GetValues(ReplyMessageType.Move, remoteIdentities[index].id, clientBuffer))
+            {
+                if(!messageElements.IsCreated)
+                    messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
+                    
+                messageElements.Add(messageElement);
+            }
+
+            if (!messageElements.IsCreated)
+                return;
+            
+            messageElements.Sort();
+            
             var remotePositions = this.remotePositions[index];
             RemotePosition remotePosition;
             DataStreamReader reader;
             var streamCompressionModel = StreamCompressionModel.Default;
             int maxRemotePositionIndex = remotePositions.Length - 1, numRemotePositions, i;
-            foreach (var message in messages.GetValues(ReplyMessageType.Move, remoteIdentities[index].id))
+            foreach (var messageElement in messageElements)
             {
-                reader = new NetworkClient.MessageElement(message, client).reader;
+                reader = messageElement.reader;
 
                 numRemotePositions = reader.ReadPackedInt(streamCompressionModel);
                 for (i = 0; i < numRemotePositions; ++i)
@@ -314,6 +447,8 @@ public partial struct ReplyMessageSystem : ISystem
                         remotePositions[maxRemotePositionIndex] = remotePosition;
                 }
             }
+
+            messageElements.Dispose();
 
             numRemotePositions = remotePositions.Length;
             if (numRemotePositions > 0)
@@ -438,7 +573,7 @@ public partial struct ReplyMessageSystem : ISystem
         public NetworkClientSendBuffer.ParallelWriter sendBuffer;
         
         [ReadOnly]
-        public NetworkClient.Messages client;
+        public NativeArray<byte> clientBuffer;
         
         [ReadOnly] 
         public ReplyMessages messages;
@@ -461,7 +596,7 @@ public partial struct ReplyMessageSystem : ISystem
             if (chunk.Has(ref remoteIdentityType))
             {
                 ReadPositions readPositions;
-                readPositions.client = client;
+                readPositions.clientBuffer = clientBuffer;
                 readPositions.messages = messages;
                 readPositions.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
                 readPositions.thirdPersonCharacterControls = chunk.GetNativeArray(ref thirdPersonCharacterControlType);
@@ -491,9 +626,9 @@ public partial struct ReplyMessageSystem : ISystem
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
-    private ComponentTypeHandle<RemoteEffectTargetDamage> __effectTargetDamageType;
+    private BufferTypeHandle<RemoteEffectTargetDamage> __effectTargetDamageType;
 
-    private ComponentTypeHandle<RemoteEffectTargetHP> __effectTargetHPType;
+    private BufferTypeHandle<RemoteEffectTargetHP> __effectTargetHPType;
 
     private BufferTypeHandle<RemotePosition> __remotePositionType;
 
@@ -507,8 +642,8 @@ public partial struct ReplyMessageSystem : ISystem
         __characterBodyType =  state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __thirdPersonCharacterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
-        __effectTargetDamageType = state.GetComponentTypeHandle<RemoteEffectTargetDamage>();
-        __effectTargetHPType = state.GetComponentTypeHandle<RemoteEffectTargetHP>();
+        __effectTargetDamageType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
+        __effectTargetHPType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
         __remotePositionType = state.GetBufferTypeHandle<RemotePosition>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -539,6 +674,7 @@ public partial struct ReplyMessageSystem : ISystem
         var messages = SystemAPI.GetSingleton<ReplyMessages>();
         var driver = SystemAPI.GetSingleton<NetworkClientDriver>();
         var client = driver.instance.AsMessages();
+        var clientBuffer = driver.instance.buffer;
         
         Collect collect;
         collect.inputs = client;
@@ -553,7 +689,7 @@ public partial struct ReplyMessageSystem : ISystem
 
         ReplyEffectTargets replyEffectTargets;
         replyEffectTargets.sendBuffer = sendBuffer;
-        replyEffectTargets.client = client;
+        replyEffectTargets.clientBuffer = clientBuffer;
         replyEffectTargets.messages = messages;
         replyEffectTargets.remoteIdentityType = __remoteIdentityType;
         replyEffectTargets.effectTargetDamageType = __effectTargetDamageType;
@@ -567,7 +703,7 @@ public partial struct ReplyMessageSystem : ISystem
 
         ReplyPositions replyPositions;
         replyPositions.sendBuffer = sendBuffer;
-        replyPositions.client = client;
+        replyPositions.clientBuffer = clientBuffer;
         replyPositions.messages = messages;
         replyPositions.remoteIdentityType = __remoteIdentityType;
         replyPositions.characterBodyType = __characterBodyType;

@@ -64,13 +64,13 @@ public partial struct LevelPlayerSystem : ISystem
         
         public void Execute(int index)
         {
-            var localplayerEntity = localPlayerEntities[index];
+            var localPlayerEntity = localPlayerEntities[index];
             
-            __Apply(LevelPlayerShared<LocalPlayer>.property, localplayerEntity);
+            __Apply(LevelPlayerShared<LocalPlayer>.property, localPlayerEntity);
 
             ThirdPersonPlayer thirdPersonPlayer;
             thirdPersonPlayer.ControlledCamera = Entity.Null;
-            thirdPersonPlayer.ControlledCharacter = localplayerEntity;
+            thirdPersonPlayer.ControlledCharacter = localPlayerEntity;
             thirdPersonPlayers[entityArray[index]] = thirdPersonPlayer;
 
             if (RemotePlayer.Status.Joined == RemotePlayer.status)
@@ -82,6 +82,8 @@ public partial struct LevelPlayerSystem : ISystem
                 remoteIdentity.id = LevelPlayerShared<RemotePlayer>.id;
 
                 remoteIdentities[remotePlayerEntity] = remoteIdentity;
+                
+                RemotePlayer.status = RemotePlayer.Status.StandBy;
             }
         }
 

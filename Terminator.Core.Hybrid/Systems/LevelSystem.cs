@@ -275,17 +275,57 @@ public partial class LevelSystemManaged : SystemBase
                 break;
         }*/
         
+        __GetSkill(player,
+            out var skillDefinition,
+            out var skillNameDefinition,
+            out var activeIndices,
+            out var skillStates /*,
+            out var skillDescs*/);
+
+        __itemGroup.TryGetSingletonBuffer<LevelItem>(out var levelItems);
+
         if (__statusStage != status.stage)
         {
             __statusStage = status.stage;
-
+            
             SpawnerShared.attributeScale = status.stage < LevelShared.stages.Length
                 ? LevelShared.stages[status.stage].spawnerAttributeScale
                 : default;
+
+            if(!manager.isRestart)
+            {
+                ref var activeSkills = ref LevelPlayerShared<LocalPlayer>.property.activeSkills;
+
+                activeSkills.Clear();
+                LevelPlayerActiveSkill activeSkill;
+                foreach (var activeIndex in activeIndices)
+                {
+                    activeSkill.name = skillNameDefinition.Value.skills[activeIndex.value];
+                    activeSkill.damageScale = activeIndex.damageScale;
+
+                    activeSkills.Add(activeSkill);
+                }
+
+                LevelShared.exp = status.exp;
+                LevelShared.expMax = status.expMax;
+                LevelShared.stage = status.stage;
+
+                ref var items = ref LevelShared.items;
+                items.Clear();
+                if (levelItems.IsCreated)
+                {
+                    LevelShared.Item item;
+                    foreach (var levelItem in levelItems)
+                    {
+                        item.name = levelItem.name;
+                        item.count = levelItem.count;
+                        
+                        items.Add(item);
+                    }
+                }
+            }
         }
         
-        __itemGroup.TryGetSingletonBuffer<LevelItem>(out var levelItems);
-
         if (manager.isRestart && levelItems.IsCreated)
         {
             levelItems.Clear();
@@ -299,7 +339,7 @@ public partial class LevelSystemManaged : SystemBase
                 levelItems.Add(levelItem);
             }
         }
-
+        
         /*else if (thirdPersonPlayerEntity != Entity.Null && !SystemAPI.Exists(player))
         {
             EntityManager.RemoveComponent<ThirdPersonPlayer>(thirdPersonPlayerEntity);
@@ -330,13 +370,6 @@ public partial class LevelSystemManaged : SystemBase
         using (SkillsProfilerMarker.Auto())
 #endif
         {
-            __GetSkill(player,
-                out var skillDefinition,
-                out var skillNameDefinition,
-                out var activeIndices,
-                out var skillStates /*,
-                out var skillDescs*/);
-            
 #if ENABLE_PROFILER
             using (UpdateSkillActiveProfilerMarker.Auto())
 #endif

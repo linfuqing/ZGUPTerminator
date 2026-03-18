@@ -5,6 +5,7 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Collections.NotBurstCompatible;
 using Unity.Entities;
+using Unity.Jobs;
 using ZG;
 
 public partial class LevelSystemManaged
@@ -38,11 +39,36 @@ public partial class LevelSystemManaged
         }
     }
 
+    /*[BurstCompile]
+    private struct RestoreSkills : IJob
+    {
+        [ReadOnly] 
+        public NetworkClient.Messages client;
+        [ReadOnly] 
+        public ReplyMessages messages;
+
+        public NativeList<LevelSkill> skills;
+
+        public void Execute()
+        {
+            int numSkills;
+            DataStreamReader reader;
+            var streamCompressionModel = StreamCompressionModel.Default;
+            foreach (var message in messages.GetValues(ReplyMessageType.SelectSkill, LevelPlayerShared<RemotePlayer>.id))
+            {
+                reader = new NetworkClient.MessageElement(message, client).reader;
+                numSkills = reader.ReadPackedInt(streamCompressionModel);
+                for (int i = 0; i < numSkills; ++i)
+                    skills.Add(new LevelSkill(ref reader, streamCompressionModel));
+            }
+        }
+    }*/
+
     private struct SelectSkills
     {
         public BlobAssetReference<SkillDefinition> definition;
         [ReadOnly] 
-        public NetworkClient.Messages client;
+        public NativeArray<byte> clientBuffer;
         [ReadOnly] 
         public ReplyMessages messages;
         [ReadOnly]
@@ -58,9 +84,16 @@ public partial class LevelSystemManaged
         
         public void Execute(int index)
         {
-            var enumerator = messages.GetValues(ReplyMessageType.SelectSkill, remoteIdentities[index].id);
+            NativeList<NetworkClient.MessageElement> messageElements = default;
+            foreach (var message in messages.GetValues(ReplyMessageType.SelectSkill, remoteIdentities[index].id, clientBuffer))
+            {
+                if(!messageElements.IsCreated)
+                    messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
+                    
+                messageElements.Add(message);
+            }
             
-            if (!enumerator.MoveNext())
+            if (!messageElements.IsCreated)
                 return;
             
             Entity entity = entityArray[index];
@@ -76,13 +109,11 @@ public partial class LevelSystemManaged
 
             int i, numSkills;
             LevelSkill skill;
-            NetworkClient.MessageElement element;
             DataStreamReader reader;
             StreamCompressionModel streamCompressionModel = StreamCompressionModel.Default;
-            do
+            foreach(var messageElement in messageElements)
             {
-                element = new NetworkClient.MessageElement(enumerator.Current, client);
-                reader = element.reader;
+                reader = messageElement.reader;
                 numSkills = reader.ReadPackedInt(streamCompressionModel);
                 for (i = 0; i < numSkills; ++i)
                 {
@@ -92,7 +123,9 @@ public partial class LevelSystemManaged
 
                     skill.Apply(ref activeIndices, ref bulletStates, ref definition);
                 }
-            } while (enumerator.MoveNext());
+            }
+
+            messageElements.Dispose();
         }
     }
 
@@ -102,7 +135,7 @@ public partial class LevelSystemManaged
         public BlobAssetReference<SkillDefinition> definition;
         
         [ReadOnly] 
-        public NetworkClient.Messages client;
+        public NativeArray<byte> clientBuffer;
         [ReadOnly] 
         public ReplyMessages messages;
         
@@ -122,7 +155,7 @@ public partial class LevelSystemManaged
         {
             SelectSkills selectSkills;
             selectSkills.definition = definition;
-            selectSkills.client = client;
+            selectSkills.clientBuffer = clientBuffer;
             selectSkills.messages = messages;
             selectSkills.entityArray = chunk.GetNativeArray(entityType);
             selectSkills.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
@@ -187,7 +220,7 @@ public partial class LevelSystemManaged
 
                 RemotePlayerSelectSkillsEx remotePlayerSelectSkills;
                 remotePlayerSelectSkills.definition = definition;
-                remotePlayerSelectSkills.client = networkClient.AsMessages();
+                remotePlayerSelectSkills.clientBuffer = networkClient.buffer;
                 remotePlayerSelectSkills.messages = clientMessages;
                 remotePlayerSelectSkills.entityType = system.__entityType;
                 remotePlayerSelectSkills.remoteIdentityType = __remoteIdentityType;
@@ -270,6 +303,8 @@ public partial class LevelSystemManaged
         //int stage, 
         LevelManager manager)
     {
+        //__skillSelection.SetStage(stage, this);
+
         if (manager.isRestart || !SystemAPI.Exists(player))
         {
             __skillSelection.Release();
@@ -283,7 +318,6 @@ public partial class LevelSystemManaged
                 definition,
                 networkClientDriver.instance,
                 SystemAPI.GetSingleton<ReplyMessages>(), this);
-        //__skillSelection.SetStage(stage, this);
         
         if (SystemAPI.HasComponent<LevelSkillVersion>(player))
         {

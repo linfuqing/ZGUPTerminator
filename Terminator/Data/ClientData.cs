@@ -439,7 +439,7 @@ public class ClientData : MonoBehaviour, IClientData
         NetworkClient.MessageElement messageElement;
         while(numMessages > __messageIndex)
         {
-            messageElement = new NetworkClient.MessageElement(__messages[__messageIndex++], instance);
+            messageElement = new NetworkClient.MessageElement(__messages[__messageIndex++], instance.buffer);
             switch (messageElement.Message.type)
             {
                 case NetworkClientMessageType.Data:

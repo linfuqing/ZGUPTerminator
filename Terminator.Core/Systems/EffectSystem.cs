@@ -1393,11 +1393,7 @@ public partial struct EffectSystem : ISystem
 
         public NativeArray<EffectTargetDamage> targetDamages;
 
-        public NativeArray<RemoteEffectTargetDamage> targetDamageRemotes;
-
         public NativeArray<EffectTargetHP> targetHPs;
-
-        public NativeArray<RemoteEffectTargetHP> targetHPRemotes;
 
         public NativeArray<EffectTarget> targets;
 
@@ -1410,6 +1406,10 @@ public partial struct EffectSystem : ISystem
         public BufferAccessor<Message> messages;
 
         public BufferAccessor<MessageParameter> messageParameters;
+
+        public BufferAccessor<RemoteEffectTargetDamage> targetDamageRemotes;
+
+        public BufferAccessor<RemoteEffectTargetHP> targetHPRemotes;
 
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
@@ -1432,25 +1432,43 @@ public partial struct EffectSystem : ISystem
             if (isRemote)
             {
                 if (index < targetDamageRemotes.Length)
-                    targetDamage = targetDamageRemotes[index].value;
-                
+                {
+                    var targetDamageRemotes = this.targetDamageRemotes[index];
+                    if (targetDamageRemotes.Length > 0)
+                    {
+                        targetDamage = targetDamageRemotes[0].value;
+                        targetDamageRemotes.RemoveAt(0);
+                    }
+                    else
+                        targetDamage = default;
+                }
+
                 if (index < targetHPRemotes.Length)
-                    targetHP = targetHPRemotes[index].value;
+                {
+                    var targetHPRemotes = this.targetHPRemotes[index];
+                    if (targetHPRemotes.Length > 0)
+                    {
+                        targetHP = targetHPRemotes[0].value;
+                        targetHPRemotes.RemoveAt(0);
+                    }
+                    else
+                        targetHP = default;
+                }
             }
             else
             {
-                if (index < targetDamageRemotes.Length)
+                if (index < targetDamageRemotes.Length && !targetDamage.isEmpty)
                 {
                     RemoteEffectTargetDamage targetDamageRemote;
                     targetDamageRemote.value = targetDamage;
-                    targetDamageRemotes[index] = targetDamageRemote;
+                    targetDamageRemotes[index].Add(targetDamageRemote);
                 }
                 
-                if (index < targetHPRemotes.Length)
+                if (index < targetHPRemotes.Length && !targetHP.isEmpty)
                 {
                     RemoteEffectTargetHP targetHPRemote;
                     targetHPRemote.value = targetHP;
-                    targetHPRemotes[index] = targetHPRemote;
+                    targetHPRemotes[index].Add(targetHPRemote);
                 }
             }
             
@@ -1963,11 +1981,7 @@ public partial struct EffectSystem : ISystem
 
         public ComponentTypeHandle<EffectTargetDamage> targetDamageType;
 
-        public ComponentTypeHandle<RemoteEffectTargetDamage> targetDamageRemoteType;
-
         public ComponentTypeHandle<EffectTargetHP> targetHPType;
-
-        public ComponentTypeHandle<RemoteEffectTargetHP> targetHPRemoteType;
 
         public ComponentTypeHandle<EffectTarget> targetType;
 
@@ -1982,6 +1996,10 @@ public partial struct EffectSystem : ISystem
         public BufferTypeHandle<Message> messageType;
 
         public BufferTypeHandle<MessageParameter> messageParameterType;
+
+        public BufferTypeHandle<RemoteEffectTargetHP> targetHPRemoteType;
+
+        public BufferTypeHandle<RemoteEffectTargetDamage> targetDamageRemoteType;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
@@ -2020,15 +2038,15 @@ public partial struct EffectSystem : ISystem
             apply.targetImmunities = chunk.GetNativeArray(ref targetImmunityType);
             apply.targetImmunityStates = chunk.GetNativeArray(ref targetImmunityStatusType);
             apply.targetDamages = chunk.GetNativeArray(ref targetDamageType);
-            apply.targetDamageRemotes = chunk.GetNativeArray(ref targetDamageRemoteType);
             apply.targetHPs = chunk.GetNativeArray(ref targetHPType);
-            apply.targetHPRemotes = chunk.GetNativeArray(ref targetHPRemoteType);
             apply.targets = chunk.GetNativeArray(ref targetType);
             apply.characterGravityFactors = chunk.GetNativeArray(ref characterGravityFactorType);
             apply.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
             apply.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             apply.messages = chunk.GetBufferAccessor(ref messageType);
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
+            apply.targetDamageRemotes = chunk.GetBufferAccessor(ref targetDamageRemoteType);
+            apply.targetHPRemotes = chunk.GetBufferAccessor(ref targetHPRemoteType);
             apply.instanceIDs = instanceIDs;
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
@@ -2116,6 +2134,9 @@ public partial struct EffectSystem : ISystem
 
     private BufferTypeHandle<DelayTime> __delayTimeType;
 
+    private BufferTypeHandle<RemoteEffectTargetDamage> __targetDamageRemoteType;
+    private BufferTypeHandle<RemoteEffectTargetHP> __targetHPRemoteType;
+
     private BufferTypeHandle<MessageParameter> __messageParameterType;
 
     private BufferTypeHandle<Message> __outputMessageType;
@@ -2139,10 +2160,8 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<EffectTargetDamageScale> __targetDamageScaleType;
 
     private ComponentTypeHandle<EffectTargetDamage> __targetDamageType;
-    private ComponentTypeHandle<RemoteEffectTargetDamage> __targetDamageRemoteType;
     private ComponentTypeHandle<EffectTargetHP> __targetHPType;
-    private ComponentTypeHandle<RemoteEffectTargetHP> __targetHPRemoteType;
-
+    
     private ComponentTypeHandle<EffectTarget> __targetType;
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;
@@ -2215,6 +2234,8 @@ public partial struct EffectSystem : ISystem
         __simulationCollisionType = state.GetComponentTypeHandle<SimulationCollision>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
+        __targetDamageRemoteType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
+        __targetHPRemoteType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __inputMessageType = state.GetBufferTypeHandle<EffectMessage>(true);
@@ -2227,9 +2248,7 @@ public partial struct EffectSystem : ISystem
         __targetImmunityStatusType = state.GetComponentTypeHandle<EffectTargetImmunityStatus>();
         __targetDamageScaleType = state.GetComponentTypeHandle<EffectTargetDamageScale>();
         __targetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
-        __targetDamageRemoteType = state.GetComponentTypeHandle<RemoteEffectTargetDamage>();
         __targetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
-        __targetHPRemoteType = state.GetComponentTypeHandle<RemoteEffectTargetHP>();
         __targetType = state.GetComponentTypeHandle<EffectTarget>();
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
@@ -2450,11 +2469,11 @@ public partial struct EffectSystem : ISystem
         __targetImmunityStatusType.Update(ref state);
         __targetMessageType.Update(ref state);
         __targetDamageScaleType.Update(ref state);
-        __targetDamageRemoteType.Update(ref state);
         __targetHPType.Update(ref state);
-        __targetHPRemoteType.Update(ref state);
         __outputMessageType.Update(ref state);
         __messageParameterType.Update(ref state);
+        __targetDamageRemoteType.Update(ref state);
+        __targetHPRemoteType.Update(ref state);
         __delayTimeType.Update(ref state);
 
         /*if (deltaTime > math.FLT_MIN_NORMAL)
@@ -2488,9 +2507,7 @@ public partial struct EffectSystem : ISystem
         apply.targetLevelType = __targetLevelType;
         apply.targetDamageScaleType = __targetDamageScaleType;
         apply.targetDamageType = __targetDamageType;
-        apply.targetDamageRemoteType = __targetDamageRemoteType;
         apply.targetHPType = __targetHPType;
-        apply.targetHPRemoteType = __targetHPRemoteType;
         apply.targetImmunityType = __targetImmunityType;
         apply.targetImmunityStatusType = __targetImmunityStatusType;
         apply.targetType = __targetType;
@@ -2500,6 +2517,8 @@ public partial struct EffectSystem : ISystem
         apply.delayTimeType = __delayTimeType;
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;
+        apply.targetDamageRemoteType = __targetDamageRemoteType;
+        apply.targetHPRemoteType = __targetHPRemoteType;
         apply.instanceIDs = __instanceIDs;
         apply.entityManager = entityManager;
         apply.prefabLoader = prefabLoader;

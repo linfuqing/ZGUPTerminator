@@ -14,7 +14,8 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
     {
         Disabled, 
         Waiting,
-        Joined
+        Joined, 
+        StandBy
     }
     
     private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<RemotePlayer>();
