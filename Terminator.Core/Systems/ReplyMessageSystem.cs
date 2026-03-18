@@ -195,6 +195,13 @@ public struct ReplyMessages : IComponentData
 [BurstCompile, UpdateInGroup(typeof(PresentationSystemGroup)), UpdateAfter(typeof(NetworkClientSystem))]
 public partial struct ReplyMessageSystem : ISystem
 {
+    [Flags]
+    private enum ReadEffectTargetFlag
+    {
+        Damage = 0x01, 
+        HP = 0x02
+    }
+    
     [BurstCompile]
     private struct Collect : IJob
     {
@@ -234,8 +241,9 @@ public partial struct ReplyMessageSystem : ISystem
 
         public BufferAccessor<RemoteEffectTargetHP> effectTargetHPs;
 
-        public void Execute(int index)
+        public ReadEffectTargetFlag Execute(int index)
         {
+            ReadEffectTargetFlag result = 0;
             uint id = remoteIdentities[index].id;
 
             NativeList<NetworkClient.MessageElement> messageElements = default;
@@ -253,6 +261,8 @@ public partial struct ReplyMessageSystem : ISystem
 
                 if (messageElements.IsCreated)
                 {
+                    result |= ReadEffectTargetFlag.Damage;
+                    
                     messageElements.Sort();
                     
                     var effectTargetDamages = this.effectTargetDamages[index];
@@ -283,6 +293,8 @@ public partial struct ReplyMessageSystem : ISystem
 
                 if (messageElements.IsCreated && messageElements.Length > 0)
                 {
+                    result |= ReadEffectTargetFlag.HP;
+
                     messageElements.Sort();
                     
                     var effectTargetHPs = this.effectTargetHPs[index];
@@ -300,6 +312,8 @@ public partial struct ReplyMessageSystem : ISystem
 
             if(messageElements.IsCreated)
                 messageElements.Dispose();
+
+            return result;
         }
     }
 
@@ -363,9 +377,13 @@ public partial struct ReplyMessageSystem : ISystem
         [ReadOnly] 
         public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
 
-        public BufferTypeHandle<RemoteEffectTargetDamage> effectTargetDamageType;
+        public ComponentTypeHandle<EffectTargetDamage> effectTargetDamageType;
 
-        public BufferTypeHandle<RemoteEffectTargetHP> effectTargetHPType;
+        public ComponentTypeHandle<EffectTargetHP> effectTargetHPType;
+
+        public BufferTypeHandle<RemoteEffectTargetDamage> remoteEffectTargetDamageType;
+
+        public BufferTypeHandle<RemoteEffectTargetHP> remoteEffectTargetHPType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
@@ -376,18 +394,26 @@ public partial struct ReplyMessageSystem : ISystem
                 readEffectTargets.messages = messages;
                 readEffectTargets.clientBuffer = clientBuffer;
                 readEffectTargets.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
-                readEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref effectTargetDamageType);
-                readEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref effectTargetHPType);
+                readEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref remoteEffectTargetDamageType);
+                readEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref remoteEffectTargetHPType);
 
+                ReadEffectTargetFlag flag;
                 while (iterator.NextEntityIndex(out int i))
-                    readEffectTargets.Execute(i);
+                {
+                    flag = readEffectTargets.Execute(i);
+                    if((flag & ReadEffectTargetFlag.Damage) == ReadEffectTargetFlag.Damage)
+                        chunk.SetComponentEnabled(ref effectTargetDamageType, i, true);
+                    
+                    if((flag & ReadEffectTargetFlag.HP) == ReadEffectTargetFlag.HP)
+                        chunk.SetComponentEnabled(ref effectTargetHPType, i, true);
+                }
             }
             else
             {
                 WriteEffectTargets writeEffectTargets;
                 writeEffectTargets.sendBuffer = sendBuffer;
-                writeEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref effectTargetDamageType);
-                writeEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref effectTargetHPType);
+                writeEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref remoteEffectTargetDamageType);
+                writeEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref remoteEffectTargetHPType);
 
                 while (iterator.NextEntityIndex(out int i))
                     writeEffectTargets.Execute(i);
@@ -630,9 +656,13 @@ public partial struct ReplyMessageSystem : ISystem
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
-    private BufferTypeHandle<RemoteEffectTargetDamage> __effectTargetDamageType;
+    private ComponentTypeHandle<EffectTargetDamage> __effectTargetDamageType;
 
-    private BufferTypeHandle<RemoteEffectTargetHP> __effectTargetHPType;
+    private ComponentTypeHandle<EffectTargetHP> __effectTargetHPType;
+
+    private BufferTypeHandle<RemoteEffectTargetDamage> __remoteEffectTargetDamageType;
+
+    private BufferTypeHandle<RemoteEffectTargetHP> __remoteEffectTargetHPType;
 
     private BufferTypeHandle<RemotePosition> __remotePositionType;
 
@@ -646,8 +676,10 @@ public partial struct ReplyMessageSystem : ISystem
         __characterBodyType =  state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __thirdPersonCharacterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
-        __effectTargetDamageType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
-        __effectTargetHPType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
+        __effectTargetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
+        __effectTargetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
+        __remoteEffectTargetDamageType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
+        __remoteEffectTargetHPType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
         __remotePositionType = state.GetBufferTypeHandle<RemotePosition>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -690,6 +722,8 @@ public partial struct ReplyMessageSystem : ISystem
         __remoteIdentityType.Update(ref state);
         __effectTargetDamageType.Update(ref state);
         __effectTargetHPType.Update(ref state);
+        __remoteEffectTargetDamageType.Update(ref state);
+        __remoteEffectTargetHPType.Update(ref state);
 
         ReplyEffectTargets replyEffectTargets;
         replyEffectTargets.sendBuffer = sendBuffer;
@@ -698,6 +732,8 @@ public partial struct ReplyMessageSystem : ISystem
         replyEffectTargets.remoteIdentityType = __remoteIdentityType;
         replyEffectTargets.effectTargetDamageType = __effectTargetDamageType;
         replyEffectTargets.effectTargetHPType = __effectTargetHPType;
+        replyEffectTargets.remoteEffectTargetDamageType = __remoteEffectTargetDamageType;
+        replyEffectTargets.remoteEffectTargetHPType = __remoteEffectTargetHPType;
         jobHandle = replyEffectTargets.ScheduleParallelByRef(__effectTargetGroup, jobHandle);
 
         __characterBodyType.Update(ref state);
