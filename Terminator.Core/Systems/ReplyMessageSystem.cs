@@ -40,7 +40,7 @@ public struct ReplyMessages : IComponentData
 
     public struct Enumerator
     {
-        private NativeArray<byte> __clientBuffer;
+        private NativeList<byte> __clientBuffer;
         private NativeList<byte> __buffer;
         private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>.Enumerator __instance;
 
@@ -55,7 +55,7 @@ public struct ReplyMessages : IComponentData
                         
                 message.offset -= bufferLength;
                 
-                return new NetworkClient.MessageElement(message, __clientBuffer);
+                return new NetworkClient.MessageElement(message, __clientBuffer.AsArray());
             }
         }
 
@@ -63,7 +63,7 @@ public struct ReplyMessages : IComponentData
             ReplyMessageType type, 
             uint id, 
             in ReplyMessages message, 
-            in NativeArray<byte> clientBuffer)
+            in NativeList<byte> clientBuffer)
         {
             __clientBuffer = clientBuffer;
             __buffer = message.__buffer;
@@ -104,7 +104,7 @@ public struct ReplyMessages : IComponentData
         __values.Dispose();
     }
 
-    public Enumerator GetValues(ReplyMessageType type, uint id, in NativeArray<byte> clientBuffer)
+    public Enumerator GetValues(ReplyMessageType type, uint id, in NativeList<byte> clientBuffer)
     {
         return new Enumerator(type, id, this, clientBuffer);
     }
@@ -217,12 +217,12 @@ public partial struct ReplyMessageSystem : ISystem
 
     private struct ReadEffectTargets
     {
-        [ReadOnly]
-        public NativeArray<byte> clientBuffer;
-        
         [ReadOnly] 
         public ReplyMessages messages;
         
+        [ReadOnly]
+        public NativeList<byte> clientBuffer;
+
         [ReadOnly] 
         public NativeArray<RemoteIdentity> remoteIdentities;
 
@@ -350,12 +350,12 @@ public partial struct ReplyMessageSystem : ISystem
     {
         public NetworkClientSendBuffer.ParallelWriter sendBuffer;
 
-        [ReadOnly]
-        public NativeArray<byte> clientBuffer;
-        
         [ReadOnly] 
         public ReplyMessages messages;
         
+        [ReadOnly]
+        public NativeList<byte> clientBuffer;
+
         [ReadOnly] 
         public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
 
@@ -369,8 +369,8 @@ public partial struct ReplyMessageSystem : ISystem
             if (chunk.Has(ref remoteIdentityType))
             {
                 ReadEffectTargets readEffectTargets;
-                readEffectTargets.clientBuffer = clientBuffer;
                 readEffectTargets.messages = messages;
+                readEffectTargets.clientBuffer = clientBuffer;
                 readEffectTargets.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
                 readEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref effectTargetDamageType);
                 readEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref effectTargetHPType);
@@ -393,11 +393,11 @@ public partial struct ReplyMessageSystem : ISystem
 
     private struct ReadPositions
     {
-        [ReadOnly]
-        public NativeArray<byte> clientBuffer;
-
         [ReadOnly] 
         public ReplyMessages messages;
+
+        [ReadOnly]
+        public NativeList<byte> clientBuffer;
 
         [ReadOnly] 
         public NativeArray<RemoteIdentity> remoteIdentities;
@@ -572,11 +572,11 @@ public partial struct ReplyMessageSystem : ISystem
     {
         public NetworkClientSendBuffer.ParallelWriter sendBuffer;
         
-        [ReadOnly]
-        public NativeArray<byte> clientBuffer;
-        
         [ReadOnly] 
         public ReplyMessages messages;
+
+        [ReadOnly]
+        public NativeList<byte> clientBuffer;
 
         [ReadOnly] 
         public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
@@ -596,8 +596,8 @@ public partial struct ReplyMessageSystem : ISystem
             if (chunk.Has(ref remoteIdentityType))
             {
                 ReadPositions readPositions;
-                readPositions.clientBuffer = clientBuffer;
                 readPositions.messages = messages;
+                readPositions.clientBuffer = clientBuffer;
                 readPositions.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
                 readPositions.thirdPersonCharacterControls = chunk.GetNativeArray(ref thirdPersonCharacterControlType);
                 readPositions.localTransforms = chunk.GetNativeArray(ref localTransformType);
@@ -689,8 +689,8 @@ public partial struct ReplyMessageSystem : ISystem
 
         ReplyEffectTargets replyEffectTargets;
         replyEffectTargets.sendBuffer = sendBuffer;
-        replyEffectTargets.clientBuffer = clientBuffer;
         replyEffectTargets.messages = messages;
+        replyEffectTargets.clientBuffer = clientBuffer;
         replyEffectTargets.remoteIdentityType = __remoteIdentityType;
         replyEffectTargets.effectTargetDamageType = __effectTargetDamageType;
         replyEffectTargets.effectTargetHPType = __effectTargetHPType;
@@ -703,8 +703,8 @@ public partial struct ReplyMessageSystem : ISystem
 
         ReplyPositions replyPositions;
         replyPositions.sendBuffer = sendBuffer;
-        replyPositions.clientBuffer = clientBuffer;
         replyPositions.messages = messages;
+        replyPositions.clientBuffer = clientBuffer;
         replyPositions.remoteIdentityType = __remoteIdentityType;
         replyPositions.characterBodyType = __characterBodyType;
         replyPositions.thirdPersonCharacterControlType = __thirdPersonCharacterControlType;

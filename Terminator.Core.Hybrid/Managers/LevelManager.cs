@@ -356,7 +356,7 @@ public partial class LevelManager : MonoBehaviour
 
     private IEnumerator __Coroutine()
     {
-        int restartVersion;
+        //int restartVersion;
         while (__coroutineEnumerators.TryDequeue(out var coroutineEnumerator))
         {
             print($"Level manager waiting for coroutine {coroutineEnumerator.name}");

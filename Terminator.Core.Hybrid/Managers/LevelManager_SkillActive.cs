@@ -414,7 +414,7 @@ public partial class LevelManager
         ++result.count;
         int rank = result.rank;
 
-        bool isChanged = false;
+        //bool isChanged = false;
         if (SkillManager.TryGetAsset(name, out SkillKeyAsset asset))
         {
             result.rank = asset.BinarySearch(result.count);

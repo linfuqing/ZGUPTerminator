@@ -747,7 +747,7 @@ public partial class UserDataMain
         userLevel.cacheType = level.cacheType;
         //userLevel.energy = level.energy;
             
-        int i, j, numRewardPools, numStageRewards, numStages = __GetStageCount(level);
+        int i, j, numStageRewards, numStages = __GetStageCount(level);
         string rewardPoolKey;
         Active<int> rewardPoolTimes;
         StageReward stageReward;

@@ -5,7 +5,6 @@ using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Collections.NotBurstCompatible;
 using Unity.Entities;
-using Unity.Jobs;
 using ZG;
 
 public partial class LevelSystemManaged
@@ -68,9 +67,9 @@ public partial class LevelSystemManaged
     {
         public BlobAssetReference<SkillDefinition> definition;
         [ReadOnly] 
-        public NativeArray<byte> clientBuffer;
-        [ReadOnly] 
         public ReplyMessages messages;
+        [ReadOnly] 
+        public NativeList<byte> clientBuffer;
         [ReadOnly]
         public NativeArray<Entity> entityArray;
         [ReadOnly]
@@ -135,7 +134,8 @@ public partial class LevelSystemManaged
         public BlobAssetReference<SkillDefinition> definition;
         
         [ReadOnly] 
-        public NativeArray<byte> clientBuffer;
+        public NativeList<byte> clientBuffer;
+        
         [ReadOnly] 
         public ReplyMessages messages;
         
