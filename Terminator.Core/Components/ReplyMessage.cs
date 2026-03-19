@@ -172,11 +172,14 @@ public struct ReplyMessages : IComponentData
                             ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
 
                             ReplyMessageShared.remotePlayerCount = 0;
+                            
+                            UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
                             break;
                         case NetworkRelayMessageType.Join:
                             channel = reader.ReadPackedInt(streamCompressionModel);
                             if (reader.GetBytesRead() < reader.Length)
                             {
+                                reader.Flush();
                                 key.id = reader.ReadPackedUInt(streamCompressionModel);
                                 if (channel == ReplyMessageShared.channel)
                                 {
@@ -194,6 +197,8 @@ public struct ReplyMessages : IComponentData
                                     }
 
                                     LevelPlayerShared<RemotePlayer>.id = key.id;
+                                    
+                                    UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}:{key.id}");
                                 }
                                 else
                                     UnityEngine.Debug.LogError($"WTF Channel {channel} For Join!");
@@ -202,6 +207,8 @@ public struct ReplyMessages : IComponentData
                             {
                                 ReplyMessageShared.isHost = false;
                                 ReplyMessageShared.channel = channel;
+                                
+                                UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
                             }
 
                             break;
@@ -212,18 +219,24 @@ public struct ReplyMessages : IComponentData
                             {
                                 if (reader.GetBytesRead() < reader.Length)
                                 {
-                                    ReplyMessageShared.remotePlayerCount =
-                                        math.max(ReplyMessageShared.remotePlayerCount - 1, 0);
-
+                                    reader.Flush();
+                                    
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
                                     if (key.id == LevelPlayerShared<RemotePlayer>.id)
                                         LevelPlayerShared<RemotePlayer>.id = 0;
+                                    
+                                    ReplyMessageShared.remotePlayerCount =
+                                        math.max(ReplyMessageShared.remotePlayerCount - 1, 0);
+                                    
+                                    UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}:{key.id}");
                                 }
                                 else
                                 {
                                     ReplyMessageShared.isHost = false;
 
                                     ReplyMessageShared.remotePlayerCount = 0;
+                                    
+                                    UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
                                 }
                             }
                             else
