@@ -604,7 +604,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
-        if (__stageLevelIndices.TryGetValue(userStageID, out int levelIndex))
+        if (!__stageLevelIndices.TryGetValue(userStageID, out int levelIndex))
         {
             __SendChapterStageMessage();
             
