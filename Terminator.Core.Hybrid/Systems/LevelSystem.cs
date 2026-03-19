@@ -156,8 +156,6 @@ public partial class LevelSystemManaged : SystemBase
     
     protected override void OnUpdate()
     {
-        LevelShared.unscaledDeltaTime = UnityEngine.Time.unscaledDeltaTime;
-        
         CompleteDependency();
 
         var manager = LevelManager.instance;
@@ -165,8 +163,12 @@ public partial class LevelSystemManaged : SystemBase
         {
             __DestroyEntities();
 
+            LevelShared.unscaledDeltaTime = 0.0f;
+
             return;
         }
+
+        LevelShared.unscaledDeltaTime = UnityEngine.Time.unscaledDeltaTime;
 
         bool isRecovery = manager.IsRecovery(out bool isWaiting);
         Entity player = SystemAPI.TryGetSingletonEntity<ThirdPersonPlayer>(out Entity thirdPersonPlayerEntity) ? 

@@ -101,7 +101,7 @@ public partial struct ReplyMessageSystem : ISystem
                 if(messageElements.IsCreated)
                     messageElements.Clear();
 
-                foreach (var message in messages.GetValues(ReplyMessageType.Damage, id, clientBuffer))
+                foreach (var message in messages.GetValues(ReplyMessageType.HP, id, clientBuffer))
                 {
                     if(!messageElements.IsCreated)
                         messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
@@ -267,36 +267,38 @@ public partial struct ReplyMessageSystem : ISystem
                 messageElements.Add(messageElement);
             }
 
-            if (!messageElements.IsCreated)
-                return;
-            
-            messageElements.Sort();
-            
-            var remotePositions = this.remotePositions[index];
+            int numRemotePositions;
             RemotePosition remotePosition;
-            DataStreamReader reader;
-            var streamCompressionModel = StreamCompressionModel.Default;
-            int maxRemotePositionIndex = remotePositions.Length - 1, numRemotePositions, i;
-            foreach (var messageElement in messageElements)
+            var remotePositions = this.remotePositions[index];
+            if (messageElements.IsCreated)
             {
-                reader = messageElement.reader;
+                messageElements.Sort();
 
-                numRemotePositions = reader.ReadPackedInt(streamCompressionModel);
-                for (i = 0; i < numRemotePositions; ++i)
+                DataStreamReader reader;
+                var streamCompressionModel = StreamCompressionModel.Default;
+                int maxRemotePositionIndex = remotePositions.Length - 1, i;
+                foreach (var messageElement in messageElements)
                 {
-                    remotePosition = new RemotePosition(ref reader, streamCompressionModel);
-                    if (maxRemotePositionIndex < 0 || remotePositions[maxRemotePositionIndex].type == RemotePosition.Type.Key)
+                    reader = messageElement.reader;
+
+                    numRemotePositions = reader.ReadPackedInt(streamCompressionModel);
+                    for (i = 0; i < numRemotePositions; ++i)
                     {
-                        remotePositions.Add(remotePosition);
+                        remotePosition = new RemotePosition(ref reader, streamCompressionModel);
+                        if (maxRemotePositionIndex < 0 ||
+                            remotePositions[maxRemotePositionIndex].type == RemotePosition.Type.Key)
+                        {
+                            remotePositions.Add(remotePosition);
 
-                        ++maxRemotePositionIndex;
+                            ++maxRemotePositionIndex;
+                        }
+                        else
+                            remotePositions[maxRemotePositionIndex] = remotePosition;
                     }
-                    else
-                        remotePositions[maxRemotePositionIndex] = remotePosition;
                 }
-            }
 
-            messageElements.Dispose();
+                messageElements.Dispose();
+            }
 
             numRemotePositions = remotePositions.Length;
             if (numRemotePositions > 0)
