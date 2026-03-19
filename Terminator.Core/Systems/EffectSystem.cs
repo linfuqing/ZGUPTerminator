@@ -32,7 +32,9 @@ public partial struct EffectSystem : ISystem
         Die = 0x08,
         Drop = 0x10 | Die,
         Recovery = 0x20, 
-        Invincible = 0x40
+        Invincible = 0x40,
+        KeepDamage = 0x80,
+        KeepHP = 0x100,
     }
 
     private struct BuffKey : IEquatable<BuffKey>
@@ -1438,6 +1440,9 @@ public partial struct EffectSystem : ISystem
                     {
                         targetDamage = targetDamageRemotes[0].value;
                         targetDamageRemotes.RemoveAt(0);
+
+                        if (targetDamageRemotes.Length > 0)
+                            result |= EnabledFlags.KeepDamage;
                     }
                     else
                         targetDamage = default;
@@ -1450,6 +1455,9 @@ public partial struct EffectSystem : ISystem
                     {
                         targetHP = targetHPRemotes[0].value;
                         targetHPRemotes.RemoveAt(0);
+                        
+                        if (targetHPRemotes.Length > 0)
+                            result |= EnabledFlags.KeepHP;
                     }
                     else
                         targetHP = default;
@@ -2080,10 +2088,11 @@ public partial struct EffectSystem : ISystem
                         chunk.SetComponentEnabled(ref characterBodyType, i, true);
 
                     chunk.SetComponentEnabled(ref targetHPType, i,
-                        (result & EnabledFlags.Invincible) == EnabledFlags.Invincible);
+                        (result & EnabledFlags.Invincible) == EnabledFlags.Invincible || 
+                        (result & EnabledFlags.KeepHP) == EnabledFlags.KeepHP);
                 }
 
-                chunk.SetComponentEnabled(ref targetDamageType, i, false);
+                chunk.SetComponentEnabled(ref targetDamageType, i, (result & EnabledFlags.KeepDamage) == EnabledFlags.KeepDamage);
             }
         }
     }
