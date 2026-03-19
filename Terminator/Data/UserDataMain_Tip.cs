@@ -539,9 +539,8 @@ public partial class UserDataMain
             yield break;
         }
 
-        IUserData.TipLevel result;
-        result.rewards = __ApplyRewards(level.rewards).ToArray();
-
+        var rewards = level.rewards;
+        
         int tipLevelIndex = __GetTipLevelIndex(level.nextLevel);
         level = _tipLevels[tipLevelIndex];
 
@@ -553,6 +552,9 @@ public partial class UserDataMain
             yield break;
         }
         
+        IUserData.TipLevel result;
+        result.rewards = __ApplyRewards(rewards).ToArray();
+
         //__AppendQuest(UserQuest.Type.TipLevel + tipLevelIndex, 1);
 
         tip -= level.cost;

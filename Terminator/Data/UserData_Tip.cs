@@ -137,21 +137,23 @@ public partial interface IUserData
 
         public void Upgrade(in UserTipLevel level)
         {
-            int numRewards = rewards == null ? 0 : rewards.Length, source = numRewards;
-            for (int i = 0; i < numRewards; ++i)
+            int source = rewards == null ? 0 : rewards.Length;
+            for (int i = 0; i < source; ++i)
             {
                 if(Array.IndexOf(level.rewardNames, rewards[i].name) == -1)
                     continue;
 
-                --numRewards;
-                Array.Copy(rewards, i + 1, rewards, i, numRewards - i);
-                --i;
+                if (--source > i)
+                {
+                    Array.Copy(rewards, i + 1, rewards, i, source - i);
+                    --i;
+                }
             }
             
-            int destination = numRewards + (level.next.rewards == null ? 0 : level.next.rewards.Length);
+            int destination = source + (level.next.rewards == null ? 0 : level.next.rewards.Length);
             Array.Resize(ref rewards, destination);
-            for (int i = numRewards; i < destination; ++i)
-                rewards[i] = level.next.rewards[i - numRewards];
+            for (int i = source; i < destination; ++i)
+                rewards[i] = level.next.rewards[i - source];
         }
     }
 

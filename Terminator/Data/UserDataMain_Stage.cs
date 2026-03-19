@@ -683,40 +683,37 @@ public partial class UserDataMain
         key = $"{key}{UserData.SEPARATOR}{stageRewardName}";
         
         var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
-        if (flag == 0)
+        var stageFlag = UserData.GetStageFlag(levelName, stage);
+        switch (condition)
         {
-            var stageFlag = UserData.GetStageFlag(levelName, stage);
-            switch (condition)
-            {
-                case UserStageReward.Condition.Normal:
-                    if((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
-                case UserStageReward.Condition.Once:
-                    if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
-                case UserStageReward.Condition.KillCount:
-                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageKillCount(levelName, stage) >= conditionValue)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
-                case UserStageReward.Condition.Gold:
-                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageGold(levelName, stage) >= conditionValue)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
-                case UserStageReward.Condition.HPPercentage:
-                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
-                case UserStageReward.Condition.Time:
-                    if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                        UserData.GetStageTime(levelName, stage) <= conditionValue)
-                        flag |= UserStageReward.Flag.Unlocked;
-                    break;
-            }
+            case UserStageReward.Condition.Normal:
+                if((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                    flag |= UserStageReward.Flag.Unlocked;
+                break;
+            case UserStageReward.Condition.Once:
+                if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
+                    flag |= UserStageReward.Flag.Unlocked;
+                break;
+            case UserStageReward.Condition.KillCount:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                    UserData.GetStageKillCount(levelName, stage) >= conditionValue)
+                    flag |= UserStageReward.Flag.Unlocked;
+                break;
+            case UserStageReward.Condition.Gold:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                    UserData.GetStageGold(levelName, stage) >= conditionValue)
+                    flag |= UserStageReward.Flag.Unlocked;
+                break;
+            case UserStageReward.Condition.HPPercentage:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                    UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
+                    flag |= UserStageReward.Flag.Unlocked;
+                break;
+            case UserStageReward.Condition.Time:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
+                    UserData.GetStageTime(levelName, stage) <= conditionValue)
+                    flag |= UserStageReward.Flag.Unlocked;
+                break;
         }
 
         return flag;
