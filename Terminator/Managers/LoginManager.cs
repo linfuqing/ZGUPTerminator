@@ -1702,19 +1702,19 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     private IEnumerator __Start(
-        bool isRestart, 
-        uint levelID, 
+        bool isRestart,
+        uint levelID,
         int stageIndex,
-        string levelName, 
+        string levelName,
         string sceneName)
     {
-        if(__isStart)
+        if (__isStart)
             yield break;
-        
+
         __isStart = true;
-        
+
         //__styles[__selectedLevelIndex].button.interactable = false;
-        
+
         /*foreach (var style in __styles.Values)
         {
             if (style.button != null)
@@ -1724,32 +1724,32 @@ public sealed class LoginManager : MonoBehaviour
         var userData = IUserData.instance;
 
         uint userID = LoginManager.userID.Value;
-        
+
         __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : -1;
-        
+
         if (isRestart)
             yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
         else
             yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
-            
+
         if (!__isStart)
         {
             __isStart = false;
-            
+
             _onEnd?.Invoke();
 
             yield break;
         }
 
-        var clientData = IClientData.instance;
-        if (clientData != null)
+        if (ReplyMessageShared.isHost)
         {
-            if (clientData.isHost)
-            {
-                RemotePlayer.status = clientData.remotePlayerCount > 0
-                    ? RemotePlayer.Status.Waiting
-                    : RemotePlayer.Status.Disabled;
+            RemotePlayer.status = ReplyMessageShared.remotePlayerCount > 0
+                ? RemotePlayer.Status.Waiting
+                : RemotePlayer.Status.Disabled;
 
+            var clientData = IClientData.instance;
+            if (clientData != null)
+            {
                 ClientMessagePlay play;
                 play.isRestart = isRestart;
                 play.levelID = levelID;
@@ -1760,22 +1760,20 @@ public sealed class LoginManager : MonoBehaviour
                 play.Write(ref writer);
                 clientData.EndSend(writer);
             }
-            else
-            {
-                RemotePlayer.status = clientData.remotePlayerCount > 0
-                    ? RemotePlayer.Status.Joined
-                    : RemotePlayer.Status.Disabled;
-            }
         }
         else
-            RemotePlayer.status = RemotePlayer.Status.Disabled;
+        {
+            RemotePlayer.status = ReplyMessageShared.remotePlayerCount > 0
+                ? RemotePlayer.Status.Joined
+                : RemotePlayer.Status.Disabled;
+        }
 
         var analytics = IAnalytics.instance as IAnalyticsEx;
-        analytics?.StartLevel(sceneName/*_levels[__selectedLevelIndex].name*/);
+        analytics?.StartLevel(sceneName /*_levels[__selectedLevelIndex].name*/);
 
         yield return __LoadScene(_startTime, sceneName);
     }
-    
+
     /*private IEnumerator __Start(bool isRestart)
     {
         return __Start(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);

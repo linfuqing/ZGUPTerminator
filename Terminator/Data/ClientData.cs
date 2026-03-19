@@ -255,10 +255,6 @@ public interface IClientData
 {
     public static IClientData instance;
 
-    bool isHost { get; }
-    
-    int remotePlayerCount { get; }
-
     ClientHeader header { get; set; }
     
     /// <summary>
@@ -332,20 +328,6 @@ public class ClientData : MonoBehaviour, IClientData
     private static ClientHeader __header;
     private static Entity __entity;
 
-    public bool isHost
-    {
-        get;
-
-        private set;
-    }
-
-    public int remotePlayerCount
-    {
-        get;
-
-        private set;
-    }
-
     public SquadInviteStatus squadInviteStatus
     {
         get;
@@ -395,7 +377,7 @@ public class ClientData : MonoBehaviour, IClientData
             if (__header.Equals(value))
                 return;
 
-            LevelPlayerShared<LocalPlayer>.id = value.userID;
+            //LevelPlayerShared<LocalPlayer>.id = value.userID;
 
             if (NetworkConnection.State.Disconnected == driver.instance.connectionState)
             {
@@ -467,17 +449,17 @@ public class ClientData : MonoBehaviour, IClientData
                                 if ((int)NetworkRelayMessageType.Leave == type)
                                 {
                                     //对面离开
-                                    --remotePlayerCount;
+                                    //--remotePlayerCount;
 
                                     ClientMessageSquadLeave temp;
                                     SendMessage(temp);
                                 }
-                                else
+                                /*else
                                 {
                                     ++remotePlayerCount;
                                     
                                     LevelPlayerShared<RemotePlayer>.id = header.userID;
-                                }
+                                }*/
                             }
                             else
                             {
@@ -500,18 +482,18 @@ public class ClientData : MonoBehaviour, IClientData
 
                                         squadInviteStatus = SquadInviteStatus.SquadInviting;
 
-                                        isHost = true;
+                                        //isHost = true;
 
                                         break;
                                     case NetworkRelayMessageType.Join:
                                         squadInviteStatus = SquadInviteStatus.SquadInvited;
                                         
-                                        isHost = false;
+                                        //isHost = false;
                                         break;
                                     case NetworkRelayMessageType.Leave:
                                         squadInviteStatus = SquadInviteStatus.None;
                                         
-                                        isHost = false;
+                                        //isHost = false;
                                         break;
                                 }
                             }
@@ -541,7 +523,7 @@ public class ClientData : MonoBehaviour, IClientData
                                     channel = ClientChannel.Squad;
                                     break;
                                 default:
-                                    UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.id, relayType.RelayID());
+                                    //UnityEngine.Assertions.Assert.AreEqual(LevelPlayerShared<LocalPlayer>.id, relayType.RelayID());
                                     break;
                             }
                             
@@ -589,17 +571,7 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 case NetworkClientMessageType.Connect:
                 {
-                    /*header = this.header;
-                    var driver = this.driver;
-                    if (driver.BeginWrite(__pipelineIndex, out var writer))
-                    {
-                        var streamCompressionModel = StreamCompressionModel.Default;
-                        writer.WritePackedInt((int)NetworkRelayMessageType.Init, streamCompressionModel);
-                        header.Write(ref writer, streamCompressionModel);
-                        driver.EndWrite(writer);
-                    }*/
-
-                    if (SquadInviteStatus.None != squadInviteStatus)
+                    /*if (SquadInviteStatus.None != squadInviteStatus)
                     {
                         var sendBuffer = driver.sendBuffer;
                         if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
@@ -608,17 +580,17 @@ public class ClientData : MonoBehaviour, IClientData
                             writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
                             sendBuffer.EndWrite(writer);
                         }
-                    }
+                    }*/
 
                     break;
                 }
                 case NetworkClientMessageType.Disconnect:
-                    if (SquadInviteStatus.None != squadInviteStatus)
+                    /*if (SquadInviteStatus.None != squadInviteStatus)
                     {
                         header = default;
                         
                         return (int)ClientMessageType.SquadLeave;
-                    }
+                    }*/
 
                     break;
             }

@@ -182,8 +182,7 @@ public struct ReplyMessages : IComponentData
                             {
                                 if (channel == ReplyMessageShared.channel)
                                 {
-                                    if (++ReplyMessageShared.remotePlayerCount >
-                                        ReplyMessageShared.maxRemotePlayerCount &&
+                                    if (++ReplyMessageShared.remotePlayerCount > 1 &&
                                         ReplyMessageShared.isHost)
                                     {
                                         if (sendBuffer.BeginWrite(0, out var writer))
@@ -195,6 +194,8 @@ public struct ReplyMessages : IComponentData
                                             sendBuffer.EndWrite(writer);
                                         }
                                     }
+
+                                    LevelPlayerShared<RemotePlayer>.id = key.id;
                                 }
                                 else
                                     UnityEngine.Debug.LogError($"WTF Channel {channel} For Join!");
@@ -222,8 +223,13 @@ public struct ReplyMessages : IComponentData
                                     ReplyMessageShared.remotePlayerCount = 0;
                                 }
                                 else
+                                {
                                     ReplyMessageShared.remotePlayerCount =
                                         math.max(ReplyMessageShared.remotePlayerCount - 1, 0);
+
+                                    if (key.id == LevelPlayerShared<RemotePlayer>.id)
+                                        LevelPlayerShared<RemotePlayer>.id = 0;
+                                }
                             }
                             else
                                 UnityEngine.Debug.LogError($"WTF Channel {channel} For Leave!");
@@ -309,6 +315,4 @@ public static class ReplyMessageShared
     public static ref int channel => ref Channel.Value.Data;
     
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
-    
-    public static ref int maxRemotePlayerCount => ref MaxRemotePlayerCount.Value.Data;
 }
