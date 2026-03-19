@@ -453,6 +453,11 @@ public class ClientData : MonoBehaviour, IClientData
                                     ClientMessageSquadLeave temp;
                                     SendMessage(temp);
                                 }
+                                else
+                                {
+                                    if (ReplyMessageShared.isHost)
+                                        LoginManager.instance?.SendChapterStageMessage();
+                                }
                                 /*else
                                 {
                                     ++remotePlayerCount;
