@@ -9,189 +9,6 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using ZG;
 
-public enum ReplyMessageType
-{
-    Move = 100, 
-    Damage, 
-    HP, 
-        
-    SelectSkill, 
-    PlayerProperty
-}
-
-public struct ReplyMessages : IComponentData
-{
-    public struct MessageKey : IEquatable<MessageKey>
-    {
-        public ReplyMessageType type;
-
-        public uint id;
-
-        public bool Equals(MessageKey other)
-        {
-            return type == other.type && id == other.id;
-        }
-
-        public override int GetHashCode()
-        {
-            return id.GetHashCode();
-        }
-    }
-
-    public struct Enumerator
-    {
-        private NativeList<byte> __clientBuffer;
-        private NativeList<byte> __buffer;
-        private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>.Enumerator __instance;
-
-        public NetworkClient.MessageElement Current
-        {
-            get
-            {
-                int bufferLength = __buffer.Length;
-                var message = __instance.Current;
-                if(message.offset < bufferLength)
-                    return new NetworkClient.MessageElement(message, __buffer.AsArray());
-                        
-                message.offset -= bufferLength;
-                
-                return new NetworkClient.MessageElement(message, __clientBuffer.AsArray());
-            }
-        }
-
-        internal Enumerator(
-            ReplyMessageType type, 
-            uint id, 
-            in ReplyMessages message, 
-            in NativeList<byte> clientBuffer)
-        {
-            __clientBuffer = clientBuffer;
-            __buffer = message.__buffer;
-            
-            MessageKey key;
-            key.type = type;
-            key.id = id;
-
-            __instance = message.__values.GetValuesForKey(key);
-        }
-
-        public bool MoveNext() => __instance.MoveNext();
-
-        public Enumerator GetEnumerator()
-        {
-            return this;
-        }
-    }
-
-    private NativeList<byte> __buffer;
-    private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message> __values;
-
-    public static void WriteHeader(ref DataStreamWriter writer, ReplyMessageType messageType)
-    {
-        writer.WriteReplyHeader((int)messageType, NetworkRelayType.Channel);
-    }
-
-    public ReplyMessages(in AllocatorManager.AllocatorHandle allocator)
-    {
-        __buffer = new NativeList<byte>(allocator);
-        __values = new NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>(1, allocator);
-    }
-
-    public void Dispose()
-    {
-        __buffer.Dispose();
-
-        __values.Dispose();
-    }
-
-    public Enumerator GetValues(ReplyMessageType type, uint id, in NativeList<byte> clientBuffer)
-    {
-        return new Enumerator(type, id, this, clientBuffer);
-    }
-
-    public void Collect(bool isBuffer, in NetworkClient.Messages messages)
-    {
-        int bufferLength = __buffer.Length;
-        if (!isBuffer)
-        {
-            bool isClear = false;
-            NetworkClient.Message message;
-            foreach (var pair in __values)
-            {
-                message = pair.Value;
-                if (message.offset + message.size > bufferLength)
-                {
-                    isClear = true;
-                    
-                    break;
-                }
-            }
-
-            if (isClear)
-            {
-                __buffer.Clear();
-                __values.Clear();
-
-                bufferLength = 0;
-            }
-        }
-
-        int replayType, size;
-        MessageKey key;
-        NetworkClient.Message value, temp;
-        DataStreamReader reader;
-        var streamCompressionModel = StreamCompressionModel.Default;
-        foreach (var element in messages)
-        {
-            if(NetworkClientMessageType.Data != element.Message.type)
-                continue;
-
-            reader = element.reader;
-
-            key.type = (ReplyMessageType)reader.ReadPackedInt(streamCompressionModel);
-            if(key.type < ReplyMessageType.Move || key.type > ReplyMessageType.PlayerProperty)
-                continue;
-                
-            replayType = reader.ReadPackedInt(streamCompressionModel);
-            UnityEngine.Assertions.Assert.AreEqual((int)NetworkRelayType.Channel, replayType);
-
-            key.id = reader.ReadPackedUInt(streamCompressionModel);
-
-            size = reader.GetBytesRead();
-
-            value = element.Message;
-            value.offset += size;
-            value.size -= size;
-            
-            if (ReplyMessageType.PlayerProperty == key.type)
-            {
-                reader = new NetworkClient.MessageElement(value, messages).reader;
-
-                LevelPlayerShared<RemotePlayer>.property = new LevelPlayerProperty(ref reader, streamCompressionModel);
-
-                RemotePlayer.status = RemotePlayer.Status.Joined;
-            }
-            else
-            {
-                if (isBuffer)
-                {
-                    temp.type = value.type;
-                    temp.size = value.size;
-                    temp.offset = __buffer.Length;
-
-                    __buffer.AddRange(new NetworkClient.MessageElement(value, messages).AsArray());
-
-                    value = temp;
-                }
-                else
-                    value.offset += bufferLength;
-
-                __values.Add(key, value);
-            }
-        }
-    }
-}
-
 [BurstCompile, UpdateInGroup(typeof(PresentationSystemGroup)), UpdateAfter(typeof(NetworkClientSystem))]
 public partial struct ReplyMessageSystem : ISystem
 {
@@ -207,6 +24,7 @@ public partial struct ReplyMessageSystem : ISystem
     {
         [ReadOnly]
         public NetworkClient.Messages inputs;
+        public NetworkClientSendBuffer sendBuffer;
         public ReplyMessages outputs;
 
         public void Execute()
@@ -222,7 +40,7 @@ public partial struct ReplyMessageSystem : ISystem
                     isBuffer = true;
                     break;
             }
-            outputs.Collect(isBuffer, inputs);
+            outputs.Collect(isBuffer, inputs, ref sendBuffer);
         }
     }
 
@@ -714,6 +532,7 @@ public partial struct ReplyMessageSystem : ISystem
         
         Collect collect;
         collect.inputs = client;
+        collect.sendBuffer = driver.sendBuffer;
         collect.outputs = messages;
         var jobHandle = collect.ScheduleByRef(state.Dependency);
         
