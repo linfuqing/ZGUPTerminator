@@ -156,7 +156,7 @@ public struct ReplyMessages : IComponentData
             switch (messageElement.Message.type)
             {
                 case NetworkClientMessageType.Connect:
-                    LevelPlayerShared<LocalPlayer>.id = 0;
+                    //LevelPlayerShared<LocalPlayer>.id = 0;
                     
                     ReplyMessageShared.isHost = false;
                     ReplyMessageShared.remotePlayerCount = 0;
@@ -168,18 +168,16 @@ public struct ReplyMessages : IComponentData
                     switch ((NetworkRelayMessageType)key.type)
                     {
                         case NetworkRelayMessageType.Create:
-                            LevelPlayerShared<LocalPlayer>.id = reader.ReadPackedUInt(streamCompressionModel);
-                            
                             ReplyMessageShared.isHost = true;
                             ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
 
                             ReplyMessageShared.remotePlayerCount = 0;
                             break;
                         case NetworkRelayMessageType.Join:
-                            key.id = reader.ReadPackedUInt(streamCompressionModel);
                             channel = reader.ReadPackedInt(streamCompressionModel);
                             if (reader.GetBytesRead() < reader.Length)
                             {
+                                key.id = reader.ReadPackedUInt(streamCompressionModel);
                                 if (channel == ReplyMessageShared.channel)
                                 {
                                     if (++ReplyMessageShared.remotePlayerCount > 1 &&
@@ -202,8 +200,6 @@ public struct ReplyMessages : IComponentData
                             }
                             else
                             {
-                                LevelPlayerShared<LocalPlayer>.id = key.id;
-                            
                                 ReplyMessageShared.isHost = false;
                                 ReplyMessageShared.channel = channel;
                             }
@@ -211,24 +207,23 @@ public struct ReplyMessages : IComponentData
                             break;
                         case NetworkRelayMessageType.Leave:
                         case NetworkRelayMessageType.Drop:
-                            key.id = reader.ReadPackedUInt(streamCompressionModel);
                             channel = reader.ReadPackedInt(streamCompressionModel);
                             if (channel == ReplyMessageShared.channel)
                             {
-                                if (key.id == LevelPlayerShared<LocalPlayer>.id)
-                                {
-                                    ReplyMessageShared.isHost = false;
-                                    LevelPlayerShared<LocalPlayer>.id = 0;
-
-                                    ReplyMessageShared.remotePlayerCount = 0;
-                                }
-                                else
+                                if (reader.GetBytesRead() < reader.Length)
                                 {
                                     ReplyMessageShared.remotePlayerCount =
                                         math.max(ReplyMessageShared.remotePlayerCount - 1, 0);
 
+                                    key.id = reader.ReadPackedUInt(streamCompressionModel);
                                     if (key.id == LevelPlayerShared<RemotePlayer>.id)
                                         LevelPlayerShared<RemotePlayer>.id = 0;
+                                }
+                                else
+                                {
+                                    ReplyMessageShared.isHost = false;
+
+                                    ReplyMessageShared.remotePlayerCount = 0;
                                 }
                             }
                             else

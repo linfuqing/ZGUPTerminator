@@ -377,7 +377,7 @@ public class ClientData : MonoBehaviour, IClientData
             if (__header.Equals(value))
                 return;
 
-            //LevelPlayerShared<LocalPlayer>.id = value.userID;
+            LevelPlayerShared<LocalPlayer>.id = value.userID;
 
             if (NetworkConnection.State.Disconnected == driver.instance.connectionState)
             {
