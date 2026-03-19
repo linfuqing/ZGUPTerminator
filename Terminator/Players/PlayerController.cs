@@ -259,14 +259,14 @@ public class PlayerController : MonoBehaviour
         float m = axis.magnitude;
         if(m > 1.0f)
             axis /= m;
-        else
-            axis = Vector3.zero;
+        /*else
+            axis = Vector3.zero;*/
         
         var axis3D = transform.InverseTransformVector(axis);
         animator.SetFloat(AxisXHash, axis3D.x);
         animator.SetFloat(AxisYHash, axis3D.z);
         //JoystickAnimatorController.Update(animator);
 
-        __position = position;
+        //__position = position;
     }
 }

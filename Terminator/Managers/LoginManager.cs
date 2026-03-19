@@ -378,6 +378,7 @@ public sealed class LoginManager : MonoBehaviour
     private Dictionary<int, LevelStyle> __levelStyles;
     private Dictionary<string, int> __rewardIndices;
     private Dictionary<string, int> __levelIndices;
+    private Dictionary<uint, int> __stageLevelIndices;
     private LinkedList<Loaders> __loaders;
     
     private UnityEvent __onLevelActivatedFirst;
@@ -394,12 +395,12 @@ public sealed class LoginManager : MonoBehaviour
 
     private int __energyMax;
 
-    //private int __selectedLevelEnergy;
     private int __selectedEnergy;
-    //private int __selectedLevelIndex;
-    private uint __selectedUserLevelID;
-    //private uint __selectedUserStageID;
+    
     private int __selectedStageIndex;
+    private uint __selectedUserLevelID;
+    private uint __selectedUserStageID;
+    private uint __targetUserStageID;
 
     private int __sceneActiveDepth;
     
@@ -601,22 +602,31 @@ public sealed class LoginManager : MonoBehaviour
         StartCoroutine(__CollectAndQueryLevels());
     }
 
-    public void MoveTo(int chapterIndex, int stage)
+    public void MoveTo(uint userStageID)
     {
-        var scrollRect = _style.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
+        if (__stageLevelIndices.TryGetValue(userStageID, out int levelIndex))
+        {
+            __SendChapterStageMessage();
+            
+            return;
+        }
+
+        var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            if (scrollRect.selectedIndex[scrollRect.axis] == chapterIndex)
+            __targetUserStageID = userStageID;
+
+            if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
             {
                 var submitHandlers = scrollRect.submitHandlers;
-                var submitHandler = submitHandlers != null && submitHandlers.Count > chapterIndex
-                    ? submitHandlers[chapterIndex]
+                var submitHandler = submitHandlers != null && submitHandlers.Count > levelIndex
+                    ? submitHandlers[levelIndex]
                     : null;
                 if(submitHandler != null)
                     submitHandler.OnSubmit(null);
             }
             
-            scrollRect.MoveTo(chapterIndex);
+            scrollRect.MoveTo(levelIndex);
         }
     }
 
@@ -694,6 +704,8 @@ public sealed class LoginManager : MonoBehaviour
 
             __selectedStageIndex = -1;
         }
+
+        __stageLevelIndices = new Dictionary<uint, int>();
         
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved;
@@ -705,7 +717,7 @@ public sealed class LoginManager : MonoBehaviour
             numStageRewardsTotal = 0, 
             numStages, 
             index;
-        uint selectedStageID = 0;
+        //uint selectedStageID = 0;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
         __levelStyles = new Dictionary<int, LevelStyle>(levelChapters.levels.Length);
@@ -741,8 +753,10 @@ public sealed class LoginManager : MonoBehaviour
                 numStages = 0;
                 foreach (var stage in userLevel.stages)
                 {
+                    __stageLevelIndices[stage.id] = userLevelIndex;
+                    
                     if(__selectedStageIndex == numStages++ && __selectedUserLevelID == userLevel.id)
-                        selectedStageID = stage.id;
+                        __targetUserStageID = stage.id;
                     
                     if (stage.rewardFlags == null)
                         break;
@@ -1017,6 +1031,7 @@ public sealed class LoginManager : MonoBehaviour
                                                             }
 
                                                             __selectedStageIndex = stageIndex;
+                                                            __selectedUserStageID = stage.id;
 
                                                             ref var levelScene = ref level.scenes[sceneIndex];
                                                             __sceneName = levelScene.name;
@@ -1052,11 +1067,14 @@ public sealed class LoginManager : MonoBehaviour
                                                                 for(i = 0; i < numStageStyles; ++i)
                                                                     stageStyles[i].toggle.SetIsOnWithoutNotify(i == stageIndex);
                                                             }
+
+                                                            if(ReplyMessageShared.isHost)
+                                                                __SendChapterStageMessage();
                                                         }
                                                     });
                                                 }
 
-                                                if ((selectedStageID == 0 || selectedStageID != currentStageID) &&
+                                                if ((__targetUserStageID == 0 || __targetUserStageID != currentStageID) &&
                                                     (__sceneActiveDepth <= 0 ||
                                                      sceneUnlocked != null &&
                                                      sceneUnlocked.TryGetValue(sceneIndex, out temp) &&
@@ -1772,6 +1790,22 @@ public sealed class LoginManager : MonoBehaviour
         analytics?.StartLevel(sceneName /*_levels[__selectedLevelIndex].name*/);
 
         yield return __LoadScene(_startTime, sceneName);
+    }
+
+    private void __SendChapterStageMessage()
+    {
+        var clientData = IClientData.instance;
+        if (clientData != null)
+        {
+            var writer = clientData.BeginSend(ClientMessageType.ChapterStage, ClientMessageChapterStage.capacity);
+
+            ClientMessageChapterStage message;
+            message.userStageID = __selectedUserStageID;
+                
+            message.Write(ref writer, StreamCompressionModel.Default);
+                
+            clientData.EndSend(writer);
+        }
     }
 
     /*private IEnumerator __Start(bool isRestart)

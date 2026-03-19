@@ -46,7 +46,7 @@ public enum ClientMessageType
     /// </summary>
     Chat, 
     
-    LevelChapter, 
+    ChapterStage, 
     Play
 }
 
@@ -174,23 +174,22 @@ public struct ClientMessageChatToSend : IClientMessageToSend
     public ClientMessageType messageType => ClientMessageType.Chat;
 }
 
-public struct ClientMessageLevelChapter : IClientMessageToSend
+public struct ClientMessageChapterStage : IClientMessageToSend
 {
-    public uint levelID;
-    public int stage;
+    public uint userStageID;
 
-    public ClientMessageType messageType => ClientMessageType.LevelChapter;
+    public static int capacity => UnsafeUtility.SizeOf<ClientMessageChapterStage>();
 
-    public ClientMessageLevelChapter(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    public ClientMessageType messageType => ClientMessageType.ChapterStage;
+    
+    public ClientMessageChapterStage(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
-        levelID = reader.ReadPackedUInt(streamCompressionModel);
-        stage = reader.ReadPackedInt(streamCompressionModel);
+        userStageID = reader.ReadPackedUInt(streamCompressionModel);
     }
 
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
-        writer.WritePackedUInt(levelID, streamCompressionModel);
-        writer.WritePackedInt(stage, streamCompressionModel);
+        writer.WritePackedUInt(userStageID, streamCompressionModel);
     }
 }
 
@@ -559,6 +558,9 @@ public class ClientData : MonoBehaviour, IClientData
 
                                     RemotePlayer.status = RemotePlayer.Status.Joined;
                                     break;*/
+                                case ClientMessageType.ChapterStage:
+                                    LoginManager.instance?.MoveTo(new ClientMessageChapterStage(ref reader, streamCompressionModel).userStageID);
+                                    break;
                                 case ClientMessageType.Play:
                                     new ClientMessagePlay(ref reader).Apply();
                                     break;
