@@ -265,6 +265,8 @@ public struct ClientMessagePlay
 public interface IClientData
 {
     public static IClientData instance;
+    
+    ClientHeader header { get; }
 
     void Connect(in ClientHeader header, string address, ushort port);
     
@@ -380,6 +382,8 @@ public class ClientData : MonoBehaviour, IClientData
             return entityManager.GetComponentData<NetworkClientDriver>(__entity);
         }
     }
+    
+    public ClientHeader header => __header;
     
     public void Connect(in ClientHeader header, string address, ushort port)
     {
