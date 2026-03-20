@@ -287,6 +287,10 @@ public struct ReplyMessages : IComponentData
 
                                     ReplyMessageShared.remotePlayerCount = 0;
                                     
+                                    RemotePlayer.isOnline = false;
+
+                                    LevelPlayerShared<RemotePlayer>.id = 0;
+                                    
                                     UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
                                 }
                             }
