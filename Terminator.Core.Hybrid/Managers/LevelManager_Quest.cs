@@ -85,7 +85,7 @@ public partial class LevelManager
 
     private int __stageKillCount;
     private int __stageGold;
-    private int __hpPercentage;
+    private int __hpPercentage = 100;
 
     public int hpPercentage
     {

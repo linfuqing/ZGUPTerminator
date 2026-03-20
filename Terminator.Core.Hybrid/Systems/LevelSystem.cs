@@ -98,6 +98,8 @@ public partial class LevelSystemManaged : SystemBase
 
     private int __version;
     private int __statusStage;
+    private int __statusKillCount;
+    private int __statusKillBossCount;
     private EntityQuery __group;
     private EntityQuery __itemGroup;
     private EntityQuery __remotePlayerGroup;
@@ -162,6 +164,9 @@ public partial class LevelSystemManaged : SystemBase
         var manager = LevelManager.instance;
         if (manager == null || !SystemAPI.TryGetSingleton<LevelStatus>(out var status))
         {
+            __statusKillCount = 0;
+            __statusKillBossCount = 0;
+            
             __DestroyEntities();
 
             LevelShared.unscaledDeltaTime = 0.0f;
@@ -183,8 +188,8 @@ public partial class LevelSystemManaged : SystemBase
                 //manager.Pause();
                 status.exp = LevelShared.exp;
                 status.expMax = LevelShared.expMax;
-                status.killCount = 0;
-                status.killBossCount = 0;
+                status.killCount = __statusKillCount;
+                status.killBossCount = __statusKillBossCount;
                 status.stage = LevelShared.stage;
                 SystemAPI.SetSingleton(status);
 
@@ -312,6 +317,9 @@ public partial class LevelSystemManaged : SystemBase
                 LevelShared.exp = status.exp;
                 LevelShared.expMax = status.expMax;
                 LevelShared.stage = status.stage;
+                
+                __statusKillCount = status.killCount;
+                __statusKillBossCount = status.killBossCount;
 
                 ref var items = ref LevelShared.items;
                 items.Clear();

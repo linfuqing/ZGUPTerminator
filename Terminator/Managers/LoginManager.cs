@@ -520,7 +520,7 @@ public sealed class LoginManager : MonoBehaviour
         set;
     }
     
-    public IReadOnlyCollection<int> levelIndices => __levelIndices.Values;
+    public IReadOnlyCollection<int> levelIndices => __stageLevelIndices.Values;
 
     [Preserve]
     public void ShowNotices()
@@ -776,11 +776,12 @@ public sealed class LoginManager : MonoBehaviour
                 numStages = 0;
                 foreach (var stage in userLevel.stages)
                 {
-                    __stageLevelIndices[stage.id] = userLevelIndex;
-                    
                     if(__selectedStageIndex == numStages++ && __selectedUserLevelID == userLevel.id)
                         __targetUserStageID = stage.id;
                     
+                    if((stage.flag & UserStage.Flag.Unlocked) != 0)
+                        __stageLevelIndices[stage.id] = userLevelIndex;
+
                     if (stage.rewardFlags == null)
                         break;
                     

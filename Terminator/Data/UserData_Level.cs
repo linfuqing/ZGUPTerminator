@@ -372,7 +372,7 @@ public partial class UserData
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
             __SetStageTime(temp.name, temp.stage, time);
             
-            __SubmitStageFlag(hpPercentage == 100, /*flag, */temp.name, temp.stage, stage);
+            __SubmitStageFlag(hpPercentage > 0, /*flag, */temp.name, temp.stage, stage);
 
             temp.stage = stage;
         }
