@@ -107,7 +107,7 @@ public partial class LevelSystemManaged
                                 ref definition);
 
                         ref var skill = ref definition.skills[index];
-                        status = states[index];
+                        status = index < states.Length ? states[index] : default;
                         float cooldown = (float)(Math.Max(status.cooldown /* - skill.duration*/, time) - time);
                         manager.SetActiveSkill(
                             originIndex,

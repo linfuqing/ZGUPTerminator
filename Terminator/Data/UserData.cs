@@ -92,6 +92,8 @@ public struct User
 {
     public string name;
     public string avatar;
+    public string replyServerAddress;
+    public ushort replyServerPort;
     public uint id;
     public int gold;
     //public int level;

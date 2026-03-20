@@ -266,7 +266,7 @@ public interface IClientData
 {
     public static IClientData instance;
 
-    ClientHeader header { get; set; }
+    void Connect(in ClientHeader header, string address, ushort port);
     
     /// <summary>
     /// int messageType;
@@ -338,6 +338,8 @@ public class ClientData : MonoBehaviour, IClientData
 
     private static ClientHeader __header;
     private static Entity __entity;
+    private static string __address;
+    private static ushort __port;
 
     /*public SquadInviteStatus squadInviteStatus
     {
@@ -379,31 +381,49 @@ public class ClientData : MonoBehaviour, IClientData
         }
     }
     
-    public ClientHeader header
+    public void Connect(in ClientHeader header, string address, ushort port)
     {
-        get => __header;
+        LevelPlayerShared<LocalPlayer>.id = header.userID;
+        
+        var driver = this.driver.instance;
+        bool isDisconnected = NetworkConnection.State.Disconnected == driver.connectionState, isChanged = false;
 
-        set
+        if (__address == null)
+            __address = _address;
+        
+        if(__port == 0)
+            __port = _port;
+        
+        if (!string.IsNullOrEmpty(address) && address != __address)
         {
-            if (__header.Equals(value))
-                return;
-
-            LevelPlayerShared<LocalPlayer>.id = value.userID;
-
-            if (NetworkConnection.State.Disconnected == driver.instance.connectionState)
-            {
-                using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
-                {
-                    var writer = new DataStreamWriter(bytes);
-                    value.Write(ref writer, StreamCompressionModel.Default);
-                    driver.Connect(_address, _port, bytes.GetSubArray(0, writer.Length));
-                }
-            }
+            __address = address;
             
-            __header = value;
+            isChanged = true;
         }
+        
+        if (port != 0 && port != __port)
+        {
+            __port = port;
+            
+            isChanged = true;
+        }
+        
+        if (isDisconnected || isChanged)
+        {
+            if(!isDisconnected)
+                driver.Shutdown();
+            
+            using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
+            {
+                var writer = new DataStreamWriter(bytes);
+                header.Write(ref writer, StreamCompressionModel.Default);
+                driver.Connect(__address, __port, bytes.GetSubArray(0, writer.Length));
+            }
+        }
+            
+        __header = header;
     }
-    
+
     public int ReadMessageType(out ClientHeader header)
     {
         var driver = this.driver;
@@ -482,7 +502,7 @@ public class ClientData : MonoBehaviour, IClientData
                             }
                             else
                             {
-                                header = this.header;
+                                header = __header;
 
                                 switch ((NetworkRelayMessageType)type)
                                 {
@@ -707,7 +727,7 @@ public class ClientData : MonoBehaviour, IClientData
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var temp = __Load<ClientMessageChatToSend>();
-                    header.Write(
+                    __header.Write(
                         ref writer, 
                         StreamCompressionModel.Default, 
                         (int)ClientMessageType.Chat, ClientChannel.Squad == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);

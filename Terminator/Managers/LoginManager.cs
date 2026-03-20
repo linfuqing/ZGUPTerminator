@@ -1595,7 +1595,7 @@ public sealed class LoginManager : MonoBehaviour
             header.userName = user.name;
             header.userAvatar = user.avatar;
             
-            clientData.header = header;
+            clientData.Connect(header, user.replyServerAddress, user.replyServerPort);
         }
 
         GameMain.Login(user.id);

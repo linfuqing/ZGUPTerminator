@@ -55,6 +55,13 @@ public sealed partial class UserDataMain : MonoBehaviour
 
         private set;
     }
+
+    [Header("Host")] 
+    [SerializeField] 
+    internal string _replyServerAddress;
+    
+    [SerializeField]
+    internal ushort _replyServerPort;
     
     private const string NAME_SPACE_USER_NICKNAME = "UserNickname";
 
@@ -155,6 +162,8 @@ public sealed partial class UserDataMain : MonoBehaviour
         User user;
         user.name = nickname;
         user.avatar = avatar;
+        user.replyServerAddress = _replyServerAddress;
+        user.replyServerPort = _replyServerPort;
         user.id = UserData.id;
         user.gold = gold;
         //user.level = UserData.level;
