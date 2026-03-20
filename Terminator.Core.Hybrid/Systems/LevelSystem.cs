@@ -13,7 +13,8 @@ using ZG;
     DestroyAll
 }*/
 
-[UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
+//[UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
+[UpdateInGroup(typeof(InitializationSystemGroup)), UpdateAfter(typeof(LevelPlayerSystem))]
 public partial class LevelSystemManaged : SystemBase
 {
     private interface ICollectLinkedEntitiesWrapper
