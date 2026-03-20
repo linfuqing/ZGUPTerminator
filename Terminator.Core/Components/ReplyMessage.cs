@@ -105,8 +105,20 @@ public struct ReplyMessages : IComponentData
         return new Enumerator(type, id, this, clientBuffer);
     }
 
-    public void Collect(bool isBuffer, in NetworkClient.Messages messages, ref NetworkClientSendBuffer sendBuffer)
+    public void Collect(in NetworkClient.Messages messages, ref NetworkClientSendBuffer sendBuffer)
     {
+        bool isBuffer;
+        switch (RemotePlayer.status)
+        {
+            case RemotePlayer.Status.Disabled:
+            case RemotePlayer.Status.StandBy:
+                isBuffer = false;
+                break;
+            default:
+                isBuffer = true;
+                break;
+        }
+        
         int bufferLength = __buffer.Length;
         if (!isBuffer)
         {
@@ -147,6 +159,7 @@ public struct ReplyMessages : IComponentData
         messageElements.Sort();
 
         int channel, size;
+        NetworkRelayChannelFlag channelFlag;
         MessageKey key;
         NetworkClient.Message value, temp;
         DataStreamReader reader;
@@ -167,6 +180,18 @@ public struct ReplyMessages : IComponentData
                     key.type = (ReplyMessageType)reader.ReadPackedInt(streamCompressionModel);
                     switch ((NetworkRelayMessageType)key.type)
                     {
+                        case NetworkRelayMessageType.Connect:
+                            key.id = reader.ReadPackedUInt(streamCompressionModel);
+                            if (key.id == LevelPlayerShared<RemotePlayer>.id)
+                                RemotePlayer.isOnline = true;
+
+                            break;
+                        case NetworkRelayMessageType.Disconnect:
+                            key.id = reader.ReadPackedUInt(streamCompressionModel);
+                            if (key.id == LevelPlayerShared<RemotePlayer>.id)
+                                RemotePlayer.isOnline = false;
+
+                            break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;
                             ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
@@ -179,11 +204,15 @@ public struct ReplyMessages : IComponentData
                             channel = reader.ReadPackedInt(streamCompressionModel);
                             if (reader.GetBytesRead() < reader.Length)
                             {
-                                reader.Flush();
-                                key.id = reader.ReadPackedUInt(streamCompressionModel);
                                 if (channel == ReplyMessageShared.channel)
                                 {
-                                    if (++ReplyMessageShared.remotePlayerCount > 1 &&
+                                    channelFlag = (NetworkRelayChannelFlag)reader.ReadPackedInt(streamCompressionModel);
+
+                                    reader.Flush();
+                                    key.id = reader.ReadPackedUInt(streamCompressionModel);
+                                    if ((++ReplyMessageShared.remotePlayerCount > 1 ||
+                                         RemotePlayer.status >= RemotePlayer.Status.Joined &&
+                                         LevelPlayerShared<RemotePlayer>.id != key.id) &&
                                         ReplyMessageShared.isHost)
                                     {
                                         if (sendBuffer.BeginWrite(0, out var writer))
@@ -194,10 +223,15 @@ public struct ReplyMessages : IComponentData
 
                                             sendBuffer.EndWrite(writer);
                                         }
+
+                                        continue;
                                     }
 
                                     LevelPlayerShared<RemotePlayer>.id = key.id;
-                                    
+
+                                    RemotePlayer.isOnline = (channelFlag & NetworkRelayChannelFlag.Online) ==
+                                                            NetworkRelayChannelFlag.Online;
+
                                     UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}:{key.id}");
                                 }
                                 else
@@ -219,12 +253,29 @@ public struct ReplyMessages : IComponentData
                             {
                                 if (reader.GetBytesRead() < reader.Length)
                                 {
+                                    channelFlag = (NetworkRelayChannelFlag)reader.ReadPackedInt(streamCompressionModel);
+                                    if ((channelFlag & NetworkRelayChannelFlag.Creator) ==
+                                        NetworkRelayChannelFlag.Creator)
+                                    {
+                                        if (sendBuffer.BeginWrite(0, out var writer))
+                                        {
+                                            writer.WritePackedInt((int)NetworkRelayMessageType.Leave,
+                                                streamCompressionModel);
+
+                                            sendBuffer.EndWrite(writer);
+                                        }
+                                    }
+                                    
                                     reader.Flush();
                                     
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
                                     if (key.id == LevelPlayerShared<RemotePlayer>.id)
+                                    {
                                         LevelPlayerShared<RemotePlayer>.id = 0;
-                                    
+
+                                        RemotePlayer.isOnline = false;
+                                    }
+
                                     ReplyMessageShared.remotePlayerCount =
                                         math.max(ReplyMessageShared.remotePlayerCount - 1, 0);
                                     
@@ -265,7 +316,8 @@ public struct ReplyMessages : IComponentData
                                 LevelPlayerShared<RemotePlayer>.property =
                                     new LevelPlayerProperty(ref reader, streamCompressionModel);
 
-                                RemotePlayer.status = RemotePlayer.Status.Joined;
+                                if(RemotePlayer.Status.StandBy != RemotePlayer.status)
+                                    RemotePlayer.status = RemotePlayer.Status.Joined;
                             }
                             else
                             {

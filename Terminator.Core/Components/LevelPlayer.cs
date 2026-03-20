@@ -18,13 +18,22 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         StandBy
     }
     
-    private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<RemotePlayer>();
+    private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
+
+    private static readonly SharedStatic<bool> OnlineValue = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
 
     public static Status status
     {
         get => StatusValue.Data;
 
         set => StatusValue.Data = value;
+    }
+    
+    public static bool isOnline
+    {
+        get => OnlineValue.Data;
+
+        set => OnlineValue.Data = value;
     }
 }
 

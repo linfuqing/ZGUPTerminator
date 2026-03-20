@@ -37,6 +37,11 @@ public enum ClientMessageType
     SquadLeave = NetworkRelayMessageType.Leave, 
     
     /// <summary>
+    /// 踢人&被踢
+    /// </summary>
+    SquadDrop = NetworkRelayMessageType.Drop, 
+    
+    /// <summary>
     /// 组队邀请
     /// </summary>
     SquadInvite = NetworkRelayMessageType.Query + 1, 
@@ -122,6 +127,13 @@ public struct ClientMessageSquadJoin : IClientMessageToRead, IClientMessageToSen
 public struct ClientMessageSquadLeave : IClientMessageToSend
 {
     public ClientMessageType messageType => ClientMessageType.SquadLeave;
+}
+
+public struct ClientMessageSquadDrop : IClientMessageToSend
+{
+    public uint userID;
+    
+    public ClientMessageType messageType => ClientMessageType.SquadDrop;
 }
 
 public struct ClientMessageSquadInviteToRead : IClientMessageToRead
@@ -280,13 +292,13 @@ public interface IClientData
 
 public class ClientData : MonoBehaviour, IClientData
 {
-    public enum SquadInviteStatus
+    /*public enum SquadInviteStatus
     {
         None,
         SquadCreating, 
         SquadInviting, 
         SquadInvited
-    }
+    }*/
     
     [SerializeField]
     internal int _connectTimeoutMS = 1000;
@@ -327,12 +339,12 @@ public class ClientData : MonoBehaviour, IClientData
     private static ClientHeader __header;
     private static Entity __entity;
 
-    public SquadInviteStatus squadInviteStatus
+    /*public SquadInviteStatus squadInviteStatus
     {
         get;
 
         private set;
-    }
+    }*/
 
     public NetworkClientDriver driver
     {
@@ -428,7 +440,7 @@ public class ClientData : MonoBehaviour, IClientData
                     var streamCompressionModel = StreamCompressionModel.Default;
                     var reader = messageElement.reader;
                     int type = reader.ReadPackedInt(streamCompressionModel);
-                    print((NetworkRelayMessageType)type);
+                    //print((NetworkRelayMessageType)type);
                     switch ((NetworkRelayMessageType)type)
                     {
                         case NetworkRelayMessageType.Init:
@@ -438,10 +450,13 @@ public class ClientData : MonoBehaviour, IClientData
                         case NetworkRelayMessageType.Create:
                         case NetworkRelayMessageType.Join:
                         case NetworkRelayMessageType.Leave:
+                        case NetworkRelayMessageType.Drop:
                         {
                             int channel = reader.ReadPackedInt(streamCompressionModel);
                             if (reader.GetBytesRead() < reader.Length)
                             {
+                                var channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                                
                                 reader.Flush();
                                 header = new ClientHeader(ref reader, streamCompressionModel);
                                 
@@ -484,12 +499,12 @@ public class ClientData : MonoBehaviour, IClientData
                                             sendBuffer.EndWrite(writer);
                                         }
 
-                                        squadInviteStatus = SquadInviteStatus.SquadInviting;
+                                        //squadInviteStatus = SquadInviteStatus.SquadInviting;
 
                                         //isHost = true;
 
                                         break;
-                                    case NetworkRelayMessageType.Join:
+                                    /*case NetworkRelayMessageType.Join:
                                         squadInviteStatus = SquadInviteStatus.SquadInvited;
                                         
                                         //isHost = false;
@@ -498,13 +513,18 @@ public class ClientData : MonoBehaviour, IClientData
                                         squadInviteStatus = SquadInviteStatus.None;
                                         
                                         //isHost = false;
-                                        break;
+                                        break;*/
                                 }
                             }
 
-                            if ((int)NetworkRelayMessageType.Leave == type)
-                                return (int)ClientMessageType.SquadLeave;
-
+                            switch ((NetworkRelayMessageType)type)
+                            {
+                                case NetworkRelayMessageType.Leave:
+                                    return (int)ClientMessageType.SquadLeave;
+                                case NetworkRelayMessageType.Drop:
+                                    return (int)ClientMessageType.SquadDrop;
+                            }
+                            
                             ClientMessageSquadJoin message;
                             message.squadInviteID = (uint)channel;
 
@@ -662,6 +682,15 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
+            case ClientMessageType.SquadDrop:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)NetworkRelayMessageType.Drop, streamCompressionModel);
+                    writer.WritePackedUInt(__Load<ClientMessageSquadDrop>().userID, streamCompressionModel);
+                    sendBuffer.EndWrite(writer);
+                }
+                break;
             case ClientMessageType.SquadInvite:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
@@ -671,7 +700,7 @@ public class ClientData : MonoBehaviour, IClientData
 
                     __squadInviteMessage = __Load<ClientMessageSquadInviteToSend>();
                     
-                    squadInviteStatus = SquadInviteStatus.SquadCreating;
+                    //squadInviteStatus = SquadInviteStatus.SquadCreating;
                 }
                 break;
             case ClientMessageType.Chat:

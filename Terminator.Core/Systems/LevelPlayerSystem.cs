@@ -326,7 +326,7 @@ public partial struct LevelPlayerSystem : ISystem
             return;
         
         var remotePlayerStatus = RemotePlayer.status;
-        if (RemotePlayer.Status.Waiting == remotePlayerStatus)
+        if (RemotePlayer.Status.Waiting == remotePlayerStatus && RemotePlayer.isOnline)
             return;
         
         NativeArray<Entity> entityArray = __group.ToEntityArray(Allocator.TempJob), localPlayers, remotePlayers;

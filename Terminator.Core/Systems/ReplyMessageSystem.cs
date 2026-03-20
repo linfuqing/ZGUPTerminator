@@ -29,18 +29,7 @@ public partial struct ReplyMessageSystem : ISystem
 
         public void Execute()
         {
-            bool isBuffer;
-            switch (RemotePlayer.status)
-            {
-                case RemotePlayer.Status.Disabled:
-                case RemotePlayer.Status.StandBy:
-                    isBuffer = false;
-                    break;
-                default:
-                    isBuffer = true;
-                    break;
-            }
-            outputs.Collect(isBuffer, inputs, ref sendBuffer);
+            outputs.Collect(inputs, ref sendBuffer);
         }
     }
 
