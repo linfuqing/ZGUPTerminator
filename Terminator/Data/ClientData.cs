@@ -67,6 +67,25 @@ public interface IClientMessageToSend
 
 public struct ClientHeader : IEquatable<ClientHeader>
 {
+    public struct Block
+    {
+        public FixedString32Bytes userName;
+        public FixedString32Bytes userAvatar;
+
+        public Block(in FixedBytes64 bytes)
+        {
+            this = bytes.AsArray().Reinterpret<Block>(1)[0];
+        }
+
+        public void Write(ref DataStreamWriter writer)
+        {
+            FixedBytes64 bytes = default;
+            var blocks = bytes.AsArray().Reinterpret<Block>(1);
+            blocks[0] = this;
+            bytes.Write(ref writer);
+        }
+    }
+    
     public uint userID;
     public FixedString32Bytes userName;
     public FixedString32Bytes userAvatar;
@@ -74,26 +93,19 @@ public struct ClientHeader : IEquatable<ClientHeader>
     public ClientHeader(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
         userID = reader.ReadPackedUInt(streamCompressionModel);
-        int position = reader.GetBytesRead();
-        userName = reader.ReadFixedString32();
-        reader.SeekSet(position + 32);
-        userAvatar = reader.ReadFixedString32();
-        reader.SeekSet(position + 64);
+        var bytes = new FixedBytes64(ref reader);
+        var block = new Block(bytes);
+        userName = block.userName;
+        userAvatar = block.userAvatar;
     }
     
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
         writer.WritePackedUInt(userID, streamCompressionModel);
-        
-        int position = writer.Length + 32;
-        writer.WriteFixedString32(userName);
-        while (writer.Length < position)
-            writer.WriteByte(0);
-        
-        position += 32;
-        writer.WriteFixedString32(userAvatar);
-        while (writer.Length < position)
-            writer.WriteByte(0);
+        Block block;
+        block.userName = userName;
+        block.userAvatar = userAvatar;
+        block.Write(ref writer);
     }
     
     public void Write(
@@ -110,6 +122,20 @@ public struct ClientHeader : IEquatable<ClientHeader>
     {
         return userID == other.userID && userName == other.userName && userAvatar == other.userAvatar;
     }
+}
+
+public struct ClientMessageSquadJoinToRead : IClientMessageToRead
+{
+    public enum PlayerFlag
+    {
+        Online = NetworkRelayChannelFlag.Online,
+    
+        Creator = NetworkRelayChannelFlag.Creator
+    }
+
+    public PlayerFlag playerFlag;
+    
+    public uint squadInviteID;
 }
 
 public struct ClientMessageSquadJoin : IClientMessageToRead, IClientMessageToSend
@@ -301,6 +327,13 @@ public class ClientData : MonoBehaviour, IClientData
         SquadInviting, 
         SquadInvited
     }*/
+
+    private enum InitStatus
+    {
+        None, 
+        Remote, 
+        Local
+    }
     
     [SerializeField]
     internal int _connectTimeoutMS = 1000;
@@ -331,6 +364,7 @@ public class ClientData : MonoBehaviour, IClientData
         NetworkPipelineStage.UnreliableSequenced,
     };
 
+    private InitStatus __initStatus;
     private int __frameCount;
     private int __pipelineIndex;
     private int __messageIndex;
@@ -430,6 +464,46 @@ public class ClientData : MonoBehaviour, IClientData
 
     public int ReadMessageType(out ClientHeader header)
     {
+        /*switch (__initStatus)
+        {
+            case InitStatus.None:
+                __initStatus = InitStatus.Remote;
+                
+                if (ReplyMessageShared.remotePlayerCount > 0)
+                {
+                    header.userID = LevelPlayerShared<RemotePlayer>.id;
+
+                    header.userName = default;
+                    header.userName.AsFixedList() = ReplyMessageShared.remotePlayerHeader;
+                    
+                    ClientMessageSquadJoin message;
+                    message.squadInviteID = (uint)ReplyMessageShared.channel;
+
+                    __Save(message);
+                            
+                    return (int)ClientMessageType.SquadJoin;
+                }
+                
+                break;
+            case InitStatus.Remote:
+                break;
+        }
+        if (!__isInit)
+        {
+            __isInit = true;
+
+            if (ReplyMessageShared.remotePlayerCount > 0)
+            {
+                header.userID = LevelPlayerShared<RemotePlayer>.id;
+                ClientMessageSquadJoin message;
+                message.squadInviteID = (uint)ReplyMessageShared.channel;
+
+                __Save(message);
+                            
+                return (int)ClientMessageType.SquadJoin;
+            }
+        }*/
+        
         var driver = this.driver;
         var instance = driver.instance;
         int frameCount = Time.frameCount;

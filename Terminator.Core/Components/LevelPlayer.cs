@@ -17,7 +17,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         Joined, 
         StandBy
     }
-    
+
     private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
 
     private static readonly SharedStatic<bool> OnlineValue = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
@@ -185,10 +185,16 @@ public static class LevelPlayerShared<T> where T : ILevelPlayer
         public static readonly SharedStatic<LevelPlayerProperty> Value = SharedStatic<LevelPlayerProperty>.GetOrCreate<Property>();
     }
 
+    private class Header
+    {
+        public static readonly SharedStatic<FixedList64Bytes<byte>> Value = SharedStatic<FixedList64Bytes<byte>>.GetOrCreate<Header>();
+    }
+    
     private class ID
     {
         public static readonly SharedStatic<uint> Value = SharedStatic<uint>.GetOrCreate<ID>();
     }
+
 
     public static ref LevelPlayerProperty property => ref Property.Value.Data;
     

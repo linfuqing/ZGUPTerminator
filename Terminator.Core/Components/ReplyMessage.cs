@@ -232,6 +232,8 @@ public struct ReplyMessages : IComponentData
                                     RemotePlayer.isOnline = (channelFlag & NetworkRelayChannelFlag.Online) ==
                                                             NetworkRelayChannelFlag.Online;
 
+                                    reader.ReadBytes(ReplyMessageShared.remotePlayerHeader.AsArray());
+
                                     UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}:{key.id}");
                                 }
                                 else
@@ -369,9 +371,9 @@ public static class ReplyMessageShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerCount>();
     }
 
-    private struct MaxRemotePlayerCount
+    private struct RemotePlayerHeader
     {
-        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<MaxRemotePlayerCount>();
+        public static readonly SharedStatic<FixedBytes64> Value = SharedStatic<FixedBytes64>.GetOrCreate<RemotePlayerHeader>();
     }
 
     public static ref bool isHost => ref IsHost.Value.Data;
@@ -379,4 +381,6 @@ public static class ReplyMessageShared
     public static ref int channel => ref Channel.Value.Data;
     
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
+    
+    public static ref FixedBytes64 remotePlayerHeader => ref RemotePlayerHeader.Value.Data;
 }
