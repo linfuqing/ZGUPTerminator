@@ -459,6 +459,8 @@ public class ClientData : MonoBehaviour, IClientData
                 var writer = new DataStreamWriter(bytes);
                 header.Write(ref writer, StreamCompressionModel.Default);
                 driver.Connect(__address, __port, bytes.GetSubArray(0, writer.Length));
+                
+                print($"{this} has been connected to {__address}:{__port}");
             }
         }
             
@@ -544,10 +546,10 @@ public class ClientData : MonoBehaviour, IClientData
                     //print((NetworkRelayMessageType)type);
                     switch ((NetworkRelayMessageType)type)
                     {
-                        case NetworkRelayMessageType.Init:
+                        /*case NetworkRelayMessageType.Status:
                             
                             //reset
-                            break;
+                            break;*/
                         case NetworkRelayMessageType.Create:
                         case NetworkRelayMessageType.Join:
                         case NetworkRelayMessageType.Leave:

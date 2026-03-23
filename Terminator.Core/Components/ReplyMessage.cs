@@ -182,6 +182,9 @@ public struct ReplyMessages : IComponentData
 
                             __Log($"Reply Message Disconnect {key.id}");
                             break;
+                        case NetworkRelayMessageType.Status:
+                            ReplyMessageShared.remotePlayerChannelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;
                             ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
@@ -365,6 +368,11 @@ public static class ReplyMessageShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Channel>();
     }
 
+    private struct RemotePlayerChannelFlag
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerChannelFlag>();
+    }
+
     private struct RemotePlayerCount
     {
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerCount>();
@@ -379,6 +387,8 @@ public static class ReplyMessageShared
     
     public static ref int channel => ref Channel.Value.Data;
     
+    public static ref int remotePlayerChannelFlag => ref RemotePlayerChannelFlag.Value.Data;
+
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
     
     public static ref FixedBytes64 remotePlayerHeader => ref RemotePlayerHeader.Value.Data;
