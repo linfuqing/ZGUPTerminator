@@ -448,6 +448,8 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         originIndex = reader.ReadPackedInt(streamCompressionModel);
         activeIndex = reader.ReadPackedInt(streamCompressionModel);
         damageScale = reader.ReadPackedFloat(streamCompressionModel);
+        
+        UnityEngine.Debug.LogError($"Read {this}");
     }
 
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
@@ -456,6 +458,8 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         writer.WritePackedInt(originIndex, streamCompressionModel);
         writer.WritePackedInt(activeIndex, streamCompressionModel);
         writer.WritePackedFloat(damageScale, streamCompressionModel);
+        
+        UnityEngine.Debug.LogError($"Write {this}");
     }
 
     public void Apply(ref NativeList<SkillActiveIndex> activeIndices)
@@ -544,6 +548,11 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
 
             instance.Apply(ref activeIndices, ref bulletStates, ref skillDefinition);
         }
+    }
+
+    public override string ToString()
+    {
+        return $"LevelSkill({index},{originIndex},{activeIndex},{damageScale})";
     }
 }
 

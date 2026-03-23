@@ -561,6 +561,8 @@ public class ClientData : MonoBehaviour, IClientData
                                 reader.Flush();
                                 header = new ClientHeader(ref reader, streamCompressionModel);
                                 
+                                UnityEngine.Assertions.Assert.AreNotEqual(__header.userID, header.userID);
+                                
                                 if ((int)NetworkRelayMessageType.Leave == type)
                                 {
                                     //对面离开

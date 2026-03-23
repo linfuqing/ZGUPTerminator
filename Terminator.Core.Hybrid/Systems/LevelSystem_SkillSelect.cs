@@ -130,7 +130,9 @@ public partial class LevelSystemManaged
         }
     }
 
+#if !DEBUG
     [BurstCompile]
+#endif
     private struct RemotePlayerSelectSkillsEx : IJobChunk
     {
         public BlobAssetReference<SkillDefinition> definition;

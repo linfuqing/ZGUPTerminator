@@ -169,6 +169,7 @@ public struct ReplyMessages : IComponentData
             switch (messageElement.Message.type)
             {
                 case NetworkClientMessageType.Connect:
+                    __Log("Reply Message Connect");
                     //LevelPlayerShared<LocalPlayer>.id = 0;
                     
                     ReplyMessageShared.isHost = false;
@@ -185,12 +186,14 @@ public struct ReplyMessages : IComponentData
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
                                 RemotePlayer.isOnline = true;
 
+                            __Log($"Reply Message Connect {key.id}");
                             break;
                         case NetworkRelayMessageType.Disconnect:
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
                                 RemotePlayer.isOnline = false;
 
+                            __Log($"Reply Message Disconnect {key.id}");
                             break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;
@@ -198,7 +201,7 @@ public struct ReplyMessages : IComponentData
 
                             ReplyMessageShared.remotePlayerCount = 0;
                             
-                            UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
+                            __Log("Reply Message Create");
                             break;
                         case NetworkRelayMessageType.Join:
                             channel = reader.ReadPackedInt(streamCompressionModel);
@@ -210,6 +213,8 @@ public struct ReplyMessages : IComponentData
 
                                     reader.Flush();
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
+                                    
+                                    __Log($"Reply Message Join {channel} : {key.id}");
                                     if ((++ReplyMessageShared.remotePlayerCount > 1 ||
                                          RemotePlayer.status >= RemotePlayer.Status.Joined &&
                                          LevelPlayerShared<RemotePlayer>.id != key.id) &&
@@ -244,7 +249,7 @@ public struct ReplyMessages : IComponentData
                                 ReplyMessageShared.isHost = false;
                                 ReplyMessageShared.channel = channel;
                                 
-                                UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
+                                __Log($"Reply Message Join {channel}");
                             }
 
                             break;
@@ -281,7 +286,7 @@ public struct ReplyMessages : IComponentData
                                     ReplyMessageShared.remotePlayerCount =
                                         math.max(ReplyMessageShared.remotePlayerCount - 1, 0);
                                     
-                                    UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}:{key.id}");
+                                    __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{key.id}");
                                 }
                                 else
                                 {
@@ -309,6 +314,8 @@ public struct ReplyMessages : IComponentData
 
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
 
+                            __Log($"Reply Message {key.type} {key.id}");
+                            
                             size = reader.GetBytesRead();
 
                             value = messageElement.Message;
@@ -351,6 +358,11 @@ public struct ReplyMessages : IComponentData
         }
 
         messageElements.Dispose();
+    }
+
+    private static void __Log(string message)
+    {
+        UnityEngine.Debug.Log(message);
     }
 }
 
