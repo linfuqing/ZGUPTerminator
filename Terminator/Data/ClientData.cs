@@ -421,6 +421,9 @@ public class ClientData : MonoBehaviour, IClientData
     
     public void Connect(in ClientHeader header, string address, ushort port)
     {
+        address = "192.168.1.168";
+        port = 1386;
+        
         LevelPlayerShared<LocalPlayer>.id = header.userID;
         
         var driver = this.driver.instance;
@@ -588,12 +591,8 @@ public class ClientData : MonoBehaviour, IClientData
                                         var sendBuffer = driver.sendBuffer;
                                         if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
                                         {
-                                            header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite, NetworkRelayType.All);
-                                            writer.WritePackedInt(channel, streamCompressionModel);
-                                            writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
-                                            writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
-                                            writer.WriteFixedString512(__squadInviteMessage.text);
-
+                                            __WriteSquadInvite(ref writer, streamCompressionModel, channel);
+                                            
                                             sendBuffer.EndWrite(writer);
                                         }
 
@@ -792,12 +791,16 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.SquadInvite:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
-                    sendBuffer.EndWrite(writer);
-
                     __squadInviteMessage = __Load<ClientMessageSquadInviteToSend>();
-                    
+
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    if (ReplyMessageShared.isHost)
+                        __WriteSquadInvite(ref writer, streamCompressionModel, ReplyMessageShared.channel);
+                    else
+                    {
+                        writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
+                        sendBuffer.EndWrite(writer);
+                    }
                     //squadInviteStatus = SquadInviteStatus.SquadCreating;
                 }
                 break;
@@ -866,6 +869,16 @@ public class ClientData : MonoBehaviour, IClientData
     private T __Load<T>() where T : unmanaged
     {
         return __bytes.AsArray().Reinterpret<T>(1)[0];
+    }
+
+    private void __WriteSquadInvite(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel, int channel)
+    {
+        header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite,
+            NetworkRelayType.All);
+        writer.WritePackedInt(channel, streamCompressionModel);
+        writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
+        writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
+        writer.WriteFixedString512(__squadInviteMessage.text);
     }
 
     void Start()
