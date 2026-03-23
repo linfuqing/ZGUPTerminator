@@ -378,7 +378,7 @@ public sealed class LoginManager : MonoBehaviour
     private LevelStyle[] __levelStyles;
     private Dictionary<string, int> __rewardIndices;
     private Dictionary<string, int> __levelIndices;
-    private Dictionary<uint, int> __stageLevelIndices;
+    private Dictionary<uint, (uint, int)> __stageLevelIndices;
     private LinkedList<Loaders> __loaders;
     
     private UnityEvent __onLevelActivatedFirst;
@@ -520,7 +520,7 @@ public sealed class LoginManager : MonoBehaviour
         set;
     }
     
-    public IReadOnlyCollection<int> levelIndices => __stageLevelIndices.Values;
+    public IReadOnlyCollection<int> levelIndices => __levelIndices.Values;
 
     [Preserve]
     public void ShowNotices()
@@ -626,7 +626,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
-        if (!__stageLevelIndices.TryGetValue(userStageID, out int levelIndex))
+        if (!__stageLevelIndices.TryGetValue(userStageID, out var stageLevelIndex))
         {
             SendChapterStageMessage();
             
@@ -636,8 +636,9 @@ public sealed class LoginManager : MonoBehaviour
         var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            __targetUserStageID = userStageID;
+            __targetUserStageID = stageLevelIndex.Item1;
 
+            int levelIndex = stageLevelIndex.Item2;
             if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
             {
                 /*var submitHandlers = scrollRect.submitHandlers;
@@ -728,7 +729,7 @@ public sealed class LoginManager : MonoBehaviour
             __selectedStageIndex = -1;
         }
 
-        __stageLevelIndices = new Dictionary<uint, int>();
+        __stageLevelIndices = new Dictionary<uint, (uint, int)>();
         
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved;
@@ -739,8 +740,9 @@ public sealed class LoginManager : MonoBehaviour
             numStageRewards = 0, 
             numStageRewardsTotal = 0, 
             numStages, 
-            index;
-        //uint selectedStageID = 0;
+            index, j;
+        uint maxStageID;
+        UserStage userStage;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
         __levelStyles = new LevelStyle[numLevels];
@@ -773,29 +775,34 @@ public sealed class LoginManager : MonoBehaviour
                     }
                 }
 
-                numStages = 0;
-                foreach (var stage in userLevel.stages)
+                maxStageID = 0;
+                numStages = userLevel.stages.Length;
+                for (j = 0; j < numStages; ++j)
                 {
-                    if(__selectedStageIndex == numStages++ && __selectedUserLevelID == userLevel.id)
-                        __targetUserStageID = stage.id;
+                    userStage = userLevel.stages[j];
                     
-                    if((stage.flag & UserStage.Flag.Unlocked) != 0)
-                        __stageLevelIndices[stage.id] = userLevelIndex;
+                    if(__selectedStageIndex == j && __selectedUserLevelID == userLevel.id)
+                        __targetUserStageID = userStage.id;
 
-                    if (stage.rewardFlags == null)
-                        break;
+                    if ((userStage.flag & UserStage.Flag.Unlocked) != 0)
+                        maxStageID = userStage.id;
                     
-                    foreach (var rewardFlag in stage.rewardFlags)
+                    __stageLevelIndices[userStage.id] = (maxStageID, userLevelIndex);
+
+                    if (userStage.rewardFlags != null)
                     {
-                        if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                        foreach (var rewardFlag in userStage.rewardFlags)
                         {
-                            ++numStageRewards;
+                            if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                            {
+                                ++numStageRewards;
 
-                            isSelected = true;
+                                isSelected = true;
+                            }
                         }
+
+                        numStageRewardsTotal += userStage.rewardFlags.Length;
                     }
-                    
-                    numStageRewardsTotal += stage.rewardFlags.Length;
                 }
             }
 

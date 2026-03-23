@@ -122,7 +122,9 @@ public partial struct LevelPlayerSystem : ISystem
                                 
                                 skillActiveIndices.Clear();
                             }
-
+                            
+                            UnityEngine.Debug.Log($"Skill {player} : {activeSkill.name} : {skillActiveIndices.Length} : {i}");
+                            
                             skillActiveIndex.value = i;
                             skillActiveIndex.damageScale = 1.0f + activeSkill.damageScale + property.effectDamageScale;
                             skillActiveIndices.Add(skillActiveIndex);
