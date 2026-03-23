@@ -17,11 +17,11 @@ public enum ReplyMessageType
 
 public struct ReplyMessages : IComponentData
 {
-    private enum Status : byte
+    /*private enum Status : byte
     {
         Buffer, 
         Clear
-    }
+    }*/
     
     public struct MessageKey : IEquatable<MessageKey>
     {
@@ -122,44 +122,13 @@ public struct ReplyMessages : IComponentData
                 break;
             default:
                 isBuffer = true;
-                
-                if(__buffer.Length < 1)
-                    __buffer.Add((byte)Status.Buffer);
                 break;
         }
         
-        int bufferLength = __buffer.Length;
         if (!isBuffer)
         {
-            bool isClear;
-            if (bufferLength > 0 && __buffer[0] == (byte)Status.Buffer)
-            {
-                __buffer[0] = (byte)Status.Clear;
-
-                isClear = false;
-            }
-            else
-                isClear = true;
-            
-            /*NetworkClient.Message message;
-            foreach (var pair in __values)
-            {
-                message = pair.Value;
-                if (message.offset + message.size > bufferLength)
-                {
-                    isClear = true;
-                    
-                    break;
-                }
-            }*/
-
-            if (isClear)
-            {
-                __buffer.Clear();
-                __values.Clear();
-
-                bufferLength = 0;
-            }
+            __buffer.Clear();
+            __values.Clear();
         }
 
         NativeList<NetworkClient.MessageElement> messageElements = default;
@@ -176,7 +145,7 @@ public struct ReplyMessages : IComponentData
         
         messageElements.Sort();
 
-        int channel, size;
+        int bufferLength = __buffer.Length, channel, size;
         NetworkRelayChannelFlag channelFlag;
         MessageKey key;
         NetworkClient.Message value, temp;
