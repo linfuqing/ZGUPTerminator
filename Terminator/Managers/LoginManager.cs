@@ -633,11 +633,13 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
 
+        __targetUserStageID = stageLevelIndex.Item1;
+        if(__targetUserStageID != userStageID)
+            SendChapterStageMessage();
+
         var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            __targetUserStageID = stageLevelIndex.Item1;
-
             int levelIndex = stageLevelIndex.Item2;
             if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
             {
