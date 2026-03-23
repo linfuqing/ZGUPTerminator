@@ -737,7 +737,7 @@ public sealed class LoginManager : MonoBehaviour
         __stageLevelIndices = new Dictionary<uint, (uint, int)>();
         
         numLevels = levelChapters.levels.Length;
-        bool isHot = false, isMoved;
+        bool isHot = false, isMoved, isUnlock;
         int movedLevelIndex = -1, 
             selectedLevelIndex = -1,
             //finalLevelIndex = -1, 
@@ -758,55 +758,42 @@ public sealed class LoginManager : MonoBehaviour
 
             //bool isEndOfLevels = userLevelIndex + 1 == numLevels;
             isSelected = false;
-            if (userLevel.stages != null)
+
+            isUnlock = true;
+            
+            numStages = userLevel.stages == null ? 0 : userLevel.stages.Length;
+            for (j = 0; j < numStages; ++j)
             {
-                if (!isHot)
+                userStage = userLevel.stages[j];
+                
+                if(__selectedStageIndex == j && __selectedUserLevelID == userLevel.id)
+                    __targetUserStageID = userStage.id;
+
+                if (isUnlock)
                 {
-                    foreach (var stage in userLevel.stages)
-                    {
-                        if (stage.rewardFlags == null)
-                            break;
+                    maxStageID = userStage.id;
 
-                        foreach (var rewardFlag in stage.rewardFlags)
-                        {
-                            if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked &&
-                                (rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
-                            {
-                                isHot = true;
-
-                                break;
-                            }
-                        }
-                    }
+                    isUnlock = (userStage.flag & UserStage.Flag.Unlocked) != 0;
                 }
 
-                numStages = userLevel.stages.Length;
-                for (j = 0; j < numStages; ++j)
+                __stageLevelIndices[userStage.id] = (maxStageID, userLevelIndex);
+
+                if (userStage.rewardFlags != null)
                 {
-                    userStage = userLevel.stages[j];
-                    
-                    if(__selectedStageIndex == j && __selectedUserLevelID == userLevel.id)
-                        __targetUserStageID = userStage.id;
-
-                    if ((userStage.flag & UserStage.Flag.Unlocked) != 0)
-                        maxStageID = userStage.id;
-                    
-                    __stageLevelIndices[userStage.id] = (maxStageID, userLevelIndex);
-
-                    if (userStage.rewardFlags != null)
+                    foreach (var rewardFlag in userStage.rewardFlags)
                     {
-                        foreach (var rewardFlag in userStage.rewardFlags)
+                        if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
                         {
-                            if ((rewardFlag & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
-                            {
-                                ++numStageRewards;
+                            ++numStageRewards;
 
-                                isSelected = true;
-                            }
+                            isSelected = true;
+                            
+                            if((rewardFlag & UserStageReward.Flag.Collected) != UserStageReward.Flag.Collected)
+                                isHot = true;
                         }
-
-                        numStageRewardsTotal += userStage.rewardFlags.Length;
                     }
+
+                    numStageRewardsTotal += userStage.rewardFlags.Length;
                 }
             }
 
