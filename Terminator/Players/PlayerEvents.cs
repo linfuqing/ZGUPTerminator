@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Scripting;
 
 public class PlayerEvents : MonoBehaviour
 {
@@ -65,6 +66,13 @@ public class PlayerEvents : MonoBehaviour
 
             __isActive = value;
         }
+    }
+
+    public static bool isFocusRemotePlayer
+    {
+        get;
+
+        private set;
     }
 
     public static int survivingCount
@@ -155,6 +163,12 @@ public class PlayerEvents : MonoBehaviour
         __timeScaleIndex = -1;
     }
 
+    [Preserve]
+    public void FocusRemotePlayer()
+    {
+        isFocusRemotePlayer = true;
+    }
+
     void OnEnable()
     {
         if (__instances == null)
@@ -167,6 +181,10 @@ public class PlayerEvents : MonoBehaviour
     void OnDisable()
     {
         if (__instances.Remove(this) && __instances.Count == 0)
+        {
             __ClearTimeScale();
+
+            isFocusRemotePlayer = false;
+        }
     }
 }

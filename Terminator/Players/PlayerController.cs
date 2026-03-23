@@ -242,7 +242,7 @@ public class PlayerController : MonoBehaviour
             PlayerEvents.isActive = true;
         }
 
-        if (__isLocal)
+        if (__isLocal || PlayerEvents.isFocusRemotePlayer)
         {
             var positionInstance = PlayerPosition.instance;
             if (positionInstance != null)

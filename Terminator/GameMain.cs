@@ -453,6 +453,7 @@ public class GameMain : GameUser
             public string name;
             public string bossTitle;
             public string bossDescription;
+            //public Vector3 playerOffset;
             public SpawnerAttribute.Scale spawnerAttribute;
         }
         
@@ -759,6 +760,7 @@ public class GameMain : GameUser
                             stage.name = chapterStage.name;
                             stage.bossTitle = chapterStage.bossTitle;
                             stage.bossDescription = chapterStage.bossDescription;
+                            //stage.playerOffset = chapterStage.playerOffset;
                             stage.spawnerAttributeScale = chapterStage.spawnerAttribute;
                             stage.quests = default;
                             LevelShared.stages.Add(stage);

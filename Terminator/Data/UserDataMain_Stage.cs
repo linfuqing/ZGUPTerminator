@@ -37,6 +37,8 @@ public partial class UserDataMain
 
         public int energy;
 
+        //public Bounds playerBounds;
+
         public SpawnerAttribute.Scale spawnerAttribute;
         
         public UserRewardData[] directRewards;
@@ -48,6 +50,10 @@ public partial class UserDataMain
         public UserLevelStageData ToLevel(string levelName, int stage, bool isForce)
         {
             UserLevelStageData result;
+            /*Vector3 min = playerBounds.min, max = playerBounds.max;
+            result.playerOffset = new Vector3(UnityEngine.Random.Range(min.x, max.x),
+                UnityEngine.Random.Range(min.y, max.y),
+                UnityEngine.Random.Range(min.z, max.z));*/
             result.spawnerAttributeScale = spawnerAttribute;
             int numQuests = indirectRewards == null ? 0 : indirectRewards.Length, i;
             if (!isForce)

@@ -327,6 +327,10 @@ public partial struct LevelSystem : ISystem
 
                 if (!playerTransform.ValueRW.Position.Equals(playerPosition))
                 {
+                    /*int levelStage = LevelShared.stage;
+                    playerPosition += levelStage < LevelShared.stages.Length
+                        ? LevelShared.stages[levelStage].playerOffset
+                        : float3.zero;*/
                     playerTransform.ValueRW.Position = playerPosition;
 
                     if (remotePositions.IsCreated)

@@ -25,6 +25,7 @@ public struct UserLevel
 [Serializable]
 public struct UserLevelStageData
 {
+    //public Vector3 playerOffset;
     public SpawnerAttribute.Scale spawnerAttributeScale;
     public LevelQuest[] quests;
 
@@ -34,6 +35,7 @@ public struct UserLevelStageData
         result.name = name;
         result.bossTitle = bossTitle;
         result.bossDescription = bossDescription;
+        //result.playerOffset = playerOffset;
         result.spawnerAttributeScale = spawnerAttributeScale;
         result.quests = default;
         if (quests != null)
@@ -215,6 +217,7 @@ public partial interface IUserData
             }
 
             LevelPlayerShared<T>.property = playerProperty;
+            //LevelPlayerShared<T>.offset = playerOffset;
         }
     }
 

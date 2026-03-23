@@ -787,6 +787,7 @@ public static class LevelShared
         public FixedString32Bytes name;
         public FixedString32Bytes bossTitle;
         public FixedString128Bytes bossDescription;
+        //public float3 playerOffset;
         public SpawnerAttribute.Scale spawnerAttributeScale;
         public FixedList32Bytes<LevelQuest> quests;
 

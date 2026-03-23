@@ -181,7 +181,7 @@ public partial class LevelSystemManaged
 
         private BufferTypeHandle<BulletStatus> __bulletStatusType;
         private BufferTypeHandle<SkillActiveIndex> __activeIndexType;
-        
+
         private NativeParallelMultiHashMap<Entity, int> __skillIndices;
 
         public SkillSelectionRemotePlayer(SystemBase system)
@@ -360,6 +360,7 @@ public partial class LevelSystemManaged
                                 {
                                     var streamCompressionModel = StreamCompressionModel.Default;
                                     writer.WriteReplyHeader((int)ReplyMessageType.SelectSkill, NetworkRelayType.Channel);
+                                    //writer.WriteInt(skillVersion.value);
                                     writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
                                     for(int i = 0; i < numSelectedSkillIndices; ++i)
                                         skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
