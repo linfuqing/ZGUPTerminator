@@ -421,8 +421,8 @@ public class ClientData : MonoBehaviour, IClientData
     
     public void Connect(in ClientHeader header, string address, ushort port)
     {
-        address = "192.168.1.168";
-        port = 1386;
+        //address = "192.168.1.168";
+        //port = 1386;
         
         LevelPlayerShared<LocalPlayer>.id = header.userID;
         
