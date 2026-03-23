@@ -608,15 +608,18 @@ public sealed class LoginManager : MonoBehaviour
         StartCoroutine(__CollectAndQueryLevels());
     }
 
-    public void SendChapterStageMessage()
+    public void SendChapterStageMessage(uint stageID = 0)
     {
+        if(stageID == 0)
+            stageID = selectedUserStageID;
+        
         var clientData = IClientData.instance;
         if (clientData != null)
         {
             var writer = clientData.BeginSend(ClientMessageType.ChapterStage, ClientMessageChapterStage.capacity);
 
             ClientMessageChapterStage message;
-            message.userStageID = selectedUserStageID;
+            message.userStageID = stageID;
                 
             message.Write(ref writer, StreamCompressionModel.Default);
                 
@@ -635,7 +638,7 @@ public sealed class LoginManager : MonoBehaviour
 
         __targetUserStageID = stageLevelIndex.Item1;
         if(__targetUserStageID != userStageID)
-            SendChapterStageMessage();
+            SendChapterStageMessage(__targetUserStageID);
 
         var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
@@ -743,7 +746,7 @@ public sealed class LoginManager : MonoBehaviour
             numStageRewardsTotal = 0, 
             numStages, 
             index, j;
-        uint maxStageID;
+        uint maxStageID = 0;
         UserStage userStage;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -777,7 +780,6 @@ public sealed class LoginManager : MonoBehaviour
                     }
                 }
 
-                maxStageID = 0;
                 numStages = userLevel.stages.Length;
                 for (j = 0; j < numStages; ++j)
                 {
