@@ -52,7 +52,8 @@ public enum ClientMessageType
     Chat, 
     
     ChapterStage, 
-    Play
+    Play, 
+    Canceled
 }
 
 public interface IClientMessageToRead
@@ -425,6 +426,8 @@ public class ClientData : MonoBehaviour, IClientData
         //port = 1386;
         
         LevelPlayerShared<LocalPlayer>.id = header.userID;
+
+        __initStatus = InitStatus.None;
         
         var driver = this.driver.instance;
         bool isDisconnected = NetworkConnection.State.Disconnected == driver.connectionState, isChanged = false;
@@ -699,6 +702,9 @@ public class ClientData : MonoBehaviour, IClientData
                                     break;
                                 case ClientMessageType.Play:
                                     new ClientMessagePlay(ref reader).Apply();
+                                    break;
+                                case ClientMessageType.Canceled:
+                                    RemotePlayer.status = RemotePlayer.Status.Canceled;
                                     break;
                             }
 

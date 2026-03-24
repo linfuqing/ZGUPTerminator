@@ -1784,12 +1784,12 @@ public sealed class LoginManager : MonoBehaviour
                 style.button.interactable = false;
         }*/
 
+        var clientData = IClientData.instance;
         if (ReplyMessageShared.remotePlayerCount > 0 &&
             __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID))
         {
             RemotePlayer.status = RemotePlayer.Status.Waiting;
 
-            var clientData = IClientData.instance;
             if (ReplyMessageShared.isHost)
             {
                 if (clientData != null)
@@ -1810,7 +1810,14 @@ public sealed class LoginManager : MonoBehaviour
                     yield return null;
 
                     if (RemotePlayer.Status.Disabled == RemotePlayer.status)
-                        break;
+                            break;
+                    
+                    if(RemotePlayer.Status.Canceled == RemotePlayer.status)
+                    {
+                        _onEnd?.Invoke();
+
+                        yield break;
+                    }
                     
                     stageID = (uint)RemotePlayer.channelStatus;
                 } while (0 == stageID);
@@ -1824,6 +1831,29 @@ public sealed class LoginManager : MonoBehaviour
                 var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
                 writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
                 clientData.EndSend(writer);
+            }
+
+            if (!ReplyMessageShared.isHost)
+            {
+                do
+                {
+                    yield return null;
+
+                    if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                        break;
+                    
+                    if(RemotePlayer.Status.Canceled == RemotePlayer.status)
+                    {
+                        _onEnd?.Invoke();
+
+                        yield break;
+                    }
+                    
+                    stageID = (uint)RemotePlayer.channelStatus;
+                } while (0 == stageID);
+
+                if(RemotePlayer.Status.Disabled != RemotePlayer.status)
+                    (levelID, stageIndex) = __stageLevelIDs[stageID];
             }
         }
         else
@@ -1847,7 +1877,13 @@ public sealed class LoginManager : MonoBehaviour
             __isStart = false;
 
             _onEnd?.Invoke();
-
+            
+            if (clientData != null)
+            {
+                var writer = clientData.BeginSend(ClientMessageType.Canceled, 0);
+                clientData.EndSend(writer);
+            }
+            
             yield break;
         }
 
