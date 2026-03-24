@@ -392,4 +392,9 @@ public static class ReplyMessageShared
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
     
     public static ref FixedBytes64 remotePlayerHeader => ref RemotePlayerHeader.Value.Data;
+
+    static ReplyMessageShared()
+    {
+        channel = CHANNEL_NULL;
+    }
 }
