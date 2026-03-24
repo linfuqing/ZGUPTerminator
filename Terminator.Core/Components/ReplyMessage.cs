@@ -199,12 +199,11 @@ public struct ReplyMessages : IComponentData
                             break;
                         case NetworkRelayMessageType.Join:
                             channel = reader.ReadPackedInt(streamCompressionModel);
+                            channelFlag = reader.ReadPackedInt(streamCompressionModel);
                             if (reader.GetBytesRead() < reader.Length)
                             {
                                 if (channel == ReplyMessageShared.channel)
                                 {
-                                    channelFlag = reader.ReadPackedInt(streamCompressionModel);
-
                                     reader.Flush();
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
                                     
@@ -251,9 +250,9 @@ public struct ReplyMessages : IComponentData
                             channel = reader.ReadPackedInt(streamCompressionModel);
                             if (channel == ReplyMessageShared.channel)
                             {
+                                channelFlag = reader.ReadPackedInt(streamCompressionModel);
                                 if (reader.GetBytesRead() < reader.Length)
                                 {
-                                    channelFlag = reader.ReadPackedInt(streamCompressionModel);
                                     if (((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Creator) ==
                                         NetworkRelayChannelFlag.Creator)
                                     {

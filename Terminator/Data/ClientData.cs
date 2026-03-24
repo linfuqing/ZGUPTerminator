@@ -556,10 +556,10 @@ public class ClientData : MonoBehaviour, IClientData
                         case NetworkRelayMessageType.Drop:
                         {
                             int channel = reader.ReadPackedInt(streamCompressionModel);
+                            var channelFlag = reader.ReadPackedInt(streamCompressionModel);
+
                             if (reader.GetBytesRead() < reader.Length)
                             {
-                                var channelFlag = reader.ReadPackedInt(streamCompressionModel);
-                                
                                 reader.Flush();
                                 header = new ClientHeader(ref reader, streamCompressionModel);
                                 
@@ -589,10 +589,10 @@ public class ClientData : MonoBehaviour, IClientData
                             {
                                 header = __header;
 
+                                var sendBuffer = driver.sendBuffer;
                                 switch ((NetworkRelayMessageType)type)
                                 {
                                     case NetworkRelayMessageType.Create:
-                                        var sendBuffer = driver.sendBuffer;
                                         if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
                                         {
                                             __WriteSquadInvite(ref writer, streamCompressionModel, channel);
@@ -600,21 +600,27 @@ public class ClientData : MonoBehaviour, IClientData
                                             sendBuffer.EndWrite(writer);
                                         }
 
-                                        //squadInviteStatus = SquadInviteStatus.SquadInviting;
-
-                                        //isHost = true;
-
+                                        if ((channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus) != 0)
+                                        {
+                                            if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                                            {
+                                                writer.WritePackedInt((int)NetworkRelayMessageType.Status, streamCompressionModel);
+                                                writer.WritePackedInt(0, streamCompressionModel);
+                                                sendBuffer.EndWrite(writer);
+                                            }
+                                        }
                                         break;
-                                    /*case NetworkRelayMessageType.Join:
-                                        squadInviteStatus = SquadInviteStatus.SquadInvited;
-                                        
-                                        //isHost = false;
+                                    case NetworkRelayMessageType.Join:
+                                        if ((channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus) != 0)
+                                        {
+                                            if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                                            {
+                                                writer.WritePackedInt((int)NetworkRelayMessageType.Status, streamCompressionModel);
+                                                writer.WritePackedInt(0, streamCompressionModel);
+                                                sendBuffer.EndWrite(writer);
+                                            }
+                                        }
                                         break;
-                                    case NetworkRelayMessageType.Leave:
-                                        squadInviteStatus = SquadInviteStatus.None;
-                                        
-                                        //isHost = false;
-                                        break;*/
                                 }
                             }
 
