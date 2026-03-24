@@ -145,8 +145,7 @@ public struct ReplyMessages : IComponentData
         
         messageElements.Sort();
 
-        int bufferLength = __buffer.Length, channel, size;
-        NetworkRelayChannelFlag channelFlag;
+        int bufferLength = __buffer.Length, channel, size, channelFlag;
         MessageKey key;
         NetworkClient.Message value, temp;
         DataStreamReader reader;
@@ -169,21 +168,26 @@ public struct ReplyMessages : IComponentData
                     switch ((NetworkRelayMessageType)key.type)
                     {
                         case NetworkRelayMessageType.Connect:
+                            channelFlag = reader.ReadPackedInt(streamCompressionModel);
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
-                                RemotePlayer.isOnline = true;
+                                RemotePlayer.channelFlag = channelFlag;
 
                             __Log($"Reply Message Connect {key.id}");
                             break;
                         case NetworkRelayMessageType.Disconnect:
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
-                                RemotePlayer.isOnline = false;
+                                RemotePlayer.channelFlag = 0;
 
                             __Log($"Reply Message Disconnect {key.id}");
                             break;
                         case NetworkRelayMessageType.Status:
-                            ReplyMessageShared.remotePlayerChannelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            //reader.Flush();
+                            key.id = reader.ReadPackedUInt(streamCompressionModel);
+                            if( key.id == LevelPlayerShared<RemotePlayer>.id)
+                                RemotePlayer.channelFlag = channelFlag;
                             break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;
@@ -199,7 +203,7 @@ public struct ReplyMessages : IComponentData
                             {
                                 if (channel == ReplyMessageShared.channel)
                                 {
-                                    channelFlag = (NetworkRelayChannelFlag)reader.ReadPackedInt(streamCompressionModel);
+                                    channelFlag = reader.ReadPackedInt(streamCompressionModel);
 
                                     reader.Flush();
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
@@ -224,8 +228,7 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.id = key.id;
 
-                                    RemotePlayer.isOnline = (channelFlag & NetworkRelayChannelFlag.Online) ==
-                                                            NetworkRelayChannelFlag.Online;
+                                    RemotePlayer.channelFlag = channelFlag;
 
                                     reader.ReadBytes(ReplyMessageShared.remotePlayerHeader.AsArray());
 
@@ -250,8 +253,8 @@ public struct ReplyMessages : IComponentData
                             {
                                 if (reader.GetBytesRead() < reader.Length)
                                 {
-                                    channelFlag = (NetworkRelayChannelFlag)reader.ReadPackedInt(streamCompressionModel);
-                                    if ((channelFlag & NetworkRelayChannelFlag.Creator) ==
+                                    channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                                    if (((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Creator) ==
                                         NetworkRelayChannelFlag.Creator)
                                     {
                                         if (sendBuffer.BeginWrite(0, out var writer))
@@ -270,7 +273,7 @@ public struct ReplyMessages : IComponentData
                                     {
                                         LevelPlayerShared<RemotePlayer>.id = 0;
 
-                                        RemotePlayer.isOnline = false;
+                                        RemotePlayer.channelFlag = 0;
                                     }
 
                                     ReplyMessageShared.remotePlayerCount =
@@ -284,7 +287,7 @@ public struct ReplyMessages : IComponentData
 
                                     ReplyMessageShared.remotePlayerCount = 0;
                                     
-                                    RemotePlayer.isOnline = false;
+                                    RemotePlayer.channelFlag = 0;
 
                                     LevelPlayerShared<RemotePlayer>.id = 0;
                                     
@@ -368,11 +371,6 @@ public static class ReplyMessageShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Channel>();
     }
 
-    private struct RemotePlayerChannelFlag
-    {
-        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerChannelFlag>();
-    }
-
     private struct RemotePlayerCount
     {
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerCount>();
@@ -387,8 +385,6 @@ public static class ReplyMessageShared
     
     public static ref int channel => ref Channel.Value.Data;
     
-    public static ref int remotePlayerChannelFlag => ref RemotePlayerChannelFlag.Value.Data;
-
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
     
     public static ref FixedBytes64 remotePlayerHeader => ref RemotePlayerHeader.Value.Data;

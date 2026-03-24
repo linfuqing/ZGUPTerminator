@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
+using ZG;
 
 public interface ILevelPlayer
 {
@@ -20,7 +21,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
     private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
 
-    private static readonly SharedStatic<bool> OnlineValue = SharedStatic<bool>.GetOrCreate<RemotePlayer>();
+    private static readonly SharedStatic<int> ChannelFlag = SharedStatic<int>.GetOrCreate<RemotePlayer>();
 
     public static Status status
     {
@@ -28,13 +29,17 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
         set => StatusValue.Data = value;
     }
-    
-    public static bool isOnline
-    {
-        get => OnlineValue.Data;
 
-        set => OnlineValue.Data = value;
+    public static int channelStatus => channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus;
+    
+    public static int channelFlag
+    {
+        get => ChannelFlag.Data;
+
+        set => ChannelFlag.Data = value;
     }
+
+    public static bool isOnline => ((NetworkRelayChannelFlag)channelFlag).HasFlag(NetworkRelayChannelFlag.Online);
 }
 
 public struct LocalPlayer : IComponentData, ILevelPlayer

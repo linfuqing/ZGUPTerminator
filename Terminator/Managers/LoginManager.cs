@@ -379,6 +379,8 @@ public sealed class LoginManager : MonoBehaviour
     private Dictionary<string, int> __rewardIndices;
     private Dictionary<string, int> __levelIndices;
     private Dictionary<uint, (uint, int)> __stageLevelIndices;
+    private Dictionary<(uint, int), uint> __stageIDs;
+    private Dictionary<uint, (uint, int)> __stageLevelIDs;
     private LinkedList<Loaders> __loaders;
     
     private UnityEvent __onLevelActivatedFirst;
@@ -603,9 +605,11 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
-    public void CollectAndQueryLevels()
+    [Preserve]
+    public void DisableRemotePlayer()
     {
-        StartCoroutine(__CollectAndQueryLevels());
+        if(!__isStart)
+            RemotePlayer.status = RemotePlayer.Status.Disabled;
     }
 
     public void SendChapterStageMessage(uint stageID = 0)
@@ -625,6 +629,11 @@ public sealed class LoginManager : MonoBehaviour
                 
             clientData.EndSend(writer);
         }
+    }
+
+    public void CollectAndQueryLevels()
+    {
+        StartCoroutine(__CollectAndQueryLevels());
     }
 
     public void MoveTo(uint userStageID)
@@ -734,6 +743,8 @@ public sealed class LoginManager : MonoBehaviour
             __selectedStageIndex = -1;
         }
 
+        __stageIDs = new Dictionary<(uint, int), uint>();
+        __stageLevelIDs = new Dictionary<uint, (uint, int)>();
         __stageLevelIndices = new Dictionary<uint, (uint, int)>();
         
         numLevels = levelChapters.levels.Length;
@@ -742,10 +753,12 @@ public sealed class LoginManager : MonoBehaviour
             selectedLevelIndex = -1,
             //finalLevelIndex = -1, 
             endLevelIndex = -1, 
+            stageIndex = 0, 
             numStageRewards = 0, 
             numStageRewardsTotal = 0, 
             numStages, 
-            index, j;
+            index, 
+            j;
         uint maxStageID = 0;
         UserStage userStage;
         UserLevel userLevel;
@@ -766,6 +779,9 @@ public sealed class LoginManager : MonoBehaviour
             {
                 userStage = userLevel.stages[j];
                 
+                __stageIDs[(userLevel.id, j)] = userStage.id;
+                __stageLevelIDs[userStage.id] = (userLevel.id, j);
+
                 if(__selectedStageIndex == j && __selectedUserLevelID == userLevel.id)
                     __targetUserStageID = userStage.id;
 
@@ -1599,6 +1615,10 @@ public sealed class LoginManager : MonoBehaviour
             header.userAvatar = user.avatar;
             
             clientData.Connect(header, user.replyServerAddress, user.replyServerPort);
+            
+            var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+            writer.WritePackedInt(0, StreamCompressionModel.Default);
+            clientData.EndSend(writer);
         }
 
         GameMain.Login(user.id);
@@ -1756,8 +1776,6 @@ public sealed class LoginManager : MonoBehaviour
         if (__isStart)
             yield break;
 
-        __isStart = true;
-
         //__styles[__selectedLevelIndex].button.interactable = false;
 
         /*foreach (var style in __styles.Values)
@@ -1765,6 +1783,53 @@ public sealed class LoginManager : MonoBehaviour
             if (style.button != null)
                 style.button.interactable = false;
         }*/
+
+        if (ReplyMessageShared.remotePlayerCount > 0 &&
+            __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID))
+        {
+            RemotePlayer.status = RemotePlayer.Status.Waiting;
+
+            var clientData = IClientData.instance;
+            if (ReplyMessageShared.isHost)
+            {
+                if (clientData != null)
+                {
+                    ClientMessagePlay play;
+                    play.isRestart = isRestart;
+                    play.levelID = levelID;
+                    play.stage = stageIndex;
+                    play.levelName = levelName;
+                    play.sceneName = sceneName;
+                    var writer = clientData.BeginSend(ClientMessageType.Play, ClientMessagePlay.capacity);
+                    play.Write(ref writer);
+                    clientData.EndSend(writer);
+                }
+
+                do
+                {
+                    yield return null;
+
+                    if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                        break;
+                    
+                    stageID = (uint)RemotePlayer.channelStatus;
+                } while (0 != stageID);
+
+                if(RemotePlayer.Status.Disabled != RemotePlayer.status)
+                    (levelID, stageIndex) = __stageLevelIDs[stageID];
+            }
+            
+            if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
+            {
+                var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+                clientData.EndSend(writer);
+            }
+        }
+        else
+            RemotePlayer.status = RemotePlayer.Status.Disabled;
+
+        __isStart = true;
 
         var userData = IUserData.instance;
 
@@ -1784,33 +1849,6 @@ public sealed class LoginManager : MonoBehaviour
             _onEnd?.Invoke();
 
             yield break;
-        }
-
-        if (ReplyMessageShared.isHost)
-        {
-            RemotePlayer.status = ReplyMessageShared.remotePlayerCount > 0
-                ? RemotePlayer.Status.Waiting
-                : RemotePlayer.Status.Disabled;
-
-            var clientData = IClientData.instance;
-            if (clientData != null)
-            {
-                ClientMessagePlay play;
-                play.isRestart = isRestart;
-                play.levelID = levelID;
-                play.stage = stageIndex;
-                play.levelName = levelName;
-                play.sceneName = sceneName;
-                var writer = clientData.BeginSend(ClientMessageType.Play, ClientMessagePlay.capacity);
-                play.Write(ref writer);
-                clientData.EndSend(writer);
-            }
-        }
-        else
-        {
-            RemotePlayer.status = ReplyMessageShared.remotePlayerCount > 0
-                ? RemotePlayer.Status.Joined
-                : RemotePlayer.Status.Disabled;
         }
 
         var analytics = IAnalytics.instance as IAnalyticsEx;
