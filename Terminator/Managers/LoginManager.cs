@@ -1785,8 +1785,8 @@ public sealed class LoginManager : MonoBehaviour
         }*/
 
         var clientData = IClientData.instance;
-        if (ReplyMessageShared.remotePlayerCount > 0 &&
-            __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID))
+        bool isChapter = __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID);
+        if (isChapter && ReplyMessageShared.remotePlayerCount > 0)
         {
             RemotePlayer.status = RemotePlayer.Status.Waiting;
 
@@ -1824,36 +1824,13 @@ public sealed class LoginManager : MonoBehaviour
 
                 if(RemotePlayer.Status.Disabled != RemotePlayer.status)
                     (levelID, stageIndex) = __stageLevelIDs[stageID];
-            }
-            
-            if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
-            {
-                var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
-                clientData.EndSend(writer);
-            }
-
-            if (!ReplyMessageShared.isHost)
-            {
-                do
+                
+                if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
                 {
-                    yield return null;
-
-                    if (RemotePlayer.Status.Disabled == RemotePlayer.status)
-                        break;
-                    
-                    if(RemotePlayer.Status.Canceled == RemotePlayer.status)
-                    {
-                        _onEnd?.Invoke();
-
-                        yield break;
-                    }
-                    
-                    stageID = (uint)RemotePlayer.channelStatus;
-                } while (0 == stageID);
-
-                if(RemotePlayer.Status.Disabled != RemotePlayer.status)
-                    (levelID, stageIndex) = __stageLevelIDs[stageID];
+                    var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                    writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+                    clientData.EndSend(writer);
+                }
             }
         }
         else
@@ -1887,6 +1864,13 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
+        if (isChapter && !ReplyMessageShared.isHost && clientData != null)
+        {
+            var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+            writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+            clientData.EndSend(writer);
+        }
+        
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.StartLevel(sceneName /*_levels[__selectedLevelIndex].name*/);
 
