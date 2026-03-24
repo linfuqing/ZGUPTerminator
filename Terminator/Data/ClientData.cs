@@ -469,46 +469,50 @@ public class ClientData : MonoBehaviour, IClientData
 
     public int ReadMessageType(out ClientHeader header)
     {
-        /*switch (__initStatus)
+        while (InitStatus.Local != __initStatus)
         {
-            case InitStatus.None:
-                __initStatus = InitStatus.Remote;
-                
-                if (ReplyMessageShared.remotePlayerCount > 0)
-                {
-                    header.userID = LevelPlayerShared<RemotePlayer>.id;
-
-                    header.userName = default;
-                    header.userName.AsFixedList() = ReplyMessageShared.remotePlayerHeader;
-                    
-                    ClientMessageSquadJoin message;
-                    message.squadInviteID = (uint)ReplyMessageShared.channel;
-
-                    __Save(message);
-                            
-                    return (int)ClientMessageType.SquadJoin;
-                }
-                
-                break;
-            case InitStatus.Remote:
-                break;
-        }
-        if (!__isInit)
-        {
-            __isInit = true;
-
-            if (ReplyMessageShared.remotePlayerCount > 0)
+            switch (__initStatus)
             {
-                header.userID = LevelPlayerShared<RemotePlayer>.id;
-                ClientMessageSquadJoin message;
-                message.squadInviteID = (uint)ReplyMessageShared.channel;
+                case InitStatus.None:
+                    __initStatus = InitStatus.Remote;
 
-                __Save(message);
-                            
-                return (int)ClientMessageType.SquadJoin;
+                    if (ReplyMessageShared.remotePlayerCount > 0)
+                    {
+                        header.userID = LevelPlayerShared<RemotePlayer>.id;
+
+                        var block = new ClientHeader.Block(ReplyMessageShared.remotePlayerHeader);
+
+                        header.userName = block.userName;
+                        header.userAvatar = block.userAvatar;
+
+                        ClientMessageSquadJoin message;
+                        message.squadInviteID = (uint)ReplyMessageShared.channel;
+
+                        __Save(message);
+
+                        return (int)ClientMessageType.SquadJoin;
+                    }
+
+                    break;
+                case InitStatus.Remote:
+                    __initStatus = InitStatus.Local;
+
+                    if (ReplyMessageShared.CHANNEL_NULL != ReplyMessageShared.channel)
+                    {
+                        header = __header;
+                        
+                        ClientMessageSquadJoin message;
+                        message.squadInviteID = (uint)ReplyMessageShared.channel;
+
+                        __Save(message);
+
+                        return (int)ClientMessageType.SquadJoin;
+                    }
+
+                    break;
             }
-        }*/
-        
+        }
+
         var driver = this.driver;
         var instance = driver.instance;
         int frameCount = Time.frameCount;
@@ -825,6 +829,16 @@ public class ClientData : MonoBehaviour, IClientData
 
                     writer.WriteFixedString512(temp.value);
                     
+                    sendBuffer.EndWrite(writer);
+                }
+                break;
+            case (ClientMessageType)NetworkRelayMessageType.Status:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)type, streamCompressionModel);
+                    writer.WritePackedInt(new DataStreamReader(__bytes.AsArray()).ReadPackedInt(streamCompressionModel), streamCompressionModel);
+
                     sendBuffer.EndWrite(writer);
                 }
                 break;

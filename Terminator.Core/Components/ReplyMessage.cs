@@ -159,6 +159,7 @@ public struct ReplyMessages : IComponentData
                     //LevelPlayerShared<LocalPlayer>.id = 0;
                     
                     ReplyMessageShared.isHost = false;
+                    ReplyMessageShared.channel = ReplyMessageShared.CHANNEL_NULL;
                     ReplyMessageShared.remotePlayerCount = 0;
                     break;
                 case NetworkClientMessageType.Data:
@@ -285,6 +286,8 @@ public struct ReplyMessages : IComponentData
                                     ReplyMessageShared.isHost = false;
 
                                     ReplyMessageShared.remotePlayerCount = 0;
+
+                                    ReplyMessageShared.channel = ReplyMessageShared.CHANNEL_NULL;
                                     
                                     RemotePlayer.channelFlag = 0;
 
@@ -379,6 +382,8 @@ public static class ReplyMessageShared
     {
         public static readonly SharedStatic<FixedBytes64> Value = SharedStatic<FixedBytes64>.GetOrCreate<RemotePlayerHeader>();
     }
+
+    public const int CHANNEL_NULL = -1;
 
     public static ref bool isHost => ref IsHost.Value.Data;
     
