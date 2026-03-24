@@ -1813,7 +1813,7 @@ public sealed class LoginManager : MonoBehaviour
                         break;
                     
                     stageID = (uint)RemotePlayer.channelStatus;
-                } while (0 != stageID);
+                } while (0 == stageID);
 
                 if(RemotePlayer.Status.Disabled != RemotePlayer.status)
                     (levelID, stageIndex) = __stageLevelIDs[stageID];
