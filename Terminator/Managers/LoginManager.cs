@@ -1809,6 +1809,9 @@ public sealed class LoginManager : MonoBehaviour
                 {
                     yield return null;
 
+                    if (!RemotePlayer.isOnline)
+                        RemotePlayer.status = RemotePlayer.Status.Disabled;
+
                     if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                             break;
                     
