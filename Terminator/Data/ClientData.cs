@@ -861,11 +861,9 @@ public class ClientData : MonoBehaviour, IClientData
                     if (ReplyMessageShared.isHost)
                         __WriteSquadInvite(ref writer, streamCompressionModel, ReplyMessageShared.channel);
                     else
-                    {
                         writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
-                        sendBuffer.EndWrite(writer);
-                    }
                     //squadInviteStatus = SquadInviteStatus.SquadCreating;
+                    sendBuffer.EndWrite(writer);
                 }
                 break;
             case ClientMessageType.Chat:
