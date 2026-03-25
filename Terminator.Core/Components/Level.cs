@@ -796,9 +796,9 @@ public static class LevelShared
     
     private struct Stages
     {
-        private static readonly SharedStatic<FixedList4096Bytes<Stage>> Value = SharedStatic<FixedList4096Bytes<Stage>>.GetOrCreate<Stages>();
+        private static readonly SharedStatic<UnsafeList<Stage>> Value = SharedStatic<UnsafeList<Stage>>.GetOrCreate<Stages>();
         
-        public static ref FixedList4096Bytes<Stage> values => ref Value.Data;
+        public static ref UnsafeList<Stage> values => ref Value.Data;
     }
     
     public struct Item
@@ -875,5 +875,10 @@ public static class LevelShared
     
     public static ref FixedList512Bytes<Item> items => ref Items.values;
     
-    public static ref FixedList4096Bytes<Stage> stages => ref Stages.values;
+    public static ref UnsafeList<Stage> stages => ref Stages.values;
+
+    static LevelShared()
+    {
+        stages = new UnsafeList<Stage>(1, Allocator.Persistent);
+    }
 }
