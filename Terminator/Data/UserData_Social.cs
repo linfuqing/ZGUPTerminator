@@ -135,19 +135,19 @@ public partial interface IUserData
     /// 同意好友申请
     /// </summary>
     /// <param name="userID"></param>
-    /// <param name="targetUserID"></param>
+    /// <param name="targetUserIDs"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator FriendRequestAgree(uint userID, uint targetUserID, Action<bool> onComplete);
+    IEnumerator FriendRequestAgree(uint userID, uint[] targetUserIDs, Action<bool> onComplete);
     
     /// <summary>
     /// 拒绝好友申请
     /// </summary>
     /// <param name="userID"></param>
-    /// <param name="targetUserID"></param>
+    /// <param name="targetUserIDs"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator FriendRequestDisagree(uint userID, uint targetUserID, Action<bool> onComplete);
+    IEnumerator FriendRequestDisagree(uint userID, uint[] targetUserIDs, Action<bool> onComplete);
     
     /// <summary>
     /// 发送好友消息并记录

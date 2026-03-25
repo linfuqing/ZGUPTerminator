@@ -322,20 +322,23 @@ public partial class UserDataMain
         onComplete(true);
     }
 
-    public IEnumerator FriendRequestAgree(uint userID, uint targetUserID, Action<bool> onComplete)
+    public IEnumerator FriendRequestAgree(uint userID, uint[] targetUserIDs, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
-        
+
+        string friends = PlayerPrefs.GetString(NAME_SPACE_USER_FRIENDS);
         var friend = UserDataMain.friend;
-        friend.id = targetUserID;
-        
-        var friends = PlayerPrefs.GetString(NAME_SPACE_USER_FRIENDS);
-        PlayerPrefs.SetString(NAME_SPACE_USER_FRIENDS, string.IsNullOrEmpty(friends) ? friend.ToString() :  $"{friends}{UserData.SEPARATOR}{friend}");
-        
+        foreach (var targetUserID in targetUserIDs)
+        {
+            friend.id = targetUserID;
+            friends = string.IsNullOrEmpty(friends) ? friend.ToString() :  $"{friends}{UserData.SEPARATOR}{friend}";
+        }
+
+        PlayerPrefs.SetString(NAME_SPACE_USER_FRIENDS, friends);
         onComplete(true);
     }
     
-    public IEnumerator FriendRequestDisagree(uint userID, uint targetUserID, Action<bool> onComplete)
+    public IEnumerator FriendRequestDisagree(uint userID, uint[] targetUserIDs, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -432,14 +435,14 @@ public partial class UserData
         return UserDataMain.instance.FriendRequestApply(userID, targetUserID, onComplete);
     }
     
-    public IEnumerator FriendRequestAgree(uint userID, uint targetUserID, Action<bool> onComplete)
+    public IEnumerator FriendRequestAgree(uint userID, uint[] targetUserIDs, Action<bool> onComplete)
     {
-        return UserDataMain.instance.FriendRequestAgree(userID, targetUserID, onComplete);
+        return UserDataMain.instance.FriendRequestAgree(userID, targetUserIDs, onComplete);
     }
     
-    public IEnumerator FriendRequestDisagree(uint userID, uint targetUserID, Action<bool> onComplete)
+    public IEnumerator FriendRequestDisagree(uint userID, uint[] targetUserIDs, Action<bool> onComplete)
     {
-        return UserDataMain.instance.FriendRequestDisagree(userID, targetUserID, onComplete);
+        return UserDataMain.instance.FriendRequestDisagree(userID, targetUserIDs, onComplete);
     }
     
     public IEnumerator FriendMessageSend(uint userID, uint targetUserID, uint senderUserID, string value, Action<bool> onComplete)
