@@ -284,6 +284,9 @@ public sealed class LoginManager : MonoBehaviour
 
     [SerializeField]
     internal UnityEvent _onEnd;
+    
+    [SerializeField]
+    internal UnityEvent _onCancel;
 
     [SerializeField]
     internal UnityEvent _onHotEnable;
@@ -612,6 +615,13 @@ public sealed class LoginManager : MonoBehaviour
             RemotePlayer.status = RemotePlayer.Status.Disabled;
     }
 
+    [Preserve]
+    public void CancelRemotePlayer()
+    {
+        if(!__isStart)
+            RemotePlayer.status = RemotePlayer.Status.Canceled;
+    }
+
     public void SendChapterStageMessage(uint stageID = 0)
     {
         if(stageID == 0)
@@ -675,8 +685,6 @@ public sealed class LoginManager : MonoBehaviour
         string levelName, 
         string sceneName)
     {
-        _onStart.Invoke();
-
         StartCoroutine(__Start(isRestart, userLevelID,  stageIndex, levelName, sceneName));
     }
 
@@ -1783,61 +1791,89 @@ public sealed class LoginManager : MonoBehaviour
             if (style.button != null)
                 style.button.interactable = false;
         }*/
-
         var clientData = IClientData.instance;
-        bool isChapter = __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID);
-        if (isChapter && ReplyMessageShared.remotePlayerCount > 0)
+        bool hasStage = __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID);
+        if (ReplyMessageShared.remotePlayerCount > 0)
         {
-            RemotePlayer.status = RemotePlayer.Status.Waiting;
-
-            if (ReplyMessageShared.isHost)
+            if (hasStage)
             {
-                if (clientData != null)
+                RemotePlayer.status = RemotePlayer.Status.Waiting;
+
+                if (ReplyMessageShared.isHost)
                 {
-                    ClientMessagePlay play;
-                    play.isRestart = isRestart;
-                    play.levelID = levelID;
-                    play.stage = stageIndex;
-                    play.levelName = levelName;
-                    play.sceneName = sceneName;
-                    var writer = clientData.BeginSend(ClientMessageType.Play, ClientMessagePlay.capacity);
-                    play.Write(ref writer);
-                    clientData.EndSend(writer);
-                }
-
-                do
-                {
-                    yield return null;
-
-                    if (!RemotePlayer.isOnline)
-                        RemotePlayer.status = RemotePlayer.Status.Disabled;
-
-                    if (RemotePlayer.Status.Disabled == RemotePlayer.status)
-                            break;
-                    
-                    if(RemotePlayer.Status.Canceled == RemotePlayer.status)
+                    if (clientData != null)
                     {
-                        _onEnd?.Invoke();
+                        while (0 != RemotePlayer.channelStatus && RemotePlayer.isOnline)
+                        {
+                            yield return null;
+                            
+                            if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                                yield break;
+                        }
 
-                        yield break;
+                        ClientMessagePlay play;
+                        play.isRestart = isRestart;
+                        play.levelID = levelID;
+                        play.stage = stageIndex;
+                        play.levelName = levelName;
+                        play.sceneName = sceneName;
+                        var writer = clientData.BeginSend(ClientMessageType.Play, ClientMessagePlay.capacity);
+                        play.Write(ref writer);
+                        clientData.EndSend(writer);
+                    }
+
+                    do
+                    {
+                        yield return null;
+
+                        if (!RemotePlayer.isOnline)
+                            RemotePlayer.status = RemotePlayer.Status.Disabled;
+
+                        if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                            break;
+
+                        if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                        {
+                            _onCancel?.Invoke();
+                            //_onEnd?.Invoke();
+
+                            yield break;
+                        }
+
+                        stageID = (uint)RemotePlayer.channelStatus;
+                    } while (0 == stageID);
+
+                    if (RemotePlayer.Status.Disabled != RemotePlayer.status)
+                        (levelID, stageIndex) = __stageLevelIDs[stageID];
+
+                    if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
+                    {
+                        var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                        writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+                        clientData.EndSend(writer);
+                    }
+                }
+            }
+            else
+            {
+                if (ReplyMessageShared.isHost)
+                    RemotePlayer.status = RemotePlayer.Status.Disabled;
+                else
+                {
+                    if (clientData != null)
+                    {
+                        var writer = clientData.BeginSend(ClientMessageType.Canceled, 0);
+                        clientData.EndSend(writer);
                     }
                     
-                    stageID = (uint)RemotePlayer.channelStatus;
-                } while (0 == stageID);
-
-                if(RemotePlayer.Status.Disabled != RemotePlayer.status)
-                    (levelID, stageIndex) = __stageLevelIDs[stageID];
-                
-                if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
-                {
-                    var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                    writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
-                    clientData.EndSend(writer);
+                    yield break;
                 }
             }
         }
         else
             RemotePlayer.status = RemotePlayer.Status.Disabled;
+
+        _onStart?.Invoke();
 
         __isStart = true;
 
@@ -1867,7 +1903,7 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
-        if (isChapter && !ReplyMessageShared.isHost && clientData != null)
+        if (hasStage && !ReplyMessageShared.isHost && clientData != null)
         {
             var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
             writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);

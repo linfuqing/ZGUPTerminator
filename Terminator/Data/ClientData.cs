@@ -23,9 +23,21 @@ public enum ClientChannel
     Squad = NetworkRelayType.Channel
 }
 
+[Flags]
+public enum ClientRemotePlayerFlag
+{
+    Online = NetworkRelayChannelFlag.Online,
+    
+    Creator = NetworkRelayChannelFlag.Creator, 
+    
+    Shift = NetworkRelayChannelFlag.ShiftToStatus
+}
+
 public enum ClientMessageType
 {
     None, 
+    
+    Status, 
     
     /// <summary>
     /// 加入队伍（先发送申请，要等待Read到之后才正式加入）
@@ -125,21 +137,34 @@ public struct ClientHeader : IEquatable<ClientHeader>
     }
 }
 
+public struct ClientMessageRemotePlayerStatus : IClientMessageToRead
+{
+    public ClientRemotePlayerFlag flag;
+
+    /// <summary>
+    /// 在线
+    /// </summary>
+    public bool isOnline => flag.HasFlag(ClientRemotePlayerFlag.Online);
+    
+    /// <summary>
+    /// 队长
+    /// </summary>
+    public bool isCreator => flag.HasFlag(ClientRemotePlayerFlag.Creator);
+
+    /// <summary>
+    /// 在游戏中
+    /// </summary>
+    public bool isInGame => ((int)flag >> (int)ClientRemotePlayerFlag.Shift) != 0;
+}
+
 public struct ClientMessageSquadJoinToRead : IClientMessageToRead
 {
-    public enum PlayerFlag
-    {
-        Online = NetworkRelayChannelFlag.Online,
-    
-        Creator = NetworkRelayChannelFlag.Creator
-    }
-
-    public PlayerFlag playerFlag;
+    public ClientMessageRemotePlayerStatus playerStatus;
     
     public uint squadInviteID;
 }
 
-public struct ClientMessageSquadJoin : IClientMessageToRead, IClientMessageToSend
+public struct ClientMessageSquadJoinToSend : IClientMessageToSend
 {
     public uint squadInviteID;
     
@@ -488,7 +513,8 @@ public class ClientData : MonoBehaviour, IClientData
                         header.userName = block.userName;
                         header.userAvatar = block.userAvatar;
 
-                        ClientMessageSquadJoin message;
+                        ClientMessageSquadJoinToRead message;
+                        message.playerStatus.flag = (ClientRemotePlayerFlag)RemotePlayer.channelFlag;
                         message.squadInviteID = (uint)ReplyMessageShared.channel;
 
                         __Save(message);
@@ -504,7 +530,11 @@ public class ClientData : MonoBehaviour, IClientData
                     {
                         header = __header;
                         
-                        ClientMessageSquadJoin message;
+                        ClientMessageSquadJoinToRead message;
+                        message.playerStatus.flag = ClientRemotePlayerFlag.Online;
+                        if(ReplyMessageShared.isHost)
+                            message.playerStatus.flag |= ClientRemotePlayerFlag.Creator;
+                        
                         message.squadInviteID = (uint)ReplyMessageShared.channel;
 
                         __Save(message);
@@ -553,10 +583,23 @@ public class ClientData : MonoBehaviour, IClientData
                     //print((NetworkRelayMessageType)type);
                     switch ((NetworkRelayMessageType)type)
                     {
-                        /*case NetworkRelayMessageType.Status:
+                        case NetworkRelayMessageType.Status:
+                        {
+                            var channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            header.userID = reader.ReadPackedUInt(streamCompressionModel);
                             
-                            //reset
-                            break;*/
+                            var block = new ClientHeader.Block(ReplyMessageShared.remotePlayerHeader);
+
+                            header.userName = block.userName;
+                            header.userAvatar = block.userAvatar;
+
+                            ClientMessageRemotePlayerStatus message;
+                            message.flag = (ClientRemotePlayerFlag)channelFlag;
+
+                            __Save(message);
+
+                            return (int)ClientMessageType.Status;
+                        }
                         case NetworkRelayMessageType.Create:
                         case NetworkRelayMessageType.Join:
                         case NetworkRelayMessageType.Leave:
@@ -639,7 +682,8 @@ public class ClientData : MonoBehaviour, IClientData
                                     return (int)ClientMessageType.SquadDrop;
                             }
                             
-                            ClientMessageSquadJoin message;
+                            ClientMessageSquadJoinToRead message;
+                            message.playerStatus.flag = (ClientRemotePlayerFlag)channelFlag;
                             message.squadInviteID = (uint)channel;
 
                             __Save(message);
@@ -787,7 +831,7 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Join, streamCompressionModel);
-                    writer.WritePackedInt((int)__Load<ClientMessageSquadJoin>().squadInviteID, streamCompressionModel);
+                    writer.WritePackedInt((int)__Load<ClientMessageSquadJoinToSend>().squadInviteID, streamCompressionModel);
                     sendBuffer.EndWrite(writer);
                 }
                 break;
