@@ -1358,15 +1358,13 @@ public sealed class LoginManager : MonoBehaviour
 
                                             if (styleScene.previous != null)
                                             {
-                                                if (0 == currentSceneIndex)
-                                                    styleScene.previous.interactable = false;
-                                                else
+                                                int previousSceneIndex = currentSceneIndex - 1;
+                                                if (sceneUnlocked.ContainsKey(previousSceneIndex))
                                                 {
                                                     styleScene.previous.interactable = true;
                                                     styleScene.previous.onClick.RemoveAllListeners();
                                                     styleScene.previous.onClick.AddListener(() =>
                                                     {
-                                                        int previousSceneIndex = currentSceneIndex - 1;
                                                         var toggle = style.scenes[previousSceneIndex].toggle;
                                                         if (toggle == null)
                                                             handlers[previousSceneIndex]?.Invoke(true);
@@ -1374,19 +1372,19 @@ public sealed class LoginManager : MonoBehaviour
                                                             toggle.isOn = true;
                                                     });
                                                 }
+                                                else
+                                                    styleScene.previous.interactable = false;
                                             }
 
                                             if (styleScene.next != null)
                                             {
-                                                if (numScenes == currentSceneIndex + 1)
-                                                    styleScene.next.interactable = false;
-                                                else
+                                                int nextSceneIndex = currentSceneIndex + 1;
+                                                if (sceneUnlocked.ContainsKey(nextSceneIndex))
                                                 {
                                                     styleScene.next.interactable = true;
                                                     styleScene.next.onClick.RemoveAllListeners();
                                                     styleScene.next.onClick.AddListener(() =>
                                                     {
-                                                        int nextSceneIndex = currentSceneIndex + 1;
                                                         var toggle = style.scenes[nextSceneIndex].toggle;
                                                         if (toggle == null)
                                                             handlers[nextSceneIndex]?.Invoke(true);
@@ -1394,6 +1392,8 @@ public sealed class LoginManager : MonoBehaviour
                                                             toggle.isOn = true;
                                                     });
                                                 }
+                                                else
+                                                    styleScene.next.interactable = false;
                                             }
                                         }
                                     };
