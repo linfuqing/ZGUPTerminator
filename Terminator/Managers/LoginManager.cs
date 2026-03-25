@@ -919,7 +919,8 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
-                    if ((selectedLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer)
+                    if ((selectedLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer &&
+                        numStageRewards < levelChapters.stageRewardCount)
                         style.onMultiplayerEnable?.Invoke();
                     else
                         style.onMultiplayerDisable?.Invoke();
@@ -1134,7 +1135,13 @@ public sealed class LoginManager : MonoBehaviour
                                                                     stageStyles[i].toggle.SetIsOnWithoutNotify(i == stageIndex);
                                                             }
 
-                                                            if(ReplyMessageShared.isHost)
+                                                            bool isSend = __targetUserStageID == stage.id;
+                                                            if (isSend)
+                                                                __targetUserStageID = 0;
+                                                            else
+                                                                isSend = __targetUserStageID == 0;
+                                                            
+                                                            if(isSend && ReplyMessageShared.isHost)
                                                                 SendChapterStageMessage();
                                                         }
                                                     });

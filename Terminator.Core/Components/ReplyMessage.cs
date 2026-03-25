@@ -232,7 +232,7 @@ public struct ReplyMessages : IComponentData
 
                                     reader.ReadBytes(ReplyMessageShared.remotePlayerHeader.AsArray());
 
-                                    UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}:{key.id}");
+                                    UnityEngine.Debug.Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
                                 }
                                 else
                                     UnityEngine.Debug.LogError($"WTF Channel {channel} For Join!");
@@ -242,7 +242,7 @@ public struct ReplyMessages : IComponentData
                                 ReplyMessageShared.isHost = false;
                                 ReplyMessageShared.channel = channel;
                                 
-                                __Log($"Reply Message Join {channel}");
+                                __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}");
                             }
 
                             break;
