@@ -20,6 +20,8 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
         public Transform root;
 
         public Toggle toggle;
+        public Button previous;
+        public Button next;
         
         public StringEvent onTitle;
         public StringEvent onDescription;

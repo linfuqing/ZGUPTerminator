@@ -65,7 +65,7 @@ public enum ClientMessageType
     
     ChapterStage, 
     Play, 
-    Canceled
+    Error
 }
 
 public interface IClientMessageToRead
@@ -387,7 +387,7 @@ public class ClientData : MonoBehaviour, IClientData
     internal NetworkPipelineStage[] _stages = new NetworkPipelineStage[]
     {
         NetworkPipelineStage.Fragmentation,
-        NetworkPipelineStage.UnreliableSequenced,
+        NetworkPipelineStage.ReliableSequenced,
     };
 
     private InitStatus __initStatus;
@@ -747,8 +747,8 @@ public class ClientData : MonoBehaviour, IClientData
                                 case ClientMessageType.Play:
                                     new ClientMessagePlay(ref reader).Apply();
                                     break;
-                                case ClientMessageType.Canceled:
-                                    RemotePlayer.status = RemotePlayer.Status.Canceled;
+                                case ClientMessageType.Error:
+                                    RemotePlayer.status = RemotePlayer.Status.Error;
                                     break;
                             }
 

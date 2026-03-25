@@ -881,8 +881,8 @@ public sealed class LoginManager : MonoBehaviour
             //for(j = 0; j < numPrefabs; ++j)
             //    prefabs[j] = Instantiate(level.scenes[j].prefab, style.scenes[j].root);
 
+            UnityAction<bool>[] handlers = null;
             var loader = __loaders.AddLast(default(Loaders));
-
             style.toggle.onValueChanged.AddListener(x =>
             {
                 __DestroyRewards();
@@ -913,7 +913,10 @@ public sealed class LoginManager : MonoBehaviour
                     toggle = style.scenes[i].toggle;
                     if(toggle == null)
                         continue;
-                                                
+                    
+                    if(handlers != null && handlers.Length > i)
+                        toggle.onValueChanged.RemoveListener(handlers[i]);
+                    
                     toggle.interactable = false;
                 }
                 
@@ -1193,175 +1196,220 @@ public sealed class LoginManager : MonoBehaviour
                             Toggle.ToggleEvent onValueChanged;
                             for (i = 0; i < numScenes; ++i)
                             {
-                                ref var styleScene = ref style.scenes[i];
+                                var styleScene = style.scenes[i];
 
-                                if (styleScene.toggle != null)
+                                int currentSceneIndex = i;
+                                handler = x =>
                                 {
-                                    onValueChanged = styleScene.toggle.onValueChanged;
-                                    onValueChanged.RemoveAllListeners();
-
-                                    int currentSceneIndex = i;
-                                    handler = x =>
+                                    if (x)
                                     {
-                                        if (x)
+                                        temp = false;
+                                        //bool isLevelActive = false;
+                                        if (__sceneActiveDepth != 0 || 
+                                            sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp || 
+                                            //重新进入关卡创建风格时候
+                                            movedLevelIndex != -1 && movedLevelIndex != userLevelIndex)
                                         {
-                                            temp = false;
-                                            //bool isLevelActive = false;
-                                            if (__sceneActiveDepth != 0 || 
-                                                sceneUnlocked != null && sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp || 
-                                                //重新进入关卡创建风格时候
-                                                movedLevelIndex != -1 && movedLevelIndex != userLevelIndex)
+                                            movedLevelIndex = -1;
+                                            
+                                            if (previousSceneIndex != currentSceneIndex)
                                             {
-                                                movedLevelIndex = -1;
+                                                if (previousSceneIndex == -1)
+                                                    style.scenes[currentSceneIndex].onActive.Invoke();
+                                                else
+                                                    style.scenes[currentSceneIndex].onActiveDiff.Invoke();
+                                            }
+
+                                            if (__levelActivatedFirst == null &&
+                                                __sceneActiveDepth == 0 && 
+                                                (selectedLevelIndex == -1 || selectedLevelIndex == userLevelIndex)
+                                                //selectedLevelIndex == -1 &&
+                                                //finalLevelIndex == userLevelIndex
+                                                )
+                                            {
+                                                __levelActivatedFirst = false;
                                                 
-                                                if (previousSceneIndex != currentSceneIndex)
+                                                var progressbar = GameProgressbar.instance;
+                                                if (progressbar == null || !progressbar.isProgressing)
                                                 {
-                                                    if (previousSceneIndex == -1)
-                                                        style.scenes[currentSceneIndex].onActive.Invoke();
-                                                    else
-                                                        style.scenes[currentSceneIndex].onActiveDiff.Invoke();
+                                                    if(onLevelActivated != null)
+                                                        onLevelActivated();
                                                 }
+                                                //if(onLevelActivated != null)
+                                                //    onLevelActivated();
 
-                                                if (__levelActivatedFirst == null &&
-                                                    __sceneActiveDepth == 0 && 
-                                                    (selectedLevelIndex == -1 || selectedLevelIndex == userLevelIndex)
-                                                    //selectedLevelIndex == -1 &&
-                                                    //finalLevelIndex == userLevelIndex
-                                                    )
-                                                {
-                                                    __levelActivatedFirst = false;
-                                                    
-                                                    var progressbar = GameProgressbar.instance;
-                                                    if (progressbar == null || !progressbar.isProgressing)
-                                                    {
-                                                        if(onLevelActivated != null)
-                                                            onLevelActivated();
-                                                    }
-                                                    //if(onLevelActivated != null)
-                                                    //    onLevelActivated();
+                                                //__levelActivated = true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            __sceneActiveDepth = -1;
+                                            
+                                            var progressbar = GameProgressbar.instance;
+                                            bool isProgressing = progressbar != null && progressbar.isProgressing;
 
-                                                    //__levelActivated = true;
-                                                }
+                                            if (isProgressing)
+                                            {
+                                                __onLevelActivatedFirst =
+                                                    style.scenes[currentSceneIndex].onActiveFirst;
+                                                
+                                                if (__levelActivatedFirst == null)
+                                                    __levelActivatedFirst = true;
                                             }
                                             else
                                             {
-                                                __sceneActiveDepth = -1;
+                                                style.scenes[currentSceneIndex].onActiveFirst.Invoke();
                                                 
-                                                var progressbar = GameProgressbar.instance;
-                                                bool isProgressing = progressbar != null && progressbar.isProgressing;
-
-                                                if (isProgressing)
+                                                if (__levelActivatedFirst == null)
                                                 {
-                                                    __onLevelActivatedFirst =
-                                                        style.scenes[currentSceneIndex].onActiveFirst;
-                                                    
-                                                    if (__levelActivatedFirst == null)
-                                                        __levelActivatedFirst = true;
-                                                }
-                                                else
-                                                {
-                                                    style.scenes[currentSceneIndex].onActiveFirst.Invoke();
-                                                    
-                                                    if (__levelActivatedFirst == null)
-                                                    {
-                                                        __levelActivatedFirst = true;
+                                                    __levelActivatedFirst = true;
 
-                                                        if(onLevelActivatedFirst != null)
-                                                            onLevelActivatedFirst();
-                                                    }
-                                                }
-                                            }
-
-                                            /*if (isLevelActive)
-                                            {
-                                                if (finalLevelIndex == userLevelIndex)
-                                                {
                                                     if(onLevelActivatedFirst != null)
                                                         onLevelActivatedFirst();
                                                 }
-                                                else if(onLevelActivated != null)
-                                                    onLevelActivated();
-                                            }*/
-
-                                            previousSceneIndex = currentSceneIndex;
-                                            
-                                            LevelStyle.Scene levelStyleScene;
-                                            for (int i = 0; i < numScenes; ++i)
-                                            {
-                                                levelStyleScene = style.scenes[i];
-                                                if (levelStyleScene.toggle == null)
-                                                    continue;
-                                                    
-                                                levelStyleScene.toggle.interactable = i != currentSceneIndex &&
-                                                    sceneUnlocked != null &&
-                                                    sceneUnlocked.ContainsKey(i);
-                                            }
-
-                                            var assetManager = GameAssetManager.instance?.dataManager;
-                                            
-                                            var loaders = loader.Value;
-                                            if (loaders.values == null || loaders.values.Length < numScenes)
-                                            {
-                                                Array.Resize(ref loaders.values, numScenes);
-
-                                                loader.Value = loaders;
-                                            }
-
-                                            if (endLevelIndex == userLevelIndex)
-                                            {
-                                                for (int i = 0; i < numScenes; ++i)
-                                                    loaders.Init(i, level, style, this, assetManager);
-                                            }
-                                            else
-                                            {
-                                                for (int i = 0; i < numScenes; ++i)
-                                                {
-                                                    if(i == currentSceneIndex)
-                                                        loaders.Init(currentSceneIndex, level, style, this, assetManager);
-                                                    else
-                                                        loaders.values[i].Dispose(_scenePrefabDestroyTime);
-                                                }
-                                            }
-                                            /*var prefab = level.scenes[currentSceneIndex].prefab;
-                                            if (prefab != loader.Value.Item2)
-                                            {
-                                                loader.Value.Item2?.Dispose();
-
-                                                prefab?.Init(this, style.scenes[currentSceneIndex].root);
-                                                prefab?.Load(assetManager);
-
-                                                loader.Value = (style.loaderProgressbar, prefab);
-                                            }*/
-
-                                            var node = loader.Previous;
-                                            if (node != null)
-                                            {
-                                                node.Value.Load(assetManager);
-
-                                                for (node = node.Previous; node != null; node = node.Previous)
-                                                    node.Value.Dispose();
-                                            }
-
-                                            node = loader.Next;
-                                            if (node != null)
-                                            {
-                                                node.Value.Load(assetManager);
-
-                                                for (node = node.Next; node != null; node = node.Next)
-                                                    node.Value.Dispose();
                                             }
                                         }
-                                    };
-                                    
-                                    onValueChanged.AddListener(handler);
 
-                                    if (i == selectedSceneIndex)
-                                    {
-                                        if (styleScene.toggle.isOn)
-                                            handler(true);
+                                        /*if (isLevelActive)
+                                        {
+                                            if (finalLevelIndex == userLevelIndex)
+                                            {
+                                                if(onLevelActivatedFirst != null)
+                                                    onLevelActivatedFirst();
+                                            }
+                                            else if(onLevelActivated != null)
+                                                onLevelActivated();
+                                        }*/
+
+                                        previousSceneIndex = currentSceneIndex;
+                                        
+                                        LevelStyle.Scene levelStyleScene;
+                                        for (int i = 0; i < numScenes; ++i)
+                                        {
+                                            levelStyleScene = style.scenes[i];
+                                            if (levelStyleScene.toggle == null)
+                                                continue;
+                                                
+                                            levelStyleScene.toggle.interactable = i != currentSceneIndex &&
+                                                sceneUnlocked != null &&
+                                                sceneUnlocked.ContainsKey(i);
+                                        }
+
+                                        var assetManager = GameAssetManager.instance?.dataManager;
+                                        
+                                        var loaders = loader.Value;
+                                        if (loaders.values == null || loaders.values.Length < numScenes)
+                                        {
+                                            Array.Resize(ref loaders.values, numScenes);
+
+                                            loader.Value = loaders;
+                                        }
+
+                                        if (endLevelIndex == userLevelIndex)
+                                        {
+                                            for (int i = 0; i < numScenes; ++i)
+                                                loaders.Init(i, level, style, this, assetManager);
+                                        }
                                         else
-                                            styleScene.toggle.isOn = true;
+                                        {
+                                            for (int i = 0; i < numScenes; ++i)
+                                            {
+                                                if(i == currentSceneIndex)
+                                                    loaders.Init(currentSceneIndex, level, style, this, assetManager);
+                                                else
+                                                    loaders.values[i].Dispose(_scenePrefabDestroyTime);
+                                            }
+                                        }
+                                        /*var prefab = level.scenes[currentSceneIndex].prefab;
+                                        if (prefab != loader.Value.Item2)
+                                        {
+                                            loader.Value.Item2?.Dispose();
+
+                                            prefab?.Init(this, style.scenes[currentSceneIndex].root);
+                                            prefab?.Load(assetManager);
+
+                                            loader.Value = (style.loaderProgressbar, prefab);
+                                        }*/
+
+                                        var node = loader.Previous;
+                                        if (node != null)
+                                        {
+                                            node.Value.Load(assetManager);
+
+                                            for (node = node.Previous; node != null; node = node.Previous)
+                                                node.Value.Dispose();
+                                        }
+
+                                        node = loader.Next;
+                                        if (node != null)
+                                        {
+                                            node.Value.Load(assetManager);
+
+                                            for (node = node.Next; node != null; node = node.Next)
+                                                node.Value.Dispose();
+                                        }
+                                        
+                                        if (styleScene.previous != null)
+                                        {
+                                            if(0 == currentSceneIndex)
+                                                styleScene.previous.interactable = false;
+                                            else
+                                            {
+                                                styleScene.previous.interactable = true;
+                                                styleScene.previous.onClick.RemoveAllListeners();
+                                                styleScene.previous.onClick.AddListener(() =>
+                                                {
+                                                    int previousSceneIndex = currentSceneIndex - 1;
+                                                    var toggle = style.scenes[previousSceneIndex].toggle;
+                                                    if (toggle == null)
+                                                        handlers[previousSceneIndex]?.Invoke(true);
+                                                    else
+                                                        toggle.isOn = true;
+                                                });
+                                            }
+                                        }
+                                        
+                                        if (styleScene.next != null)
+                                        {
+                                            if(numScenes == currentSceneIndex + 1)
+                                                styleScene.next.interactable = false;
+                                            else
+                                            {
+                                                styleScene.next.interactable = true;
+                                                styleScene.next.onClick.RemoveAllListeners();
+                                                styleScene.next.onClick.AddListener(() =>
+                                                {
+                                                    int nextSceneIndex = currentSceneIndex + 1;
+                                                    var toggle = style.scenes[nextSceneIndex].toggle;
+                                                    if (toggle == null)
+                                                        handlers[nextSceneIndex]?.Invoke(true);
+                                                    else
+                                                        toggle.isOn = true;
+                                                });
+                                            }
+                                        }
                                     }
+                                };
+                                    
+                                if (handlers == null)
+                                    handlers = new UnityAction<bool>[numScenes];
+
+                                handlers[i] = handler;
+                                
+                                if (styleScene.toggle != null)
+                                {
+                                    onValueChanged = styleScene.toggle.onValueChanged;
+                                    //onValueChanged.RemoveAllListeners();
+
+                                    onValueChanged.AddListener(handler);
+                                }
+
+                                if (i == selectedSceneIndex)
+                                {
+                                    if (styleScene.toggle == null || styleScene.toggle.isOn)
+                                        handler(true);
+                                    else
+                                        styleScene.toggle.isOn = true;
                                 }
                             }
 
@@ -1863,12 +1911,13 @@ public sealed class LoginManager : MonoBehaviour
                         if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                             break;
 
-                        if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                        switch (RemotePlayer.status)
                         {
-                            _onCancel?.Invoke();
-                            //_onEnd?.Invoke();
-
-                            yield break;
+                            case  RemotePlayer.Status.Error:
+                                _onCancel?.Invoke();
+                                yield break;
+                            case  RemotePlayer.Status.Canceled:
+                                yield break;
                         }
 
                         stageID = (uint)RemotePlayer.channelStatus;
@@ -1897,7 +1946,7 @@ public sealed class LoginManager : MonoBehaviour
                 {
                     if (clientData != null)
                     {
-                        var writer = clientData.BeginSend(ClientMessageType.Canceled, 0);
+                        var writer = clientData.BeginSend(ClientMessageType.Error, 0);
                         clientData.EndSend(writer);
                     }
                     
@@ -1931,7 +1980,7 @@ public sealed class LoginManager : MonoBehaviour
             
             if (clientData != null)
             {
-                var writer = clientData.BeginSend(ClientMessageType.Canceled, 0);
+                var writer = clientData.BeginSend(ClientMessageType.Error, 0);
                 clientData.EndSend(writer);
             }
             

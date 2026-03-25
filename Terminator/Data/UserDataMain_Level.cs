@@ -95,6 +95,8 @@ public partial class UserDataMain
 
         public int stageCountToMultiplayer;
 
+        public int stageCountToNext;
+
         public int stageRewardCount;
         
 #if UNITY_EDITOR
@@ -106,6 +108,8 @@ public partial class UserDataMain
                 name = value;
 
                 stageCountToMultiplayer = 3;
+
+                stageCountToNext = 6;
             }
         }
         
@@ -301,22 +305,30 @@ public partial class UserDataMain
             Debug.LogError("WTF??????");*/
 
         uint selectedLevelID = levelCache.id;
-        int selectedStage = levelCache.stage, stageCount = __GetStageCount(level);
-        if (stageCount <= levelCache.stage)
+        int stageCount = __GetStageCount(level), selectedStage = levelCache.stage;
+        if (__GetLevelTicketIndex(level.name, out _, out _))
         {
-            if (__GetLevelTicketIndex(level.name, out _, out _))
+            if (stageCount <= levelCache.stage)
             {
+                selectedStage = 0;
+                
                 PlayerPrefs.SetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}", 1);
 
                 for (int i = 1; i <= levelCache.stage; ++i)
                     UserData.DeleteStageCache(level.name, i);
             }
-            else
+        }
+        else
+        {
+            int chapterIndex = __GetLevelChapterIndex(level.name),
+                stageCountToNext = _levelChapters[chapterIndex].stageCountToNext;
+            stageCountToNext = stageCountToNext > 0 ? Mathf.Min(stageCountToNext, stageCount) : stageCount;
+
+            //selectedStage = stageCountToNext - 1;
+            if (stageCountToNext <= levelCache.stage)
             {
-                selectedStage = stageCount - 1;
-                
                 int chapter = UserData.chapter;
-                if (chapter == __GetLevelChapterIndex(level.name))
+                if (chapter == chapterIndex)
                 {
                     UserData.chapter = ++chapter;
 
@@ -326,11 +338,11 @@ public partial class UserDataMain
 
                         selectedStage = 0;
                     }
-                    
+
                     var flag = UserDataMain.flag;
-                    if ((flag & Flag.TicketsUnlock) == 0 && 
-                        _levelTickets != null && 
-                        _levelTickets.Length > 0 && 
+                    if ((flag & Flag.TicketsUnlock) == 0 &&
+                        _levelTickets != null &&
+                        _levelTickets.Length > 0 &&
                         _levelTickets[0].levels[0].chapter <= chapter)
                     {
                         flag |= Flag.TicketsUnlock;
@@ -338,6 +350,8 @@ public partial class UserDataMain
                         UserDataMain.flag = flag;
                     }
                 }
+                else if (stageCount > 0 && stageCount <= selectedStage)
+                    selectedStage = stageCount - 1;
             }
         }
 
