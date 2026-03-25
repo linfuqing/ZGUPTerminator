@@ -12,7 +12,7 @@ public partial class UserDataMain
     {
         public string name;
         //public int energy;
-        
+
         public UserLevel.CacheType cacheType;
 
         public string[] stageNames;
@@ -93,13 +93,20 @@ public partial class UserDataMain
     {
         public string name;
 
+        public int stageCountToMultiplayer;
+
         public int stageRewardCount;
         
 #if UNITY_EDITOR
         [CSVField]
         public string 章节名字
         {
-            set => name = value;
+            set
+            {
+                name = value;
+
+                stageCountToMultiplayer = 3;
+            }
         }
         
         [CSVField]
@@ -436,6 +443,7 @@ public partial class UserDataMain
             chapter = UserData.chapter, 
             numChapters = Mathf.Clamp(chapter + 1, 1, _levelChapters.Length);
         LevelChapter levelChapter;
+        UserLevel userLevel;
         var userLevels = new UserLevel[numChapters];
         for (int i = 0; i < numChapters; ++i)
         {
@@ -443,7 +451,24 @@ public partial class UserDataMain
 
             stageRewardCount = levelChapter.stageRewardCount;
             
-            userLevels[i] = __ToUserLevel(__GetLevelIndex(levelChapter.name), ref isUnlock);
+            userLevel = __ToUserLevel(__GetLevelIndex(levelChapter.name), ref isUnlock);
+            if (levelChapter.stageCountToMultiplayer > 0)
+            {
+                if (userLevel.stages != null)
+                {
+                    foreach (var stage in userLevel.stages)
+                    {
+                        if ((stage.flag & UserStage.Flag.Unlocked) == UserStage.Flag.Unlocked &&
+                            --levelChapter.stageCountToMultiplayer <= 0)
+                            break;
+                    }
+                }
+            }
+            
+            if(levelChapter.stageCountToMultiplayer < 1)
+                userLevel.flag |= UserLevel.Flag.Multiplayer;
+
+            userLevels[i] = userLevel;
         }
 
         IUserData.LevelChapters result;
@@ -747,7 +772,7 @@ public partial class UserDataMain
         userLevel.name = level.name;
         userLevel.id = __ToID(levelIndex);
         userLevel.cacheType = level.cacheType;
-        //userLevel.energy = level.energy;
+        userLevel.flag = 0;
             
         int i, j, numStageRewards, numStages = __GetStageCount(level);
         string rewardPoolKey;

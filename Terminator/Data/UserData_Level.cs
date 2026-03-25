@@ -14,9 +14,16 @@ public struct UserLevel
         Week, 
         Month
     }
+
+    [Flags]
+    public enum Flag
+    {
+        Multiplayer = 0x01
+    }
     
     public string name;
     public uint id;
+    public Flag flag;
     //public int energy;
     public CacheType cacheType;
     public UserStage[] stages;

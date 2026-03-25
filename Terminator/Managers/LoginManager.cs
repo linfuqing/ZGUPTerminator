@@ -33,13 +33,13 @@ public sealed class LoginManager : MonoBehaviour
 
             public int index;
         }
-        
+
         public string name;
         public string title;
         public string description;
-        
+
         public AssetObjectLoader prefab;
-        
+
         public Stage[] stages;
 
         public int StageIndexOf(int stageIndex)
@@ -63,11 +63,11 @@ public sealed class LoginManager : MonoBehaviour
         {
             Chapter = 0x01
         }
-        
+
         public string name;
 
         public Flag flag;
-        
+
         public Scene[] scenes;
 
         public Scene.Stage GetSceneStage(int stageIndex)
@@ -85,14 +85,14 @@ public sealed class LoginManager : MonoBehaviour
 
             return default;
         }
-        
+
 #if UNITY_EDITOR
         [CSVField]
         public string 章节名称
         {
             set => name = value;
         }
-        
+
         [CSVField]
         public int 章节标签
         {
@@ -110,7 +110,7 @@ public sealed class LoginManager : MonoBehaviour
                 Scene scene;
                 for (i = 0; i < numParameters; ++i)
                 {
-                    temp =  parameters[i].Split(':');
+                    temp = parameters[i].Split(':');
                     scene.name = temp[0];
                     scene.title = temp[1];
                     scene.description = temp[2];
@@ -128,6 +128,7 @@ public sealed class LoginManager : MonoBehaviour
                         stage.bossDescription = temp2[2];
                         stage.index = stageIndex++;
                     }
+
                     scenes[i] = scene;
                 }
             }
@@ -141,6 +142,14 @@ public sealed class LoginManager : MonoBehaviour
         public string name;
 
         public UnityEvent callback;
+    }
+
+    private struct LevelStage
+    {
+        public uint levelID;
+        public uint maxUnlockStageID;
+        public int stageIndex;
+        public int levelIndex;
     }
 
     /*[Serializable]
@@ -381,9 +390,8 @@ public sealed class LoginManager : MonoBehaviour
     private LevelStyle[] __levelStyles;
     private Dictionary<string, int> __rewardIndices;
     private Dictionary<string, int> __levelIndices;
-    private Dictionary<uint, (uint, int)> __stageLevelIndices;
+    private Dictionary<uint, LevelStage> __levelStages;
     private Dictionary<(uint, int), uint> __stageIDs;
-    private Dictionary<uint, (uint, int)> __stageLevelIDs;
     private LinkedList<Loaders> __loaders;
     
     private UnityEvent __onLevelActivatedFirst;
@@ -648,21 +656,21 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
-        if (!__stageLevelIndices.TryGetValue(userStageID, out var stageLevelIndex))
+        if (!__levelStages.TryGetValue(userStageID, out var levelStage))
         {
             SendChapterStageMessage();
             
             return;
         }
 
-        __targetUserStageID = stageLevelIndex.Item1;
+        __targetUserStageID = levelStage.maxUnlockStageID;
         if(__targetUserStageID != userStageID)
             SendChapterStageMessage(__targetUserStageID);
 
         var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            int levelIndex = stageLevelIndex.Item2;
+            int levelIndex = levelStage.levelIndex;
             if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
             {
                 /*var submitHandlers = scrollRect.submitHandlers;
@@ -751,9 +759,8 @@ public sealed class LoginManager : MonoBehaviour
             __selectedStageIndex = -1;
         }
 
+        __levelStages = new Dictionary<uint, LevelStage>();
         __stageIDs = new Dictionary<(uint, int), uint>();
-        __stageLevelIDs = new Dictionary<uint, (uint, int)>();
-        __stageLevelIndices = new Dictionary<uint, (uint, int)>();
         
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved, isUnlock;
@@ -768,6 +775,7 @@ public sealed class LoginManager : MonoBehaviour
             index, 
             j;
         uint maxStageID = 0;
+        LevelStage levelStage;
         UserStage userStage;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
@@ -787,9 +795,6 @@ public sealed class LoginManager : MonoBehaviour
             {
                 userStage = userLevel.stages[j];
                 
-                __stageIDs[(userLevel.id, j)] = userStage.id;
-                __stageLevelIDs[userStage.id] = (userLevel.id, j);
-
                 if(__selectedStageIndex == j && __selectedUserLevelID == userLevel.id)
                     __targetUserStageID = userStage.id;
 
@@ -800,7 +805,17 @@ public sealed class LoginManager : MonoBehaviour
                     isUnlock = (userStage.flag & UserStage.Flag.Unlocked) != 0;
                 }
 
-                __stageLevelIndices[userStage.id] = (maxStageID, userLevelIndex);
+                if ((userLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer)
+                {
+                    levelStage.levelID = userLevel.id;
+                    levelStage.maxUnlockStageID = maxStageID;
+                    levelStage.stageIndex = j;
+                    levelStage.levelIndex = userLevelIndex;
+
+                    __levelStages[userStage.id] = levelStage;
+
+                    __stageIDs[(userLevel.id, j)] = userStage.id;
+                }
 
                 if (userStage.rewardFlags != null)
                 {
@@ -904,6 +919,11 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
+                    if ((selectedLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer)
+                        style.onMultiplayerEnable?.Invoke();
+                    else
+                        style.onMultiplayerDisable?.Invoke();
+                    
                     __levelName = selectedLevel.name;
                     
                     __selectedUserLevelID = selectedLevel.id;
@@ -1559,12 +1579,16 @@ public sealed class LoginManager : MonoBehaviour
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
         
         property.Apply<LocalPlayer>(hasSweepCard ? 2 : 1, rage, out var playerProperty);
-        
-        if (RemotePlayer.isOnline)
+
+        if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+            EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
+                                            IUserData.PurchaseFlag.AdvertisingFreeCard;
+        else
+        {
             playerProperty.effectTargetRecovery = playerProperty.effectTargetRecoveryTimes;
-        
-        EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
-                                        IUserData.PurchaseFlag.AdvertisingFreeCard;
+
+            EffectShared.keepRecoveryTime = false;
+        }
 
         var clientData = IClientData.instance;
         if (clientData != null)
@@ -1844,7 +1868,11 @@ public sealed class LoginManager : MonoBehaviour
                     } while (0 == stageID);
 
                     if (RemotePlayer.Status.Disabled != RemotePlayer.status)
-                        (levelID, stageIndex) = __stageLevelIDs[stageID];
+                    {
+                        var levelStage = __levelStages[stageID];
+                        levelID = levelStage.levelID;
+                        stageIndex = levelStage.stageIndex;
+                    }
 
                     if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
                     {

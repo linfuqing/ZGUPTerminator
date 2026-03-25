@@ -28,6 +28,9 @@ public class LevelStyle : MonoBehaviour, IScrollRectSubmitHandler
         
         public StageStyle[] stageStyles;
     }
+
+    public UnityEvent onMultiplayerEnable;
+    public UnityEvent onMultiplayerDisable;
     
     public StringEvent onEnergy;
 
