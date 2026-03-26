@@ -458,7 +458,7 @@ public partial class UserDataMain
             numChapters = Mathf.Clamp(chapter + 1, 1, _levelChapters.Length);
         LevelChapter levelChapter;
         UserLevel userLevel;
-        var userLevels = new UserLevel[numChapters];
+        var userLevels = new List<UserLevel>();
         for (int i = 0; i < numChapters; ++i)
         {
             levelChapter = _levelChapters[i];
@@ -482,13 +482,16 @@ public partial class UserDataMain
             if(levelChapter.stageCountToMultiplayer < 1)
                 userLevel.flag |= UserLevel.Flag.Multiplayer;
 
-            userLevels[i] = userLevel;
+            userLevels.Add(userLevel);
+
+            if (!isUnlock)
+                break;
         }
 
         IUserData.LevelChapters result;
         result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.LevelChapters.Flag.UnlockFirst;
         result.stageRewardCount = stageRewardCount;
-        result.levels = userLevels;
+        result.levels = userLevels.ToArray();
         
         onComplete(result);
     }
@@ -780,6 +783,9 @@ public partial class UserDataMain
     
     private UserLevel __ToUserLevel(int levelIndex, ref bool isUnlock)
     {
+        bool isUnlockTemp = isUnlock;
+        isUnlock = false;
+
         ref var level = ref _levels[levelIndex];
         
         UserLevel userLevel;
@@ -794,33 +800,13 @@ public partial class UserDataMain
         StageReward stageReward;
         Stage stage;
         UserStage userStage;
-        userLevel.stages = new UserStage[numStages];
+        var userStages = new List<UserStage>();
         for (i = 0; i < numStages; ++i)
         {
             stage = __GetStage(level, i);
-            userStage.name = stage.name;
-            userStage.id = __GetLevelStageID(levelIndex, i);
-            userStage.energy = stage.energy;
+                 
             userStage.flag = 0;
-
-            userStage.rewardPoolTimes = 0;
-            userStage.rewardPoolTimesPerDay = 0;
-            if (stage.rewardPools != null)
-            {
-                foreach (var rewardPool in stage.rewardPools)
-                {
-                    userStage.rewardPoolTimesPerDay =
-                        Mathf.Max(userStage.rewardPoolTimesPerDay, rewardPool.timesPerDay);
-                    
-                    rewardPoolKey = $"{NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES}{stage.name}{UserData.SEPARATOR}{rewardPool.name}";
-                    rewardPoolTimes = new Active<int>(PlayerPrefs.GetString(rewardPoolKey), __Parse);
-
-                    userStage.rewardPoolTimes = Mathf.Max(userStage.rewardPoolTimes,
-                        rewardPool.timesPerDay - rewardPoolTimes.ToDay());
-                }
-            }
-                
-            if (isUnlock)
+            if (isUnlockTemp)
             {
                 userStage.rewards = null;
                 numStageRewards = stage.indirectRewards.Length;
@@ -841,21 +827,51 @@ public partial class UserDataMain
                    !__GetStageCache(level.name, i, level.cacheType).isEmpty)
                     userStage.flag |= UserStage.Flag.Cached;
                 
-                isUnlock = (UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;
-                if (isUnlock)
+                isUnlockTemp = (UserData.GetStageFlag(level.name, i) & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal;
+                if (isUnlockTemp)
+                {
+                    isUnlock = true;
+                    
                     userStage.flag |= UserStage.Flag.Unlocked;
+                }
             }
             else
             {
+                if ((stage.flag & Stage.Flag.DontCache) != Stage.Flag.DontCache)
+                    break;
+                
                 userStage.rewards = stage.directRewards;
                 userStage.rewardFlags = null;
             }
 
+            userStage.name = stage.name;
+            userStage.id = __GetLevelStageID(levelIndex, i);
+            userStage.energy = stage.energy;
+
+            userStage.rewardPoolTimes = 0;
+            userStage.rewardPoolTimesPerDay = 0;
+            if (stage.rewardPools != null)
+            {
+                foreach (var rewardPool in stage.rewardPools)
+                {
+                    userStage.rewardPoolTimesPerDay =
+                        Mathf.Max(userStage.rewardPoolTimesPerDay, rewardPool.timesPerDay);
+                    
+                    rewardPoolKey = $"{NAME_SPACE_LEVEL_STAGE_REWARD_POOL_TIMES}{stage.name}{UserData.SEPARATOR}{rewardPool.name}";
+                    rewardPoolTimes = new Active<int>(PlayerPrefs.GetString(rewardPoolKey), __Parse);
+
+                    userStage.rewardPoolTimes = Mathf.Max(userStage.rewardPoolTimes,
+                        rewardPool.timesPerDay - rewardPoolTimes.ToDay());
+                }
+            }
+           
             //userStage.rewardPools = stage.rewardPools;
 
-            userLevel.stages[i] = userStage;
+            userStages.Add(userStage);
         }
 
+        userLevel.stages = userStages.ToArray();
+        
         return userLevel;
     }
 
