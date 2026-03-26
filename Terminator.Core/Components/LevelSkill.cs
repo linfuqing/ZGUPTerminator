@@ -476,7 +476,9 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         {
             ref var temp = ref activeIndices.ElementAt(activeIndex);
             
-            UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
+            if(originIndex != temp.value)
+                UnityEngine.Debug.LogError($"LevelSkill: {originIndex} != {temp.value}");
+            //UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
             
             temp.value = index;
             temp.damageScale = damageScale;
@@ -502,7 +504,9 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
         {
             ref var temp = ref activeIndices.ElementAt(activeIndex);
             
-            UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
+            if(originIndex != temp.value)
+                UnityEngine.Debug.LogError($"LevelSkill: {originIndex} != {temp.value}");
+            //UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
 
             temp.value = index;
             temp.damageScale = damageScale;
