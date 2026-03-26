@@ -86,7 +86,7 @@ public partial struct LevelPickableSystem : ISystem
                 if (i == numLevelItems)
                 {
                     LevelItem levelItem;
-                    levelItem.count = random.NextInt(item.min, item.max);
+                    levelItem.count = random.NextInt(item.min, item.max + 1);
                     if (levelItem.count > 0)
                     {
                         levelItem.name = item.name;
