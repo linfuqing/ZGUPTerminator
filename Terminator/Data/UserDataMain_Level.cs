@@ -114,6 +114,12 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public int 章节解锁下一章需要小关数
+        {
+            set => stageCountToNext = value;
+        }
+        
+        [CSVField]
         public int 章节解锁需要星星数
         {
             set => stageRewardCount = value;
