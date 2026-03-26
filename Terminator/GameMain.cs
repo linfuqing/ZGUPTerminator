@@ -168,12 +168,28 @@ public class GameLevelData : ILevelData
                 {
                     canRecoveryExtra = x;
 
-                    LevelPlayerShared<LocalPlayer>.property.effectTargetRecoveryTimes = 2;
+                    //LevelPlayerShared<LocalPlayer>.property.effectTargetRecoveryTimes = 2;
 
                     onComplete(x);
                 });
             
         }
+
+        onComplete(true);
+        
+        return null;
+    }
+    
+    public IEnumerator BuyToSkip(Action<bool> onComplete)
+    {
+        var purchaseData = IPurchaseData.instance;
+        if (purchaseData != null)
+            return purchaseData.Buy(UserID, PurchaseType.AdvertisingFreeCard, 0, x =>
+            {
+                //canRecoveryExtra = x;
+
+                onComplete(x);
+            });
 
         onComplete(true);
         

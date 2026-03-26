@@ -54,5 +54,7 @@ public interface ILevelData
     
     IEnumerator Buy(Action<bool> onComplete);
     
+    IEnumerator BuyToSkip(Action<bool> onComplete);
+
     IEnumerator Broadcast(Action<bool> onComplete);
 }

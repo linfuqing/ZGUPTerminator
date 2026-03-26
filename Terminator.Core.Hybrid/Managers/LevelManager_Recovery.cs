@@ -8,6 +8,7 @@ public partial class LevelManager
     {
         None, 
         UserConfirmed, 
+        UserBuy, 
         WaitingForUser, 
         WaitingForTime, 
         WaitingForQuery,
@@ -65,6 +66,12 @@ public partial class LevelManager
         }
         
         return false;
+    }
+
+    public void BuyRecovery()
+    {
+        if(RecoveryStatus.WaitingForUser == __recoveredStatus)
+            __recoveredStatus = RecoveryStatus.UserBuy;
     }
 
     public void ConfirmRecovery()
@@ -268,22 +275,30 @@ public partial class LevelManager
                             } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
                         }
 
-                        if (RecoveryStatus.UserConfirmed == __recoveredStatus)
+                        switch (__recoveredStatus)
                         {
-                            __recoveredStatus = RecoveryStatus.WaitingForQuery;
+                            case RecoveryStatus.UserBuy:
+                            case RecoveryStatus.UserConfirmed:
+                                __recoveredStatus = RecoveryStatus.WaitingForQuery;
 
-                            _onRecovering?.Invoke();
+                                _onRecovering?.Invoke();
 
-                            yield return levelData.Buy(x =>
-                            {
-                                if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
-                                    __recoveredStatus = x ? RecoveryStatus.TheLastTime : RecoveryStatus.None;
+                                yield return levelData.Buy(x =>
+                                {
+                                    if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
+                                        __recoveredStatus = x ? RecoveryStatus.TheLastTime : RecoveryStatus.None;
 
-                                if (x)
-                                    _onRecoveredSuccess?.Invoke();
-                                else
-                                    _onRecoveredFailure?.Invoke();
-                            });
+                                    if (x)
+                                    {
+                                        LevelPlayerShared<LocalPlayer>.property.effectTargetRecoveryTimes = 2;
+
+                                        _onRecoveredSuccess?.Invoke();
+                                    }
+                                    else
+                                        _onRecoveredFailure?.Invoke();
+                                });
+
+                                break;
                         }
 
                         yield break;
@@ -337,22 +352,44 @@ public partial class LevelManager
                     } while (RecoveryStatus.WaitingForUser == __recoveredStatus);
                 }
 
-                if (RecoveryStatus.UserConfirmed == __recoveredStatus)
+                switch (__recoveredStatus)
                 {
-                    __recoveredStatus = RecoveryStatus.WaitingForQuery;
+                    case RecoveryStatus.UserBuy:
+                    case RecoveryStatus.UserConfirmed:
+                        
+                        __recoveredStatus = RecoveryStatus.WaitingForQuery;
 
-                    _onRecovering?.Invoke();
+                        _onRecovering?.Invoke();
 
-                    yield return levelData.Broadcast(x =>
-                    {
-                        if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
-                            __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
+                        if (RecoveryStatus.UserBuy == __recoveredStatus)
+                        {
+                            yield return levelData.BuyToSkip(x =>
+                            {
+                                if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
+                                    __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
 
-                        if (x)
-                            _onRecoveredSuccess?.Invoke();
+                                if (x)
+                                {
+                                    EffectShared.keepRecoveryTime = true;
+                                    
+                                    _onRecoveredSuccess?.Invoke();
+                                }
+                                else
+                                    _onRecoveredFailure?.Invoke();
+                            });
+                        }
                         else
-                            _onRecoveredFailure?.Invoke();
-                    });
+                            yield return levelData.Broadcast(x =>
+                            {
+                                if (RecoveryStatus.WaitingForQuery == __recoveredStatus)
+                                    __recoveredStatus = x ? recoveryStatus : RecoveryStatus.None;
+
+                                if (x)
+                                    _onRecoveredSuccess?.Invoke();
+                                else
+                                    _onRecoveredFailure?.Invoke();
+                            });
+                        break;
                 }
             }
         }
