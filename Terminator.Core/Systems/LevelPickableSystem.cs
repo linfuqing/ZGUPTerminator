@@ -74,7 +74,7 @@ public partial struct LevelPickableSystem : ISystem
                     ref var levelItem = ref levelItems.ElementAt(i);
                     if (levelItem.name == item.name)
                     {
-                        levelItem.count += random.NextInt(item.min, item.max);
+                        levelItem.count += random.NextInt(item.min, item.max + 1);
                         
                         if(levelItem.count < 0)
                             levelItems.RemoveAtSwapBack(i);
@@ -114,10 +114,8 @@ public partial struct LevelPickableSystem : ISystem
         [ReadOnly] 
         public ComponentTypeHandle<PickableStatus> statusType;
 
-        [ReadOnly] 
         public ComponentTypeHandle<LevelPickableSkill> skillType;
 
-        [ReadOnly] 
         public ComponentTypeHandle<LevelPickableItem> itemType;
 
         public NativeQueue<Result>.ParallelWriter results;
@@ -138,7 +136,15 @@ public partial struct LevelPickableSystem : ISystem
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
+            {
                 collect.Execute(i);
+                
+                if(i < collect.skills.Length)
+                    chunk.SetComponentEnabled(ref skillType, i, false);
+                
+                if(i < collect.items.Length)
+                    chunk.SetComponentEnabled(ref itemType, i, false);
+            }
         }
     }
 
@@ -275,8 +281,8 @@ public partial struct LevelPickableSystem : ISystem
     {
         __entityType = state.GetEntityTypeHandle();
         __statusType = state.GetComponentTypeHandle<PickableStatus>(true);
-        __itemType = state.GetComponentTypeHandle<LevelPickableItem>(true);
-        __skillType = state.GetComponentTypeHandle<LevelPickableSkill>(true);
+        __itemType = state.GetComponentTypeHandle<LevelPickableItem>();
+        __skillType = state.GetComponentTypeHandle<LevelPickableSkill>();
         
         __versions = state.GetComponentLookup<LevelSkillVersion>();
         __definitions = state.GetComponentLookup<LevelSkillDefinitionData>(true);

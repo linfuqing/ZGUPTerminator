@@ -168,6 +168,8 @@ public class GameLevelData : ILevelData
                 {
                     canRecoveryExtra = x;
 
+                    LevelPlayerShared<LocalPlayer>.property.effectTargetRecoveryTimes = 2;
+
                     onComplete(x);
                 });
             

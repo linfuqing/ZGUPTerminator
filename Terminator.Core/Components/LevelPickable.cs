@@ -1,7 +1,7 @@
 using Unity.Collections;
 using Unity.Entities;
 
-public struct LevelPickableSkill : IComponentData
+public struct LevelPickableSkill : IComponentData, IEnableableComponent
 {
     public int min;
     public int max;
@@ -9,7 +9,7 @@ public struct LevelPickableSkill : IComponentData
     public int selection;
 }
 
-public struct LevelPickableItem : IComponentData
+public struct LevelPickableItem : IComponentData, IEnableableComponent
 {
     public FixedString32Bytes name;
 

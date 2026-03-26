@@ -294,8 +294,8 @@ public sealed class LoginManager : MonoBehaviour
     [SerializeField]
     internal UnityEvent _onEnd;
     
-    [SerializeField]
-    internal UnityEvent _onCancel;
+    [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_onCancel")]
+    internal UnityEvent _onError;
 
     [SerializeField]
     internal UnityEvent _onHotEnable;
@@ -1922,7 +1922,7 @@ public sealed class LoginManager : MonoBehaviour
                         switch (RemotePlayer.status)
                         {
                             case  RemotePlayer.Status.Error:
-                                _onCancel?.Invoke();
+                                _onError?.Invoke();
                                 yield break;
                             case  RemotePlayer.Status.Canceled:
                                 yield break;
@@ -1938,12 +1938,12 @@ public sealed class LoginManager : MonoBehaviour
                         stageIndex = levelStage.stageIndex;
                     }
 
-                    if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
+                    /*if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
                     {
                         var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
                         writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
                         clientData.EndSend(writer);
-                    }
+                    }*/
                 }
             }
             else
@@ -1995,11 +1995,45 @@ public sealed class LoginManager : MonoBehaviour
             yield break;
         }
 
-        if (hasStage && !ReplyMessageShared.isHost && clientData != null)
+        if (hasStage && /*!ReplyMessageShared.isHost && */clientData != null)
         {
             var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
             writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
             clientData.EndSend(writer);
+
+            int channelStatus;
+            do
+            {
+                if (!RemotePlayer.isOnline)
+                    RemotePlayer.status = RemotePlayer.Status.Disabled;
+
+                if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                    break;
+
+                channelStatus = RemotePlayer.channelStatus;
+                if (channelStatus != 0 && channelStatus != stageID)
+                    RemotePlayer.status = RemotePlayer.Status.Error;
+
+                switch (RemotePlayer.status)
+                {
+                    case  RemotePlayer.Status.Error:
+                    case  RemotePlayer.Status.Canceled:
+                        writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                        writer.WritePackedInt(0, StreamCompressionModel.Default);
+                        clientData.EndSend(writer);
+
+                        __isStart = false;
+
+                        _onEnd?.Invoke();
+                        
+                        if(RemotePlayer.Status.Error == RemotePlayer.status)
+                            _onError?.Invoke();
+                        
+                        yield break;
+                }
+
+                yield return null;
+            } while (RemotePlayer.Status.Joined != RemotePlayer.status);
         }
         
         var analytics = IAnalytics.instance as IAnalyticsEx;
