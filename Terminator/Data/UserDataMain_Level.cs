@@ -837,7 +837,7 @@ public partial class UserDataMain
             }
             else
             {
-                if ((stage.flag & Stage.Flag.DontCache) != Stage.Flag.DontCache)
+                if ((stage.flag & Stage.Flag.DontCache) == Stage.Flag.DontCache)
                     break;
                 
                 userStage.rewards = stage.directRewards;
