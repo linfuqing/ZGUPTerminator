@@ -16,7 +16,6 @@ public sealed class LoginManager : MonoBehaviour
         None,
         Waiting, 
         Start, 
-        End, 
         Error
     }
     
@@ -628,15 +627,14 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void DisableRemotePlayer()
     {
-        if(Status.Waiting != __status)
+        //if(Status.Waiting == __status)
             RemotePlayer.status = RemotePlayer.Status.Disabled;
     }
 
-    [Preserve]
+    //[Preserve]
     public void CancelRemotePlayer()
     {
-        if(Status.Waiting != __status)
-            RemotePlayer.status = RemotePlayer.Status.Canceled;
+        RemotePlayer.status = RemotePlayer.Status.Canceled;
     }
 
     public void SendChapterStageMessage(uint stageID = 0)
@@ -1946,6 +1944,12 @@ public sealed class LoginManager : MonoBehaviour
                         if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                         {
                             __status = Status.None;
+                            
+                            if (clientData != null)
+                            {
+                                var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
+                                clientData.EndSend(writer);
+                            }
                             
                             yield break;
                         }
