@@ -145,12 +145,12 @@ public struct ClientMessageRemotePlayerStatus : IClientMessageToRead
     /// <summary>
     /// 在线
     /// </summary>
-    public bool isOnline => flag.HasFlag(ClientRemotePlayerFlag.Online);
+    public bool isOnline => (flag & ClientRemotePlayerFlag.Online) == ClientRemotePlayerFlag.Online;
     
     /// <summary>
     /// 队长
     /// </summary>
-    public bool isCreator => flag.HasFlag(ClientRemotePlayerFlag.Creator);
+    public bool isCreator => (flag & ClientRemotePlayerFlag.Creator) == ClientRemotePlayerFlag.Creator;
 
     /// <summary>
     /// 在游戏中

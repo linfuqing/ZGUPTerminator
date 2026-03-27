@@ -62,7 +62,8 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         private set => Version.Value.Data = value;
     }
 
-    public static bool isOnline => ((NetworkRelayChannelFlag)channelFlag).HasFlag(NetworkRelayChannelFlag.Online);
+    public static bool isOnline => ((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Online) ==
+                                   NetworkRelayChannelFlag.Online;
 }
 
 public struct LocalPlayer : IComponentData, ILevelPlayer

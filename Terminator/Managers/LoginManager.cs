@@ -1659,7 +1659,7 @@ public sealed class LoginManager : MonoBehaviour
         {
             playerProperty.effectTargetRecovery = playerProperty.effectTargetRecoveryTimes;
 
-            EffectShared.keepRecoveryTime = false;
+            EffectShared.keepRecoveryTime = true;
         }
 
         var clientData = IClientData.instance;
