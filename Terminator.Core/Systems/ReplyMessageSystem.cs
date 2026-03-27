@@ -528,41 +528,44 @@ public partial struct ReplyMessageSystem : ISystem
         collect.sendBuffer = driver.sendBuffer;
         collect.outputs = messages;
         var jobHandle = collect.ScheduleByRef(state.Dependency);
-        
-        var sendBuffer = driver.sendBuffer.AsParallelWriter();
-        
-        __remoteIdentityType.Update(ref state);
-        __effectTargetDamageType.Update(ref state);
-        __effectTargetHPType.Update(ref state);
-        __remoteEffectTargetDamageType.Update(ref state);
-        __remoteEffectTargetHPType.Update(ref state);
 
-        ReplyEffectTargets replyEffectTargets;
-        replyEffectTargets.sendBuffer = sendBuffer;
-        replyEffectTargets.messages = messages;
-        replyEffectTargets.clientBuffer = clientBuffer;
-        replyEffectTargets.remoteIdentityType = __remoteIdentityType;
-        replyEffectTargets.effectTargetDamageType = __effectTargetDamageType;
-        replyEffectTargets.effectTargetHPType = __effectTargetHPType;
-        replyEffectTargets.remoteEffectTargetDamageType = __remoteEffectTargetDamageType;
-        replyEffectTargets.remoteEffectTargetHPType = __remoteEffectTargetHPType;
-        jobHandle = replyEffectTargets.ScheduleParallelByRef(__effectTargetGroup, jobHandle);
+        if (RemotePlayer.isOnline)
+        {
+            var sendBuffer = driver.sendBuffer.AsParallelWriter();
 
-        __characterBodyType.Update(ref state);
-        __thirdPersonCharacterControlType.Update(ref state);
-        __localTransformType.Update(ref state);
-        __remotePositionType.Update(ref state);
+            __remoteIdentityType.Update(ref state);
+            __effectTargetDamageType.Update(ref state);
+            __effectTargetHPType.Update(ref state);
+            __remoteEffectTargetDamageType.Update(ref state);
+            __remoteEffectTargetHPType.Update(ref state);
 
-        ReplyPositions replyPositions;
-        replyPositions.sendBuffer = sendBuffer;
-        replyPositions.messages = messages;
-        replyPositions.clientBuffer = clientBuffer;
-        replyPositions.remoteIdentityType = __remoteIdentityType;
-        replyPositions.characterBodyType = __characterBodyType;
-        replyPositions.thirdPersonCharacterControlType = __thirdPersonCharacterControlType;
-        replyPositions.localTransformType = __localTransformType;
-        replyPositions.remotePositionType = __remotePositionType;
-        jobHandle = replyPositions.ScheduleParallelByRef(__positionGroup, jobHandle);
+            ReplyEffectTargets replyEffectTargets;
+            replyEffectTargets.sendBuffer = sendBuffer;
+            replyEffectTargets.messages = messages;
+            replyEffectTargets.clientBuffer = clientBuffer;
+            replyEffectTargets.remoteIdentityType = __remoteIdentityType;
+            replyEffectTargets.effectTargetDamageType = __effectTargetDamageType;
+            replyEffectTargets.effectTargetHPType = __effectTargetHPType;
+            replyEffectTargets.remoteEffectTargetDamageType = __remoteEffectTargetDamageType;
+            replyEffectTargets.remoteEffectTargetHPType = __remoteEffectTargetHPType;
+            jobHandle = replyEffectTargets.ScheduleParallelByRef(__effectTargetGroup, jobHandle);
+
+            __characterBodyType.Update(ref state);
+            __thirdPersonCharacterControlType.Update(ref state);
+            __localTransformType.Update(ref state);
+            __remotePositionType.Update(ref state);
+
+            ReplyPositions replyPositions;
+            replyPositions.sendBuffer = sendBuffer;
+            replyPositions.messages = messages;
+            replyPositions.clientBuffer = clientBuffer;
+            replyPositions.remoteIdentityType = __remoteIdentityType;
+            replyPositions.characterBodyType = __characterBodyType;
+            replyPositions.thirdPersonCharacterControlType = __thirdPersonCharacterControlType;
+            replyPositions.localTransformType = __localTransformType;
+            replyPositions.remotePositionType = __remotePositionType;
+            jobHandle = replyPositions.ScheduleParallelByRef(__positionGroup, jobHandle);
+        }
 
         state.Dependency = jobHandle;
         SystemAPI.SetSingleton(messages);
