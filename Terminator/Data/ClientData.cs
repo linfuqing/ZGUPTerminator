@@ -881,7 +881,7 @@ public class ClientData : MonoBehaviour, IClientData
                     __header.Write(
                         ref writer, 
                         StreamCompressionModel.Default, 
-                        (int)ClientMessageType.Chat, ClientChannel.Squad == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);
+                        (int)ClientMessageType.Chat, ClientChannel.Private == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);
 
                     writer.WriteFixedString512(temp.value);
                     
