@@ -1557,7 +1557,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (property.levelStages == null)
         {
-            __status = Status.None;
+            __status = Status.Error;
 
             return;
         }
