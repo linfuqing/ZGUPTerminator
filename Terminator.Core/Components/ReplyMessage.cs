@@ -211,6 +211,7 @@ public struct ReplyMessages : IComponentData
                                     __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
                                     if ((++ReplyMessageShared.remotePlayerCount > 1 ||
                                          RemotePlayer.status >= RemotePlayer.Status.Joined &&
+                                         LevelPlayerShared<RemotePlayer>.id != 0 && 
                                          LevelPlayerShared<RemotePlayer>.id != key.id) &&
                                         ReplyMessageShared.isHost)
                                     {
