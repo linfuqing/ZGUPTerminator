@@ -23,8 +23,16 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
     private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
 
-    private static readonly SharedStatic<int> ChannelFlag = SharedStatic<int>.GetOrCreate<RemotePlayer>();
+    private struct ChannelFlag
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ChannelFlag>();
+    }
 
+    private struct Version
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Version>();
+    }
+    
     public static Status status
     {
         get => StatusValue.Data;
@@ -36,9 +44,22 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
     
     public static int channelFlag
     {
-        get => ChannelFlag.Data;
+        get => ChannelFlag.Value.Data;
 
-        set => ChannelFlag.Data = value;
+        set
+        {
+            ChannelFlag.Value.Data = value;
+
+            if (value != 0)
+                ++version;
+        }
+    }
+
+    public static int version
+    {
+        get => Version.Value.Data;
+
+        private set => Version.Value.Data = value;
     }
 
     public static bool isOnline => ((NetworkRelayChannelFlag)channelFlag).HasFlag(NetworkRelayChannelFlag.Online);
