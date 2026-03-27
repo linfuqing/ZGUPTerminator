@@ -230,6 +230,8 @@ public partial struct ReplyMessageSystem : ISystem
 
     private struct ReadPositions
     {
+        public const float MAX_DISTANCE_SQ = 10.0F;
+        
         [ReadOnly] 
         public ReplyMessages messages;
 
@@ -296,7 +298,7 @@ public partial struct ReplyMessageSystem : ISystem
                 
                 remotePosition = remotePositions[0];
                 if (RemotePosition.Type.Wrap == remotePosition.type || 
-                    math.distancesq(localTransform.Position.xyz, remotePosition.value.xyz) > 1.0f)
+                    math.distancesq(localTransform.Position, remotePosition.value) > MAX_DISTANCE_SQ)
                 {
                     localTransform.Position = remotePosition.value;
                     localTransforms[index] = localTransform;
