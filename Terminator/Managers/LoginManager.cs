@@ -15,7 +15,9 @@ public sealed class LoginManager : MonoBehaviour
     {
         None,
         Waiting, 
-        Start
+        Start, 
+        End, 
+        Error
     }
     
     public struct Stage
@@ -1587,7 +1589,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (property.cache.skills == null)
         {
-            __status = Status.None;
+            __status = Status.Error;
 
             //__styles[__selectedLevelIndex].button.interactable = true;
             
@@ -1639,7 +1641,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (!property.isVail)
         {
-            __status = Status.None;
+            __status = Status.Error;
 
             return;
         }
@@ -1941,18 +1943,13 @@ public sealed class LoginManager : MonoBehaviour
                         if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                             break;
 
-                        switch (RemotePlayer.status)
+                        if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                         {
-                            case  RemotePlayer.Status.Error:
-                            case  RemotePlayer.Status.Canceled:
-                                __status = Status.None;
-
-                                if(RemotePlayer.Status.Error == RemotePlayer.status)
-                                    _onError?.Invoke();
-                                
-                                yield break;
+                            __status = Status.None;
+                            
+                            yield break;
                         }
-
+                        
                         stageID = (uint)RemotePlayer.channelStatus;
                     } while (0 == stageID);
 
@@ -1981,7 +1978,7 @@ public sealed class LoginManager : MonoBehaviour
                     
                     if (clientData != null)
                     {
-                        var writer = clientData.BeginSend(ClientMessageType.Error, 0);
+                        var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
                         clientData.EndSend(writer);
                     }
                     
@@ -1994,82 +1991,93 @@ public sealed class LoginManager : MonoBehaviour
 
         _onStart?.Invoke();
 
-        __status = Status.Start;
-
         var userData = IUserData.instance;
 
         uint userID = LoginManager.userID.Value;
 
         __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : -1;
 
-        if (isRestart)
-            yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
-        else
-            yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
-
-        if (Status.Start != __status)
-        {
-            __status = Status.None;
-
-            _onEnd?.Invoke();
-            
-            if (clientData != null)
-            {
-                var writer = clientData.BeginSend(ClientMessageType.Error, 0);
-                clientData.EndSend(writer);
-            }
-            
-            yield break;
-        }
-
         if (hasStage && /*!ReplyMessageShared.isHost && */clientData != null)
         {
+            __status = Status.Error;
+
             sourceVersion = 0;
             
             int channelStatus;
             DataStreamWriter writer;
             do
             {
-                if (!RemotePlayer.isOnline)
-                    RemotePlayer.status = RemotePlayer.Status.Disabled;
-
-                if (RemotePlayer.Status.Disabled == RemotePlayer.status)
-                    break;
-
-                channelStatus = RemotePlayer.channelStatus;
-                if (channelStatus !=0 && channelStatus != stageID)
-                    RemotePlayer.status = RemotePlayer.Status.Error;
-
-                switch (RemotePlayer.status)
+                if (Status.Error == __status)
                 {
-                    case RemotePlayer.Status.Error:
-                    case RemotePlayer.Status.Canceled:
-                        writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                        writer.WritePackedInt(0, StreamCompressionModel.Default);
-                        clientData.EndSend(writer);
+                    __status = Status.Start;
 
-                        __status = Status.None;
-
-                        _onEnd?.Invoke();
-                        
-                        if(RemotePlayer.Status.Error == RemotePlayer.status)
-                            _onError?.Invoke();
-                        
-                        yield break;
+                    if (isRestart)
+                        yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
+                    else
+                        yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
                 }
 
-                destinationVersion = RemotePlayer.version;
-                if (destinationVersion != sourceVersion)
-                {
-                    sourceVersion = destinationVersion;
+                channelStatus = RemotePlayer.channelStatus;
+                if (channelStatus != 0 && channelStatus != stageID)
+                    RemotePlayer.status = RemotePlayer.Status.Canceled;
 
+                if (Status.Start == __status)
+                {
+                    destinationVersion = RemotePlayer.version;
+                    if (destinationVersion != sourceVersion)
+                    {
+                        sourceVersion = destinationVersion;
+
+                        writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                        writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+                        clientData.EndSend(writer);
+                    }
+                    
+                    if (!RemotePlayer.isOnline || RemotePlayer.Status.Canceled == RemotePlayer.status)
+                        RemotePlayer.status = RemotePlayer.Status.Disabled;
+
+                    if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                        break;
+                }
+                else if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                {
                     writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                    writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+                    writer.WritePackedInt(0, StreamCompressionModel.Default);
                     clientData.EndSend(writer);
+
+                    __status = Status.None;
+
+                    _onEnd?.Invoke();
+
+                    yield break;
                 }
 
                 yield return null;
             } while (RemotePlayer.Status.Joined != RemotePlayer.status);
+        }
+        else
+        {
+            __status = Status.Start;
+
+            if (isRestart)
+                yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
+            else
+                yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
+
+            if(Status.Start != __status)
+            {
+                __status = Status.None;
+
+                _onEnd?.Invoke();
+
+                if (clientData != null)
+                {
+                    var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
+                    clientData.EndSend(writer);
+                }
+
+                yield break;
+            }
         }
         
         var analytics = IAnalytics.instance as IAnalyticsEx;

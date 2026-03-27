@@ -65,6 +65,7 @@ public enum ClientMessageType
     
     ChapterStage, 
     Play, 
+    Cancel, 
     Error
 }
 
@@ -755,8 +756,13 @@ public class ClientData : MonoBehaviour, IClientData
                                 case ClientMessageType.Play:
                                     new ClientMessagePlay(ref reader).Apply();
                                     break;
+                                case ClientMessageType.Cancel:
+                                    //RemotePlayer.status = RemotePlayer.Status.Error;
+                                    LoginManager.instance?.CancelRemotePlayer();
+                                    break;
                                 case ClientMessageType.Error:
-                                    RemotePlayer.status = RemotePlayer.Status.Error;
+                                    //RemotePlayer.status = RemotePlayer.Status.Error;
+                                    LoginManager.instance?._onError?.Invoke();
                                     break;
                             }
 
