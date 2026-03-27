@@ -477,7 +477,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
             ref var temp = ref activeIndices.ElementAt(activeIndex);
             
             if(originIndex != temp.value)
-                UnityEngine.Debug.LogError($"LevelSkill: {originIndex} != {temp.value}");
+                UnityEngine.Debug.LogError($"LevelSkill {index}: {originIndex} != {temp.value}");
             //UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
             
             temp.value = index;
@@ -505,7 +505,7 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
             ref var temp = ref activeIndices.ElementAt(activeIndex);
             
             if(originIndex != temp.value)
-                UnityEngine.Debug.LogError($"LevelSkill: {originIndex} != {temp.value}");
+                UnityEngine.Debug.LogError($"LevelSkill {index}: {originIndex} != {temp.value}");
             //UnityEngine.Assertions.Assert.AreEqual(originIndex, temp.value);
 
             temp.value = index;

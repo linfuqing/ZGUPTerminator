@@ -208,7 +208,7 @@ public struct ReplyMessages : IComponentData
                                     reader.Flush();
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
                                     
-                                    __Log($"Reply Message Join {channel} : {key.id}");
+                                    __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
                                     if ((++ReplyMessageShared.remotePlayerCount > 1 ||
                                          RemotePlayer.status >= RemotePlayer.Status.Joined &&
                                          LevelPlayerShared<RemotePlayer>.id != key.id) &&
@@ -232,7 +232,7 @@ public struct ReplyMessages : IComponentData
 
                                     reader.ReadBytes(ReplyMessageShared.remotePlayerHeader.AsArray());
 
-                                    UnityEngine.Debug.Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
+                                    //UnityEngine.Debug.Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
                                 }
                                 else
                                     UnityEngine.Debug.LogError($"WTF Channel {channel} For Join!");
@@ -293,7 +293,7 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.id = 0;
                                     
-                                    UnityEngine.Debug.Log($"{(NetworkRelayMessageType)key.type}");
+                                    __Log($"{(NetworkRelayMessageType)key.type}");
                                 }
                             }
                             else

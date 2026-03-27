@@ -31,7 +31,7 @@ public partial class UserDataMain
         result.chapter = UserData.chapter;
         
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
-        int groupID = __GetRoleGroupIndex(groupName);
+        uint groupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetRoleGroupIndex(groupName));
         
         result.role = default;
         

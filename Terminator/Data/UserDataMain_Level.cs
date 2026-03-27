@@ -114,6 +114,12 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public int 章节联机需要小关数
+        {
+            set => stageCountToMultiplayer = value;
+        }
+
+        [CSVField]
         public int 章节解锁下一章需要小关数
         {
             set => stageCountToNext = value;

@@ -583,22 +583,30 @@ public class ClientData : MonoBehaviour, IClientData
                     //print((NetworkRelayMessageType)type);
                     switch ((NetworkRelayMessageType)type)
                     {
+                        case NetworkRelayMessageType.Disconnect:
+                        case NetworkRelayMessageType.Connect:
                         case NetworkRelayMessageType.Status:
                         {
-                            var channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            var channelFlag = (int)NetworkRelayMessageType.Disconnect == type
+                                ? 0
+                                : reader.ReadPackedInt(streamCompressionModel);
                             header.userID = reader.ReadPackedUInt(streamCompressionModel);
-                            
-                            var block = new ClientHeader.Block(ReplyMessageShared.remotePlayerHeader);
+                            if (header.userID == LevelPlayerShared<RemotePlayer>.id)
+                            {
+                                var block = new ClientHeader.Block(ReplyMessageShared.remotePlayerHeader);
 
-                            header.userName = block.userName;
-                            header.userAvatar = block.userAvatar;
+                                header.userName = block.userName;
+                                header.userAvatar = block.userAvatar;
 
-                            ClientMessageRemotePlayerStatus message;
-                            message.flag = (ClientRemotePlayerFlag)channelFlag;
+                                ClientMessageRemotePlayerStatus message;
+                                message.flag = (ClientRemotePlayerFlag)channelFlag;
 
-                            __Save(message);
+                                __Save(message);
 
-                            return (int)ClientMessageType.Status;
+                                return (int)ClientMessageType.Status;
+                            }
+
+                            break;
                         }
                         case NetworkRelayMessageType.Create:
                         case NetworkRelayMessageType.Join:

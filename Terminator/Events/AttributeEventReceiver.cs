@@ -147,8 +147,14 @@ public class AttributeEventReceiver : MonoBehaviour
                 ref var attribute = ref _attributes[i];
                 if(!__attributes.TryGetValue(attribute.id, out source))
                     continue;
+
+                if (!__attributes.TryGetValue(attribute.idMax, out destination))
+                {
+                    destination = source;
+
+                    __attributes[attribute.idMax] = destination;
+                }
                 
-                destination = __attributes.TryGetValue(attribute.idMax, out destination) ? destination : source;
                 AttributeManager.instance.Set(
                     _space, 
                     __instanceID, 
