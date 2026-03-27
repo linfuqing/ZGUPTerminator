@@ -501,10 +501,10 @@ public class ClientData : MonoBehaviour, IClientData
                 print($"{this} has been connected to {__address}:{__port}");
             }
         }
-        else
-            __SetStatus();
         
         __header = header;
+
+        SetStatus(0);
     }
 
     public void SetStatus(int value)
@@ -514,7 +514,7 @@ public class ClientData : MonoBehaviour, IClientData
 
         status = value;
 
-        __SetStatus();
+        __SendStatus();
     }
 
     public int ReadMessageType(out ClientHeader header)
@@ -794,9 +794,7 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 case NetworkClientMessageType.Connect:
                 {
-                    var writer = BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                    writer.WritePackedInt(status, StreamCompressionModel.Default);
-                    EndSend(writer);
+                    __SendStatus();
                     /*if (SquadInviteStatus.None != squadInviteStatus)
                     {
                         var sendBuffer = driver.sendBuffer;
@@ -991,7 +989,7 @@ public class ClientData : MonoBehaviour, IClientData
         writer.WriteFixedString512(__squadInviteMessage.text);
     }
 
-    private void __SetStatus()
+    private void __SendStatus()
     {
         var writer = BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
         writer.WritePackedInt(status, StreamCompressionModel.Default);
