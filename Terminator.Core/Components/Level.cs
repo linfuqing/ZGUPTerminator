@@ -297,7 +297,7 @@ public struct LevelStageOption
                 case Type.Gold:
                     return value <= status.gold;
                 case Type.Stage:
-                    return value <= status.stage;
+                    return value < 0 ? -value >= status.stage : value <= status.stage;
                 case Type.Level:
                     foreach (var levelStage in levelStages)
                     {
