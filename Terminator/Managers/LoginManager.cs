@@ -2036,16 +2036,6 @@ public sealed class LoginManager : MonoBehaviour
                 if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                     break;
 
-                destinationVersion = RemotePlayer.version;
-                if (destinationVersion != sourceVersion)
-                {
-                    sourceVersion = destinationVersion;
-
-                    writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                    writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
-                    clientData.EndSend(writer);
-                }
-                
                 channelStatus = RemotePlayer.channelStatus;
                 if (channelStatus !=0 && channelStatus != stageID)
                     RemotePlayer.status = RemotePlayer.Status.Error;
@@ -2066,6 +2056,16 @@ public sealed class LoginManager : MonoBehaviour
                             _onError?.Invoke();
                         
                         yield break;
+                }
+
+                destinationVersion = RemotePlayer.version;
+                if (destinationVersion != sourceVersion)
+                {
+                    sourceVersion = destinationVersion;
+
+                    writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                    writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
+                    clientData.EndSend(writer);
                 }
 
                 yield return null;

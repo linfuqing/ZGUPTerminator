@@ -184,12 +184,7 @@ public class GameLevelData : ILevelData
     {
         var purchaseData = IPurchaseData.instance;
         if (purchaseData != null)
-            return purchaseData.Buy(UserID, PurchaseType.AdvertisingFreeCard, 0, x =>
-            {
-                //canRecoveryExtra = x;
-
-                onComplete(x);
-            });
+            return purchaseData.Buy(UserID, PurchaseType.AdvertisingFreeCard, 0, onComplete);
 
         onComplete(true);
         
