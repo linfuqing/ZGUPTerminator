@@ -337,7 +337,7 @@ public partial struct LevelSystem : ISystem
                     {
                         RemotePosition remotePosition;
                         remotePosition.type = RemotePosition.Type.Wrap;
-                        remotePosition.value = math.float2(playerPosition.x, playerPosition.z);
+                        remotePosition.value = playerPosition;
 
                         remotePositions.Add(remotePosition);
                     }

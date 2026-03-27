@@ -295,10 +295,10 @@ public partial struct ReplyMessageSystem : ISystem
                 var localTransform = localTransforms[index];
                 
                 remotePosition = remotePositions[0];
-                if (RemotePosition.Type.Wrap == remotePosition.type || math.distancesq(localTransform.Position.xz, remotePosition.value) < localTransform.Position.y * localTransform.Position.y)
+                if (RemotePosition.Type.Wrap == remotePosition.type || 
+                    math.distancesq(localTransform.Position.xz, remotePosition.value.xz) < math.distancesq(localTransform.Position.y, remotePosition.value.y))
                 {
-                    localTransform.Position = math.float3(remotePosition.value.x, 0.0f,
-                        remotePosition.value.y);
+                    localTransform.Position = remotePosition.value;
                     localTransforms[index] = localTransform;
                     
                     thirdPersonCharacterControls[index] = default;
@@ -308,7 +308,7 @@ public partial struct ReplyMessageSystem : ISystem
                     var thirdPersonCharacterControl = thirdPersonCharacterControls[index];
                     
                     thirdPersonCharacterControl.MoveVector =
-                        math.float3(remotePosition.value.x, localTransform.Position.y, remotePosition.value.y) -
+                        remotePosition.value -
                         localTransform.Position;
                     if (!__ClampToMaxLength(ref thirdPersonCharacterControl.MoveVector) &&
                         numRemotePositions > 1)
@@ -355,7 +355,7 @@ public partial struct ReplyMessageSystem : ISystem
                     ? RemotePosition.Type.Key
                     : RemotePosition.Type.Normal;
             var localTransform = localTransforms[index];
-            remotePosition.value = math.float2(localTransform.Position.x, localTransform.Position.z);
+            remotePosition.value = localTransform.Position;
             
             var remotePositions = this.remotePositions[index];
             int numRemotePositions = remotePositions.Length;
