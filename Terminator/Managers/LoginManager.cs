@@ -1717,10 +1717,6 @@ public sealed class LoginManager : MonoBehaviour
             header.userAvatar = user.avatar;
             
             clientData.Connect(header, user.replyServerAddress, user.replyServerPort);
-            
-            var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-            writer.WritePackedInt(0, StreamCompressionModel.Default);
-            clientData.EndSend(writer);
         }
 
         GameMain.Login(user.id);
@@ -2005,8 +2001,6 @@ public sealed class LoginManager : MonoBehaviour
         {
             __status = Status.Error;
 
-            sourceVersion = 0;
-            
             int channelStatus;
             DataStreamWriter writer;
             do
@@ -2027,15 +2021,7 @@ public sealed class LoginManager : MonoBehaviour
 
                 if (Status.Start == __status)
                 {
-                    destinationVersion = RemotePlayer.version;
-                    if (destinationVersion != sourceVersion)
-                    {
-                        sourceVersion = destinationVersion;
-
-                        writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                        writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
-                        clientData.EndSend(writer);
-                    }
+                    clientData.SetStatus((int)stageID);
                     
                     if (!RemotePlayer.isOnline || RemotePlayer.Status.Canceled == RemotePlayer.status)
                         RemotePlayer.status = RemotePlayer.Status.Disabled;
@@ -2045,9 +2031,7 @@ public sealed class LoginManager : MonoBehaviour
                 }
                 else if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                 {
-                    writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                    writer.WritePackedInt(0, StreamCompressionModel.Default);
-                    clientData.EndSend(writer);
+                    clientData.SetStatus(0);
 
                     __status = Status.None;
 
@@ -2068,7 +2052,9 @@ public sealed class LoginManager : MonoBehaviour
             else
                 yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
 
-            if(Status.Start != __status)
+            if (Status.Start == __status)
+                clientData?.SetStatus(-1);
+            else
             {
                 __status = Status.None;
 

@@ -322,6 +322,8 @@ public interface IClientData
     ClientHeader header { get; }
 
     void Connect(in ClientHeader header, string address, ushort port);
+
+    void SetStatus(int value);
     
     /// <summary>
     /// int messageType;
@@ -411,6 +413,13 @@ public class ClientData : MonoBehaviour, IClientData
         private set;
     }*/
 
+    public int status
+    {
+        get;
+
+        private set;
+    }
+
     public NetworkClientDriver driver
     {
         get
@@ -492,8 +501,20 @@ public class ClientData : MonoBehaviour, IClientData
                 print($"{this} has been connected to {__address}:{__port}");
             }
         }
-            
+        else
+            __SetStatus();
+        
         __header = header;
+    }
+
+    public void SetStatus(int value)
+    {
+        if (status == value)
+            return;
+
+        status = value;
+
+        __SetStatus();
     }
 
     public int ReadMessageType(out ClientHeader header)
@@ -773,6 +794,9 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 case NetworkClientMessageType.Connect:
                 {
+                    var writer = BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+                    writer.WritePackedInt(status, StreamCompressionModel.Default);
+                    EndSend(writer);
                     /*if (SquadInviteStatus.None != squadInviteStatus)
                     {
                         var sendBuffer = driver.sendBuffer;
@@ -965,6 +989,13 @@ public class ClientData : MonoBehaviour, IClientData
         writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
         writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
         writer.WriteFixedString512(__squadInviteMessage.text);
+    }
+
+    private void __SetStatus()
+    {
+        var writer = BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
+        writer.WritePackedInt(status, StreamCompressionModel.Default);
+        EndSend(writer);
     }
 
     void Start()
