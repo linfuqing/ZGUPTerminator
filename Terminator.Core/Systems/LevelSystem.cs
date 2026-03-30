@@ -336,7 +336,7 @@ public partial struct LevelSystem : ISystem
                     if (remotePositions.IsCreated)
                     {
                         RemotePosition remotePosition;
-                        remotePosition.type = RemotePosition.Type.Wrap;
+                        remotePosition.type = RemotePosition.Type.Warp;
                         remotePosition.value = playerPosition;
 
                         remotePositions.Add(remotePosition);

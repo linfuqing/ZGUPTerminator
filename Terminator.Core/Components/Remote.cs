@@ -53,7 +53,7 @@ public struct RemotePosition : IBufferElementData
     {
         Normal, 
         Key, 
-        Wrap
+        Warp
     }
 
     public Type type;

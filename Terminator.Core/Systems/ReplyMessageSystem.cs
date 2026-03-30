@@ -297,7 +297,7 @@ public partial struct ReplyMessageSystem : ISystem
                 var localTransform = localTransforms[index];
                 
                 remotePosition = remotePositions[0];
-                if (RemotePosition.Type.Wrap == remotePosition.type || 
+                if (RemotePosition.Type.Warp == remotePosition.type || 
                     math.distancesq(localTransform.Position, remotePosition.value) > MAX_DISTANCE_SQ)
                 {
                     localTransform.Position = remotePosition.value;

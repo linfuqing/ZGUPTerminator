@@ -670,6 +670,9 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
 
+        if (levelStage.maxUnlockStageID == 0)
+            return;
+
         __targetUserStageID = levelStage.maxUnlockStageID;
         if(__targetUserStageID != userStageID)
             SendChapterStageMessage(__targetUserStageID);
@@ -691,6 +694,21 @@ public sealed class LoginManager : MonoBehaviour
             
             scrollRect.MoveTo(levelIndex);
         }
+    }
+
+    public void Register(
+        uint userStageID, 
+        uint userLevelID, 
+        int stageIndex)
+    {
+        __stageIDs.Add((userLevelID, stageIndex), userStageID);
+
+        LevelStage levelStage;
+        levelStage.levelID = userLevelID;
+        levelStage.maxUnlockStageID = 0;
+        levelStage.stageIndex = stageIndex;
+        levelStage.levelIndex = -1;
+        __levelStages.Add(userStageID, levelStage);
     }
 
     public void ApplyStart(
@@ -2002,7 +2020,6 @@ public sealed class LoginManager : MonoBehaviour
             __status = Status.Error;
 
             int channelStatus;
-            DataStreamWriter writer;
             do
             {
                 if (Status.Error == __status)
