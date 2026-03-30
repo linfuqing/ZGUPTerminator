@@ -314,7 +314,7 @@ public partial class UserDataMain
         onComplete(results);
     }
     
-    public IEnumerator FriendRequestApply(uint userID, uint targetUserID, Action<bool> onComplete)
+    public IEnumerator FriendRequestApply(uint userID, uint targetUserID, string description, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
         
@@ -430,9 +430,9 @@ public partial class UserData
         return UserDataMain.instance.QueryFriendRequests(userID, onComplete);
     }
     
-    public IEnumerator FriendRequestApply(uint userID, uint targetUserID, Action<bool> onComplete)
+    public IEnumerator FriendRequestApply(uint userID, uint targetUserID, string description, Action<bool> onComplete)
     {
-        return UserDataMain.instance.FriendRequestApply(userID, targetUserID, onComplete);
+        return UserDataMain.instance.FriendRequestApply(userID, targetUserID, description, onComplete);
     }
     
     public IEnumerator FriendRequestAgree(uint userID, uint[] targetUserIDs, Action<bool> onComplete)
