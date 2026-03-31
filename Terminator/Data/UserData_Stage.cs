@@ -38,7 +38,7 @@ public struct UserStageReward
         HPPercentage = 2, 
         KillCount = 3, 
         Gold = 5, 
-        Time = 4, 
+        Time = 4
     }
     
     public string name;

@@ -13,6 +13,7 @@ public class LevelPlayerAuthoring : MonoBehaviour
             Entity entity = GetEntity(TransformUsageFlags.None);
 
             AddComponent<LevelPlayer>(entity);
+            AddComponent<EffectDamageDistribution>(entity);
 
             RequestEntityPrefabLoaded requestEntityPrefabLoaded;
             requestEntityPrefabLoaded.Prefab = new EntityPrefabReference(authoring.prefab);

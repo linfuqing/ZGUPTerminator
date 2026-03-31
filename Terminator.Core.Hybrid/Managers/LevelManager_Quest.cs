@@ -72,33 +72,6 @@ public partial class LevelManager
     [SerializeField] 
     internal float _questDestroyTime = 3.0f;
 
-    [SerializeField] 
-    internal ZG.UI.Progressbar _progressbar;
-    [SerializeField] 
-    internal ZG.UI.Progressbar _expProgressbar;
-
-    [SerializeField] 
-    internal StringEvent _onKillCount;
-    [SerializeField] 
-    internal StringEvent _onKillBossCount;
-    [SerializeField] 
-    internal StringEvent _onGoldCount;
-    
-    [SerializeField]
-    internal StringEvent _onExp;
-
-    [SerializeField]
-    internal StringEvent _onStage;
-
-    [SerializeField]
-    internal StringEvent _onStageTitle;
-
-    [SerializeField]
-    internal StringEvent _onStageBossTitle;
-
-    [SerializeField]
-    internal StringEvent _onStageBossDescription;
-
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_onQuestActive")] 
     internal UnityEvent _onQuestEnable;
     
@@ -109,10 +82,6 @@ public partial class LevelManager
     internal QuestStyle[] _questStyles;
     
     private List<QuestStatus> __questStates;
-
-    private int __stageKillCount;
-    private int __stageGold;
-    private int __hpPercentage = 100;
 
     public int hpPercentage
     {
@@ -127,160 +96,6 @@ public partial class LevelManager
     public int stageKillCount => __killCount - __stageKillCount;
     
     public int stageGold => __gold - __stageGold;
-
-    public void Set(
-        int value, 
-        int max, 
-        int maxExp, 
-        int exp, 
-        int killCount, 
-        int killBossCount, 
-        int gold, 
-        int stage, 
-        in Unity.Entities.DynamicBuffer<LevelItem> levelItems)
-    {
-        bool isDirty = false;
-        int time = __GetStageTime(out float now);
-        if (stage != __stage)
-        {
-            print($"Stage has been changed to {stage} : {__stage} : {isRestart}");
-            isDirty = true;
-
-            //__CreateStageQuests(stage);
-            StartCoroutine(__DestroyAndCreateStageQuests(
-                stage, 
-                killCount - __stageKillCount, 
-                gold - __stageGold, 
-                time));
-            
-            __stageKillCount = __killCount;
-            __stageGold = __gold;
-
-            if (_onStage != null)
-                _onStage.Invoke(stage.ToString());
-
-            if (stage < LevelShared.stages.Length)
-            {
-                var levelStage = LevelShared.stages[stage];
-                
-                if (_onStageTitle != null)
-                    _onStageTitle.Invoke(levelStage.name.ToString());
-                
-                if (_onStageBossTitle != null)
-                    _onStageBossTitle.Invoke(levelStage.bossTitle.ToString());
-                
-                if (_onStageBossDescription != null)
-                    _onStageBossDescription.Invoke(levelStage.bossDescription.ToString());
-            }
-
-            if (!isRestart && stage > __stage)
-                __Submit(stage, gold, exp, maxExp, time, levelItems);
-
-            __stageTime = now;
-
-            //__dataFlag = 0;
-            
-            __stage = stage;
-        }
-
-        if (value != __value)
-        {
-            isDirty = true;
-            
-            if (__stages != null)
-            {
-                foreach (var stageIndex in __stages)
-                {
-                    ref var temp = ref _stages[stageIndex];
-                    if (temp.max > 0 && temp.onCount != null)
-                        temp.onCount.Invoke(Mathf.Max(0, temp.max - value).ToString());
-                }
-            }
-
-            if (_progressbar != null)
-                _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
-
-            __value = value;
-        }
-        else if (max != __max)
-        {
-            isDirty = true;
-
-            if (_progressbar != null)
-                _progressbar.value = Mathf.Clamp01(value * 1.0f / max);
-
-            __max = max;
-        }
-
-        if (exp != __exp || maxExp != __maxExp)
-        {
-            isDirty = true;
-
-            if (_expProgressbar != null)
-                _expProgressbar.value = Mathf.Clamp01(exp * 1.0f / maxExp); 
-            else if(exp != __exp && _onExp != null)
-                _onExp.Invoke(exp.ToString());
-
-            __exp = exp;
-            __maxExp = maxExp;
-        }
-
-        if (killCount != __killCount)
-        {
-            isDirty = true;
-
-            __SetStageQuestValue(killCount - __stageKillCount, stageKillCount, LevelQuestType.KillCount);
-
-            if (_onKillCount != null)
-                _onKillCount.Invoke(killCount.ToString());
-
-            __killCount = killCount;
-        }
-        
-        if (killBossCount != __killBossCount)
-        {
-            if (killBossCount > 0)
-            {
-                isDirty = true;
-
-                if (_onKillBossCount != null)
-                    _onKillBossCount.Invoke(killBossCount.ToString());
-
-                __killBossCount = killBossCount;
-            }
-            //else
-            //    __ShowTime();
-        }
-
-        if (gold != __gold)
-        {
-            isDirty = true;
-
-            __SetStageQuestValue(gold - __stageGold, stageGold, LevelQuestType.Gold);
-
-            if (_onGoldCount != null)
-                _onGoldCount.Invoke(gold.ToString());
-            
-            __gold = gold;
-        }
-
-        if (isRestart)
-        {
-            //__dataFlag = 0;
-            
-            if(__skillSelectionGuideNames != null)
-                __skillSelectionGuideNames.Clear();
-        }
-
-        if (isDirty)
-        {
-            __SetStageQuestValue(time, __time, LevelQuestType.Time);
-
-            IAnalytics.instance?.Set(value, max, maxExp, exp, killCount, killBossCount, gold, stage);
-        }
-
-        __time = time;
-    }
 
     private void __SetStageQuestValue(int value, int oldValue, LevelQuestType type)
     {

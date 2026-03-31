@@ -1,9 +1,24 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public partial class LevelManager
 {
+    [Serializable]
+    internal struct Stage
+    {
+        public string name;
+        public string[] sharedNames;
+
+        public int max;
+
+        public StringEvent onCount;
+        
+        public UnityEvent onEnable;
+        public UnityEvent onDisable;
+    }
+
     [SerializeField] 
     internal Stage[] _stages;
     

@@ -155,6 +155,8 @@ public partial class LevelManager
     private Dictionary<string, SkillActiveKeyData> __skillActiveKeys;
     private Dictionary<string, int> __skillChildKeyCounts;
 
+    private Dictionary<(int, int), FixedString128Bytes> __skillActiveNames;
+
     public int maxSkillActiveKeyCount
     {
         get

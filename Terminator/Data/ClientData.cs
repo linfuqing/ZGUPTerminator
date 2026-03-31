@@ -568,6 +568,9 @@ public class ClientData : MonoBehaviour, IClientData
         if (status == value)
             return;
 
+        if (value == 0)
+            LevelShared.match = 0;
+
         status = value;
 
         __SendStatus();
@@ -780,8 +783,10 @@ public class ClientData : MonoBehaviour, IClientData
                             header = __header;
                             return (int)ClientMessageType.SquadJoinFail;
                         case NetworkRelayMessageType.Matching:
-                        case NetworkRelayMessageType.Match:
                         case NetworkRelayMessageType.Mismatch:
+                            header = __header;
+                            return type;
+                        case NetworkRelayMessageType.Match:
                         {
                             header = __header;
                             int match = reader.ReadPackedInt(streamCompressionModel), distance = reader.ReadPackedInt(streamCompressionModel);
@@ -789,8 +794,10 @@ public class ClientData : MonoBehaviour, IClientData
                             message.matchID = match;
                             message.level = distance;
                             __Save(message);
+
+                            LevelShared.match = match;
                         }
-                            return type;
+                            return (int)ClientMessageType.Match;
                         case NetworkRelayMessageType.Query:
                             break;
                         default:

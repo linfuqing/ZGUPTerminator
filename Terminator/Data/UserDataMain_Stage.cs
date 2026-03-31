@@ -234,6 +234,56 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public string 小关重复奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    duplicateRewards = null;
+                    
+                    return;
+                }
+                
+                var parameters = value.Split('/');
+                
+                int numParameters = parameters.Length;
+                duplicateRewards = new StageReward[numParameters];
+
+                int i, j, numValues;
+                string parameter;
+                string[] values;
+                for (i = 0; i < numParameters; ++i)
+                {
+                    parameter = parameters[i];
+                    values = parameter.Split(':');
+                    
+                    ref var duplicateReward = ref duplicateRewards[i];
+                    duplicateReward.name = values[0];
+                    duplicateReward.condition = (UserStageReward.Condition)int.Parse(values[1]);
+                    if (values.Length > 3)
+                    {
+                        duplicateReward.conditionValue = int.Parse(values[2]);
+                        
+                        values = values[3].Split('+');
+                    }
+                    else
+                    {
+                        duplicateReward.conditionValue = 0;
+                        
+                        values = values[2].Split('+');
+                    }
+
+                    numValues = values.Length;
+
+                    duplicateReward.values = new UserRewardData[numValues];
+                    for (j = 0; j < numValues; ++j)
+                        duplicateReward.values[j] = new UserRewardData(values[j]);
+                }
+            }
+        }
+
+        [CSVField]
         public string 小关奖池
         {
             set

@@ -21,7 +21,8 @@ public enum UserRewardType
     RoleExp, 
     Event, 
     Tip, 
-    RankedPoint
+    RankedPoint,
+    RankedPass
 }
 
 public enum UserSkillType

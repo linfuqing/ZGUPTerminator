@@ -333,7 +333,7 @@ public partial class LevelManager
                                     count = GetSkillActiveKeyCount(keyName);
                                     if(keyAsset.BinarySearch(count) < keyAsset.BinarySearch(count + GetSkillChildKeyCount(keyName)))
                                     {
-                                        uprankKeyCounts.Add(keyName, count);
+                                        uprankKeyCounts?.Add(keyName, count);
                                         
                                         isRecommend = true;
 
@@ -346,7 +346,7 @@ public partial class LevelManager
                         if (isRecommend && style.onRecommend != null)
                             style.onRecommend.Invoke();
 
-                        if (style.uprankKeyStyle != null && uprankKeyCounts.Count > 0)
+                        if (style.uprankKeyStyle != null && uprankKeyCounts != null && uprankKeyCounts.Count > 0)
                         {
                             SkillKeyAsset keyAsset;
                             LevelSkillKeyStyle uprankKeyStyle;

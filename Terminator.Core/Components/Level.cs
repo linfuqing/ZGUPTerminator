@@ -838,13 +838,17 @@ public static class LevelShared
         public static readonly SharedStatic<float> Value = SharedStatic<float>.GetOrCreate<UnscaledDeltaTime>();
     }
 
-    /*private struct SpawnerAttributeScale
+    private struct Match
     {
-        private static readonly SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>> Value =
-            SharedStatic<FixedList512Bytes<SpawnerAttribute.Scale>>.GetOrCreate<SpawnerAttributeScale>();
-
-        public static ref FixedList512Bytes<SpawnerAttribute.Scale> values => ref Value.Data;
-    }*/
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Match>();
+    }
+    
+    public static int match
+    {
+        get => Match.Value.Data;
+        
+        set => Match.Value.Data = value;
+    }
 
     public static int stage
     {
