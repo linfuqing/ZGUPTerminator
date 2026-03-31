@@ -823,10 +823,7 @@ public sealed class LoginManager : MonoBehaviour
                 if(__selectedStageIndex == j && __selectedUserLevelID == userLevel.id)
                     __targetUserStageID = userStage.id;
 
-                if (isUnlock)
-                    isUnlock = (userStage.flag & UserStage.Flag.Unlocked) != 0;
-
-                if ((userLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer)
+                if (isUnlock && (userLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer)
                 {
                     maxMultiplayerStageID = userStage.id;
 
@@ -839,6 +836,9 @@ public sealed class LoginManager : MonoBehaviour
                 levelStage.levelIndex = userLevelIndex;
 
                 __levelStages[userStage.id] = levelStage;
+
+                if (isUnlock)
+                    isUnlock = (userStage.flag & UserStage.Flag.Unlocked) != 0;
 
                 if (userStage.rewardFlags != null)
                 {
