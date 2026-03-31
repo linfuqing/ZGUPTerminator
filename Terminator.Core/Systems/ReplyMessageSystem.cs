@@ -295,28 +295,43 @@ public partial struct ReplyMessageSystem : ISystem
             if (numRemotePositions > 0)
             {
                 var localTransform = localTransforms[index];
-                
-                remotePosition = remotePositions[0];
-                if (RemotePosition.Type.Warp == remotePosition.type || 
-                    math.distancesq(localTransform.Position, remotePosition.value) > MAX_DISTANCE_SQ)
+
+                float3 position = remotePositions[numRemotePositions - 1].value;
+                if (math.distancesq(localTransform.Position, position) >
+                    MAX_DISTANCE_SQ)
                 {
-                    localTransform.Position = remotePosition.value;
+                    localTransform.Position = position;
                     localTransforms[index] = localTransform;
-                    
+
                     thirdPersonCharacterControls[index] = default;
+                    
+                    remotePositions.Clear();
                 }
                 else
                 {
-                    var thirdPersonCharacterControl = thirdPersonCharacterControls[index];
-                    
-                    thirdPersonCharacterControl.MoveVector =
-                        remotePosition.value -
-                        localTransform.Position;
-                    if (!__ClampToMaxLength(ref thirdPersonCharacterControl.MoveVector) &&
-                        numRemotePositions > 1)
-                        remotePositions.RemoveAt(0);
+                    remotePosition = remotePositions[0];
+                    if (RemotePosition.Type.Warp == remotePosition.type)
+                    {
+                        localTransform.Position = remotePosition.value;
+                        localTransforms[index] = localTransform;
 
-                    thirdPersonCharacterControls[index] = thirdPersonCharacterControl;
+                        thirdPersonCharacterControls[index] = default;
+                        
+                        remotePositions.RemoveAt(0);
+                    }
+                    else
+                    {
+                        var thirdPersonCharacterControl = thirdPersonCharacterControls[index];
+
+                        thirdPersonCharacterControl.MoveVector =
+                            remotePosition.value -
+                            localTransform.Position;
+                        if (!__ClampToMaxLength(ref thirdPersonCharacterControl.MoveVector) &&
+                            numRemotePositions > 1)
+                            remotePositions.RemoveAt(0);
+
+                        thirdPersonCharacterControls[index] = thirdPersonCharacterControl;
+                    }
                 }
             }
         }
