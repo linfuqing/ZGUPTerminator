@@ -20,7 +20,8 @@ public enum UserRewardType
     Exp,
     RoleExp, 
     Event, 
-    Tip
+    Tip, 
+    RankedPoint
 }
 
 public enum UserSkillType
@@ -74,6 +75,14 @@ public struct UserRewardData
         name = parameters[0];
         type = (UserRewardType)int.Parse(parameters[1]);
         count = int.Parse(parameters[2]);
+    }
+
+    public static UserRewardData operator *(in UserRewardData x, float y)
+    {
+        UserRewardData result = x;
+        result.count = Mathf.CeilToInt(result.count * y);
+        
+        return result;
     }
 }
 

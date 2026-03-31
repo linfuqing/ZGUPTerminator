@@ -132,6 +132,16 @@ public class GameLevelData : ILevelData
                 result.energyStage = x.nextStageEnergy;
                 result.energyMax = x.totalEnergy;
                 
+                int numItems = x.rewards == null ? 0 : x.rewards.Length;
+                result.rewards = numItems > 0 ? new ILevelData.Item[numItems] : null;
+                for (int i = 0; i < numItems; ++i)
+                {
+                    ref var source = ref x.rewards[i];
+                    ref var destination = ref result.rewards[i];
+                    destination.name = source.name;
+                    destination.count = source.count;
+                }
+                
                 onComplete(result);
             });
     }

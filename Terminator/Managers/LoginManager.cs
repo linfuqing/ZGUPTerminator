@@ -791,9 +791,7 @@ public sealed class LoginManager : MonoBehaviour
         bool isHot = false, isMoved, isUnlock;
         int movedLevelIndex = -1, 
             selectedLevelIndex = -1,
-            //finalLevelIndex = -1, 
             endLevelIndex = -1, 
-            stageIndex = 0, 
             numStageRewards = 0, 
             numStageRewardsTotal = 0, 
             numStages, 
@@ -1910,19 +1908,26 @@ public sealed class LoginManager : MonoBehaviour
 
                 if (ReplyMessageShared.isHost)
                 {
+                    print("[Start:Host]Waiting for remotePlayer login..");
                     while (0 != RemotePlayer.channelStatus && RemotePlayer.isOnline)
                     {
                         yield return null;
 
                         if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                         {
+                            print("[Start:Host]Canceled.");
+                            
                             __status = Status.None;
                                 
                             yield break;
                         }
 
-                        if(RemotePlayer.Status.Disabled == RemotePlayer.status)
+                        if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                        {
+                            print("[Start:Host]Disabled.");
+                            
                             break;
+                        }
                     }
 
                     ClientMessagePlay play;
@@ -1932,6 +1937,7 @@ public sealed class LoginManager : MonoBehaviour
                     play.levelName = levelName;
                     play.sceneName = sceneName;
                     
+                    print("[Start:Host]Waiting for play..");
                     do
                     {
                         destinationVersion = RemotePlayer.version;
@@ -1950,13 +1956,23 @@ public sealed class LoginManager : MonoBehaviour
                         yield return null;
 
                         if (!RemotePlayer.isOnline)
+                        {
+                            print("[Start:Host]Remote player offline.");
+
                             RemotePlayer.status = RemotePlayer.Status.Disabled;
+                        }
 
                         if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                        {
+                            print("[Start:Host]Disabled.");
+
                             break;
+                        }
 
                         if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                         {
+                            print("[Start:Host]Canceled.");
+
                             __status = Status.None;
                             
                             if (clientData != null)
@@ -1992,6 +2008,8 @@ public sealed class LoginManager : MonoBehaviour
                     RemotePlayer.status = RemotePlayer.Status.Disabled;
                 else
                 {
+                    print("[Start]Canceled.");
+
                     __status = Status.None;
                     
                     if (clientData != null)
@@ -2017,6 +2035,8 @@ public sealed class LoginManager : MonoBehaviour
 
         if (hasStage && /*!ReplyMessageShared.isHost && */clientData != null)
         {
+            print("[Start]Waiting for start..");
+
             __status = Status.Error;
 
             int channelStatus;
@@ -2034,10 +2054,16 @@ public sealed class LoginManager : MonoBehaviour
 
                 channelStatus = RemotePlayer.channelStatus;
                 if (channelStatus != 0 && channelStatus != stageID)
+                {
+                    print("[Start]Remote player has started the other stage!");
+
                     RemotePlayer.status = RemotePlayer.Status.Canceled;
+                }
 
                 if (Status.Start == __status)
                 {
+                    print("[Start]Success!Waiting for remote player into stage..");
+
                     clientData.SetStatus((int)stageID);
                     
                     if (!RemotePlayer.isOnline || RemotePlayer.Status.Canceled == RemotePlayer.status)
@@ -2046,15 +2072,23 @@ public sealed class LoginManager : MonoBehaviour
                     if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                         break;
                 }
-                else if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                else
                 {
-                    clientData.SetStatus(0);
+                    print("[Start]Failed!Retry..");
 
-                    __status = Status.None;
+                    if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                    {
+                        print("[Start]Failed and canceled.");
 
-                    _onEnd?.Invoke();
+                        clientData.SetStatus(0);
 
-                    yield break;
+                        __status = Status.None;
+
+                        _onEnd?.Invoke();
+
+                        yield break;
+                    }
+
                 }
 
                 yield return null;

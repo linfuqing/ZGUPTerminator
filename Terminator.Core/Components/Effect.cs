@@ -204,6 +204,13 @@ public struct EffectDamageStatistic : IBufferElementData
     }
 }
 
+public struct EffectDamageDistribution : IComponentData
+{
+    public float countRatio;
+    public float valueRatio;
+    public float valueClampRatio;
+}
+
 public struct EffectStatus : IComponentData, IEnableableComponent
 {
     public int index;

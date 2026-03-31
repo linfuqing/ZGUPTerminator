@@ -45,6 +45,8 @@ public partial class UserDataMain
         
         public StageReward[] indirectRewards;
 
+        public StageReward[] duplicateRewards;
+
         public RewardPool[] rewardPools;
 
         public UserLevelStageData ToLevel(string levelName, int stage, bool isForce)
@@ -63,7 +65,7 @@ public partial class UserDataMain
                     ref var indirectReward = ref indirectRewards[i];
 
                     if ((__GetStageRewardFlag(indirectRewards[i].name, levelName, stage, indirectReward.conditionValue,
-                            indirectReward.condition, out _) & UserStageReward.Flag.Unlocked) ==
+                            indirectReward.condition, out _, out _) & UserStageReward.Flag.Unlocked) ==
                         UserStageReward.Flag.Unlocked)
                     {
                         isForce = true;
@@ -72,52 +74,35 @@ public partial class UserDataMain
                 }
             }
 
+            List<LevelQuest> results = null;
             if (isForce)
             {
-                List<LevelQuest> results = null;
-                LevelQuest destination;
                 for (i = 0; i < numQuests; ++i)
                 {
-                    ref var source = ref indirectRewards[i];
+                    ref var indirectReward = ref indirectRewards[i];
                     
-                    if ((__GetStageRewardFlag(indirectRewards[i].name, levelName, stage, source.conditionValue,
-                            source.condition, out _) & UserStageReward.Flag.Unlocked) ==
+                    if ((__GetStageRewardFlag(indirectReward.name, levelName, stage, indirectReward.conditionValue,
+                            indirectReward.condition, out _, out _) & UserStageReward.Flag.Unlocked) ==
                         UserStageReward.Flag.Unlocked)
                         continue;
-                    
-                    switch (source.condition)
-                    {
-                        case UserStageReward.Condition.Once:
-                            destination.type = LevelQuestType.Once;
-                            break;
-                        case UserStageReward.Condition.HPPercentage:
-                            destination.type = LevelQuestType.HPPercentage;
-                            break;
-                        case UserStageReward.Condition.KillCount:
-                            destination.type = LevelQuestType.KillCount;
-                            break;
-                        case UserStageReward.Condition.Gold:
-                            destination.type = LevelQuestType.Gold;
-                            break;
-                        case UserStageReward.Condition.Time:
-                            destination.type = LevelQuestType.Time;
-                            break;
-                        default:
-                            continue;
-                    }
-
-                    destination.value = source.conditionValue;
                     
                     if(results == null)
                         results = new  List<LevelQuest>();
                     
-                    results.Add(destination);
+                    results.Add(indirectReward.ToLevel());
                 }
-                
-                result.quests = results?.ToArray();
             }
-            else
-                result.quests = null;
+
+            numQuests = duplicateRewards == null ? 0 : duplicateRewards.Length;
+            for (i = 0; i < numQuests; ++i)
+            {
+                if(results == null)
+                    results = new  List<LevelQuest>();
+                    
+                results.Add(duplicateRewards[i].ToLevel());
+            }
+                
+            result.quests = results?.ToArray();
             
             return result;
         }
@@ -287,6 +272,36 @@ public partial class UserDataMain
         public UserStageReward.Condition condition;
         public int conditionValue;
         public UserRewardData[] values;
+
+        public LevelQuest ToLevel()
+        {
+            LevelQuest result;
+            result.value = conditionValue;
+            
+            switch (condition)
+            {
+                case UserStageReward.Condition.Once:
+                    result.type = LevelQuestType.Once;
+                    break;
+                case UserStageReward.Condition.HPPercentage:
+                    result.type = LevelQuestType.HPPercentage;
+                    break;
+                case UserStageReward.Condition.KillCount:
+                    result.type = LevelQuestType.KillCount;
+                    break;
+                case UserStageReward.Condition.Gold:
+                    result.type = LevelQuestType.Gold;
+                    break;
+                case UserStageReward.Condition.Time:
+                    result.type = LevelQuestType.Time;
+                    break;
+                default:
+                    result.type = LevelQuestType.Unknown;
+                    break;
+            }
+
+            return result;
+        }
     }
 
     public IEnumerator QueryStage(
@@ -332,7 +347,7 @@ public partial class UserDataMain
                 levelStage.stageIndex,
                 stageReward.conditionValue,
                 stageReward.condition,
-                out _);
+                out _, out _);
             userStageReward.condition = stageReward.condition;
             userStageReward.conditionValue = stageReward.conditionValue;
             userStageReward.values = stageReward.values;
@@ -525,7 +540,7 @@ public partial class UserDataMain
                     stage,
                     stageReward.conditionValue,
                     stageReward.condition,
-                    out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                    out _, out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
                 result |= 1 << i;
         }
 
@@ -542,6 +557,57 @@ public partial class UserDataMain
     public bool ApplyStage(uint levelID, int stage, out int energy)
     {
         return __ApplyEnergy(GetStageEnergy(levelID, stage), out energy);
+    }
+
+    public const string NAME_SPACE_USER_STAGE_DUPLICATE_REWARD_RATIO = "userStageDuplicateRewardRatio";
+
+    public UserRewardData[] CollectStageReward(
+        uint levelID, 
+        int stage, 
+        int startStage, 
+        int damagePercentage, 
+        int hpPercentage, 
+        int killCount, 
+        int gold, 
+        int time)
+    {
+        List<UserRewardData> rewards = null;
+        var level = _levels[__ToIndex(levelID)];
+        var duplicateRewards = __GetStage(level, stage).duplicateRewards;
+        if (duplicateRewards != null)
+        {
+            string key = UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_DUPLICATE_REWARD_RATIO, level.name, stage);
+            var stageFlag = startStage == 0 || (__GetStage(level, stage).flag & Stage.Flag.DontCache) == Stage.Flag.DontCache ? 
+                IUserData.StageFlag.Once : IUserData.StageFlag.Normal;
+            float ratio;
+            foreach (var duplicateReward in duplicateRewards)
+            {
+                ratio = __GetStageRewardRatio(
+                    damagePercentage, 
+                    hpPercentage, 
+                    killCount, 
+                    gold, 
+                    time, 
+                    duplicateReward.conditionValue, 
+                    duplicateReward.condition, 
+                    stageFlag);
+                
+                if (ratio > Mathf.Epsilon && duplicateReward.values != null)
+                {
+                    PlayerPrefs.SetFloat($"{key}{UserData.SEPARATOR}{duplicateReward.name}", ratio);
+
+                    foreach (var value in duplicateReward.values)
+                    {
+                        if (rewards == null)
+                            rewards = new List<UserRewardData>();
+                        
+                        rewards.Add(value * Mathf.Clamp01(ratio));
+                    }
+                }
+            }
+        }
+
+        return rewards?.ToArray();
     }
 
     private static IUserData.StageCache __GetStageCache(string levelName, int stage, UserLevel.CacheType cacheType)
@@ -612,7 +678,7 @@ public partial class UserDataMain
             stage,
             stageReward.conditionValue, 
             stageReward.condition,
-            out var key);
+            out var key, out _);
         if ((flag & UserStageReward.Flag.Unlocked) != UserStageReward.Flag.Unlocked ||
             (flag & UserStageReward.Flag.Collected) == UserStageReward.Flag.Collected)
             return false;
@@ -683,48 +749,87 @@ public partial class UserDataMain
         int stage, 
         int conditionValue, 
         UserStageReward.Condition condition, 
-        out string key)
+        out string key, 
+        out float ratio)
     {
         key = UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_REWARD_FLAG, levelName, stage);
         key = $"{key}{UserData.SEPARATOR}{stageRewardName}";
         
-        var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
         var stageFlag = UserData.GetStageFlag(levelName, stage);
-        switch (condition)
-        {
-            case UserStageReward.Condition.Normal:
-                if((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
-                    flag |= UserStageReward.Flag.Unlocked;
-                break;
-            case UserStageReward.Condition.Once:
-                if ((stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once)
-                    flag |= UserStageReward.Flag.Unlocked;
-                break;
-            case UserStageReward.Condition.KillCount:
-                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                    UserData.GetStageKillCount(levelName, stage) >= conditionValue)
-                    flag |= UserStageReward.Flag.Unlocked;
-                break;
-            case UserStageReward.Condition.Gold:
-                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                    UserData.GetStageGold(levelName, stage) >= conditionValue)
-                    flag |= UserStageReward.Flag.Unlocked;
-                break;
-            case UserStageReward.Condition.HPPercentage:
-                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                    UserData.GetStageHPPercentage(levelName, stage) >= conditionValue)
-                    flag |= UserStageReward.Flag.Unlocked;
-                break;
-            case UserStageReward.Condition.Time:
-                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal && 
-                    UserData.GetStageTime(levelName, stage) <= conditionValue)
-                    flag |= UserStageReward.Flag.Unlocked;
-                break;
-        }
+        ratio = __GetStageRewardRatio(
+            100, 
+            UserData.GetStageHPPercentage(levelName, stage), 
+            UserData.GetStageKillCount(levelName, stage), 
+            UserData.GetStageGold(levelName, stage), 
+            UserData.GetStageTime(levelName, stage), 
+            conditionValue, 
+            condition, 
+            stageFlag);
+        
+        var flag = (UserStageReward.Flag)PlayerPrefs.GetInt(key);
+        if(ratio >= 1.0f)
+            flag |= UserStageReward.Flag.Unlocked;
 
         return flag;
     }
 
+    private static float __GetStageRewardRatio(
+        int damagePercentage, 
+        int hpPercentage, 
+        int killCount, 
+        int gold, 
+        int time, 
+        int conditionValue, 
+        UserStageReward.Condition condition, 
+        IUserData.StageFlag stageFlag)
+    {
+        float result;
+        switch (condition)
+        {
+            case UserStageReward.Condition.Normal:
+                result = (stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal ? 1.0f : 0.0f;
+
+                break;
+            case UserStageReward.Condition.Once:
+                result = (stageFlag & IUserData.StageFlag.Once) == IUserData.StageFlag.Once ? 1.0f : 0.0f;
+                break;
+            case UserStageReward.Condition.DamagePercentage:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                    result = conditionValue > 0 ? damagePercentage * 1.0f / conditionValue : 1.0f;
+                else
+                    result = 0.0f;
+                break;
+            case UserStageReward.Condition.HPPercentage:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                    result = conditionValue > 0 ? hpPercentage * 1.0f / conditionValue : 1.0f;
+                else
+                    result = 0.0f;
+                break;
+            case UserStageReward.Condition.KillCount:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                    result = conditionValue > 0 ? killCount * 1.0f / conditionValue : 1.0f;
+                else
+                    result = 0.0f;
+                break;
+            case UserStageReward.Condition.Gold:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                    result = conditionValue > 0 ? gold * 1.0f / conditionValue : 1.0f;
+                else
+                    result = 0.0f;
+                break;
+            case UserStageReward.Condition.Time:
+                if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
+                    result = conditionValue > 0 ? 1.0f - Mathf.Min(1.0f, time * 1.0f / conditionValue) : 0.0f;
+                else
+                    result = 0.0f;
+                break;
+            default:
+                result = 0.0f;
+                break;
+        }
+
+        return result;
+    }
 }
 
 public partial class UserData
@@ -815,6 +920,7 @@ public partial class UserData
         {
             result.totalEnergy = 0;
             result.nextStageEnergy = 0;
+            result.rewards = null;
 
             if (!isNullMain)
                 oldStage = Mathf.Min(oldStage, main.GetMaxStage(temp.id, stage));
@@ -851,6 +957,9 @@ public partial class UserData
 
                 result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
             }
+
+            result.rewards =
+                main.CollectStageReward(temp.id, oldStage, startStage, 100, hpPercentage, killCount, gold, time);
         }
 
         __SubmitStageFlag(temp.name, stage, out _, out _);

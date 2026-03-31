@@ -43,12 +43,6 @@ public partial class LevelManager : MonoBehaviour
         private set;
     }
 
-    //[SerializeField] 
-    //internal int _max = 100;
-
-    //[SerializeField] 
-    //internal string _gameTimeFormat = "mm:ss"
-    //
     [SerializeField] 
     internal float _quitTime = 0.5f;
 
@@ -69,35 +63,9 @@ public partial class LevelManager : MonoBehaviour
 
     [SerializeField] 
     internal StringEvent _onGameTime;
-    [SerializeField] 
-    internal StringEvent _onKillCount;
-    [SerializeField] 
-    internal StringEvent _onKillBossCount;
-    [SerializeField] 
-    internal StringEvent _onGoldCount;
     
-    [SerializeField]
-    internal StringEvent _onExp;
-
-    [SerializeField]
-    internal StringEvent _onStage;
-
-    [SerializeField]
-    internal StringEvent _onStageTitle;
-
-    [SerializeField]
-    internal StringEvent _onStageBossTitle;
-
-    [SerializeField]
-    internal StringEvent _onStageBossDescription;
-
     [SerializeField] 
     internal ActiveEvent _onSubmit;
-
-    [SerializeField] 
-    internal ZG.UI.Progressbar _progressbar;
-    [SerializeField] 
-    internal ZG.UI.Progressbar _expProgressbar;
 
     [SerializeField] 
     internal GameObject[] _ranks;
@@ -105,13 +73,7 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField] 
     internal UserGroup[] _userGroups;
 
-    [SerializeField] 
-    internal Stage[] _stages;
-    
     private bool __isQuitting;
-
-    //private LevelBulletStatus __bulletStatusThisFrame;
-    //private int __bulletStatusFrameCount;
 
     private int __restartFrameCount;
     private int __submitCount;
@@ -126,12 +88,6 @@ public partial class LevelManager : MonoBehaviour
     private int __gold;
     private int __stage = -1;
 
-    //private int __stageExp;
-    //private int __stageExpMax;
-    //private string[] __stageActiveSkillNames;
-
-    //private ILevelData.Flag __dataFlag;
-    
     private float __startTime;
     
     private float __stageTime;
@@ -145,12 +101,6 @@ public partial class LevelManager : MonoBehaviour
     private List<GameObject> __gameObjectsToDestroy;
 
     private Dictionary<(int, int), FixedString128Bytes> __skillActiveNames;
-    
-    private HashSet<string> __skillSelectionGuideNames;
-
-    private HashSet<int> __stages;
-
-    private Dictionary<string, int> __stageIndices;
     
     public bool debugLevelUp
     {
@@ -181,97 +131,11 @@ public partial class LevelManager : MonoBehaviour
         }
     }
 
-    /*public int dataFlag
-    {
-        get => (int)__dataFlag;
-        
-        set => __dataFlag = (ILevelData.Flag)value;
-    }*/
-
-    /*public LevelBulletStatus bulletStatus
-    {
-        get
-        {
-            if (isRestart)
-                return LevelBulletStatus.DestroyAll;
-            
-            return Time.frameCount == __bulletStatusFrameCount ? __bulletStatusThisFrame : LevelBulletStatus.Normal;
-        }
-        
-        private set
-        {
-            __bulletStatusThisFrame = value;
-            
-            __bulletStatusFrameCount = Time.frameCount;
-        }
-    }*/
-    
     public int rage
     {
         get;
 
         set;
-    }
-
-    public bool EnableStage(string name)
-    {
-        IAnalytics.instance?.EnableStage(name);
-        
-        if (__stageIndices == null)
-        {
-            __stageIndices = new Dictionary<string, int>();
-            int numEvents = _stages == null ? 0 : _stages.Length;
-            for (int i = 0; i < numEvents; ++i)
-            {
-                ref var stage = ref _stages[i];
-                if(stage.sharedNames == null || stage.sharedNames.Length < 1)
-                    __stageIndices.Add(stage.name, i);
-                else
-                {
-                    foreach (string sharedName in stage.sharedNames)
-                        __stageIndices.Add(sharedName, i);
-                }
-            }
-        }
-
-        if (__stageIndices.TryGetValue(name, out int stageIndex))
-        {
-            if (__stages == null)
-                __stages = new HashSet<int>();
-
-            if (__stages.Add(stageIndex))
-            {
-                ref var stage = ref _stages[stageIndex];
-                if (stage.onEnable != null)
-                    stage.onEnable.Invoke();
-                
-                if (stage.max > 0 && stage.onCount != null)
-                    stage.onCount.Invoke(Mathf.Max(0, stage.max - __value).ToString());
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public bool DisableStage(string name)
-    {
-        IAnalytics.instance?.DisableStage(name);
-
-        if (__stageIndices != null && 
-            __stageIndices.TryGetValue(name, out int stageIndex) && 
-            __stages != null && 
-            __stages.Remove(stageIndex))
-        {
-            var onDisable = _stages[stageIndex].onDisable;
-            if(onDisable != null)
-                onDisable.Invoke();
-
-            return true;
-        }
-
-        return false;
     }
 
     [UnityEngine.Scripting.Preserve]

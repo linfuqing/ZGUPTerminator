@@ -2097,6 +2097,55 @@ public partial struct EffectSystem : ISystem
         }
     }
 
+    [BurstCompile]
+    private struct ComputeDamageDistributions : IJobChunk
+    {
+        [ReadOnly] 
+        public BufferTypeHandle<EffectDamageStatistic> statisticType;
+        
+        public ComponentTypeHandle<EffectDamageDistribution> distributionType;
+        
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            int totalCount = 0, totalValue = 0, totalValueClamp = 0;
+            
+            var statistics = chunk.GetBufferAccessor(ref statisticType);
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+            {
+                foreach (var statistic in statistics[i])
+                {
+                    totalCount += statistic.count;
+                    totalValue += statistic.value;
+                    totalValueClamp += statistic.valueClamp;
+                }
+            }
+            
+            int count, value, valueClamp;
+            EffectDamageDistribution distribution;
+            var distributions = chunk.GetNativeArray(ref distributionType);
+            iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while (iterator.NextEntityIndex(out int i))
+            {
+                count = 0;
+                value = 0;
+                valueClamp = 0;
+                foreach (var statistic in statistics[i])
+                {
+                    count += statistic.count;
+                    value += statistic.value;
+                    valueClamp += statistic.valueClamp;
+                }
+                
+                distribution.countRatio =  count * 1.0f / totalCount;
+                distribution.valueRatio =  value * 1.0f / totalValue;
+                distribution.valueClampRatio =  valueClamp * 1.0f / totalValueClamp;
+                
+                distributions[i] = distribution;
+            }
+        }
+    }
+
     private int __frameCount;
     //private float __deltaTime;
 
@@ -2158,6 +2207,10 @@ public partial struct EffectSystem : ISystem
 
     private BufferTypeHandle<EffectStatusTarget> __statusTargetType;
 
+    private BufferTypeHandle<EffectDamageStatistic> __damageStatisticType;
+        
+    private ComponentTypeHandle<EffectDamageDistribution> __damageDistributionType;
+
     private ComponentTypeHandle<EffectStatus> __statusType;
 
     private ComponentTypeHandle<EffectTargetLevel> __targetLevelType;
@@ -2214,6 +2267,8 @@ public partial struct EffectSystem : ISystem
 
     private EntityQuery __groupToApply;
     
+    private EntityQuery __groupToDamageDistribute;
+
     private PrefabLoader __prefabLoader;
     
     private NativeQueue<DamageInstance> __damageInstances;
@@ -2251,6 +2306,8 @@ public partial struct EffectSystem : ISystem
         __targetMessageType = state.GetBufferTypeHandle<EffectTargetMessage>(true);
         __prefabType = state.GetBufferTypeHandle<EffectPrefab>(true);
         __statusTargetType = state.GetBufferTypeHandle<EffectStatusTarget>();
+        __damageStatisticType = state.GetBufferTypeHandle<EffectDamageStatistic>(true);
+        __damageDistributionType = state.GetComponentTypeHandle<EffectDamageDistribution>();
         __statusType = state.GetComponentTypeHandle<EffectStatus>();
         __targetLevelType = state.GetComponentTypeHandle<EffectTargetLevel>(true);
         __targetImmunityType = state.GetComponentTypeHandle<EffectTargetImmunityDefinitionData>(true);
@@ -2308,6 +2365,12 @@ public partial struct EffectSystem : ISystem
                 .WithAny<EffectTargetDamage, EffectTargetHP>()
                 .Build(ref state);
         
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __groupToDamageDistribute = builder
+                .WithAll<EffectDamageStatistic>()
+                .WithAllRW<EffectDamageDistribution>()
+                .Build(ref state);
+
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
 
         state.RequireForUpdate<FixedFrame>();
@@ -2532,7 +2595,17 @@ public partial struct EffectSystem : ISystem
         apply.entityManager = entityManager;
         apply.prefabLoader = prefabLoader;
         apply.damageInstances = damageInstances;
-        state.Dependency = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
+        var applyJobHandle = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
+        
+        __damageStatisticType.Update(ref state);
+        __damageDistributionType.Update(ref state);
+        ComputeDamageDistributions computeDamageDistributions;
+        computeDamageDistributions.statisticType = __damageStatisticType;
+        computeDamageDistributions.distributionType = __damageDistributionType;
+        var computeDamageDistributionsJobHandle =
+            computeDamageDistributions.ScheduleParallelByRef(__groupToDamageDistribute, jobHandle);
+        
+        state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamageDistributionsJobHandle);
     }
     
     public static int ComputeDamage(int value, float scale, ref Random random)

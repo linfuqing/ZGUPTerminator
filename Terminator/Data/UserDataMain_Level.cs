@@ -150,6 +150,7 @@ public partial class UserDataMain
             public string name;
 
             public int chapter;
+            public int chapterStage;
         }
 
         public string name;
@@ -176,7 +177,7 @@ public partial class UserDataMain
                 {
                     var parameters = value.Split('/');
                     
-                    int numParameters = parameters.Length, index;
+                    int numParameters = parameters.Length, index, count;
                     string parameter;
                     levels = new Level[numParameters];
                     for (int i = 0; i < numParameters; ++i)
@@ -190,11 +191,23 @@ public partial class UserDataMain
                         {
                             level.name = parameter;
                             level.chapter = 0;
+                            level.chapterStage = 0;
                         }
                         else
                         {
                             level.name = parameter.Remove(index);
-                            level.chapter = int.Parse(parameter.Substring(index + 1));
+                            
+                            count = parameter.IndexOf(':', ++index);
+                            if (count == -1)
+                            {
+                                level.chapter = int.Parse(parameter.Substring(index));
+                                level.chapterStage = 0;
+                            }
+                            else
+                            {
+                                level.chapter = int.Parse(parameter.Substring(index, count - index));
+                                level.chapterStage = int.Parse(parameter.Substring(count + 1));
+                            }
                         }
                     }
                 }
@@ -402,6 +415,25 @@ public partial class UserDataMain
                 __ApplyRewards(stage.directRewards, rewards);
             }
 
+            if (stage.duplicateRewards != null)
+            {
+                float ratio;
+                string duplicateRewardKey =
+                        UserData.GetStageNameSpace(NAME_SPACE_USER_STAGE_DUPLICATE_REWARD_RATIO, level.name, i),
+                    duplicateRewardKeyTemp;
+                foreach (var duplicateReward in stage.duplicateRewards)
+                {
+                    duplicateRewardKeyTemp = $"{duplicateRewardKey}{UserData.SEPARATOR}{duplicateReward.name}";
+                    ratio = PlayerPrefs.GetFloat(duplicateRewardKeyTemp);
+                    if (ratio > Mathf.Epsilon)
+                    {
+                        PlayerPrefs.DeleteKey(duplicateRewardKeyTemp);
+                        
+                        __ApplyRewards(rewards, ratio);
+                    }
+                }
+            }
+
             if (stage.rewardPools != null)
             {
                 foreach (var rewardPool in stage.rewardPools)
@@ -528,16 +560,21 @@ public partial class UserDataMain
                 destinationTicket.name = sourceTicket.name;
                 destinationTicket.count = sourceTicket.count;
                 destinationTicket.chapter = 0;
+                destinationTicket.chapterStage = 0;
                 
                 if(levelNames != null)
                     levelNames.Clear();
 
                 foreach (var level in sourceTicket.levels)
                 {
-                    if (level.chapter > chapter)
+                    if (level.chapter > chapter || level.chapterStage > 0 &&
+                        (UserData.GetStageFlag(level.name, level.chapterStage - 1) &
+                         IUserData.StageFlag.Normal) !=
+                        IUserData.StageFlag.Normal)
                     {
                         destinationTicket.chapter = level.chapter;
-                        
+                        destinationTicket.chapterStage = level.chapterStage;
+
                         break;
                     }
 
@@ -778,7 +815,7 @@ public partial class UserDataMain
                             j,
                             stageReward.conditionValue,
                             stageReward.condition,
-                            out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
+                            out _, out _) & UserStageReward.Flag.Unlocked) == UserStageReward.Flag.Unlocked)
                         ++result;
                 }
 
@@ -832,7 +869,7 @@ public partial class UserDataMain
                         i,
                         stageReward.conditionValue, 
                         stageReward.condition,
-                        out _);
+                        out _, out _);
                 }
                 
                 if((stage.flag & Stage.Flag.DontCache) != Stage.Flag.DontCache && 
@@ -898,7 +935,11 @@ public partial class UserDataMain
         if (__GetLevelTicketIndex(levelName, out int levelIndexOfTicket, out int levelTicketIndex))
         {
             var levelTicket = _levelTickets[levelTicketIndex];
-            if (UserData.chapter < levelTicket.levels[levelIndexOfTicket].chapter)
+            var level = levelTicket.levels[levelIndexOfTicket];
+            if (UserData.chapter < level.chapter || 
+                level.chapterStage > 0 && (UserData.GetStageFlag(level.name, level.chapterStage - 1) &
+                                   IUserData.StageFlag.Normal) !=
+                IUserData.StageFlag.Normal)
                 return false;
 
             int count = levelTicket.count;

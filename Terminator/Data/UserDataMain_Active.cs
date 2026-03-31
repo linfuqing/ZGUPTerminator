@@ -819,7 +819,10 @@ public partial class UserDataMain
                     {
                         ref var levelTicket = ref _levelTickets[levelTicketIndex];
                         ref var ticketLevel = ref levelTicket.levels[levelIndexOfTicket];
-                        return ticketLevel.chapter > UserData.chapter ||
+                        return (ticketLevel.chapter > UserData.chapter || 
+                               ticketLevel.chapterStage > 0 && (UserData.GetStageFlag(ticketLevel.name, ticketLevel.chapterStage - 1) &
+                                                                IUserData.StageFlag.Normal) !=
+                               IUserData.StageFlag.Normal) &&
                                levelIndexOfTicket > 0 &&
                                PlayerPrefs.GetInt(
                                    $"{NAME_SPACE_USER_LEVEL_FLAG}{levelTicket.levels[levelIndexOfTicket - 1].name}") == 0

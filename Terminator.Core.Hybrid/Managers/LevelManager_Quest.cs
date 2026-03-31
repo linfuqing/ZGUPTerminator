@@ -72,6 +72,33 @@ public partial class LevelManager
     [SerializeField] 
     internal float _questDestroyTime = 3.0f;
 
+    [SerializeField] 
+    internal ZG.UI.Progressbar _progressbar;
+    [SerializeField] 
+    internal ZG.UI.Progressbar _expProgressbar;
+
+    [SerializeField] 
+    internal StringEvent _onKillCount;
+    [SerializeField] 
+    internal StringEvent _onKillBossCount;
+    [SerializeField] 
+    internal StringEvent _onGoldCount;
+    
+    [SerializeField]
+    internal StringEvent _onExp;
+
+    [SerializeField]
+    internal StringEvent _onStage;
+
+    [SerializeField]
+    internal StringEvent _onStageTitle;
+
+    [SerializeField]
+    internal StringEvent _onStageBossTitle;
+
+    [SerializeField]
+    internal StringEvent _onStageBossDescription;
+
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_onQuestActive")] 
     internal UnityEvent _onQuestEnable;
     

@@ -36,7 +36,7 @@ public struct UserLevelStageData
     public SpawnerAttribute.Scale spawnerAttributeScale;
     public LevelQuest[] quests;
 
-    public LevelShared.Stage ToShared(in FixedString64Bytes name, in FixedString32Bytes bossTitle, in FixedString128Bytes bossDescription)
+    public LevelShared.Stage ToShared(in FixedString64Bytes name, in FixedString64Bytes bossTitle, in FixedString128Bytes bossDescription)
     {
         LevelShared.Stage result;
         result.name = name;
@@ -105,6 +105,11 @@ public partial interface IUserData
         /// </summary>
         public int chapter;
         
+        /// <summary>
+        /// 下一次解锁新关卡需要的章节小关数
+        /// </summary>
+        public int chapterStage;
+
         /// <summary>
         /// 对应Level的名字
         /// </summary>

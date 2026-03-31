@@ -118,6 +118,8 @@ public partial class LevelManager
     private List<int> __selectedSkillIndices;
 
     private List<ResultSkillStyle> __resultSkillStyles;
+    private HashSet<string> __skillSelectionGuideNames;
+
     private Dictionary<string, Queue<Coroutine>> __skillSelectionCoroutines;
     
     private Dictionary<string, LevelSkillStyle> __skillStyles;

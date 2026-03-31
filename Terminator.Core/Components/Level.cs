@@ -15,10 +15,13 @@ using Random = Unity.Mathematics.Random;
 public enum LevelQuestType : byte
 {
     Once, 
+    DamagePercentage, 
     HPPercentage, 
     KillCount, 
     Gold, 
-    Time
+    Time, 
+    
+    Unknown
 }
 
 [StructLayout(LayoutKind.Explicit), Serializable]

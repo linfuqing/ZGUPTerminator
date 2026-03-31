@@ -32,12 +32,13 @@ public struct UserStageReward
 
     public enum Condition
     {
-        Normal, 
-        Once, 
-        HPPercentage, 
-        KillCount, 
-        Time, 
-        Gold
+        Normal = 0, 
+        Once = 1, 
+        DamagePercentage = 6, 
+        HPPercentage = 2, 
+        KillCount = 3, 
+        Gold = 5, 
+        Time = 4, 
     }
     
     public string name;
@@ -206,6 +207,8 @@ public partial interface IUserData
 
         public int totalEnergy;
         public int nextStageEnergy;
+
+        public UserRewardData[] rewards;
     }
 
     /// <summary>

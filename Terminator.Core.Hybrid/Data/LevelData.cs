@@ -15,6 +15,8 @@ public interface ILevelData
 
         public int energyStage;
         public int energyMax;
+
+        public Item[] rewards;
     }
 
     /*[Flags]

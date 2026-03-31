@@ -315,10 +315,10 @@ public partial class UserDataMain
         return true;
     }
 
-    private List<UserReward> __ApplyRewards(List<UserReward> outRewards)
+    private List<UserReward> __ApplyRewards(List<UserReward> outRewards, float ratio = 1.0f)
     {
         foreach (var reward in UserData.Rewards)
-            __ApplyReward(reward, outRewards);
+            __ApplyReward(reward * ratio, outRewards);
         
         UserData.Rewards.Clear();
 
