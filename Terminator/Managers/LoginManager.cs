@@ -155,7 +155,7 @@ public sealed class LoginManager : MonoBehaviour
     private struct LevelStage
     {
         public uint levelID;
-        public uint maxUnlockStageID;
+        public uint maxMultiplayerStageID;
         public int stageIndex;
         public int levelIndex;
     }
@@ -663,17 +663,19 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
-        if (!__levelStages.TryGetValue(userStageID, out var levelStage))
+        if (!__levelStages.TryGetValue(userStageID, out var levelStage) || levelStage.maxMultiplayerStageID == 0)
         {
-            SendChapterStageMessage();
+            /*SendChapterStageMessage();
             
-            return;
+            return;*/
+            foreach (var pair in __levelStages)
+                levelStage = pair.Value;
         }
 
-        if (levelStage.maxUnlockStageID == 0)
+        if (levelStage.maxMultiplayerStageID == 0)
             return;
 
-        __targetUserStageID = levelStage.maxUnlockStageID;
+        __targetUserStageID = levelStage.maxMultiplayerStageID;
         if(__targetUserStageID != userStageID)
             SendChapterStageMessage(__targetUserStageID);
 
@@ -705,7 +707,7 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelStage levelStage;
         levelStage.levelID = userLevelID;
-        levelStage.maxUnlockStageID = 0;
+        levelStage.maxMultiplayerStageID = 0;
         levelStage.stageIndex = stageIndex;
         levelStage.levelIndex = -1;
         __levelStages.Add(userStageID, levelStage);
@@ -797,7 +799,7 @@ public sealed class LoginManager : MonoBehaviour
             numStages, 
             index, 
             j;
-        uint maxStageID = 0;
+        uint maxMultiplayerStageID = 0;
         LevelStage levelStage;
         UserStage userStage;
         UserLevel userLevel;
@@ -822,23 +824,21 @@ public sealed class LoginManager : MonoBehaviour
                     __targetUserStageID = userStage.id;
 
                 if (isUnlock)
-                {
-                    maxStageID = userStage.id;
-
                     isUnlock = (userStage.flag & UserStage.Flag.Unlocked) != 0;
-                }
 
                 if ((userLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer)
                 {
-                    levelStage.levelID = userLevel.id;
-                    levelStage.maxUnlockStageID = maxStageID;
-                    levelStage.stageIndex = j;
-                    levelStage.levelIndex = userLevelIndex;
-
-                    __levelStages[userStage.id] = levelStage;
+                    maxMultiplayerStageID = userStage.id;
 
                     __stageIDs[(userLevel.id, j)] = userStage.id;
                 }
+
+                levelStage.levelID = userLevel.id;
+                levelStage.maxMultiplayerStageID = maxMultiplayerStageID;
+                levelStage.stageIndex = j;
+                levelStage.levelIndex = userLevelIndex;
+
+                __levelStages[userStage.id] = levelStage;
 
                 if (userStage.rewardFlags != null)
                 {
