@@ -819,14 +819,15 @@ public partial class UserDataMain
                     {
                         ref var levelTicket = ref _levelTickets[levelTicketIndex];
                         ref var ticketLevel = ref levelTicket.levels[levelIndexOfTicket];
-                        return ticketLevel.isUnlock &&
+                        return __IsUnlock(ticketLevel) &&
                                (levelIndexOfTicket < 1 ||
-                               PlayerPrefs.GetInt(
-                                   $"{NAME_SPACE_USER_LEVEL_FLAG}{levelTicket.levels[levelIndexOfTicket - 1].name}") != 0)
+                                PlayerPrefs.GetInt(
+                                    $"{NAME_SPACE_USER_LEVEL_FLAG}{levelTicket.levels[levelIndexOfTicket - 1].name}") !=
+                                0)
                             ? 1
                             : 0;
                     }
-                    
+
                     return 0;
                 }
 
