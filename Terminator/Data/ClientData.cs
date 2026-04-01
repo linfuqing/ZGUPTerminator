@@ -661,7 +661,7 @@ public class ClientData : MonoBehaviour, IClientData
                     var streamCompressionModel = StreamCompressionModel.Default;
                     var reader = messageElement.reader;
                     int type = reader.ReadPackedInt(streamCompressionModel);
-                    //print((NetworkRelayMessageType)type);
+                    print((NetworkRelayMessageType)type);
                     switch ((NetworkRelayMessageType)type)
                     {
                         case NetworkRelayMessageType.Disconnect:
