@@ -29,6 +29,7 @@ public partial class UserDataMain
         IUserData.Friend result;
 
         result.chapter = UserData.chapter;
+        result.rankedPoints = rankedPoints;
         
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
         uint groupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetRoleGroupIndex(groupName));

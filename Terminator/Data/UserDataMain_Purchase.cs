@@ -390,7 +390,7 @@ public partial class UserDataMain
 
                     break;
                 case PurchaseType.Pass:
-                    result.exp = am;
+                    result.exp = rankedPass;
                     exp = result.exp;
 
                     if (input.level == -1 && (output.ticks == 0 ||
@@ -499,7 +499,7 @@ public partial class UserDataMain
             case PurchaseType.Pass:
                 isWriteTimes = true;
                 
-                exp = am;
+                exp = rankedPass;
                 break;
             default:
                 yield break;
@@ -592,7 +592,7 @@ public partial class UserDataMain
                 exp = __GetChapterStageRewardCount();//UserData.chapter;
                 break;
             case PurchaseType.Pass:
-                exp = am;
+                exp = rankedPass;
                 break;
             default:
                 yield break;

@@ -232,6 +232,7 @@ public partial interface IUserData
         uint userID,
         int stage,
         int time, 
+        int damagePercentage, 
         int hpPercentage,
         int killCount, 
         int killBossCount, 
@@ -281,6 +282,13 @@ public partial class UserData
     public static int GetStageTime(string levelName, int stage)
     {
         return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_TIME, levelName, stage));
+    }
+
+    private const string NAME_SPACE_USER_STAGE_DAMAGE_PERCENTAGE = "UserStageDamagePercentage";
+    
+    public static int GetStageDamagePercentage(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_DAMAGE_PERCENTAGE, levelName, stage));
     }
 
     private const string NAME_SPACE_USER_STAGE_HP_PERCENTAGE = "UserStageHPPercentage";
@@ -409,6 +417,11 @@ public partial class UserData
     private static void __SetStageTime(string levelName, int stage, int value)
     {
         __SetStageValue(NAME_SPACE_USER_STAGE_TIME, levelName, stage, value, false);
+    }
+
+    private static void __SetStageDamagePercentage(string levelName, int stage, int value)
+    {
+        __SetStageValue(NAME_SPACE_USER_STAGE_DAMAGE_PERCENTAGE, levelName, stage, value, true);
     }
 
     private static void __SetStageHPPercentage(string levelName, int stage, int value)

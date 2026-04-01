@@ -151,6 +151,11 @@ public partial class UserDataMain
 
             public int chapter;
             public int chapterStage;
+
+            public bool isUnlock => chapter < UserData.chapter ||
+                                    chapterStage < 1 || (UserData.GetStageFlag(name, chapterStage - 1) &
+                                                         IUserData.StageFlag.Normal) ==
+                                    IUserData.StageFlag.Normal;
         }
 
         public string name;
@@ -368,7 +373,7 @@ public partial class UserDataMain
                     if ((flag & Flag.TicketsUnlock) == 0 &&
                         _levelTickets != null &&
                         _levelTickets.Length > 0 &&
-                        _levelTickets[0].levels[0].chapter <= chapter)
+                        _levelTickets[0].levels[0].isUnlock)
                     {
                         flag |= Flag.TicketsUnlock;
 
@@ -567,10 +572,7 @@ public partial class UserDataMain
 
                 foreach (var level in sourceTicket.levels)
                 {
-                    if (level.chapter > chapter || level.chapterStage > 0 &&
-                        (UserData.GetStageFlag(level.name, level.chapterStage - 1) &
-                         IUserData.StageFlag.Normal) !=
-                        IUserData.StageFlag.Normal)
+                    if (!level.isUnlock)
                     {
                         destinationTicket.chapter = level.chapter;
                         destinationTicket.chapterStage = level.chapterStage;
@@ -936,10 +938,7 @@ public partial class UserDataMain
         {
             var levelTicket = _levelTickets[levelTicketIndex];
             var level = levelTicket.levels[levelIndexOfTicket];
-            if (UserData.chapter < level.chapter || 
-                level.chapterStage > 0 && (UserData.GetStageFlag(level.name, level.chapterStage - 1) &
-                                   IUserData.StageFlag.Normal) !=
-                IUserData.StageFlag.Normal)
+            if (!level.isUnlock)
                 return false;
 
             int count = levelTicket.count;

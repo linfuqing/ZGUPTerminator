@@ -807,7 +807,7 @@ public partial class UserDataMain
         
         var stageFlag = UserData.GetStageFlag(levelName, stage);
         ratio = __GetStageRewardRatio(
-            100, 
+            UserData.GetStageDamagePercentage(levelName, stage), 
             UserData.GetStageHPPercentage(levelName, stage), 
             UserData.GetStageKillCount(levelName, stage), 
             UserData.GetStageGold(levelName, stage), 
@@ -937,6 +937,7 @@ public partial class UserData
         uint userID,
         int stage,
         int time, 
+        int damagePercentage, 
         int hpPercentage,
         int killCount, 
         int killBossCount, 
@@ -1009,7 +1010,7 @@ public partial class UserData
             }
 
             result.rewards =
-                main.CollectStageReward(temp.id, oldStage, startStage, 100, hpPercentage, killCount, gold, time);
+                main.CollectStageReward(temp.id, oldStage, startStage, damagePercentage, hpPercentage, killCount, gold, time);
         }
 
         __SubmitStageFlag(temp.name, stage, out _, out _);
@@ -1026,6 +1027,7 @@ public partial class UserData
             __SetStageTime(temp.name, temp.stage, time);
 
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+            __SetStageDamagePercentage(temp.name, temp.stage, damagePercentage);
             
             __SubmitStageFlag(hpPercentage > 0, /*flag, */temp.name, temp.stage, stage);
 

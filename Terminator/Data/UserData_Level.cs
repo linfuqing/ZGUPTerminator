@@ -252,6 +252,7 @@ public partial interface IUserData
         //StageFlag flag,
         int stage, 
         int time, 
+        int damagePercentage, 
         int hpPercentage, 
         int killCount, 
         int killBossCount, 
@@ -347,9 +348,9 @@ public partial class UserData
 
     public IEnumerator SubmitLevel(
         uint userID,
-        //IUserData.StageFlag flag,
         int stage,
         int time, 
+        int damagePercentage, 
         int hpPercentage,
         int killCount, 
         int killBossCount, 
@@ -385,6 +386,7 @@ public partial class UserData
         if (temp.stage < stage)
         {
             __SetStageHPPercentage(temp.name, temp.stage, hpPercentage);
+            __SetStageDamagePercentage(temp.name, temp.stage, damagePercentage);
             __SetStageTime(temp.name, temp.stage, time);
             
             __SubmitStageFlag(hpPercentage > 0, /*flag, */temp.name, temp.stage, stage);

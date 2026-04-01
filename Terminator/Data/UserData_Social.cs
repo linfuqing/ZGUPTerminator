@@ -37,6 +37,7 @@ public partial interface IUserData
     public struct Friend
     {
         public int chapter;
+        public int rankedPoints;
         public UserRole role;
         public UserCard[] cards;
         public UserAccessory[] accessories;

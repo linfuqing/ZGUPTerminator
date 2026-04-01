@@ -124,6 +124,7 @@ public partial class LevelManager : MonoBehaviour
     private int __stageKillCount;
     private int __stageGold;
     private int __hpPercentage = 100;
+    private int __damagePercentage = 0;
 
     private float __startTime;
     
@@ -401,6 +402,7 @@ public partial class LevelManager : MonoBehaviour
                 //__dataFlag, 
                 __stage,
                 Mathf.RoundToInt(__GetStageTime(out _)), 
+                __damagePercentage, 
                 __hpPercentage, 
                 __killCount,
                 __killBossCount, 
@@ -590,7 +592,8 @@ public partial class LevelManager : MonoBehaviour
         __StartCoroutine(nameof(__Submit), levelData.SubmitStage(
             //__dataFlag, 
             stage,
-            time,
+            time, 
+            __damagePercentage, 
             __hpPercentage,
             __killCount,
             __killBossCount,
@@ -612,6 +615,11 @@ public partial class LevelManager : MonoBehaviour
         }
         else if (--__submitCount == 0)
             _onSubmit?.Invoke(false);
+    }
+
+    private void __OnSubmitLevel(bool x)
+    {
+        __SetSubmit(false);
     }
 
     private void __ClearSubmit()
@@ -642,7 +650,25 @@ public partial class LevelManager : MonoBehaviour
 
     void OnApplicationFocus(bool focus)
     {
-        if(!focus)
-            __Submit(__stage, __gold, __exp, __maxExp, __GetStageTime(out _), default);
+        if (!focus)
+        {
+            var levelData = ILevelData.instance;
+            if (levelData != null)
+            {
+                __SetSubmit(true);
+
+                //__Submit(__stage, __gold, __exp, __maxExp, __GetStageTime(out _), default);
+                __StartCoroutine(nameof(OnApplicationFocus), levelData.SubmitLevel(
+                    //__dataFlag, 
+                    __stage,
+                    Mathf.RoundToInt(__GetStageTime(out _)),
+                    __damagePercentage,
+                    __hpPercentage,
+                    __killCount,
+                    __killBossCount,
+                    __gold,
+                    __OnSubmitLevel));
+            }
+        }
     }
 }
