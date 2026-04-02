@@ -703,6 +703,9 @@ public sealed class LoginManager : MonoBehaviour
         uint userLevelID, 
         int stageIndex)
     {
+        UnityEngine.Assertions.Assert.AreNotEqual(0, userStageID);
+        UnityEngine.Assertions.Assert.AreNotEqual(0, userLevelID);
+        
         __stageIDs.Add((userLevelID, stageIndex), userStageID);
 
         LevelStage levelStage;
