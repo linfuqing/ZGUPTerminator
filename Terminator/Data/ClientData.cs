@@ -1099,6 +1099,8 @@ public class ClientData : MonoBehaviour, IClientData
 
     private void __SendStatus()
     {
+        print($"Sending status {status}");
+        
         var writer = BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
         writer.WritePackedInt(status, StreamCompressionModel.Default);
         EndSend(writer);

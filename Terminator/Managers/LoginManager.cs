@@ -2062,7 +2062,7 @@ public sealed class LoginManager : MonoBehaviour
 
                 if (Status.Start == __status)
                 {
-                    print("[Start]Success!Waiting for remote player into stage..");
+                    print($"[Start]Success!Waiting for remote player into stage {stageID}..");
 
                     clientData.SetStatus((int)stageID);
                     
