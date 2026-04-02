@@ -979,7 +979,7 @@ public partial class UserDataMain
     
     private bool __IsUnlock(in LevelTicket.Level level)
     {
-        int chapter = level.chapter;
+        int chapter = UserData.chapter;
         if (chapter < level.chapter)
             return false;
         
