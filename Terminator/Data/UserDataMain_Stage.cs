@@ -333,6 +333,9 @@ public partial class UserDataMain
                 case UserStageReward.Condition.Once:
                     result.type = LevelQuestType.Once;
                     break;
+                case UserStageReward.Condition.DamagePercentage:
+                    result.type = LevelQuestType.DamagePercentage;
+                    break;
                 case UserStageReward.Condition.HPPercentage:
                     result.type = LevelQuestType.HPPercentage;
                     break;
