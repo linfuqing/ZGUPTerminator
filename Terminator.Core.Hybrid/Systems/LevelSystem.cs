@@ -358,6 +358,13 @@ public partial class LevelSystemManaged : SystemBase
             return;
         }*/
 
+        if (SystemAPI.HasComponent<EffectDamageDistribution>(player))
+        {
+            var effectDamageDistribution = SystemAPI.GetComponent<EffectDamageDistribution>(player);
+
+            manager.damagePercentage = (int)math.round(effectDamageDistribution.valueRatio * 100.0f);
+        }
+        
 #if ENABLE_PROFILER
         using(SetProfilerMarker.Auto())
 #endif

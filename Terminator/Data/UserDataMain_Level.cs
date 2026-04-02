@@ -144,8 +144,14 @@ public partial class UserDataMain
     [Serializable]
     internal struct LevelTicket
     {
+        [Flags]
+        public enum Flag
+        {
+            ShowAll = 0x01
+        }
+        
         [Serializable]
-        internal struct Level
+        public struct Level
         {
             public string name;
 
@@ -154,6 +160,8 @@ public partial class UserDataMain
         }
 
         public string name;
+
+        public Flag flag;
         
         public int capacity;
         
@@ -164,6 +172,18 @@ public partial class UserDataMain
         public string 关卡门票名字
         {
             set => name = value;
+        }
+        
+        [CSVField]
+        public int 关卡门票标签
+        {
+            set => flag = (Flag)value;
+        }
+
+        [CSVField]
+        public int 关卡门票每日次数
+        {
+            set => capacity = value;
         }
         
         [CSVField]
@@ -212,12 +232,6 @@ public partial class UserDataMain
                     }
                 }
             }
-        }
-
-        [CSVField]
-        public int 关卡门票每日次数
-        {
-            set => capacity = value;
         }
 #endif
         
@@ -587,7 +601,8 @@ public partial class UserDataMain
 
                     levels.Add(userLevel);
                     
-                    if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}") == 0)
+                    if ((sourceTicket.flag & LevelTicket.Flag.ShowAll) != LevelTicket.Flag.ShowAll && 
+                        PlayerPrefs.GetInt($"{NAME_SPACE_USER_LEVEL_FLAG}{level.name}") == 0)
                         break;
                 }
                 
@@ -964,7 +979,11 @@ public partial class UserDataMain
     
     private bool __IsUnlock(in LevelTicket.Level level)
     {
-        if (level.chapter < UserData.chapter || level.chapterStage < 1)
+        int chapter = level.chapter;
+        if (chapter < level.chapter)
+            return false;
+        
+        if (chapter > level.chapter || level.chapterStage < 1)
             return true;
                 
         return (UserData.GetStageFlag(_levelChapters[level.chapter].name, level.chapterStage - 1) &

@@ -83,6 +83,16 @@ public partial class LevelManager
     
     private List<QuestStatus> __questStates;
 
+    public int damagePercentage
+    {
+        set
+        {
+            __SetStageQuestValue(value, __damagePercentage, LevelQuestType.DamagePercentage);
+            
+            __damagePercentage = value;
+        }
+    }
+    
     public int hpPercentage
     {
         set
@@ -121,6 +131,9 @@ public partial class LevelManager
                     case LevelQuestType.Once:
                         if(LevelShared.stage == questStatus.Value.value)
                             questStatus.SetResult(true);
+                        break;
+                    case LevelQuestType.DamagePercentage:
+                        questStatus.SetResult(__damagePercentage >= questStatus.Value.value);
                         break;
                     case LevelQuestType.HPPercentage:
                         questStatus.SetResult(__hpPercentage >= questStatus.Value.value);
@@ -174,8 +187,11 @@ public partial class LevelManager
                             if(LevelShared.stage != questStatus.Value.value)
                                 questStatus.SetResult(false);
                             break;
+                        case LevelQuestType.DamagePercentage:
+                            questStatus.SetCount(__damagePercentage, 0);
+                            break;
                         case LevelQuestType.HPPercentage:
-                            questStatus.SetCount(__hpPercentage, 0);
+                            questStatus.SetCount(__hpPercentage, 100);
                             break;
                         case LevelQuestType.KillCount:
                             questStatus.SetCount(0, stageKillCount);
