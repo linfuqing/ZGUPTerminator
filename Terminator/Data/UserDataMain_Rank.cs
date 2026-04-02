@@ -225,7 +225,7 @@ public partial class UserDataMain
 
         ranks.ranks = new UserRankData[numRanks];
         for (int i = 0; i < numRanks; ++i)
-            ranks.ranks[i] = _rankedList[i].ToUserRankData();
+            ranks.ranks[i] = _ranks[i].ToUserRankData();
 
         onComplete(ranks);
     }
