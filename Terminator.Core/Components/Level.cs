@@ -14,12 +14,12 @@ using Random = Unity.Mathematics.Random;
 
 public enum LevelQuestType : byte
 {
-    Once, 
-    DamagePercentage, 
-    HPPercentage, 
-    KillCount, 
-    Gold, 
-    Time, 
+    Once = 0, 
+    DamagePercentage = 5, 
+    HPPercentage = 1, 
+    KillCount = 2, 
+    Gold = 3, 
+    Time = 4, 
     
     Unknown
 }
@@ -792,7 +792,7 @@ public static class LevelShared
         public FixedString128Bytes bossDescription;
         //public float3 playerOffset;
         public SpawnerAttribute.Scale spawnerAttributeScale;
-        public FixedList32Bytes<LevelQuest> quests;
+        public FixedList128Bytes<LevelQuest> quests;
 
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Stage>();
     }
