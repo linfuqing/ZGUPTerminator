@@ -1,9 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using ZG;
 
-[Serializable]
 public struct UserRankData
 {
     public string name;
@@ -82,5 +81,13 @@ public partial interface IUserData
     /// <param name="onComplete"></param>
     /// <returns></returns>
     IEnumerator Uprank(uint userID, Action<Memory<UserReward>> onComplete);
+
+    /// <summary>
+    /// 领取排行榜奖励
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator CollectRankList(uint userID, Action<Memory<UserReward>> onComplete);
 }
 

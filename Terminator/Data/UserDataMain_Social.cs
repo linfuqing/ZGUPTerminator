@@ -101,6 +101,40 @@ public partial class UserDataMain
         
         result.cards = userCards.ToArray();
 
+        
+        int numCardBondLevels, numCardBondCards, numCardBonds = _cardBonds.Length;
+        CardBond cardBond;
+        UserCardBond userCardBond;
+        UserCardBond.Card userCardBondCard;
+        List<int> cardBondLevelIndices;
+        result.cardBonds = new UserCardBond[numCardBonds];
+        for (i = 0; i < numCardBonds; ++i)
+        {
+            cardBond = _cardBonds[i];
+            userCardBond.name = cardBond.name;
+            userCardBond.id = __ToID(i);
+            userCardBond.level = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBond.name}");
+            
+            cardBondLevelIndices = __GetCardBondLevelIndices(userCardBond.name);
+            numCardBondLevels = cardBondLevelIndices.Count;
+            userCardBond.levels = new UserCardBond.Level[numCardBondLevels];
+            for (j = 0; j < numCardBondLevels; ++j)
+                userCardBond.levels[j] = _cardBondLevels[cardBondLevelIndices[j]].value;
+
+            numCardBondCards = cardBond.cardNames.Length;
+            userCardBond.cards = new UserCardBond.Card[numCardBondCards];
+            for (j = 0; j < numCardBondCards; ++j)
+            {
+                userCardBondCard.name = cardBond.cardNames[j];
+                
+                userCardBondCard.level = __GetCardLevel(userCardBondCard.name, out _);
+                
+                userCardBond.cards[j] = userCardBondCard;
+            }
+            
+            result.cardBonds[i] = userCardBond;
+        }
+        
         int k, l,  
             numAccessoryStages, 
             numAccessorySlots = _accessorySlots.Length, 
@@ -143,8 +177,6 @@ public partial class UserDataMain
 
             userAccessory.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
 
-            userAccessory.property = accessory.property;
-            
             accessoryStageIndices = __GetAccessoryStageIndices(i);
             numAccessoryStages = accessoryStageIndices.Count;
             for (j = 0; j <= numAccessoryStages; ++j)
@@ -157,6 +189,11 @@ public partial class UserDataMain
                     continue;
 
                 userAccessory.stage = j;
+
+                if (j > 0)
+                    userAccessory.property = _accessoryStages[accessoryStageIndices[j - 1]].property;
+                else
+                    userAccessory.property = accessory.property;
 
                 accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
 

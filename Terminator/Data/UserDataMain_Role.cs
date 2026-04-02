@@ -359,8 +359,6 @@ public partial class UserDataMain
 
             userAccessory.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
 
-            userAccessory.property = accessory.property;
-            
             accessoryStageIndices = __GetAccessoryStageIndices(i);
 
             numAccessoryStages = accessoryStageIndices.Count;
@@ -374,6 +372,11 @@ public partial class UserDataMain
                     continue;
 
                 userAccessory.stage = j;
+
+                if (j > 0)
+                    userAccessory.property = _accessoryStages[accessoryStageIndices[j - 1]].property;
+                else
+                    userAccessory.property = accessory.property;
 
                 accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
 

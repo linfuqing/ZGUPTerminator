@@ -40,6 +40,7 @@ public partial interface IUserData
         public int rankedPoints;
         public UserRole role;
         public UserCard[] cards;
+        public UserCardBond[] cardBonds;
         public UserAccessory[] accessories;
         public UserAccessorySlot[] accessorySlots;
         public UserTalent[] talents;

@@ -543,9 +543,12 @@ public partial class UserDataMain
             result.roleSkillGroupDamage = accessory.roleSkillGroupDamage;
             result.skillDamage = accessory.skillDamage;
             result.attributeValue = accessory.attributeValue;
-            result.property = accessory.property;
-
             var accessoryStageIndices = __GetAccessoryStageIndices(info.index);
+            if (info.stage > 0)
+                result.property = _accessoryStages[accessoryStageIndices[info.stage - 1]].property;
+            else
+                result.property = accessory.property;
+
             if (info.stage < accessoryStageIndices.Count)
             {
                 var accessoryStage = _accessoryStages[accessoryStageIndices[info.stage]];
