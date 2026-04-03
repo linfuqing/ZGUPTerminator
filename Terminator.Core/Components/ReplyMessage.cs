@@ -195,7 +195,8 @@ public struct ReplyMessages : IComponentData
                             ReplyMessageShared.remotePlayerCount = 0;
                             ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
                             
-                            LevelPlayerShared<LocalPlayer>.channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            ReplyMessageShared.SetChannelFlag(reader.ReadPackedInt(streamCompressionModel));
+                            //LevelPlayerShared<LocalPlayer>.channelFlag = reader.ReadPackedInt(streamCompressionModel);
 
                             __Log("Reply Message Create");
                             break;
@@ -245,7 +246,8 @@ public struct ReplyMessages : IComponentData
                             {
                                 ReplyMessageShared.isHost = false;
                                 ReplyMessageShared.channel = channel;
-                                LevelPlayerShared<LocalPlayer>.channelFlag = channelFlag;
+                                ReplyMessageShared.SetChannelFlag(channelFlag);
+                                //LevelPlayerShared<LocalPlayer>.channelFlag = channelFlag;
                                 
                                 __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}");
                             }
@@ -294,7 +296,9 @@ public struct ReplyMessages : IComponentData
 
                                     ReplyMessageShared.channel = ReplyMessageShared.CHANNEL_NULL;
                                     
-                                    LevelPlayerShared<LocalPlayer>.channelFlag = channelFlag;
+                                    ReplyMessageShared.SetChannelFlag(channelFlag);
+                                    
+                                    //LevelPlayerShared<LocalPlayer>.channelFlag = channelFlag;
                                     
                                     LevelPlayerShared<RemotePlayer>.channelFlag = 0;
 
@@ -380,6 +384,11 @@ public static class ReplyMessageShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Channel>();
     }
 
+    private struct ChannelStatus
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ChannelStatus>();
+    }
+
     private struct RemotePlayerCount
     {
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerCount>();
@@ -396,7 +405,31 @@ public static class ReplyMessageShared
     
     public static ref int channel => ref Channel.Value.Data;
     
+    public static ref int channelStatus => ref ChannelStatus.Value.Data;
+
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
+
+    public static int GetChannelFlag(int value)
+    {
+        return (value & ~(int)NetworkRelayChannelFlag.All) | (channelStatus << (int)NetworkRelayChannelFlag.ShiftToStatus);
+    }
+
+    public static void SetChannelFlag(int value)
+    {
+        LevelPlayerShared<LocalPlayer>.channelFlag = GetChannelFlag(value);
+    }
+
+    public static bool SetChannelStatus(int value)
+    {
+        if (value == channelStatus)
+            return false;
+        
+        channelStatus = value;
+        
+        LevelPlayerShared<LocalPlayer>.channelFlag = GetChannelFlag(LevelPlayerShared<LocalPlayer>.channelFlag);
+
+        return true;
+    }
     
     static ReplyMessageShared()
     {

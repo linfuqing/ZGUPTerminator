@@ -450,13 +450,6 @@ public class ClientData : MonoBehaviour, IClientData
         private set;
     }*/
 
-    public int status
-    {
-        get;
-
-        private set;
-    }
-
     public NetworkClientDriver driver
     {
         get
@@ -551,13 +544,11 @@ public class ClientData : MonoBehaviour, IClientData
 
     public void SetStatus(int value)
     {
-        if (status == value)
+        if (!ReplyMessageShared.SetChannelStatus(value))
             return;
 
         if (value == 0)
             LevelShared.match = 0;
-
-        status = value;
 
         __SendStatus();
     }
@@ -1085,10 +1076,10 @@ public class ClientData : MonoBehaviour, IClientData
 
     private void __SendStatus()
     {
-        print($"Sending status {status}");
+        print($"Sending status {ReplyMessageShared.channelStatus}");
         
         var writer = BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-        writer.WritePackedInt(status, StreamCompressionModel.Default);
+        writer.WritePackedInt(ReplyMessageShared.channelStatus, StreamCompressionModel.Default);
         EndSend(writer);
     }
 

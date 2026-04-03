@@ -23,11 +23,25 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
     private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
 
+    private static readonly SharedStatic<int> Version = SharedStatic<int>.GetOrCreate<RemotePlayer>();
+
     public static Status status
     {
         get => StatusValue.Data;
 
-        set => StatusValue.Data = value;
+        set
+        {
+            StatusValue.Data = value;
+
+            version = LevelPlayerShared<RemotePlayer>.version;
+        }
+    }
+
+    public static int version
+    {
+        get => Version.Data;
+        
+        private set => Version.Data = value;
     }
 
 }
