@@ -246,6 +246,8 @@ public static class LevelPlayerShared<T> where T : ILevelPlayer
         set
         {
             ChannelFlag.Value.Data = value;
+            
+            UnityEngine.Debug.Log($"[LevelPlayer] Channel Status: {value}");
 
             if (value != 0)
                 ++version;
