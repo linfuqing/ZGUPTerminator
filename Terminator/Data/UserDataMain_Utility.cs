@@ -182,9 +182,11 @@ public partial class UserDataMain
                 if(reward.count > 1)
                     __AppendQuest(UserQuest.Type.Accessories + reward.count + 1, 1);
 
-                id = (uint)Random.Range(int.MinValue, int.MaxValue);
                 int accessoryIndex = __GetAccessoryIndex(reward.name);
-                __CreateAccessory(id, accessoryIndex, reward.count);
+                do
+                {
+                    id = (uint)Random.Range(int.MinValue, int.MaxValue);
+                } while (!__CreateAccessory(id, accessoryIndex, reward.count));
 
                 if ((flag & Flag.RolesUnlock) == 0 /* && UserData.chapter > 1*/) //(flag & Flag.RolesCreated) == 0)
                 {

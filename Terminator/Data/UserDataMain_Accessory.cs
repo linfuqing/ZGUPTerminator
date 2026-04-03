@@ -1021,13 +1021,39 @@ public partial class UserDataMain
         return true;
     }
 
-    private void __CreateAccessory(uint id, int index, int stage)
+    private bool __CreateAccessory(uint id, int index, int stage)
     {
         string accessoryName = _accessories[index].name, 
             key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{stage}", 
             idsString = PlayerPrefs.GetString(key);
         
-        idsString = string.IsNullOrEmpty(idsString) ? id.ToString() : $"{idsString}{UserData.SEPARATOR}{id}";
+        if(string.IsNullOrEmpty(idsString))
+            idsString = id.ToString();
+        else
+        {
+            string idString = $"{id}";
+            if (idString == idsString)
+                return false;
+            
+            string temp = $"{idString}{UserData.SEPARATOR}";
+            if (idsString.Length > temp.Length)
+            {
+                if (idsString.Remove(temp.Length) == temp)
+                    return false;
+
+                temp = $"{UserData.SEPARATOR}{idString}";
+                if (idsString.Substring(idsString.Length - temp.Length) == temp)
+                    return false;
+                
+                if (idsString.Contains($"{temp}{UserData.SEPARATOR}"))
+                    return false;
+            }
+            else
+                temp = $"{UserData.SEPARATOR}{idString}";
+
+            idsString = $"{idsString}{temp}";
+        }
+
         PlayerPrefs.SetString(key, idsString);
 
         if (__accessoryIDToInfos != null)
@@ -1037,6 +1063,8 @@ public partial class UserDataMain
             accessoryInfo.stage = stage;
             __accessoryIDToInfos.Add(id, accessoryInfo);
         }
+
+        return true;
     }
 }
 
