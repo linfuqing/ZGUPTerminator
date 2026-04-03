@@ -773,6 +773,8 @@ public class ClientData : MonoBehaviour, IClientData
                             __Save(message);
 
                             LevelShared.match = match;
+                            
+                            print($"[ClientData]Match {match}, distance {distance}");
                         }
                             return (int)ClientMessageType.Match;
                         case NetworkRelayMessageType.Query:
