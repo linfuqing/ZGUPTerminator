@@ -53,7 +53,7 @@ public partial class UserDataMain
                 int numParameters = parameters.Length;
                 rewards = new UserRewardData[numParameters];
                 for(int i = 0; i < numParameters; ++i)
-                    rewards[i] = UserRewardData.Parse(parameters[i]);
+                    rewards[i] = new UserRewardData(parameters[i]);
             }
         }
 #endif
@@ -128,7 +128,7 @@ public partial class UserDataMain
                 int numParameters = parameters.Length;
                 rewards = new UserRewardData[numParameters];
                 for(int i = 0; i < numParameters; ++i)
-                    rewards[i] = UserRewardData.Parse(parameters[i]);
+                    rewards[i] = new UserRewardData(parameters[i]);
             }
         }
 #endif

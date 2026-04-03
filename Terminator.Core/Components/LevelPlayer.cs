@@ -23,16 +23,6 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
     private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
 
-    private struct ChannelFlag
-    {
-        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ChannelFlag>();
-    }
-
-    private struct Version
-    {
-        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Version>();
-    }
-    
     public static Status status
     {
         get => StatusValue.Data;
@@ -40,30 +30,6 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         set => StatusValue.Data = value;
     }
 
-    public static int channelStatus => channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus;
-    
-    public static int channelFlag
-    {
-        get => ChannelFlag.Value.Data;
-
-        set
-        {
-            ChannelFlag.Value.Data = value;
-
-            if (value != 0)
-                ++version;
-        }
-    }
-
-    public static int version
-    {
-        get => Version.Value.Data;
-
-        private set => Version.Value.Data = value;
-    }
-
-    public static bool isOnline => ((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Online) ==
-                                   NetworkRelayChannelFlag.Online;
 }
 
 public struct LocalPlayer : IComponentData, ILevelPlayer
@@ -207,25 +173,80 @@ public struct LevelPlayerProperty
     }
 }
 
+public struct LevelPlayerHeader
+{
+    public FixedString32Bytes name;
+    public FixedString32Bytes avatar;
+        
+    public LevelPlayerHeader(in FixedBytes64 bytes)
+    {
+        this = bytes.AsArray().Reinterpret<LevelPlayerHeader>(1)[0];
+    }
+
+    public void Write(ref DataStreamWriter writer)
+    {
+        FixedBytes64 bytes = default;
+        var blocks = bytes.AsArray().Reinterpret<LevelPlayerHeader>(1);
+        blocks[0] = this;
+        bytes.Write(ref writer);
+    }
+}
+
 public static class LevelPlayerShared<T> where T : ILevelPlayer
 {
-    private class Property
+    private struct Header
+    {
+        public static readonly SharedStatic<LevelPlayerHeader> Value = SharedStatic<LevelPlayerHeader>.GetOrCreate<Header>();
+    }
+
+    private struct Property
     {
         public static readonly SharedStatic<LevelPlayerProperty> Value = SharedStatic<LevelPlayerProperty>.GetOrCreate<Property>();
     }
 
-    private class Header
-    {
-        public static readonly SharedStatic<FixedList64Bytes<byte>> Value = SharedStatic<FixedList64Bytes<byte>>.GetOrCreate<Header>();
-    }
-    
-    private class ID
+    private struct ID
     {
         public static readonly SharedStatic<uint> Value = SharedStatic<uint>.GetOrCreate<ID>();
     }
 
+    private struct ChannelFlag
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<ChannelFlag>();
+    }
+
+    private struct Version
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Version>();
+    }
+
+    public static ref LevelPlayerHeader header => ref Header.Value.Data;
 
     public static ref LevelPlayerProperty property => ref Property.Value.Data;
     
     public static ref uint id => ref ID.Value.Data;
+    
+    public static int channelStatus => channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus;
+    
+    public static int channelFlag
+    {
+        get => ChannelFlag.Value.Data;
+
+        set
+        {
+            ChannelFlag.Value.Data = value;
+
+            if (value != 0)
+                ++version;
+        }
+    }
+
+    public static int version
+    {
+        get => Version.Value.Data;
+
+        private set => Version.Value.Data = value;
+    }
+
+    public static bool isOnline => ((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Online) ==
+                                   NetworkRelayChannelFlag.Online;
 }

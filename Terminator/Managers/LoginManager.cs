@@ -1912,7 +1912,7 @@ public sealed class LoginManager : MonoBehaviour
                 if (ReplyMessageShared.isHost)
                 {
                     print("[Start:Host]Waiting for remotePlayer login..");
-                    while (0 != RemotePlayer.channelStatus && RemotePlayer.isOnline)
+                    while (0 != LevelPlayerShared<RemotePlayer>.channelStatus && LevelPlayerShared<RemotePlayer>.isOnline)
                     {
                         yield return null;
 
@@ -1943,7 +1943,7 @@ public sealed class LoginManager : MonoBehaviour
                     print("[Start:Host]Waiting for play..");
                     do
                     {
-                        destinationVersion = RemotePlayer.version;
+                        destinationVersion = LevelPlayerShared<RemotePlayer>.version;
                         if (destinationVersion != sourceVersion)
                         {
                             sourceVersion = destinationVersion;
@@ -1958,7 +1958,7 @@ public sealed class LoginManager : MonoBehaviour
 
                         yield return null;
 
-                        if (!RemotePlayer.isOnline)
+                        if (!LevelPlayerShared<RemotePlayer>.isOnline)
                         {
                             print("[Start:Host]Remote player offline.");
 
@@ -1987,7 +1987,7 @@ public sealed class LoginManager : MonoBehaviour
                             yield break;
                         }
                         
-                        stageID = (uint)RemotePlayer.channelStatus;
+                        stageID = (uint)LevelPlayerShared<RemotePlayer>.channelStatus;
                     } while (0 == stageID);
 
                     if (RemotePlayer.Status.Disabled != RemotePlayer.status)
@@ -2055,7 +2055,7 @@ public sealed class LoginManager : MonoBehaviour
                         yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
                 }
 
-                channelStatus = RemotePlayer.channelStatus;
+                channelStatus = LevelPlayerShared<RemotePlayer>.channelStatus;
                 if (channelStatus != 0 && channelStatus != stageID)
                 {
                     print("[Start]Remote player has started the other stage!");
@@ -2069,7 +2069,7 @@ public sealed class LoginManager : MonoBehaviour
 
                     clientData.SetStatus((int)stageID);
                     
-                    if (!RemotePlayer.isOnline || RemotePlayer.Status.Canceled == RemotePlayer.status)
+                    if (!LevelPlayerShared<RemotePlayer>.isOnline || RemotePlayer.Status.Canceled == RemotePlayer.status)
                         RemotePlayer.status = RemotePlayer.Status.Disabled;
 
                     if (RemotePlayer.Status.Disabled == RemotePlayer.status)

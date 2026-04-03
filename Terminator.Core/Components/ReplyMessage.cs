@@ -172,14 +172,14 @@ public struct ReplyMessages : IComponentData
                             channelFlag = reader.ReadPackedInt(streamCompressionModel);
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
-                                RemotePlayer.channelFlag = channelFlag;
+                                LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
                             __Log($"Reply Message Connect {key.id}");
                             break;
                         case NetworkRelayMessageType.Disconnect:
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
-                                RemotePlayer.channelFlag = 0;
+                                LevelPlayerShared<RemotePlayer>.channelFlag = 0;
 
                             __Log($"Reply Message Disconnect {key.id}");
                             break;
@@ -188,14 +188,15 @@ public struct ReplyMessages : IComponentData
                             //reader.Flush();
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if( key.id == LevelPlayerShared<RemotePlayer>.id)
-                                RemotePlayer.channelFlag = channelFlag;
+                                LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
                             break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;
-                            ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
-
                             ReplyMessageShared.remotePlayerCount = 0;
+                            ReplyMessageShared.channel = reader.ReadPackedInt(streamCompressionModel);
                             
+                            LevelPlayerShared<LocalPlayer>.channelFlag = reader.ReadPackedInt(streamCompressionModel);
+
                             __Log("Reply Message Create");
                             break;
                         case NetworkRelayMessageType.Join:
@@ -229,10 +230,12 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.id = key.id;
 
-                                    RemotePlayer.channelFlag = channelFlag;
+                                    LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
-                                    reader.ReadBytes(ReplyMessageShared.remotePlayerHeader.AsArray());
+                                    FixedBytes64 bytes = default;
+                                    reader.ReadBytes(bytes.AsArray());
 
+                                    LevelPlayerShared<RemotePlayer>.header = new LevelPlayerHeader(bytes);
                                     //UnityEngine.Debug.Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
                                 }
                                 else
@@ -242,6 +245,7 @@ public struct ReplyMessages : IComponentData
                             {
                                 ReplyMessageShared.isHost = false;
                                 ReplyMessageShared.channel = channel;
+                                LevelPlayerShared<LocalPlayer>.channelFlag = channelFlag;
                                 
                                 __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}");
                             }
@@ -274,7 +278,7 @@ public struct ReplyMessages : IComponentData
                                     {
                                         LevelPlayerShared<RemotePlayer>.id = 0;
 
-                                        RemotePlayer.channelFlag = 0;
+                                        LevelPlayerShared<RemotePlayer>.channelFlag = 0;
                                     }
 
                                     ReplyMessageShared.remotePlayerCount =
@@ -290,7 +294,9 @@ public struct ReplyMessages : IComponentData
 
                                     ReplyMessageShared.channel = ReplyMessageShared.CHANNEL_NULL;
                                     
-                                    RemotePlayer.channelFlag = 0;
+                                    LevelPlayerShared<LocalPlayer>.channelFlag = channelFlag;
+                                    
+                                    LevelPlayerShared<RemotePlayer>.channelFlag = 0;
 
                                     LevelPlayerShared<RemotePlayer>.id = 0;
                                     
@@ -392,8 +398,6 @@ public static class ReplyMessageShared
     
     public static ref int remotePlayerCount => ref RemotePlayerCount.Value.Data;
     
-    public static ref FixedBytes64 remotePlayerHeader => ref RemotePlayerHeader.Value.Data;
-
     static ReplyMessageShared()
     {
         channel = CHANNEL_NULL;

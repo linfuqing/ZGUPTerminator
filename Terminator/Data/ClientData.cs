@@ -95,25 +95,6 @@ public interface IClientMessageToSend
 
 public struct ClientHeader : IEquatable<ClientHeader>
 {
-    public struct Block
-    {
-        public FixedString32Bytes userName;
-        public FixedString32Bytes userAvatar;
-
-        public Block(in FixedBytes64 bytes)
-        {
-            this = bytes.AsArray().Reinterpret<Block>(1)[0];
-        }
-
-        public void Write(ref DataStreamWriter writer)
-        {
-            FixedBytes64 bytes = default;
-            var blocks = bytes.AsArray().Reinterpret<Block>(1);
-            blocks[0] = this;
-            bytes.Write(ref writer);
-        }
-    }
-    
     public uint userID;
     public FixedString32Bytes userName;
     public FixedString32Bytes userAvatar;
@@ -122,18 +103,18 @@ public struct ClientHeader : IEquatable<ClientHeader>
     {
         userID = reader.ReadPackedUInt(streamCompressionModel);
         var bytes = new FixedBytes64(ref reader);
-        var block = new Block(bytes);
-        userName = block.userName;
-        userAvatar = block.userAvatar;
+        var header = new LevelPlayerHeader(bytes);
+        userName = header.name;
+        userAvatar = header.avatar;
     }
     
     public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
     {
         writer.WritePackedUInt(userID, streamCompressionModel);
-        Block block;
-        block.userName = userName;
-        block.userAvatar = userAvatar;
-        block.Write(ref writer);
+        LevelPlayerHeader header;
+        header.name = userName;
+        header.avatar = userAvatar;
+        header.Write(ref writer);
     }
     
     public void Write(
@@ -518,6 +499,11 @@ public class ClientData : MonoBehaviour, IClientData
         
         LevelPlayerShared<LocalPlayer>.id = header.userID;
 
+        LevelPlayerHeader levelPlayerHeader;
+        levelPlayerHeader.name = header.userName;
+        levelPlayerHeader.avatar = header.userAvatar;
+        LevelPlayerShared<LocalPlayer>.header = levelPlayerHeader;
+
         __initStatus = InitStatus.None;
         
         var driver = this.driver.instance;
@@ -589,13 +575,13 @@ public class ClientData : MonoBehaviour, IClientData
                     {
                         header.userID = LevelPlayerShared<RemotePlayer>.id;
 
-                        var block = new ClientHeader.Block(ReplyMessageShared.remotePlayerHeader);
+                        var levelPlayerHeader = LevelPlayerShared<RemotePlayer>.header;
 
-                        header.userName = block.userName;
-                        header.userAvatar = block.userAvatar;
+                        header.userName = levelPlayerHeader.name;
+                        header.userAvatar = levelPlayerHeader.avatar;
 
                         ClientMessageSquadJoinToRead message;
-                        message.playerStatus.flag = (ClientRemotePlayerFlag)RemotePlayer.channelFlag;
+                        message.playerStatus.flag = (ClientRemotePlayerFlag)LevelPlayerShared<RemotePlayer>.channelFlag;
                         message.squadInviteID = (uint)ReplyMessageShared.channel;
 
                         __Save(message);
@@ -674,10 +660,10 @@ public class ClientData : MonoBehaviour, IClientData
                             header.userID = reader.ReadPackedUInt(streamCompressionModel);
                             if (header.userID == LevelPlayerShared<RemotePlayer>.id)
                             {
-                                var block = new ClientHeader.Block(ReplyMessageShared.remotePlayerHeader);
+                                var levelPlayerHeader = LevelPlayerShared<RemotePlayer>.header;
 
-                                header.userName = block.userName;
-                                header.userAvatar = block.userAvatar;
+                                header.userName = levelPlayerHeader.name;
+                                header.userAvatar = levelPlayerHeader.avatar;
 
                                 ClientMessageRemotePlayerStatus message;
                                 message.flag = (ClientRemotePlayerFlag)channelFlag;
