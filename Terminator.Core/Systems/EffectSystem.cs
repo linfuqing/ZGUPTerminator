@@ -2098,17 +2098,19 @@ public partial struct EffectSystem : ISystem
     }
 
     [BurstCompile]
-    private struct ComputeDamageDistributions : IJobChunk
+    private struct ComputeDamageStatistics : IJobChunk
     {
+        [NativeDisableUnsafePtrRestriction] 
+        public NativeArray<int> total;
+        
         [ReadOnly] 
         public BufferTypeHandle<EffectDamageStatistic> statisticType;
-        
-        public ComponentTypeHandle<EffectDamageDistribution> distributionType;
-        
-        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
+            in v128 chunkEnabledMask)
         {
             int totalCount = 0, totalValue = 0, totalValueClamp = 0;
-            
+
             var statistics = chunk.GetBufferAccessor(ref statisticType);
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
@@ -2120,11 +2122,32 @@ public partial struct EffectSystem : ISystem
                     totalValueClamp += statistic.valueClamp;
                 }
             }
-            
-            int count, value, valueClamp;
+
+            var span = total.AsSpan();
+            Interlocked.Add(ref span[0], totalCount);
+            Interlocked.Add(ref span[1], totalValue);
+            Interlocked.Add(ref span[2], totalValueClamp);
+        }
+    }
+
+    [BurstCompile]
+    private struct ComputeDamageDistributions : IJobChunk
+    {
+        [ReadOnly]
+        public NativeArray<int> total;
+        
+        [ReadOnly] 
+        public BufferTypeHandle<EffectDamageStatistic> statisticType;
+        
+        public ComponentTypeHandle<EffectDamageDistribution> distributionType;
+        
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            int totalCount = total[0], totalValue = total[1], totalValueClamp = total[2], count, value, valueClamp;
             EffectDamageDistribution distribution;
+            var statistics = chunk.GetBufferAccessor(ref statisticType);
             var distributions = chunk.GetNativeArray(ref distributionType);
-            iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
             {
                 count = 0;
@@ -2267,7 +2290,7 @@ public partial struct EffectSystem : ISystem
 
     private EntityQuery __groupToApply;
     
-    private EntityQuery __groupToDamageDistribute;
+    private EntityQuery __groupToDamages;
 
     private PrefabLoader __prefabLoader;
     
@@ -2366,7 +2389,7 @@ public partial struct EffectSystem : ISystem
                 .Build(ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __groupToDamageDistribute = builder
+            __groupToDamages = builder
                 .WithAll<EffectDamageStatistic>()
                 .WithAllRW<EffectDamageDistribution>()
                 .Build(ref state);
@@ -2598,14 +2621,21 @@ public partial struct EffectSystem : ISystem
         var applyJobHandle = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
         
         __damageStatisticType.Update(ref state);
+        var totalDamages = CollectionHelper.CreateNativeArray<int>(3, state.WorldUpdateAllocator);
+        ComputeDamageStatistics computeDamageStatistics;
+        computeDamageStatistics.total = totalDamages;
+        computeDamageStatistics.statisticType = __damageStatisticType;
+        var computeDamagesJobHandle = computeDamageStatistics.ScheduleParallelByRef(__groupToDamages, jobHandle);
+        
         __damageDistributionType.Update(ref state);
         ComputeDamageDistributions computeDamageDistributions;
+        computeDamageDistributions.total = totalDamages;
         computeDamageDistributions.statisticType = __damageStatisticType;
         computeDamageDistributions.distributionType = __damageDistributionType;
-        var computeDamageDistributionsJobHandle =
-            computeDamageDistributions.ScheduleParallelByRef(__groupToDamageDistribute, jobHandle);
+        computeDamagesJobHandle =
+            computeDamageDistributions.ScheduleParallelByRef(__groupToDamages, computeDamagesJobHandle);
         
-        state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamageDistributionsJobHandle);
+        state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle);
     }
     
     public static int ComputeDamage(int value, float scale, ref Random random)
