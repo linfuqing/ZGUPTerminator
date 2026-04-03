@@ -1893,6 +1893,8 @@ public sealed class LoginManager : MonoBehaviour
         if (__status != Status.None)
             yield break;
 
+        __status = Status.Waiting;
+
         //__styles[__selectedLevelIndex].button.interactable = false;
 
         /*foreach (var style in __styles.Values)
@@ -2068,12 +2070,21 @@ public sealed class LoginManager : MonoBehaviour
                     print($"[Start]Success!Waiting for remote player into stage {stageID}..");
 
                     clientData.SetStatus((int)stageID);
-                    
-                    if (!LevelPlayerShared<RemotePlayer>.isOnline || RemotePlayer.Status.Canceled == RemotePlayer.status)
+
+                    if (!LevelPlayerShared<RemotePlayer>.isOnline ||
+                        RemotePlayer.Status.Canceled == RemotePlayer.status)
+                    {
+                        print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
+
                         RemotePlayer.status = RemotePlayer.Status.Disabled;
+                    }
 
                     if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                    {
+                        print($"[Start]Disabled.");
+
                         break;
+                    }
                 }
                 else
                 {
