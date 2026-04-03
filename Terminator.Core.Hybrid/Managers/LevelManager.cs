@@ -490,27 +490,28 @@ public partial class LevelManager : MonoBehaviour
                     
                     __stageRewardStyles[reward.name] = stageRewardStyle;
                 }
-
-                foreach (var stageReward in _stageRewards)
+                else
                 {
-                    if (stageReward.name == reward.name)
+                    foreach (var stageReward in _stageRewards)
                     {
-                        stageRewardStyle.count = reward.count;
-                
-                        stageRewardStyle.value = Instantiate(stageReward.style, stageReward.style.transform.parent);
-                        stageRewardStyle.value.onCount.Invoke(reward.count.ToString());
-                        
-                        stageRewardStyle.value.gameObject.SetActive(true);
-                    
-                        if (__stageRewardStyles == null)
-                            __stageRewardStyles = new Dictionary<string, StageRewardStyle>();
+                        if (stageReward.name == reward.name)
+                        {
+                            stageRewardStyle.count = reward.count;
 
-                        __stageRewardStyles[reward.name] = stageRewardStyle;
-                        
-                        break;
+                            stageRewardStyle.value = Instantiate(stageReward.style, stageReward.style.transform.parent);
+                            stageRewardStyle.value.onCount.Invoke(reward.count.ToString());
+
+                            stageRewardStyle.value.gameObject.SetActive(true);
+
+                            if (__stageRewardStyles == null)
+                                __stageRewardStyles = new Dictionary<string, StageRewardStyle>();
+
+                            __stageRewardStyles[reward.name] = stageRewardStyle;
+
+                            break;
+                        }
                     }
                 }
-                
             }
         }
         
