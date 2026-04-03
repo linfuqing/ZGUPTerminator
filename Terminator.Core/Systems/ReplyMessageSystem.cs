@@ -544,7 +544,7 @@ public partial struct ReplyMessageSystem : ISystem
         collect.outputs = messages;
         var jobHandle = collect.ScheduleByRef(state.Dependency);
 
-        if (LevelPlayerShared<RemotePlayer>.isOnline)
+        if (LevelPlayerShared<RemotePlayer>.version == RemotePlayer.version)
         {
             var sendBuffer = driver.sendBuffer.AsParallelWriter();
 

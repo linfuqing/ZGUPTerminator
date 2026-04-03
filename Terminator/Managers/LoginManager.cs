@@ -2104,6 +2104,8 @@ public sealed class LoginManager : MonoBehaviour
 
                 yield return null;
             } while (RemotePlayer.Status.Joined != RemotePlayer.status);
+            
+            RemotePlayer.version = LevelPlayerShared<RemotePlayer>.version;
         }
         else
         {
