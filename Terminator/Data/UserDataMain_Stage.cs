@@ -1045,7 +1045,7 @@ public partial class UserData
             result.rewards =
                 isNullMain
                     ? null
-                    : main.CollectStageReward(temp.id, temp.stage, startStage, damagePercentage, hpPercentage, killCount,
+                    : main.CollectStageReward(temp.id, oldStage, startStage, damagePercentage, hpPercentage, killCount,
                         gold, time);
         }
         else

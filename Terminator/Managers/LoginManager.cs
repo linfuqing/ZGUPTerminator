@@ -2004,6 +2004,14 @@ public sealed class LoginManager : MonoBehaviour
                         clientData.EndSend(writer);
                     }*/
                 }
+                else
+                {
+                    print("[Start]Not a host.");
+
+                    __status = Status.None;
+                    
+                    yield break;
+                }
             }
             else
             {
