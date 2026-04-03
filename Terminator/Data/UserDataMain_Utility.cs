@@ -325,19 +325,25 @@ public partial class UserDataMain
         return true;
     }
 
-    private List<UserReward> __ApplyRewards(List<UserReward> outRewards, float ratio = 1.0f)
+    private List<UserReward> __ApplyRewards(List<UserReward> outRewards)
     {
         foreach (var reward in UserData.Rewards)
-            __ApplyReward(reward * ratio, outRewards);
+            __ApplyReward(reward, outRewards);
         
         UserData.Rewards.Clear();
 
         return outRewards;
     }
 
-    private List<UserReward> __ApplyRewards(UserRewardData[] rewards, List<UserReward> outRewards = null)
+    private List<UserReward> __ApplyRewards(UserRewardData[] rewards, List<UserReward> outRewards = null, float ratio = 1.0f)
     {
-        UserData.Rewards.AddRange(rewards);
+        if (ratio < 1.0f)
+        {
+            foreach (var reward in rewards)
+                UserData.Rewards.Add(reward * ratio);
+        }
+        else
+            UserData.Rewards.AddRange(rewards);
 
         if (outRewards == null)
             outRewards = new List<UserReward>();

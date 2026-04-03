@@ -443,7 +443,7 @@ public partial class UserDataMain
                     {
                         PlayerPrefs.DeleteKey(duplicateRewardKeyTemp);
                         
-                        __ApplyRewards(rewards, ratio);
+                        __ApplyRewards(duplicateReward.values, rewards, ratio);
                     }
                 }
             }

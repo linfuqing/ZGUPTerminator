@@ -499,6 +499,8 @@ public partial class LevelManager : MonoBehaviour
                 
                         stageRewardStyle.value = Instantiate(stageReward.style, stageReward.style.transform.parent);
                         stageRewardStyle.value.onCount.Invoke(reward.count.ToString());
+                        
+                        stageRewardStyle.value.gameObject.SetActive(true);
                     
                         if (__stageRewardStyles == null)
                             __stageRewardStyles = new Dictionary<string, StageRewardStyle>();
