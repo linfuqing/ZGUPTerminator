@@ -1909,6 +1909,8 @@ public sealed class LoginManager : MonoBehaviour
         {
             if (hasStage)
             {
+                print($"[Start]Host{ReplyMessageShared.isHost}");
+
                 RemotePlayer.status = RemotePlayer.Status.Waiting;
 
                 if (ReplyMessageShared.isHost)
@@ -2009,6 +2011,8 @@ public sealed class LoginManager : MonoBehaviour
             }
             else
             {
+                print("[Start]Dont has stage.");
+
                 if (ReplyMessageShared.isHost)
                     RemotePlayer.status = RemotePlayer.Status.Disabled;
                 else
@@ -2028,7 +2032,11 @@ public sealed class LoginManager : MonoBehaviour
             }
         }
         else
+        {
+            print("[Start]Single play.");
+
             RemotePlayer.status = RemotePlayer.Status.Disabled;
+        }
 
         _onStart?.Invoke();
 
