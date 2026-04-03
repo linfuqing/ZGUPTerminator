@@ -411,7 +411,7 @@ public static class ReplyMessageShared
 
     public static int GetChannelFlag(int value)
     {
-        return (value & ~(int)NetworkRelayChannelFlag.All) | (channelStatus << (int)NetworkRelayChannelFlag.ShiftToStatus);
+        return (value & (int)NetworkRelayChannelFlag.All) | (channelStatus << (int)NetworkRelayChannelFlag.ShiftToStatus);
     }
 
     public static void SetChannelFlag(int value)
