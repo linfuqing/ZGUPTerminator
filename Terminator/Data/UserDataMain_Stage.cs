@@ -965,7 +965,7 @@ public partial class UserData
         }
 
         var temp = levelCache.Value;
-        int oldStage = temp.stage;
+        int oldStage = temp.stage, startStage = GetStartStage(temp.name, out _);;
         
         IUserData.StageResult result;
         var main = UserDataMain.instance;
@@ -974,14 +974,12 @@ public partial class UserData
         {
             result.totalEnergy = 0;
             result.nextStageEnergy = 0;
-            result.rewards = null;
 
             if (!isNullMain)
                 oldStage = Mathf.Min(oldStage, main.GetMaxStage(temp.id, stage));
         }
         else
         {
-            int startStage = GetStartStage(temp.name, out _);
             if (startStage < oldStage)
             {
                 result.totalEnergy = 0;
@@ -1011,9 +1009,6 @@ public partial class UserData
 
                 result.nextStageEnergy = main.GetStageEnergy(temp.id, stage);
             }
-
-            result.rewards =
-                main.CollectStageReward(temp.id, oldStage, startStage, damagePercentage, hpPercentage, killCount, gold, time);
         }
 
         __SubmitStageFlag(temp.name, stage, out _, out _);
@@ -1046,7 +1041,15 @@ public partial class UserData
             
             temp.killCount = Mathf.Max(temp.killCount, killCount);
             temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
+
+            result.rewards =
+                isNullMain
+                    ? null
+                    : main.CollectStageReward(temp.id, temp.stage, startStage, damagePercentage, hpPercentage, killCount,
+                        gold, time);
         }
+        else
+            result.rewards = null;
         
         result.flag = (object)main == null ? (int)GetStageFlag(temp.name, oldStage) : main.GetStageFlag(temp.id, oldStage);
 
