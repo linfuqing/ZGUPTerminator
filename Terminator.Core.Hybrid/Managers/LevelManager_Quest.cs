@@ -175,10 +175,15 @@ public partial class LevelManager
             {
                 if (__questStates == null)
                     __questStates = new List<QuestStatus>();
-                
+
                 foreach (var quest in stage.quests)
+                {
+                    if(quest.type != LevelQuestType.Once && quest.value == 0)
+                        continue;
+                    
                     __questStates.Add(new QuestStatus(quest, _questStyles));
-                
+                }
+
                 foreach (var questStatus in __questStates)
                 {
                     switch (questStatus.Value.type)
