@@ -1911,96 +1911,114 @@ public sealed class LoginManager : MonoBehaviour
             {
                 print($"[Start]Host{ReplyMessageShared.isHost}");
 
-                RemotePlayer.status = RemotePlayer.Status.Waiting;
-
-                if (ReplyMessageShared.isHost && stageID != (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
+                if (ReplyMessageShared.isHost)
                 {
-                    print("[Start:Host]Waiting for remotePlayer login..");
-                    while (0 != LevelPlayerShared<RemotePlayer>.channelStatus && LevelPlayerShared<RemotePlayer>.isOnline)
+                    if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                     {
-                        yield return null;
-
-                        if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                        if (RemotePlayer.Status.Joined != RemotePlayer.status)
                         {
-                            print("[Start:Host]Canceled.");
-                            
                             __status = Status.None;
-                                
-                            yield break;
-                        }
-
-                        if (RemotePlayer.Status.Disabled == RemotePlayer.status)
-                        {
-                            print("[Start:Host]Disabled.");
                             
-                            break;
+                            Debug.LogError("WTF???");
+                            
+                            yield break;
                         }
                     }
-
-                    ClientMessagePlay play;
-                    play.isRestart = isRestart;
-                    play.levelID = levelID;
-                    play.stage = stageIndex;
-                    play.levelName = levelName;
-                    play.sceneName = sceneName;
-                    
-                    print("[Start:Host]Waiting for play..");
-                    do
+                    else
                     {
-                        destinationVersion = LevelPlayerShared<RemotePlayer>.version;
-                        if (destinationVersion != sourceVersion)
+                        RemotePlayer.status = RemotePlayer.Status.Waiting;
+
+                        print("[Start:Host]Waiting for remotePlayer login..");
+                        while (0 != LevelPlayerShared<RemotePlayer>.channelStatus &&
+                               LevelPlayerShared<RemotePlayer>.isOnline)
                         {
-                            sourceVersion = destinationVersion;
-                            
-                            if (clientData != null)
+                            yield return null;
+
+                            if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                             {
-                                var writer = clientData.BeginSend(ClientMessageType.Play, ClientMessagePlay.capacity);
-                                play.Write(ref writer);
-                                clientData.EndSend(writer);
+                                print("[Start:Host]Canceled.");
+
+                                __status = Status.None;
+
+                                yield break;
+                            }
+
+                            if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                            {
+                                print("[Start:Host]Disabled.");
+
+                                break;
                             }
                         }
 
-                        yield return null;
+                        ClientMessagePlay play;
+                        play.isRestart = isRestart;
+                        play.levelID = levelID;
+                        play.stage = stageIndex;
+                        play.levelName = levelName;
+                        play.sceneName = sceneName;
 
-                        if (!LevelPlayerShared<RemotePlayer>.isOnline)
+                        print("[Start:Host]Waiting for play..");
+                        do
                         {
-                            print("[Start:Host]Remote player offline.");
-
-                            RemotePlayer.status = RemotePlayer.Status.Disabled;
-                        }
-
-                        if (RemotePlayer.Status.Disabled == RemotePlayer.status)
-                        {
-                            print("[Start:Host]Disabled.");
-
-                            break;
-                        }
-
-                        if (RemotePlayer.Status.Canceled == RemotePlayer.status)
-                        {
-                            print("[Start:Host]Canceled.");
-
-                            __status = Status.None;
-                            
-                            if (clientData != null)
+                            destinationVersion = LevelPlayerShared<RemotePlayer>.version;
+                            if (destinationVersion != sourceVersion)
                             {
-                                var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
-                                clientData.EndSend(writer);
-                            }
-                            
-                            yield break;
-                        }
-                        
-                        stageID = (uint)LevelPlayerShared<RemotePlayer>.channelStatus;
-                    } while (0 == stageID);
+                                sourceVersion = destinationVersion;
 
-                    if (RemotePlayer.Status.Disabled != RemotePlayer.status)
-                    {
-                        var levelStage = __levelStages[stageID];
-                        levelID = levelStage.levelID;
-                        stageIndex = levelStage.stageIndex;
+                                if (clientData != null)
+                                {
+                                    var writer = clientData.BeginSend(ClientMessageType.Play,
+                                        ClientMessagePlay.capacity);
+                                    play.Write(ref writer);
+                                    clientData.EndSend(writer);
+                                }
+                            }
+
+                            yield return null;
+
+                            if (!LevelPlayerShared<RemotePlayer>.isOnline)
+                            {
+                                print("[Start:Host]Remote player offline.");
+
+                                RemotePlayer.status = RemotePlayer.Status.Disabled;
+                            }
+
+                            if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                            {
+                                print("[Start:Host]Disabled.");
+
+                                break;
+                            }
+
+                            if (RemotePlayer.Status.Canceled == RemotePlayer.status)
+                            {
+                                print("[Start:Host]Canceled.");
+
+                                __status = Status.None;
+
+                                if (clientData != null)
+                                {
+                                    var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
+                                    clientData.EndSend(writer);
+                                }
+
+                                yield break;
+                            }
+
+                            stageID = (uint)LevelPlayerShared<RemotePlayer>.channelStatus;
+                        } while (0 == stageID);
+
+                        if (RemotePlayer.Status.Disabled != RemotePlayer.status)
+                        {
+                            var levelStage = __levelStages[stageID];
+                            levelID = levelStage.levelID;
+                            stageIndex = levelStage.stageIndex;
+                        }
                     }
                 }
+                else
+                    RemotePlayer.status = RemotePlayer.Status.Waiting;
             }
             else
             {
