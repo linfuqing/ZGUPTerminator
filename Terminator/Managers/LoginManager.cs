@@ -1913,7 +1913,7 @@ public sealed class LoginManager : MonoBehaviour
 
                 RemotePlayer.status = RemotePlayer.Status.Waiting;
 
-                if (ReplyMessageShared.isHost)
+                if (ReplyMessageShared.isHost && stageID != (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                 {
                     print("[Start:Host]Waiting for remotePlayer login..");
                     while (0 != LevelPlayerShared<RemotePlayer>.channelStatus && LevelPlayerShared<RemotePlayer>.isOnline)
@@ -2000,13 +2000,6 @@ public sealed class LoginManager : MonoBehaviour
                         levelID = levelStage.levelID;
                         stageIndex = levelStage.stageIndex;
                     }
-
-                    /*if (clientData != null && RemotePlayer.Status.Disabled != RemotePlayer.status)
-                    {
-                        var writer = clientData.BeginSend((ClientMessageType)NetworkRelayMessageType.Status, 4);
-                        writer.WritePackedInt((int)stageID, StreamCompressionModel.Default);
-                        clientData.EndSend(writer);
-                    }*/
                 }
             }
             else
