@@ -296,11 +296,11 @@ public partial struct ReplyMessageSystem : ISystem
             {
                 var localTransform = localTransforms[index];
 
-                float3 position = remotePositions[numRemotePositions - 1].value;
-                if (math.distancesq(localTransform.Position, position) >
+                float2 position = remotePositions[numRemotePositions - 1].value;
+                if (math.distancesq(localTransform.Position.xz, position) >
                     MAX_DISTANCE_SQ)
                 {
-                    localTransform.Position = position;
+                    localTransform.Position = math.float3(position.x, localTransform.Position.y, position.y);
                     localTransforms[index] = localTransform;
 
                     thirdPersonCharacterControls[index] = default;
@@ -312,7 +312,7 @@ public partial struct ReplyMessageSystem : ISystem
                     remotePosition = remotePositions[0];
                     if (RemotePosition.Type.Warp == remotePosition.type)
                     {
-                        localTransform.Position = remotePosition.value;
+                        localTransform.Position = remotePosition.GetPosition(localTransform.Position.y);
                         localTransforms[index] = localTransform;
 
                         thirdPersonCharacterControls[index] = default;
@@ -324,7 +324,7 @@ public partial struct ReplyMessageSystem : ISystem
                         var thirdPersonCharacterControl = thirdPersonCharacterControls[index];
 
                         thirdPersonCharacterControl.MoveVector =
-                            remotePosition.value -
+                            remotePosition.GetPosition(localTransform.Position.y) -
                             localTransform.Position;
                         if (!__ClampToMaxLength(ref thirdPersonCharacterControl.MoveVector) &&
                             numRemotePositions > 1)
@@ -372,7 +372,7 @@ public partial struct ReplyMessageSystem : ISystem
                     ? RemotePosition.Type.Key
                     : RemotePosition.Type.Normal;
             var localTransform = localTransforms[index];
-            remotePosition.value = localTransform.Position;
+            remotePosition.value = localTransform.Position.xz;
             
             var remotePositions = this.remotePositions[index];
             int numRemotePositions = remotePositions.Length;

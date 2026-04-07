@@ -355,19 +355,6 @@ public partial class LevelSystemManaged
                             int numSelectedSkillIndices = selectedSkillIndices == null ? 0 : selectedSkillIndices.Length;
                             if (numSelectedSkillIndices > 0)
                             {
-                                var sendBuffer = networkClientDriver.sendBuffer;
-                                if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
-                                {
-                                    var streamCompressionModel = StreamCompressionModel.Default;
-                                    writer.WriteReplyHeader((int)ReplyMessageType.SelectSkill, NetworkRelayType.Channel);
-                                    //writer.WriteInt(skillVersion.value);
-                                    writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
-                                    for(int i = 0; i < numSelectedSkillIndices; ++i)
-                                        skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
-                                    
-                                    sendBuffer.EndWrite(writer);
-                                }
-                                
                                 var skillIndices = new NativeList<int>(
                                     numSelectedSkillIndices * (activeIndices.Length + 1),
                                     Allocator.TempJob);
@@ -392,6 +379,19 @@ public partial class LevelSystemManaged
                                                 numActiveSkillIndices - numSelectedSkillIndices));
 
                                 skillIndices.Dispose();
+                                
+                                var sendBuffer = networkClientDriver.sendBuffer;
+                                if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
+                                {
+                                    var streamCompressionModel = StreamCompressionModel.Default;
+                                    writer.WriteReplyHeader((int)ReplyMessageType.SelectSkill, NetworkRelayType.Channel);
+                                    //writer.WriteInt(skillVersion.value);
+                                    writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
+                                    for(int i = 0; i < numSelectedSkillIndices; ++i)
+                                        skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
+                                    
+                                    sendBuffer.EndWrite(writer);
+                                }
                             }
                         }
 

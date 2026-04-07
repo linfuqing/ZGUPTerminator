@@ -57,14 +57,14 @@ public struct RemotePosition : IBufferElementData
     }
 
     public Type type;
-    public float3 value;
+    public float2 value;
 
     public RemotePosition(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
     {
         type = (Type)reader.ReadPackedInt(streamCompressionModel);
         value.x = reader.ReadPackedFloat(streamCompressionModel);
         value.y = reader.ReadPackedFloat(streamCompressionModel);
-        value.z = reader.ReadPackedFloat(streamCompressionModel);
+        //value.z = reader.ReadPackedFloat(streamCompressionModel);
     }
 
     public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
@@ -72,6 +72,8 @@ public struct RemotePosition : IBufferElementData
         writer.WritePackedInt((int)type, streamCompressionModel);
         writer.WritePackedFloat(value.x, streamCompressionModel);
         writer.WritePackedFloat(value.y, streamCompressionModel);
-        writer.WritePackedFloat(value.z, streamCompressionModel);
+        //writer.WritePackedFloat(value.z, streamCompressionModel);
     }
+
+    public float3 GetPosition(float y) => math.float3(value.x, y, value.y);
 }
