@@ -360,6 +360,19 @@ public partial class LevelSystemManaged
                                     Allocator.TempJob);
                                 skillIndices.CopyFromNBC(selectedSkillIndices);
 
+                                var sendBuffer = networkClientDriver.sendBuffer;
+                                if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
+                                {
+                                    var streamCompressionModel = StreamCompressionModel.Default;
+                                    writer.WriteReplyHeader((int)ReplyMessageType.SelectSkill, NetworkRelayType.Channel);
+                                    //writer.WriteInt(skillVersion.value);
+                                    writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
+                                    for(int i = 0; i < numSelectedSkillIndices; ++i)
+                                        skills[skillIndices[i]].Write(ref writer, streamCompressionModel);
+                                    
+                                    sendBuffer.EndWrite(writer);
+                                }
+
                                 var bulletStates = SystemAPI.GetBuffer<BulletStatus>(player);
                                 LevelSkill.Apply(
                                     skillIndices,
@@ -378,19 +391,6 @@ public partial class LevelSystemManaged
                                             .GetSubArray(numSelectedSkillIndices,
                                                 numActiveSkillIndices - numSelectedSkillIndices));
 
-                                var sendBuffer = networkClientDriver.sendBuffer;
-                                if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
-                                {
-                                    var streamCompressionModel = StreamCompressionModel.Default;
-                                    writer.WriteReplyHeader((int)ReplyMessageType.SelectSkill, NetworkRelayType.Channel);
-                                    //writer.WriteInt(skillVersion.value);
-                                    writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
-                                    for(int i = 0; i < numSelectedSkillIndices; ++i)
-                                        skills[skillIndices[i]].Write(ref writer, streamCompressionModel);
-                                    
-                                    sendBuffer.EndWrite(writer);
-                                }
-                                
                                 skillIndices.Dispose();
                             }
                         }
