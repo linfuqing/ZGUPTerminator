@@ -103,6 +103,8 @@ public partial interface IUserData
     /// 组队邀请列表，取满足关卡条件的且最近登录的玩家列表，服务器实现的时候一定要注意性能！
     /// </summary>
     /// <param name="userID"></param>
+    /// <param name="levelID"></param>
+    /// <param name="stage"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
     IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, Action<Memory<UserFriend>> onComplete);
