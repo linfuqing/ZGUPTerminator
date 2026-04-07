@@ -167,9 +167,10 @@ public struct ClientMessageMatchToRead : IClientMessageToRead
 
     public int GetSceneIndex(int sceneCount)
     {
-        UnityEngine.Random.InitState(matchID);
-        
-        return UnityEngine.Random.Range(0, sceneCount);
+        return matchID % sceneCount;
+        /*UnityEngine.Random.InitState(matchID);
+
+        return UnityEngine.Random.Range(0, sceneCount);*/
     }
 }
 
