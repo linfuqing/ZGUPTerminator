@@ -98,6 +98,14 @@ public partial interface IUserData
     /// <param name="onComplete"></param>
     /// <returns></returns>
     IEnumerator QueryFriends(uint userID, Action<Memory<UserFriend>> onComplete);
+
+    /// <summary>
+    /// 组队邀请列表，取满足关卡条件的且最近登录的玩家列表，服务器实现的时候一定要注意性能！
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, Action<Memory<UserFriend>> onComplete);
     
     /// <summary>
     /// 好友推荐，每次点换一批查询一次

@@ -184,35 +184,38 @@ public partial class LevelManager
                     __questStates.Add(new QuestStatus(quest, _questStyles));
                 }
 
-                foreach (var questStatus in __questStates)
+                if (__questStates.Count > 0)
                 {
-                    switch (questStatus.Value.type)
+                    foreach (var questStatus in __questStates)
                     {
-                        case LevelQuestType.Once:
-                            if(LevelShared.stage != questStatus.Value.value)
-                                questStatus.SetResult(false);
-                            break;
-                        case LevelQuestType.DamagePercentage:
-                            questStatus.SetCount(__damagePercentage, 0);
-                            break;
-                        case LevelQuestType.HPPercentage:
-                            questStatus.SetCount(__hpPercentage, 100);
-                            break;
-                        case LevelQuestType.KillCount:
-                            questStatus.SetCount(0, stageKillCount);
-                            break;
-                        case LevelQuestType.Gold:
-                            questStatus.SetCount(0, stageGold);
-                            break;
-                        /*case LevelManagerShared.QuestType.Time:
-                            questStatus.SetCount(__GetStageTime(out _) <= questStatus.Value.count);
-                            break;*/
+                        switch (questStatus.Value.type)
+                        {
+                            case LevelQuestType.Once:
+                                if (LevelShared.stage != questStatus.Value.value)
+                                    questStatus.SetResult(false);
+                                break;
+                            case LevelQuestType.DamagePercentage:
+                                questStatus.SetCount(__damagePercentage, 0);
+                                break;
+                            case LevelQuestType.HPPercentage:
+                                questStatus.SetCount(__hpPercentage, 100);
+                                break;
+                            case LevelQuestType.KillCount:
+                                questStatus.SetCount(0, stageKillCount);
+                                break;
+                            case LevelQuestType.Gold:
+                                questStatus.SetCount(0, stageGold);
+                                break;
+                            /*case LevelManagerShared.QuestType.Time:
+                                questStatus.SetCount(__GetStageTime(out _) <= questStatus.Value.count);
+                                break;*/
+                        }
                     }
-                }
 
-                _onQuestEnable?.Invoke();
-                
-                isActive = true;
+                    _onQuestEnable?.Invoke();
+
+                    isActive = true;
+                }
             }
         }
 

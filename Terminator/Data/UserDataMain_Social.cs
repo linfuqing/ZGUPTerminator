@@ -302,6 +302,22 @@ public partial class UserDataMain
         onComplete(results);
     }
 
+    public IEnumerator QueryFriendsToSquadInvite(
+        uint userID, 
+        uint levelID, 
+        int stage, Action<Memory<UserFriend>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        int count = UnityEngine.Random.Range(5, 10);
+        
+        var friends = new UserFriend[count];
+        for (int i = 0; i < count; ++i)
+            friends[i] = friend;
+        
+        onComplete(friends);
+    }
+
     public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)
     {
         yield return __CreateEnumerator();
@@ -451,6 +467,11 @@ public partial class UserData
     public IEnumerator QueryFriends(uint userID, Action<Memory<UserFriend>> onComplete)
     {
         return UserDataMain.instance.QueryFriends(userID, onComplete);
+    }
+
+    public IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, Action<Memory<UserFriend>> onComplete)
+    {
+        return UserDataMain.instance.QueryFriendsToSquadInvite(userID, levelID, stage, onComplete);
     }
     
     public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)

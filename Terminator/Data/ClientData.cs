@@ -221,6 +221,7 @@ public struct ClientMessageSquadDrop : IClientMessageToSend
 
 public struct ClientMessageSquadInviteToRead : IClientMessageToRead
 {
+    public ClientChannel channel;
     public uint squadInviteID;
     public uint levelID;
     public int stage;
@@ -238,6 +239,10 @@ public struct ClientMessageSquadInviteToRead : IClientMessageToRead
 
 public struct ClientMessageSquadInviteToSend : IClientMessageToSend
 {
+    /// <summary>
+    /// 当userID为0时发送到世界，否则发给对应用户
+    /// </summary>
+    public uint userID;
     public uint levelID;
     public int stage;
     
@@ -800,11 +805,12 @@ public class ClientData : MonoBehaviour, IClientData
                             {
                                 case ClientMessageType.SquadInvite:
                                 {
-                                    UnityEngine.Assertions.Assert.AreEqual(ClientChannel.Public, channel);
+                                    //UnityEngine.Assertions.Assert.AreEqual(ClientChannel.Public, channel);
                                     
                                     header = new ClientHeader(ref reader, streamCompressionModel);
 
                                     ClientMessageSquadInviteToRead message;
+                                    message.channel = channel;
                                     message.squadInviteID = (uint)reader.ReadPackedInt(streamCompressionModel);
                                     message.levelID = reader.ReadPackedUInt(streamCompressionModel);
                                     message.stage = reader.ReadPackedInt(streamCompressionModel);
@@ -1069,7 +1075,7 @@ public class ClientData : MonoBehaviour, IClientData
     private void __WriteSquadInvite(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel, int channel)
     {
         header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite,
-            NetworkRelayType.All);
+            __squadInviteMessage.userID == 0 ? NetworkRelayType.All : __squadInviteMessage.userID.RelayType());
         writer.WritePackedInt(channel, streamCompressionModel);
         writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
         writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);

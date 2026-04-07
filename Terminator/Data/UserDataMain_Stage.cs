@@ -848,7 +848,7 @@ public partial class UserDataMain
                 break;
             case UserStageReward.Condition.DamagePercentage:
                 if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
-                    result = conditionValue > 0 ? damagePercentage * 1.0f / conditionValue : (damagePercentage > 0.5f ? 1.0f : 0.0f);
+                    result = conditionValue > 0 ? damagePercentage * 1.0f / conditionValue : (damagePercentage > 50 ? 1.0f : 0.0f);
                 else
                     result = 0.0f;
                 break;
