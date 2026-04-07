@@ -949,7 +949,7 @@ public sealed class LoginManager : MonoBehaviour
                 if (x)
                 {
                     if ((selectedLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer &&
-                        numStageRewards >= levelChapters.stageRewardCount)
+                        (endLevelIndex != userLevelIndex || numStageRewards >= levelChapters.stageRewardCount))
                         style.onMultiplayerEnable?.Invoke();
                     else
                         style.onMultiplayerDisable?.Invoke();
