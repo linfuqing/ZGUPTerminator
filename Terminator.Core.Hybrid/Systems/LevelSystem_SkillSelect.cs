@@ -378,8 +378,6 @@ public partial class LevelSystemManaged
                                             .GetSubArray(numSelectedSkillIndices,
                                                 numActiveSkillIndices - numSelectedSkillIndices));
 
-                                skillIndices.Dispose();
-                                
                                 var sendBuffer = networkClientDriver.sendBuffer;
                                 if (sendBuffer.isCreated && sendBuffer.BeginWrite(0, out var writer))
                                 {
@@ -388,10 +386,12 @@ public partial class LevelSystemManaged
                                     //writer.WriteInt(skillVersion.value);
                                     writer.WritePackedInt(numSelectedSkillIndices, streamCompressionModel);
                                     for(int i = 0; i < numSelectedSkillIndices; ++i)
-                                        skills[selectedSkillIndices[i]].Write(ref writer, streamCompressionModel);
+                                        skills[skillIndices[i]].Write(ref writer, streamCompressionModel);
                                     
                                     sendBuffer.EndWrite(writer);
                                 }
+                                
+                                skillIndices.Dispose();
                             }
                         }
 
