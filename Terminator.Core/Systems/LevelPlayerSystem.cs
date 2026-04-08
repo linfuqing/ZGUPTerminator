@@ -358,7 +358,10 @@ public partial struct LevelPlayerSystem : ISystem
                         ComponentType.ReadWrite<RemoteEffectTargetDamage>(), 
                         ComponentType.ReadWrite<RemoteEffectTargetHP>()));
 
-                entityManager.AddComponent(remotePlayers, ComponentType.ReadWrite<EffectDamageDistribution>());
+                entityManager.AddComponent(remotePlayers,
+                    new ComponentTypeSet(
+                        ComponentType.ReadWrite<CameraRotation>(),
+                        ComponentType.ReadWrite<EffectDamageDistribution>()));
                 
                 if(LevelPlayerShared<RemotePlayer>.property.skillOpcodes.Length > 0)
                     entityManager.AddComponent<LevelSkillOpcode>(remotePlayers);
@@ -366,10 +369,15 @@ public partial struct LevelPlayerSystem : ISystem
 
             entityManager.AddComponent(localPlayers,
                 new ComponentTypeSet(
-                    ComponentType.ReadWrite<EffectDamageDistribution>(), 
                     ComponentType.ReadWrite<RemotePosition>(), 
                     ComponentType.ReadWrite<RemoteEffectTargetDamage>(),
                     ComponentType.ReadWrite<RemoteEffectTargetHP>()));
+            
+            entityManager.AddComponent(localPlayers,
+                new ComponentTypeSet(
+                    ComponentType.ReadWrite<EffectDamageDistribution>(), 
+                    ComponentType.ReadWrite<CameraRotation>(),
+                    ComponentType.ReadWrite<RemoteCameraForward>()));
             
             if(LevelPlayerShared<LocalPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(localPlayers);

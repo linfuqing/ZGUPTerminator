@@ -7,7 +7,8 @@ using ZG;
 
 public enum ReplyMessageType
 {
-    Move = 100, 
+    Camera = 100, 
+    Move, 
     Damage, 
     HP, 
         
@@ -312,7 +313,7 @@ public struct ReplyMessages : IComponentData
 
                             break;
                         default:
-                            if (key.type < ReplyMessageType.Move || key.type > ReplyMessageType.PlayerProperty)
+                            if (key.type < ReplyMessageType.Camera || key.type > ReplyMessageType.PlayerProperty)
                                 continue;
 
                             channel = reader.ReadPackedInt(streamCompressionModel);

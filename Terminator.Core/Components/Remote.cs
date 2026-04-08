@@ -10,6 +10,18 @@ public struct RemoteIdentity : IComponentData
 public struct RemoteCameraForward : IComponentData
 {
     public float2 value;
+
+    public RemoteCameraForward(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
+    {
+        value.x = reader.ReadPackedFloat(streamCompressionModel);
+        value.y = reader.ReadPackedFloat(streamCompressionModel);
+    }
+
+    public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedFloat(value.x, streamCompressionModel);
+        writer.WritePackedFloat(value.y, streamCompressionModel);
+    }
 }
 
 public struct RemotePosition : IBufferElementData

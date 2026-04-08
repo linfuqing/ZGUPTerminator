@@ -474,32 +474,120 @@ public partial struct ReplyMessageSystem : ISystem
         }
     }
 
+    private struct ReadCameraRotations
+    {
+        [ReadOnly] 
+        public ReplyMessages messages;
+
+        [ReadOnly]
+        public NativeList<byte> clientBuffer;
+
+        [ReadOnly] 
+        public NativeArray<RemoteIdentity> remoteIdentities;
+
+        public NativeArray<CameraRotation> cameraRotations;
+
+        public void Execute(int index)
+        {
+            NetworkClient.MessageElement? result = null;
+            foreach (var messageElement in messages.GetValues(ReplyMessageType.Camera, remoteIdentities[index].id, clientBuffer))
+            {
+                if (result == null || result.Value.Message.offset < messageElement.Message.offset)
+                    result = messageElement;
+            }
+
+            if (result == null)
+                return;
+
+            var reader = result.Value.reader;
+
+            var remoteCameraForward = new RemoteCameraForward(ref reader, StreamCompressionModel.Default);
+
+            CameraRotation cameraRotation;
+            cameraRotation.value =
+                quaternion.LookRotationSafe(math.float3(remoteCameraForward.value.x, 0.0f, remoteCameraForward.value.y),
+                    math.up());
+            cameraRotations[index] = cameraRotation;
+        }
+
+    }
+
     private struct WriteCameraRotations
     {
-        public NetworkClientSendBuffer.ParallelWriter sendBuffer;
+        public const float MIN_DOT = 0.1F;
 
         [ReadOnly]
         public NativeArray<CameraRotation> cameraRotations;
 
         public NativeArray<RemoteCameraForward> remoteCameraForwards;
 
+        public NetworkClientSendBuffer.ParallelWriter sendBuffer;
+
         public void Execute(int index)
         {
-            /*var remoteCameraForward = remoteCameraForwards[index];
+            var forward = math.forward(cameraRotations[index].value).xz;
+            var remoteCameraForward = remoteCameraForwards[index];
+            if (math.dot(remoteCameraForward.value, forward) < MIN_DOT)
+                return;
+
+            remoteCameraForward.value = forward;
+            remoteCameraForwards[index] = remoteCameraForward;
+            
             if (sendBuffer.BeginWrite(0, out var writer))
             {
-                writer.WriteReplyHeader((int)ReplyMessageType.Move, NetworkRelayType.Channel);
+                writer.WriteReplyHeader((int)ReplyMessageType.Camera, NetworkRelayType.Channel);
                 var streamCompressionModel = StreamCompressionModel.Default;
 
-                writer.WritePackedInt(numRemotePositions, streamCompressionModel);
-                for(int i = 0; i < numRemotePositions; ++i)
-                    remotePositions[i].Write(ref writer, streamCompressionModel);
+                remoteCameraForward.Write(ref writer, streamCompressionModel);
                 
                 sendBuffer.EndWrite(writer);
-                
-                remotePositions.Clear();
-                remotePositions.Add(remotePosition);
-            }*/
+            }
+        }
+    }
+
+    [BurstCompile]
+    private struct ReplyCameraRotations : IJobChunk
+    {
+        [ReadOnly] 
+        public ReplyMessages messages;
+
+        [ReadOnly]
+        public NativeList<byte> clientBuffer;
+
+        [ReadOnly] 
+        public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
+
+        public ComponentTypeHandle<CameraRotation> cameraRotationType;
+
+        public ComponentTypeHandle<RemoteCameraForward> remoteCameraForwardType;
+
+        public NetworkClientSendBuffer.ParallelWriter sendBuffer;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            if (chunk.Has(ref remoteIdentityType))
+            {
+                ReadCameraRotations readRotations;
+                readRotations.messages = messages;
+                readRotations.clientBuffer = clientBuffer;
+                readRotations.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
+                readRotations.cameraRotations = chunk.GetNativeArray(ref cameraRotationType);
+
+                var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+                while (iterator.NextEntityIndex(out int i))
+                    readRotations.Execute(i);
+            }
+            else
+            {
+                WriteCameraRotations writeRotations;
+                writeRotations.cameraRotations = chunk.GetNativeArray(ref cameraRotationType);
+                writeRotations.remoteCameraForwards = chunk.GetNativeArray(ref remoteCameraForwardType);
+                writeRotations.sendBuffer = sendBuffer;
+
+                var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+                while (iterator.NextEntityIndex(out int i))
+                    writeRotations.Execute(i);
+            }
         }
     }
     
@@ -511,9 +599,13 @@ public partial struct ReplyMessageSystem : ISystem
 
     private ComponentTypeHandle<LocalTransform> __localTransformType;
 
+    private ComponentTypeHandle<CameraRotation> __cameraRotationType;
+
     private ComponentTypeHandle<EffectTargetDamage> __effectTargetDamageType;
 
     private ComponentTypeHandle<EffectTargetHP> __effectTargetHPType;
+
+    private ComponentTypeHandle<RemoteCameraForward> __remoteCameraForwardType;
 
     private BufferTypeHandle<RemoteEffectTargetDamage> __remoteEffectTargetDamageType;
 
@@ -523,6 +615,7 @@ public partial struct ReplyMessageSystem : ISystem
 
     private EntityQuery __effectTargetGroup;
     private EntityQuery __positionGroup;
+    private EntityQuery __cameraGroup;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -531,8 +624,10 @@ public partial struct ReplyMessageSystem : ISystem
         __characterBodyType =  state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __thirdPersonCharacterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
+        __cameraRotationType = state.GetComponentTypeHandle<CameraRotation>(true);
         __effectTargetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __effectTargetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
+        __remoteCameraForwardType = state.GetComponentTypeHandle<RemoteCameraForward>();
         __remoteEffectTargetDamageType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
         __remoteEffectTargetHPType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
         __remotePositionType = state.GetBufferTypeHandle<RemotePosition>();
@@ -544,6 +639,10 @@ public partial struct ReplyMessageSystem : ISystem
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __positionGroup =
                 builder.WithAll<LocalTransform, RemotePosition>().Build(ref state);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __cameraGroup =
+                builder.WithAll<CameraRotation>().Build(ref state);
 
         state.RequireForUpdate<NetworkClientDriver>();
         state.RequireForUpdate<ReplyMessages>();
@@ -609,6 +708,18 @@ public partial struct ReplyMessageSystem : ISystem
             replyPositions.localTransformType = __localTransformType;
             replyPositions.remotePositionType = __remotePositionType;
             jobHandle = replyPositions.ScheduleParallelByRef(__positionGroup, jobHandle);
+            
+            __cameraRotationType.Update(ref state);
+            __remoteCameraForwardType.Update(ref state);
+            
+            ReplyCameraRotations replyCameraRotations;
+            replyCameraRotations.sendBuffer = sendBuffer;
+            replyCameraRotations.messages = messages;
+            replyCameraRotations.clientBuffer = clientBuffer;
+            replyCameraRotations.remoteIdentityType = __remoteIdentityType;
+            replyCameraRotations.cameraRotationType = __cameraRotationType;
+            replyCameraRotations.remoteCameraForwardType = __remoteCameraForwardType;
+            jobHandle = replyCameraRotations.ScheduleParallelByRef(__cameraGroup, jobHandle);
         }
 
         state.Dependency = jobHandle;

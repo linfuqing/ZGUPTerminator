@@ -240,12 +240,12 @@ public partial class UserDataMain
         if (rank < _ranks.Length)
         {
             var temp = _ranks[rank];
-            int rankedPoints = UserDataMain.rankedPoints;
-            if (rankedPoints >= temp.points)
+            //int rankedPoints = UserDataMain.rankedPoints;
+            if (temp.points <= rankedPoints)
             {
-                rankedPoints -= temp.points;
+                //rankedPoints -= temp.points;
 
-                UserDataMain.rankedPoints = rankedPoints;
+                //UserDataMain.rankedPoints = rankedPoints;
                 UserDataMain.rank = rank + 1;
 
                 onComplete(__ApplyRewards(temp.rewards)?.ToArray());
