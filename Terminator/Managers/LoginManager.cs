@@ -13,6 +13,7 @@ public sealed class LoginManager : MonoBehaviour
 {
     private enum Status
     {
+        Init, 
         None,
         Waiting, 
         Start, 
@@ -663,39 +664,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
-        if (!__levelStages.TryGetValue(userStageID, out var levelStage) || levelStage.maxMultiplayerStageID == 0)
-        {
-            /*SendChapterStageMessage();
-            
-            return;*/
-            foreach (var pair in __levelStages)
-                levelStage = pair.Value;
-        }
-
-        if (levelStage.maxMultiplayerStageID == 0)
-            return;
-
-        __targetUserStageID = levelStage.maxMultiplayerStageID;
-        if(__targetUserStageID != userStageID)
-            SendChapterStageMessage(__targetUserStageID);
-
-        var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
-        if (scrollRect != null)
-        {
-            int levelIndex = levelStage.levelIndex;
-            if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
-            {
-                /*var submitHandlers = scrollRect.submitHandlers;
-                var submitHandler = submitHandlers != null && submitHandlers.Count > levelIndex
-                    ? submitHandlers[levelIndex]
-                    : null;
-                if(submitHandler != null)
-                    submitHandler.OnSubmit(null);*/
-                __levelStyles[levelIndex].toggle?.onValueChanged.Invoke(true);
-            }
-            
-            scrollRect.MoveTo(levelIndex);
-        }
+        StartCoroutine(__MoveTo(userStageID));
     }
 
     public void Register(
@@ -1240,7 +1209,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 sceneUnlocked != null &&
                                                 sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp ||
                                                 //重新进入关卡创建风格时候
-                                                movedLevelIndex != -1 && movedLevelIndex != userLevelIndex)
+                                                movedLevelIndex != -1 && movedLevelIndex != userLevelIndex || 
+                                                LevelPlayerShared<RemotePlayer>.isOnline)
                                             {
                                                 movedLevelIndex = -1;
 
@@ -2162,11 +2132,47 @@ public sealed class LoginManager : MonoBehaviour
         yield return __LoadScene(_startTime, sceneName);
     }
 
-    /*private IEnumerator __Start(bool isRestart)
+    private IEnumerator __MoveTo(uint userStageID)
     {
-        return __Start(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
-    }*/
+        while (Status.Init == __status)
+            yield return null;
+        
+        if (!__levelStages.TryGetValue(userStageID, out var levelStage) || levelStage.maxMultiplayerStageID == 0)
+        {
+            /*SendChapterStageMessage();
 
+            return;*/
+            foreach (var pair in __levelStages)
+                levelStage = pair.Value;
+        }
+
+        if (levelStage.maxMultiplayerStageID == 0)
+            yield break;
+
+        __targetUserStageID = levelStage.maxMultiplayerStageID;
+        if(__targetUserStageID != userStageID)
+            SendChapterStageMessage(__targetUserStageID);
+
+        var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
+        if (scrollRect != null)
+        {
+            int levelIndex = levelStage.levelIndex;
+            if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
+            {
+                /*var submitHandlers = scrollRect.submitHandlers;
+                var submitHandler = submitHandlers != null && submitHandlers.Count > levelIndex
+                    ? submitHandlers[levelIndex]
+                    : null;
+                if(submitHandler != null)
+                    submitHandler.OnSubmit(null);*/
+                __levelStyles[levelIndex].toggle?.onValueChanged.Invoke(true);
+            }
+            
+            scrollRect.MoveTo(levelIndex);
+        }
+    }
+
+    
     void OnDestroy()
     {
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
@@ -2256,6 +2262,8 @@ public sealed class LoginManager : MonoBehaviour
         }
         
         _onEnd?.Invoke();
+        
+        __status = Status.None;
 
         while (manager != null && manager.isNoticeShow)
             yield return null;

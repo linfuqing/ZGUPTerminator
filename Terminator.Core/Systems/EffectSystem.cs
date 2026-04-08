@@ -603,6 +603,9 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterProperties> characterProperties;
 
+        [ReadOnly] 
+        public ComponentLookup<CameraRotation> cameraRotations;
+
         [ReadOnly]
         public ComponentLookup<EffectTarget> targets;
 
@@ -764,6 +767,7 @@ public partial struct EffectSystem : ISystem
                     MessageParameter messageParameter;
                     Entity instance;
                     LocalToWorld destination;
+                    quaternion cameraRotation;
                     float3 forceResult, force;
                     float delayDestroyTime,
                         mass,
@@ -973,6 +977,9 @@ public partial struct EffectSystem : ISystem
 
                         damageLayerMask |= targetBelongsTo;
 
+                        cameraRotation = cameraRotations.HasComponent(simulationEvent.entity)
+                            ? cameraRotations[simulationEvent.entity].value
+                            : this.cameraRotation;
                         __Drop(
                             targetBelongsTo, 
                             cameraRotation, 
@@ -1081,6 +1088,9 @@ public partial struct EffectSystem : ISystem
                 if (resultCount > 0 || isEnd)
                 {
                     var transform = math.RigidTransform(source.Value);
+                    var cameraRotation = cameraRotations.HasComponent(entity)
+                        ? cameraRotations[entity].value
+                        : this.cameraRotation;
                     
                     int count = resultCount + status.count;
                     if (!isEnd && (count < effect.count || effect.count < 1))
@@ -1200,6 +1210,9 @@ public partial struct EffectSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterProperties> characterProperties;
 
+        [ReadOnly] 
+        public ComponentLookup<CameraRotation> cameraRotations;
+
         [ReadOnly]
         public ComponentLookup<EffectTarget> targets;
 
@@ -1288,6 +1301,7 @@ public partial struct EffectSystem : ISystem
             collect.children = children;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
+            collect.cameraRotations = cameraRotations;
             collect.targets = targets;
             collect.targetDamageScales = targetDamageScales;
             collect.damageParentMap = damageParents;
@@ -1372,6 +1386,9 @@ public partial struct EffectSystem : ISystem
 
         [ReadOnly]
         public NativeArray<KinematicCharacterBody> characterBodies;
+
+        [ReadOnly]
+        public NativeArray<CameraRotation> cameraRotations;
 
         [ReadOnly]
         public NativeArray<EffectDefinitionData> instances;
@@ -1674,6 +1691,9 @@ public partial struct EffectSystem : ISystem
                 }
 
                 float delayTime = 0.0f, deadTime = 0.0f;
+                var cameraRotation = index < cameraRotations.Length
+                    ? cameraRotations[index].value
+                    : this.cameraRotation;
                 Message message;
                 var messages = index < this.messages.Length ? this.messages[index] : default;
                 if (index < targetMessages.Length &&
@@ -1962,6 +1982,9 @@ public partial struct EffectSystem : ISystem
         public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
         [ReadOnly]
+        public ComponentTypeHandle<CameraRotation> cameraRotationType;
+
+        [ReadOnly]
         public ComponentTypeHandle<RemoteIdentity> remoteIdentityType;
 
         [ReadOnly]
@@ -2038,6 +2061,7 @@ public partial struct EffectSystem : ISystem
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.characterBodies = chunk.GetNativeArray(ref characterBodyType);
+            apply.cameraRotations = chunk.GetNativeArray(ref cameraRotationType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
             apply.damageParents = chunk.GetNativeArray(ref damageParentType);
             apply.targetInstances = chunk.GetNativeArray(ref targetInstanceType);
@@ -2197,6 +2221,8 @@ public partial struct EffectSystem : ISystem
 
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
+    private ComponentTypeHandle<CameraRotation> __cameraRotationType;
+
     private ComponentTypeHandle<RemoteIdentity> __remoteIdentityType;
 
     private ComponentTypeHandle<FallToDestroy> __fallToDestroyType;
@@ -2269,6 +2295,8 @@ public partial struct EffectSystem : ISystem
     
     private ComponentLookup<DropToDamage> __dropToDamages;
 
+    private ComponentLookup<CameraRotation> __cameraRotations;
+
     private ComponentLookup<LocalToWorld> __localToWorlds;
 
     private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
@@ -2312,6 +2340,7 @@ public partial struct EffectSystem : ISystem
         __entityType = state.GetEntityTypeHandle();
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
+        __cameraRotationType = state.GetComponentTypeHandle<CameraRotation>(true);
         __remoteIdentityType = state.GetComponentTypeHandle<RemoteIdentity>(true);
         __fallToDestroyType = state.GetComponentTypeHandle<FallToDestroy>(true);
         __damageParentType = state.GetComponentTypeHandle<EffectDamageParent>(true);
@@ -2349,6 +2378,7 @@ public partial struct EffectSystem : ISystem
         __targetLevels = state.GetComponentLookup<EffectTargetLevel>();
         __delayDestroies = state.GetComponentLookup<DelayDestroy>();
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
+        __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
         __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>();
         __outputMessages = state.GetBufferLookup<Message>();
@@ -2500,6 +2530,7 @@ public partial struct EffectSystem : ISystem
 
             __physicsColliders.Update(ref state);
             __characterProperties.Update(ref state);
+            __cameraRotations.Update(ref state);
             __rages.Update(ref state);
             __targetDamageScales.Update(ref state);
             __simulationCollisionType.Update(ref state);
@@ -2521,6 +2552,7 @@ public partial struct EffectSystem : ISystem
             collect.children = __children;
             collect.physicsColliders = __physicsColliders;
             collect.characterProperties = __characterProperties;
+            collect.cameraRotations = __cameraRotations;
             collect.targets = __targets;
             collect.targetDamageScales = __targetDamageScales;
             collect.damageParents = __damageParents;
@@ -2554,6 +2586,7 @@ public partial struct EffectSystem : ISystem
         
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
+        __cameraRotationType.Update(ref state);
         __remoteIdentityType.Update(ref state);
         __fallToDestroyType.Update(ref state);
         __characterGravityFactorType.Update(ref state);
@@ -2594,6 +2627,7 @@ public partial struct EffectSystem : ISystem
         apply.targetMessageType = __targetMessageType;
         apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
+        apply.cameraRotationType = __cameraRotationType;
         apply.remoteIdentityType = __remoteIdentityType;
         apply.fallToDestroyType = __fallToDestroyType;
         apply.damageParentType = __damageParentType;

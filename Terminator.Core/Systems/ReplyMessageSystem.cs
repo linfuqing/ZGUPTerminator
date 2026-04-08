@@ -474,6 +474,35 @@ public partial struct ReplyMessageSystem : ISystem
         }
     }
 
+    private struct WriteCameraRotations
+    {
+        public NetworkClientSendBuffer.ParallelWriter sendBuffer;
+
+        [ReadOnly]
+        public NativeArray<CameraRotation> cameraRotations;
+
+        public NativeArray<RemoteCameraForward> remoteCameraForwards;
+
+        public void Execute(int index)
+        {
+            /*var remoteCameraForward = remoteCameraForwards[index];
+            if (sendBuffer.BeginWrite(0, out var writer))
+            {
+                writer.WriteReplyHeader((int)ReplyMessageType.Move, NetworkRelayType.Channel);
+                var streamCompressionModel = StreamCompressionModel.Default;
+
+                writer.WritePackedInt(numRemotePositions, streamCompressionModel);
+                for(int i = 0; i < numRemotePositions; ++i)
+                    remotePositions[i].Write(ref writer, streamCompressionModel);
+                
+                sendBuffer.EndWrite(writer);
+                
+                remotePositions.Clear();
+                remotePositions.Add(remotePosition);
+            }*/
+        }
+    }
+    
     private ComponentTypeHandle<RemoteIdentity> __remoteIdentityType;
 
     private ComponentTypeHandle<KinematicCharacterBody> __characterBodyType;

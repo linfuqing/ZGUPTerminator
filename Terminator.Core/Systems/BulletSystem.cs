@@ -154,6 +154,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
+        [ReadOnly] 
+        public ComponentLookup<CameraRotation> cameraRotations;
+
         [ReadOnly]
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
@@ -235,10 +238,12 @@ public partial struct BulletSystem : ISystem
             bool isFire = this.isFire;
             BulletLocation location = 0;
             float3 up = math.up();
+            quaternion cameraRotation;
             ref var definition = ref definitions[index].definition.Value;
             DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes;
             if (character == Entity.Null)
             {
+                cameraRotation = cameraRotations.TryGetComponent(entity, out var temp) ? temp.value : this.cameraRotation;
                 //characterStandTimes = default;
                 this.characterStandTimes.TryGetBuffer(entity, out characterStandTimes);
                 
@@ -246,6 +251,8 @@ public partial struct BulletSystem : ISystem
             }
             else
             {
+                cameraRotation = cameraRotations.TryGetComponent(character, out var temp) ? temp.value : this.cameraRotation;
+                
                 up = characterBody.GroundingUp;
 
                 if (characterBody.IsGrounded)
@@ -396,6 +403,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
+        [ReadOnly] 
+        public ComponentLookup<CameraRotation> cameraRotations;
+
         [ReadOnly]
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
@@ -475,6 +485,7 @@ public partial struct BulletSystem : ISystem
             collect.characterInterpolations = characterInterpolations;
             collect.characterBodies = characterBodies;
             collect.characterControls = characterControls;
+            collect.cameraRotations = cameraRotations;
             collect.animationCurveDeltas = animationCurveDeltas;
             collect.followTargetVelocities = followTargetVelocities;
             collect.effectDamages = effectDamages;
@@ -516,6 +527,8 @@ public partial struct BulletSystem : ISystem
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
+
+    private ComponentLookup<CameraRotation> __cameraRotations;
 
     private ComponentLookup<AnimationCurveDelta> __animationCurveDeltas;
 
@@ -572,6 +585,7 @@ public partial struct BulletSystem : ISystem
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
+        __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
         __followTargetVelocities = state.GetComponentLookup<FollowTargetVelocity>(true);
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
@@ -628,6 +642,7 @@ public partial struct BulletSystem : ISystem
         __characterInterpolations.Update(ref state);
         __characterBodies.Update(ref state);
         __characterControls.Update(ref state);
+        __cameraRotations.Update(ref state);
         __animationCurveDeltas.Update(ref state);
         __followTargetVelocities.Update(ref state);
         __effectDamages.Update(ref state);
@@ -666,6 +681,7 @@ public partial struct BulletSystem : ISystem
         collect.characterInterpolations = __characterInterpolations;
         collect.characterBodies = __characterBodies;
         collect.characterControls = __characterControls;
+        collect.cameraRotations = __cameraRotations;
         collect.animationCurveDeltas = __animationCurveDeltas;
         collect.followTargetVelocities = __followTargetVelocities;
         collect.effectDamages = __effectDamages;

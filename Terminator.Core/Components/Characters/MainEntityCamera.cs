@@ -21,6 +21,11 @@ public struct MainCameraTransform : IComponentData
     }
 }
 
+public struct CameraRotation : IComponentData
+{
+    public quaternion value;
+}
+
 /*public struct MainCameraScreenToWorld : IComponentData
 {
     public float pixelHeight;

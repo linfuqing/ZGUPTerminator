@@ -160,7 +160,7 @@ public partial struct FollowTargetSystem : ISystem
                 .WithAnyRW<PhysicsVelocity, ThirdPersonCharacterControl>()
                 .Build(ref state);
         
-        state.RequireForUpdate<MainCameraTransform>();
+        //state.RequireForUpdate<MainCameraTransform>();
     }
 
     [BurstCompile]
@@ -273,6 +273,9 @@ public partial struct FollowTargetTransformSystem : ISystem
         public quaternion cameraRotation;
 
         [ReadOnly] 
+        public ComponentLookup<CameraRotation> cameraRotations;
+
+        [ReadOnly] 
         public ComponentLookup<LocalToWorld> localToWorlds;
 
         [ReadOnly] 
@@ -339,8 +342,10 @@ public partial struct FollowTargetTransformSystem : ISystem
             switch (instance.space)
             {
                 case FollowTargetSpace.Camera:
-                    velocity.lookAt = cameraRotation;
-                    velocity.target = targetLocalToWorld.c3.xyz + math.mul(cameraRotation, instance.offset);
+                    velocity.lookAt = cameraRotations.TryGetComponent(instance.entity, out var cameraRotation)
+                        ? cameraRotation.value
+                        : this.cameraRotation;
+                    velocity.target = targetLocalToWorld.c3.xyz + math.mul(velocity.lookAt, instance.offset);
                     break;
                 default:
                     velocity.lookAt = default;
@@ -445,10 +450,13 @@ public partial struct FollowTargetTransformSystem : ISystem
         public quaternion cameraRotation;
 
         [ReadOnly] 
-        public BufferTypeHandle<FollowTargetDistance> distanceType;
+        public ComponentLookup<CameraRotation> cameraRotations;
 
         [ReadOnly] 
         public ComponentLookup<LocalToWorld> localToWorlds;
+
+        [ReadOnly] 
+        public BufferTypeHandle<FollowTargetDistance> distanceType;
 
         [ReadOnly]
         public ComponentTypeHandle<Parent> parentType;
@@ -477,6 +485,7 @@ public partial struct FollowTargetTransformSystem : ISystem
             ComputeVelocities computeVelocities;
             computeVelocities.time = time;
             computeVelocities.cameraRotation = cameraRotation;
+            computeVelocities.cameraRotations = cameraRotations;
             computeVelocities.localToWorlds = localToWorlds;
             computeVelocities.distances = chunk.GetBufferAccessor(ref distanceType);
             computeVelocities.parents = chunk.GetNativeArray(ref parentType);
@@ -497,6 +506,8 @@ public partial struct FollowTargetTransformSystem : ISystem
         }
     }
 
+    private ComponentLookup<CameraRotation> __cameraRotations;
+
     private ComponentTypeHandle<Parent> __parentType;
 
     private ComponentTypeHandle<FollowTargetUp> __upType;
@@ -516,6 +527,7 @@ public partial struct FollowTargetTransformSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __parentType = state.GetComponentTypeHandle<Parent>(true);
         __upType = state.GetComponentTypeHandle<FollowTargetUp>(true);
         __speedType = state.GetComponentTypeHandle<FollowTargetSpeed>(true);
@@ -566,6 +578,7 @@ public partial struct FollowTargetTransformSystem : ISystem
             out _);
         
         localToWorlds.Update(ref state);
+        __cameraRotations.Update(ref state);
         __parentType.Update(ref state);
         __upType.Update(ref state);
         __speedType.Update(ref state);
@@ -575,6 +588,7 @@ public partial struct FollowTargetTransformSystem : ISystem
         ComputeVelocitiesEx computeVelocities;
         computeVelocities.time = SystemAPI.Time.ElapsedTime;
         computeVelocities.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
+        computeVelocities.cameraRotations = __cameraRotations;
         computeVelocities.localToWorlds = localToWorlds;
         computeVelocities.localTransformType = localTransformType;
         computeVelocities.parentType = __parentType;

@@ -25,6 +25,7 @@ public partial struct LookAtSystem : ISystem
         private RenderFrustumPlanes __renderFrustumPlanes;
         private CollisionWorld __collisionWorld;
         private ComponentLookup<KinematicCharacterBody> __characterBodies;
+        private ComponentLookup<CameraRotation> __cameraRotations;
 
         public bool EarlyOutOnFirstHit => false;
 
@@ -59,7 +60,8 @@ public partial struct LookAtSystem : ISystem
             in float3 cameraDirection, 
             in RenderFrustumPlanes renderFrustumPlanes,
             in CollisionWorld collisionWorld, 
-            in ComponentLookup<KinematicCharacterBody> characterBodies)
+            in ComponentLookup<KinematicCharacterBody> characterBodies, 
+            in ComponentLookup<CameraRotation> cameraRotations)
         {
             __dynamicBodiesCount = dynamicBodiesCount;
             __location = location;
@@ -75,6 +77,7 @@ public partial struct LookAtSystem : ISystem
             __collisionWorld = collisionWorld;
 
             __characterBodies = characterBodies;
+            __cameraRotations = cameraRotations;
 
             closestHit = default;
         }
@@ -88,7 +91,10 @@ public partial struct LookAtSystem : ISystem
             var location = __location;
             if ((location & LookAtLocation.Camera) == LookAtLocation.Camera)
             {
-                float dot = math.dot(hit.Position - __position, __cameraDirection);
+                var cameraDirection = __cameraRotations.TryGetComponent(hit.Entity, out var cameraRotation)
+                    ? math.forward(cameraRotation.value)
+                    : __cameraDirection;
+                float dot = math.dot(hit.Position - __position, cameraDirection);
                 if(dot < __minDot * math.max(distance, 0.0f))
                     return false;
 
@@ -141,6 +147,9 @@ public partial struct LookAtSystem : ISystem
         
         [ReadOnly]
         public CollisionWorld collisionWorld;
+
+        [ReadOnly]
+        public ComponentLookup<CameraRotation> cameraRotations;
 
         [ReadOnly]
         public ComponentLookup<KinematicCharacterBody> characterBodies;
@@ -248,7 +257,8 @@ public partial struct LookAtSystem : ISystem
                         cameraDirection, 
                         renderFrustumPlanes, 
                         collisionWorld, 
-                        characterBodies);
+                        characterBodies, 
+                        cameraRotations);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
                 }
@@ -281,7 +291,8 @@ public partial struct LookAtSystem : ISystem
                         cameraDirection, 
                         renderFrustumPlanes, 
                         collisionWorld, 
-                        characterBodies);
+                        characterBodies, 
+                        cameraRotations);
                     if (collisionWorld.Bodies[rigidBodyIndex].CalculateDistance(pointDistanceInput, ref collector))
                         closestHit = collector.closestHit;
                 }
@@ -299,7 +310,8 @@ public partial struct LookAtSystem : ISystem
                     cameraDirection, 
                     renderFrustumPlanes, 
                     collisionWorld, 
-                    characterBodies);
+                    characterBodies, 
+                    cameraRotations);
                 if (collisionWorld.CalculateDistance(pointDistanceInput, ref collector))
                     closestHit = collector.closestHit;
             }
@@ -432,6 +444,9 @@ public partial struct LookAtSystem : ISystem
         public ComponentLookup<KinematicCharacterBody> characterBodies;
 
         [ReadOnly]
+        public ComponentLookup<CameraRotation> cameraRotations;
+
+        [ReadOnly]
         public ComponentTypeHandle<FollowTargetParent> followTargetParentType;
 
         [ReadOnly]
@@ -463,6 +478,7 @@ public partial struct LookAtSystem : ISystem
             apply.collisionWorld = collisionWorld;
             apply.parents = parents;
             apply.characterBodies = characterBodies;
+            apply.cameraRotations = cameraRotations;
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.followTargetParents = chunk.GetNativeArray(ref followTargetParentType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
@@ -490,6 +506,8 @@ public partial struct LookAtSystem : ISystem
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
 
+    private ComponentLookup<CameraRotation> __cameraRotations;
+
     private ComponentTypeHandle<FollowTargetParent> __followTargetParentType;
 
     private ComponentTypeHandle<LookAtAndFollow> __lookAtAndFollowType;
@@ -514,6 +532,7 @@ public partial struct LookAtSystem : ISystem
         __followTargets = state.GetComponentLookup<FollowTarget>();
         __parents = state.GetComponentLookup<Parent>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
+        __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __followTargetParentType = state.GetComponentTypeHandle<FollowTargetParent>(true);
         __lookAtAndFollowType = state.GetComponentTypeHandle<LookAtAndFollow>(true);
         __instanceType = state.GetComponentTypeHandle<LookAt>(true);
@@ -540,6 +559,7 @@ public partial struct LookAtSystem : ISystem
         __localTransforms.Update(ref state);
         __followTargets.Update(ref state);
         __characterBodies.Update(ref state);
+        __cameraRotations.Update(ref state);
         __followTargetParentType.Update(ref state);
         __lookAtAndFollowType.Update(ref state);
         __instanceType.Update(ref state);
@@ -558,6 +578,7 @@ public partial struct LookAtSystem : ISystem
         apply.entityType = __entityType;
         apply.parents = __parents;
         apply.characterBodies = __characterBodies;
+        apply.cameraRotations = __cameraRotations;
         apply.followTargetParentType = __followTargetParentType;
         apply.lookAtAndFollowType = __lookAtAndFollowType;
         apply.instanceType = __instanceType;
