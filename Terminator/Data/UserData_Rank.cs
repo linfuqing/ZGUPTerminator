@@ -28,10 +28,15 @@ public partial interface IUserData
     public struct RankedList
     {
         /// <summary>
+        /// 已领奖的名次
+        /// </summary>
+        public int top;
+
+        /// <summary>
         /// 自己的名次
         /// </summary>
         public int points;
-        
+
         /// <summary>
         /// 前N名
         /// </summary>

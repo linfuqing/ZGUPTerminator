@@ -624,7 +624,7 @@ public partial struct ReplyMessageSystem : ISystem
         __characterBodyType =  state.GetComponentTypeHandle<KinematicCharacterBody>(true);
         __thirdPersonCharacterControlType = state.GetComponentTypeHandle<ThirdPersonCharacterControl>();
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
-        __cameraRotationType = state.GetComponentTypeHandle<CameraRotation>(true);
+        __cameraRotationType = state.GetComponentTypeHandle<CameraRotation>();
         __effectTargetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
         __effectTargetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
         __remoteCameraForwardType = state.GetComponentTypeHandle<RemoteCameraForward>();

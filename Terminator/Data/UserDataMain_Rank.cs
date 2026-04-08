@@ -78,7 +78,6 @@ public partial class UserDataMain
             public int Get(RankListElement[] list, int index) => list[index].points;
         }
 
-
         public string name;
     
         public int points;
@@ -194,6 +193,7 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         IUserData.RankedList result;
+        result.top = rankedListTop;
         result.points = rankedListPoints;
         if (result.points == 0)
         {
