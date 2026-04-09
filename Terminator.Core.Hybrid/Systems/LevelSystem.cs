@@ -300,7 +300,7 @@ public partial class LevelSystemManaged : SystemBase
                 ? LevelShared.stages[status.stage].spawnerAttributeScale
                 : default;
 
-            if(!manager.isRestart)
+            if(!manager.isRestart && activeIndices.IsCreated)
             {
                 ref var activeSkills = ref LevelPlayerShared<LocalPlayer>.property.activeSkills;
 

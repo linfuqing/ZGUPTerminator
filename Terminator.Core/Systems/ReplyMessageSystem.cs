@@ -514,8 +514,6 @@ public partial struct ReplyMessageSystem : ISystem
 
     private struct WriteCameraRotations
     {
-        public const float MIN_DOT = 0.1F;
-
         [ReadOnly]
         public NativeArray<CameraRotation> cameraRotations;
 
@@ -527,7 +525,7 @@ public partial struct ReplyMessageSystem : ISystem
         {
             var forward = math.forward(cameraRotations[index].value).xz;
             var remoteCameraForward = remoteCameraForwards[index];
-            if (math.dot(remoteCameraForward.value, forward) < MIN_DOT)
+            if (ZG.Mathematics.Math.Approximately(remoteCameraForward.value, forward))
                 return;
 
             remoteCameraForward.value = forward;

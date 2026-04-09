@@ -14,6 +14,8 @@ public partial struct LevelPlayerSystem : ISystem
 #endif
     private struct Apply : IJobParallelFor
     {
+        public quaternion cameraRotation;
+        
         [ReadOnly, DeallocateOnJobCompletion] 
         public NativeArray<Entity> entityArray;
 
@@ -58,6 +60,9 @@ public partial struct LevelPlayerSystem : ISystem
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<EffectRage> effectRages;
+
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<CameraRotation> cameraRotations;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<ThirdPersonPlayer> thirdPersonPlayers;
@@ -265,6 +270,13 @@ public partial struct LevelPlayerSystem : ISystem
                 effectRage.value = property.effectRage;
                 effectRages[player] = effectRage;
             }
+
+            if (cameraRotations.HasComponent(player))
+            {
+                CameraRotation cameraRotation;
+                cameraRotation.value = this.cameraRotation;
+                cameraRotations[player] = cameraRotation;
+            }
         }
     }
     
@@ -290,6 +302,8 @@ public partial struct LevelPlayerSystem : ISystem
 
     private ComponentLookup<EffectRage> __effectRages;
 
+    private ComponentLookup<CameraRotation> __cameraRotations;
+
     private ComponentLookup<ThirdPersonPlayer> __thirdPersonPlayers;
     
     private EntityQuery __group;
@@ -309,6 +323,7 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargetDamageScales = state.GetComponentLookup<EffectTargetDamageScale>();
         //__effectDamages = state.GetComponentLookup<EffectDamage>();
         __effectRages = state.GetComponentLookup<EffectRage>();
+        __cameraRotations = state.GetComponentLookup<CameraRotation>();
         __thirdPersonPlayers = state.GetComponentLookup<ThirdPersonPlayer>();
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
@@ -318,6 +333,7 @@ public partial struct LevelPlayerSystem : ISystem
                 .Build(ref state);
         
         state.RequireForUpdate(__group);
+        state.RequireForUpdate<MainCameraTransform>();
     }
 #if !DEBUG
     [BurstCompile]
@@ -396,9 +412,11 @@ public partial struct LevelPlayerSystem : ISystem
         __effectTargets.Update(ref state);
         __effectTargetDamageScales.Update(ref state);
         __effectRages.Update(ref state);
+        __cameraRotations.Update(ref state);
         __thirdPersonPlayers.Update(ref state);
             
         Apply apply;
+        apply.cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation;
         apply.entityArray = entityArray;
         apply.localPlayerEntities = localPlayers;
         apply.remotePlayerEntities = remotePlayers;
@@ -414,6 +432,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.effectTargetDamageScales = __effectTargetDamageScales;
         //apply.effectDamages = __effectDamages;
         apply.effectRages = __effectRages;
+        apply.cameraRotations = __cameraRotations;
         apply.thirdPersonPlayers = __thirdPersonPlayers;
         state.Dependency = apply.ScheduleByRef(entityArray.Length, 1, state.Dependency);
     }
