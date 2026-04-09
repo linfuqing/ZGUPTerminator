@@ -699,6 +699,19 @@ public sealed class LoginManager : MonoBehaviour
     {
         ApplyStart(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
     }
+
+    public AssetObjectLoader CreateLoader(string levelName, int sceneIndex)
+    {
+        if (__levelIndices == null)
+        {
+            int numLevels = _levels.Length;
+            __levelIndices = new Dictionary<string, int>(numLevels);
+            for (int i = 0; i < numLevels; ++i)
+                __levelIndices[_levels[i].name] = i;
+        }
+
+        return new AssetObjectLoader(_levels[__levelIndices[levelName]].scenes[sceneIndex].prefab);
+    }
     
     private void __ApplyLevelChapters(IUserData.LevelChapters levelChapters)
     {
