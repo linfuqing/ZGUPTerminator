@@ -130,7 +130,7 @@ public partial struct ThirdPersonPlayerFixedStepControlSystem : ISystem
         {
             tick = SystemAPI.GetSingleton<FixedTickSystem.Singleton>().Tick, 
             // Get camera rotation, since our movement is relative to it.
-            cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().value.rot, //quaternion.identity;
+            cameraRotation = SystemAPI.GetSingleton<MainCameraTransform>().rotation, //quaternion.identity;
             localTransforms = __localTransforms,
             cameraRotations = __cameraRotations,
             characterControls = __characterControls
