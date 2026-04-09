@@ -356,12 +356,14 @@ public partial class LevelManager
                 {
                     case RecoveryStatus.UserBuy:
                     case RecoveryStatus.UserConfirmed:
+
+                        bool hasBuy = RecoveryStatus.UserBuy == __recoveredStatus;
                         
                         __recoveredStatus = RecoveryStatus.WaitingForQuery;
 
                         _onRecovering?.Invoke();
 
-                        if (RecoveryStatus.UserBuy == __recoveredStatus)
+                        if (hasBuy)
                         {
                             yield return levelData.BuyToSkip(x =>
                             {

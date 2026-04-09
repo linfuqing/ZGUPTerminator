@@ -86,6 +86,9 @@ public partial class LevelManager : MonoBehaviour
     [SerializeField]
     internal StringEvent _onStageBossDescription;
 
+    [SerializeField]
+    internal StringEvent _onTotalStageRewardCount;
+
     [SerializeField] 
     internal ActiveEvent _onSubmit;
 
@@ -511,6 +514,15 @@ public partial class LevelManager : MonoBehaviour
                             break;
                         }
                     }
+                }
+
+                if (__stageRewardStyles != null)
+                {
+                    int totalStageRewardCount = 0;
+                    foreach (var pair in __stageRewardStyles)
+                        totalStageRewardCount += pair.Value.count;
+                    
+                    _onTotalStageRewardCount?.Invoke(totalStageRewardCount.ToString());
                 }
             }
         }
