@@ -11,10 +11,6 @@ public struct UserFriend
     /// 到达的最大章节数
     /// </summary>
     public int chapter;
-    /// <summary>
-    /// 到达的最大章节数下的最大小关
-    /// </summary>
-    public int stage;
     
     /// <summary>
     /// 战力
@@ -33,7 +29,6 @@ public struct UserFriend
         avatar = string.Empty;
         id = uint.Parse(parameters[0]);
         chapter = 1;
-        stage = 0;
         power = 0;
         ticks = DateTime.UtcNow.Ticks;
     }
@@ -111,14 +106,15 @@ public partial interface IUserData
     IEnumerator QueryFriends(uint userID, Action<Memory<UserFriend>> onComplete);
 
     /// <summary>
-    /// 组队邀请列表，取满足关卡条件的且最近登录的玩家列表，服务器实现的时候一定要注意性能！
+    /// 组队邀请列表，客户端根据最近登录的时间来筛选邀请查询，服务器下发可匹配的人。该查询可以查询陌生人
     /// </summary>
     /// <param name="userID"></param>
     /// <param name="levelID"></param>
     /// <param name="stage"></param>
+    /// <param name="targetUserIDs"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, Action<Memory<UserFriend>> onComplete);
+    IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, int[] targetUserIDs, Action<Memory<UserFriend>> onComplete);
     
     /// <summary>
     /// 好友推荐，每次点换一批查询一次

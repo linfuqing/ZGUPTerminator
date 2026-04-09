@@ -37,44 +37,69 @@ public enum ClientMessageType
 {
     None, 
     
+    /// <summary>
+    /// 好友或队友状态改变，接收消息为<see cref="ClientMessageRemotePlayerStatus"/>，无发送消息
+    /// </summary>
     Status, 
     
-    //匹配中
+    //匹配中，无接收消息，无发送消息
     Matching = NetworkRelayMessageType.Matching, 
-    //匹配成功
+    
+    /// <summary>
+    /// 匹配成功，接收消息为<see cref="ClientMessageMatchToRead"/>，发送消息为<see cref="ClientMessageMatchToSend"/>
+    /// </summary>
     Match = NetworkRelayMessageType.Match, 
-    //匹配失败&取消匹配
+    
+    /// <summary>
+    /// 匹配失败&取消匹配，无接收消息，发送消息为<see cref="ClientMessageMismatch"/>
+    /// </summary>
     Mismatch = NetworkRelayMessageType.Mismatch, 
 
     /// <summary>
-    /// 队伍已满，加入失败
+    /// 队伍已满，加入失败，无接收消息，无发送消息
     /// </summary>
     SquadJoinFail = NetworkRelayMessageType.JoinFailed, 
 
     /// <summary>
-    /// 加入队伍（先发送申请，要等待Read到之后才正式加入）
+    /// 加入队伍（先发送申请，要等待Read到之后才正式加入），接收消息为<see cref="ClientMessageSquadJoinToRead"/>，发送消息为<see cref="ClientMessageSquadJoinToSend"/>
     /// </summary>
     SquadJoin = NetworkRelayMessageType.Join, 
     /// <summary>
-    /// 离开队伍（不管是主动还是被踢，ReadMessageType之后才生效，本类型没有Message结构体，不需要ReadMessage）
+    /// 离开队伍（不管是主动还是被踢，ReadMessageType之后才生效），无接收消息，发送消息为<see cref="ClientMessageSquadLeave"/>
     /// </summary>
     SquadLeave = NetworkRelayMessageType.Leave, 
     
     /// <summary>
-    /// 踢人&被踢
+    /// 踢人&被踢，无接收消息，发送消息为<see cref="ClientMessageSquadDrop"/>
     /// </summary>
     SquadDrop = NetworkRelayMessageType.Drop, 
     
     /// <summary>
-    /// 组队邀请
+    /// 组队邀请，接收消息为<see cref="ClientMessageSquadInviteToRead"/>，发送消息为<see cref="ClientMessageSquadInviteToSend"/>
     /// </summary>
     SquadInvite = NetworkRelayMessageType.Query + 1, 
     
     /// <summary>
-    /// 聊天
+    /// 聊天，接收消息为<see cref="ClientMessageChatToRead"/>，发送消息为<see cref="ClientMessageChatToSend"/>
     /// </summary>
     Chat, 
     
+    /// <summary>
+    /// 申请好友，接收消息为<see cref="ClientMessageApplyFriendToRead"/>，发送消息为<see cref="ClientMessageApplyFriendToSend"/>
+    /// </summary>
+    ApplyFriend, 
+    
+    /// <summary>
+    /// 添加好友，先通过<see cref="ApplyFriend"/>接收到好友申请，同意添加时发送添加。添加成功后会收到接收消息。注意：这个消息可能会重复接收到，根据ID判断是不是同一个好友，并以短链接服务器为主。
+    /// 接收消息为<see cref="ClientMessageRemotePlayerStatus"/>，发送消息为<see cref="ClientMessageAddFriend"/>
+    /// </summary>
+    AddFriend = NetworkRelayMessageType.Add, 
+    
+    /// <summary>
+    /// 删除好友，无接收消息，发送消息为<see cref="ClientMessageRemoveFriend"/>
+    /// </summary>
+    RemoveFriend = NetworkRelayMessageType.Remove, 
+
     Page, 
     
     ChapterStage, 
@@ -153,40 +178,38 @@ public struct ClientMessageRemotePlayerStatus : IClientMessageToRead
     public bool isInGame => ((int)flag >> (int)ClientRemotePlayerFlag.Shift) != 0;
 }
 
-public struct ClientMessageMatchToRead : IClientMessageToRead
+public struct ClientMessageAddFriend : IClientMessageToSend
+{
+    public uint userID;
+
+    public ClientMessageType messageType => ClientMessageType.AddFriend;
+}
+
+public struct ClientMessageRemoveFriend : IClientMessageToSend
+{
+    public uint userID;
+    
+    public ClientMessageType messageType => ClientMessageType.RemoveFriend;
+}
+
+public struct ClientMessageApplyFriendToRead : IClientMessageToRead
 {
     /// <summary>
-    /// 对应<see cref="IUserData.LevelTicket.levelNames"/>的索引
+    /// 申请说明
     /// </summary>
-    public int level;
+    public FixedString512Bytes text;
+}
+
+public struct ClientMessageApplyFriendToSend : IClientMessageToSend
+{
+    public uint userID;
     
     /// <summary>
-    /// 匹配ID， 用这个来做随机种子进入相同的场景
+    /// 申请说明
     /// </summary>
-    public int matchID;
+    public FixedString512Bytes text;
 
-    public int GetSceneIndex(int sceneCount)
-    {
-        return matchID % sceneCount;
-        /*UnityEngine.Random.InitState(matchID);
-
-        return UnityEngine.Random.Range(0, sceneCount);*/
-    }
-}
-
-public struct ClientMessageMatchToSend : IClientMessageToSend
-{
-    /// <summary>
-    /// 段位
-    /// </summary>
-    public int level;
-
-    public ClientMessageType messageType => ClientMessageType.Match;
-}
-
-public struct ClientMessageMismatchToSend : IClientMessageToSend
-{
-    public ClientMessageType messageType => ClientMessageType.Mismatch;
+    public ClientMessageType messageType => ClientMessageType.ApplyFriend;
 }
 
 public struct ClientMessageSquadJoinToRead : IClientMessageToRead
@@ -253,6 +276,42 @@ public struct ClientMessageSquadInviteToSend : IClientMessageToSend
     public FixedString512Bytes text;
     
     public ClientMessageType messageType => ClientMessageType.SquadInvite;
+}
+
+public struct ClientMessageMatchToRead : IClientMessageToRead
+{
+    /// <summary>
+    /// 对应<see cref="IUserData.LevelTicket.levelNames"/>的索引
+    /// </summary>
+    public int level;
+    
+    /// <summary>
+    /// 匹配ID， 用这个来做随机种子进入相同的场景
+    /// </summary>
+    public int matchID;
+
+    public int GetSceneIndex(int sceneCount)
+    {
+        return matchID % sceneCount;
+        /*UnityEngine.Random.InitState(matchID);
+
+        return UnityEngine.Random.Range(0, sceneCount);*/
+    }
+}
+
+public struct ClientMessageMatchToSend : IClientMessageToSend
+{
+    /// <summary>
+    /// 段位
+    /// </summary>
+    public int level;
+
+    public ClientMessageType messageType => ClientMessageType.Match;
+}
+
+public struct ClientMessageMismatch : IClientMessageToSend
+{
+    public ClientMessageType messageType => ClientMessageType.Mismatch;
 }
 
 public struct ClientMessageChatToRead : IClientMessageToRead
@@ -650,10 +709,21 @@ public class ClientData : MonoBehaviour, IClientData
                         case NetworkRelayMessageType.Disconnect:
                         case NetworkRelayMessageType.Connect:
                         case NetworkRelayMessageType.Status:
+                        case NetworkRelayMessageType.Add:
+                        case NetworkRelayMessageType.Remove:
                         {
-                            var channelFlag = (int)NetworkRelayMessageType.Disconnect == type
-                                ? 0
-                                : reader.ReadPackedInt(streamCompressionModel);
+                            int channelFlag;
+                            switch (type)
+                            {
+                                case (int)NetworkRelayMessageType.Disconnect:
+                                case (int)NetworkRelayMessageType.Remove:
+                                    channelFlag = 0;
+                                    break;
+                                default:
+                                    channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                                    break;
+                            }
+                            
                             header.userID = reader.ReadPackedUInt(streamCompressionModel);
                             if (header.userID == LevelPlayerShared<RemotePlayer>.id)
                             {
@@ -661,17 +731,45 @@ public class ClientData : MonoBehaviour, IClientData
 
                                 header.userName = levelPlayerHeader.name;
                                 header.userAvatar = levelPlayerHeader.avatar;
-
-                                ClientMessageRemotePlayerStatus message;
-                                message.flag = (ClientRemotePlayerFlag)channelFlag;
-
-                                __Save(message);
-
-                                return (int)ClientMessageType.Status;
+                            }
+                            else
+                            {
+                                header.userName = default;
+                                header.userAvatar = default;
                             }
 
-                            break;
+                            ClientMessageRemotePlayerStatus message;
+                            message.flag = (ClientRemotePlayerFlag)channelFlag;
+
+                            __Save(message);
+
+                            switch ((NetworkRelayMessageType)type)
+                            {
+                                case NetworkRelayMessageType.Add:
+                                case NetworkRelayMessageType.Remove:
+                                    return type;
+                                default:
+                                    return (int)ClientMessageType.Status;
+                            }
                         }
+                        case NetworkRelayMessageType.Matching:
+                        case NetworkRelayMessageType.Mismatch:
+                            header = __header;
+                            return type;
+                        case NetworkRelayMessageType.Match:
+                        {
+                            header = __header;
+                            int match = reader.ReadPackedInt(streamCompressionModel), distance = reader.ReadPackedInt(streamCompressionModel);
+                            ClientMessageMatchToRead message;
+                            message.matchID = match;
+                            message.level = distance;
+                            __Save(message);
+
+                            LevelShared.match = match;
+                            
+                            print($"[ClientData]Match {match}, distance {distance}");
+                        }
+                            return (int)ClientMessageType.Match;
                         case NetworkRelayMessageType.Create:
                         case NetworkRelayMessageType.Join:
                         case NetworkRelayMessageType.Leave:
@@ -765,24 +863,6 @@ public class ClientData : MonoBehaviour, IClientData
                         case NetworkRelayMessageType.JoinFailed:
                             header = __header;
                             return (int)ClientMessageType.SquadJoinFail;
-                        case NetworkRelayMessageType.Matching:
-                        case NetworkRelayMessageType.Mismatch:
-                            header = __header;
-                            return type;
-                        case NetworkRelayMessageType.Match:
-                        {
-                            header = __header;
-                            int match = reader.ReadPackedInt(streamCompressionModel), distance = reader.ReadPackedInt(streamCompressionModel);
-                            ClientMessageMatchToRead message;
-                            message.matchID = match;
-                            message.level = distance;
-                            __Save(message);
-
-                            LevelShared.match = match;
-                            
-                            print($"[ClientData]Match {match}, distance {distance}");
-                        }
-                            return (int)ClientMessageType.Match;
                         case NetworkRelayMessageType.Query:
                             break;
                         default:
@@ -829,6 +909,16 @@ public class ClientData : MonoBehaviour, IClientData
                                     __Save(message);
                                     return (int)ClientMessageType.Chat;
                                 }
+                                case ClientMessageType.ApplyFriend:
+                                {
+                                    header = new ClientHeader(ref reader, streamCompressionModel);
+
+                                    ClientMessageApplyFriendToRead message;
+                                    message.text = reader.ReadFixedString512();
+                                    __Save(message);
+                                    return (int)ClientMessageType.ApplyFriend;
+                                }
+                                    break;
                                 /*case ClientMessageType.PlayerProperty:
                                     var playerProperty = new ClientMessagePlayerProperty(ref reader);
                                     LevelPlayerShared<RemotePlayer>.property = playerProperty.value;
@@ -926,31 +1016,33 @@ public class ClientData : MonoBehaviour, IClientData
         var sendBuffer = this.driver.sendBuffer;
         switch (type)
         {
-            case ClientMessageType.Match:
+            case (ClientMessageType)NetworkRelayMessageType.Status:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var message = __Load<ClientMessageMatchToSend>();
-                    NetworkRelayMatch match;
-                    match.playerCount = 2;
-                    match.distance = message.level;
-                    match.distanceTime = 3.0f;
-
                     var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)NetworkRelayMessageType.Match, streamCompressionModel);
-                    match.Write(ref writer, streamCompressionModel);
+                    writer.WritePackedInt((int)type, streamCompressionModel);
+                    writer.WritePackedInt(new DataStreamReader(__bytes.AsArray()).ReadPackedInt(streamCompressionModel), streamCompressionModel);
 
-                    //squadInviteStatus = SquadInviteStatus.SquadCreating;
                     sendBuffer.EndWrite(writer);
                 }
                 break;
-            case ClientMessageType.Mismatch:
+            case ClientMessageType.AddFriend:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, streamCompressionModel);
+                    writer.WritePackedInt((int)NetworkRelayMessageType.Add, streamCompressionModel);
+                    writer.WritePackedInt((int)__Load<ClientMessageAddFriend>().userID, streamCompressionModel);
                     sendBuffer.EndWrite(writer);
                 }
-
+                break;
+            case ClientMessageType.RemoveFriend:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)NetworkRelayMessageType.Remove, streamCompressionModel);
+                    writer.WritePackedInt((int)__Load<ClientMessageRemoveFriend>().userID, streamCompressionModel);
+                    sendBuffer.EndWrite(writer);
+                }
                 break;
             case ClientMessageType.SquadJoin:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
@@ -996,6 +1088,32 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
+            case ClientMessageType.Match:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var message = __Load<ClientMessageMatchToSend>();
+                    NetworkRelayMatch match;
+                    match.playerCount = 2;
+                    match.distance = message.level;
+                    match.distanceTime = 3.0f;
+
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)NetworkRelayMessageType.Match, streamCompressionModel);
+                    match.Write(ref writer, streamCompressionModel);
+
+                    //squadInviteStatus = SquadInviteStatus.SquadCreating;
+                    sendBuffer.EndWrite(writer);
+                }
+                break;
+            case ClientMessageType.Mismatch:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, streamCompressionModel);
+                    sendBuffer.EndWrite(writer);
+                }
+
+                break;
             case ClientMessageType.Chat:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
@@ -1010,13 +1128,17 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
-            case (ClientMessageType)NetworkRelayMessageType.Status:
+            case ClientMessageType.ApplyFriend:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)type, streamCompressionModel);
-                    writer.WritePackedInt(new DataStreamReader(__bytes.AsArray()).ReadPackedInt(streamCompressionModel), streamCompressionModel);
+                    var temp = __Load<ClientMessageApplyFriendToSend>();
+                    __header.Write(
+                        ref writer, 
+                        StreamCompressionModel.Default, 
+                        (int)ClientMessageType.ApplyFriend, temp.userID.RelayType());
 
+                    writer.WriteFixedString512(temp.text);
+                    
                     sendBuffer.EndWrite(writer);
                 }
                 break;

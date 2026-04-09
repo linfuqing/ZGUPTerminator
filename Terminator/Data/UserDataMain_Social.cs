@@ -15,7 +15,6 @@ public partial class UserDataMain
             result.name = "客户端测试";
             result.avatar = string.Empty;
             result.chapter = UserData.chapter;
-            result.stage = 0;
             result.power = UnityEngine.Random.Range(10000, 20000);
             result.ticks = DateTime.UtcNow.Ticks;
 
@@ -307,6 +306,7 @@ public partial class UserDataMain
         uint userID, 
         uint levelID, 
         int stage, 
+        int [] targetUserIDs, 
         Action<Memory<UserFriend>> onComplete)
     {
         yield return __CreateEnumerator();
@@ -471,9 +471,10 @@ public partial class UserData
         return UserDataMain.instance.QueryFriends(userID, onComplete);
     }
 
-    public IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, Action<Memory<UserFriend>> onComplete)
+    public IEnumerator QueryFriendsToSquadInvite(uint userID, uint levelID, int stage, 
+        int[] targetUserIDs, Action<Memory<UserFriend>> onComplete)
     {
-        return UserDataMain.instance.QueryFriendsToSquadInvite(userID, levelID, stage, onComplete);
+        return UserDataMain.instance.QueryFriendsToSquadInvite(userID, levelID, stage, targetUserIDs, onComplete);
     }
     
     public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)
@@ -515,7 +516,7 @@ public partial class UserData
     {
         return UserDataMain.instance.FriendDelete(userID, targetUserID, onComplete);
     }
-
+    
     public IEnumerator UpdatePowerForFriends(uint userID, int power, Action<bool> onComplete)
     {
         return UserDataMain.instance.UpdatePowerForFriends(userID, power, onComplete);
