@@ -14,6 +14,8 @@ public partial class UserDataMain
             result.id = (uint)UnityEngine.Random.Range(1, int.MaxValue);
             result.name = "客户端测试";
             result.avatar = string.Empty;
+            result.chapter = UserData.chapter;
+            result.stage = 0;
             result.power = UnityEngine.Random.Range(10000, 20000);
             result.ticks = DateTime.UtcNow.Ticks;
 
@@ -28,7 +30,6 @@ public partial class UserDataMain
         //客户端没有这种信息，取自己的做展示
         IUserData.Friend result;
 
-        result.chapter = UserData.chapter;
         result.rankedPoints = rankedPoints;
         
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
@@ -305,7 +306,8 @@ public partial class UserDataMain
     public IEnumerator QueryFriendsToSquadInvite(
         uint userID, 
         uint levelID, 
-        int stage, Action<Memory<UserFriend>> onComplete)
+        int stage, 
+        Action<Memory<UserFriend>> onComplete)
     {
         yield return __CreateEnumerator();
 

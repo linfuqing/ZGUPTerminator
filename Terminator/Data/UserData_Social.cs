@@ -6,6 +6,16 @@ public struct UserFriend
     public string name;
     public string avatar;
     public uint id;
+    
+    /// <summary>
+    /// 到达的最大章节数
+    /// </summary>
+    public int chapter;
+    /// <summary>
+    /// 到达的最大章节数下的最大小关
+    /// </summary>
+    public int stage;
+    
     /// <summary>
     /// 战力
     /// </summary>
@@ -22,6 +32,8 @@ public struct UserFriend
         name = string.Empty;
         avatar = string.Empty;
         id = uint.Parse(parameters[0]);
+        chapter = 1;
+        stage = 0;
         power = 0;
         ticks = DateTime.UtcNow.Ticks;
     }
@@ -36,7 +48,6 @@ public partial interface IUserData
 {
     public struct Friend
     {
-        public int chapter;
         public int rankedPoints;
         public UserRole role;
         public UserCard[] cards;

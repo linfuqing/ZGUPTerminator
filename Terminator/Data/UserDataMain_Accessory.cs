@@ -1023,6 +1023,9 @@ public partial class UserDataMain
 
     private bool __CreateAccessory(uint id, int index, int stage)
     {
+        if (__accessoryIDToInfos != null && __accessoryIDToInfos.ContainsKey(id))
+            return false;
+        
         string accessoryName = _accessories[index].name, 
             key = $"{NAME_SPACE_USER_ACCESSORY_IDS}{accessoryName}{UserData.SEPARATOR}{stage}", 
             idsString = PlayerPrefs.GetString(key);
