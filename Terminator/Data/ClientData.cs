@@ -100,7 +100,7 @@ public enum ClientMessageType
     /// </summary>
     RemoveFriend = NetworkRelayMessageType.Remove, 
 
-    Page, 
+    Page = ApplyFriend + 1, 
     
     ChapterStage, 
     Play, 
