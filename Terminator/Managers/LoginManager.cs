@@ -176,11 +176,13 @@ public sealed class LoginManager : MonoBehaviour
 
         public void Dispose(float destroyTime = 0.0f)
         {
+            Debug.Log($"[Loader]Dispose {assetObject.assetName}");
             assetObject?.Dispose(destroyTime, false);
         }
 
         public void Load(AssetManager assetManager)
         {
+            Debug.Log($"[Loader]Load {assetObject.assetName}");
             assetObject?.Load(assetManager);
         }
         
@@ -1256,7 +1258,8 @@ public sealed class LoginManager : MonoBehaviour
                                             }
                                             else
                                             {
-                                                __sceneActiveDepth = -1;
+                                                //__sceneActiveDepth = -1;
+                                                sceneUnlocked[currentSceneIndex] = true;
 
                                                 var progressbar = GameProgressbar.instance;
                                                 bool isProgressing = progressbar != null && progressbar.isProgressing;
