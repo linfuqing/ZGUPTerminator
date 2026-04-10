@@ -176,13 +176,17 @@ public sealed class LoginManager : MonoBehaviour
 
         public void Dispose(float destroyTime = 0.0f)
         {
-            Debug.Log($"[Loader]Dispose {assetObject.assetName}");
+            if(assetObject != null)
+                Debug.Log($"[Loader]Dispose {assetObject.assetName}");
+            
             assetObject?.Dispose(destroyTime, false);
         }
 
         public void Load(AssetManager assetManager)
         {
-            Debug.Log($"[Loader]Load {assetObject.assetName}");
+            if(assetObject != null)
+                Debug.Log($"[Loader]Load {assetObject.assetName}");
+            
             assetObject?.Load(assetManager);
         }
         
