@@ -1491,8 +1491,8 @@ public sealed class LoginManager : MonoBehaviour
         var scrollRect = parent.GetComponentInParent<ScrollRectComponentEx>(true);
         if (scrollRect != null)
         {
-            movedLevelIndex = Mathf.Max(0, movedLevelIndex);
-            if (scrollRect.index[scrollRect.axis] == movedLevelIndex)
+            int targetIndex = Mathf.Max(0, movedLevelIndex);
+            if (scrollRect.index[scrollRect.axis] == targetIndex)
             {
                 /*var submitHandlers = scrollRect.submitHandlers;
                 var submitHandler = submitHandlers != null && submitHandlers.Count > movedLevelIndex
@@ -1500,10 +1500,10 @@ public sealed class LoginManager : MonoBehaviour
                     : null;
                 if(submitHandler != null)
                     submitHandler.OnSubmit(null);*/
-                __levelStyles[movedLevelIndex].toggle?.onValueChanged.Invoke(true);
+                __levelStyles[targetIndex].toggle?.onValueChanged.Invoke(true);
             }
             
-            scrollRect.MoveTo(movedLevelIndex);
+            scrollRect.MoveTo(targetIndex);
         }
 
         if (isHot)
