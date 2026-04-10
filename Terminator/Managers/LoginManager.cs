@@ -1279,7 +1279,6 @@ public sealed class LoginManager : MonoBehaviour
                                             else
                                             {
                                                 //__sceneActiveDepth = -1;
-                                                sceneUnlocked[currentSceneIndex] = true;
 
                                                 var progressbar = GameProgressbar.instance;
                                                 bool isProgressing = progressbar != null && progressbar.isProgressing;
@@ -2134,8 +2133,17 @@ public sealed class LoginManager : MonoBehaviour
 
                 yield return null;
             } while (RemotePlayer.Status.Joined != RemotePlayer.status);
-            
-            RemotePlayer.version = LevelPlayerShared<RemotePlayer>.version;
+
+            if (Status.Start != __status)
+            {
+                _onEnd?.Invoke();
+
+                yield break;
+            }
+
+            RemotePlayer.version = RemotePlayer.Status.Joined == RemotePlayer.status
+                ? LevelPlayerShared<RemotePlayer>.version
+                : 0;
         }
         else
         {
