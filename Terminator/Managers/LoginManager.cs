@@ -940,11 +940,6 @@ public sealed class LoginManager : MonoBehaviour
                     
                     __selectedUserLevelID = selectedLevel.id;
 
-                    if (movedLevelIndex == userLevelIndex)
-                        movedLevelIndex = -1;
-                    /*if (selectedLevelIndex == userLevelIndex)
-                        selectedLevelIndex = -1;*/
-
                     int numStages = selectedLevel.stages == null ? 0 : selectedLevel.stages.Length;
                     if (numStages > 0)
                     {
@@ -1148,10 +1143,18 @@ public sealed class LoginManager : MonoBehaviour
 
                                                             bool isSend = __targetUserStageID == stage.id;
                                                             if (isSend)
+                                                            {
                                                                 __targetUserStageID = 0;
+                                                                
+                                                                movedLevelIndex = -1;
+                                                            }
                                                             else
+                                                            {
                                                                 isSend = __targetUserStageID == 0;
-                                                            
+                                                                if (isSend && movedLevelIndex == userLevelIndex)
+                                                                    movedLevelIndex = -1;
+                                                            }
+
                                                             if(isSend && ReplyMessageShared.isHost)
                                                                 SendChapterStageMessage();
                                                         }
@@ -1225,7 +1228,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 movedLevelIndex != -1 && movedLevelIndex != userLevelIndex || 
                                                 LevelPlayerShared<RemotePlayer>.isOnline)
                                             {
-                                                movedLevelIndex = -1;
+                                                //movedLevelIndex = -1;
 
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
@@ -1284,7 +1287,7 @@ public sealed class LoginManager : MonoBehaviour
                                                     }
                                                 }
                                             }
-
+                                            
                                             /*if (isLevelActive)
                                             {
                                                 if (finalLevelIndex == userLevelIndex)
