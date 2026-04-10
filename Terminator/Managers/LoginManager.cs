@@ -579,10 +579,15 @@ public sealed class LoginManager : MonoBehaviour
         else
             return;
         
-        int selectedLevelIndex = __levelStyles.Length - 1;
         var scrollRect = _style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
-        if (scrollRect != null && scrollRect.selectedIndex[scrollRect.axis] != selectedLevelIndex)
+        if (scrollRect != null/* && scrollRect.selectedIndex[scrollRect.axis] != selectedLevelIndex*/)
+        {
+            int selectedLevelIndex = __levelStyles.Length - 1;
+            if (scrollRect.index[scrollRect.axis] == selectedLevelIndex)
+                __levelStyles[selectedLevelIndex].toggle?.onValueChanged.Invoke(true);
+            
             scrollRect.MoveTo(selectedLevelIndex);
+        }
         else
         {
             foreach (var levelStyle in __levelStyles)
@@ -1487,7 +1492,7 @@ public sealed class LoginManager : MonoBehaviour
         if (scrollRect != null)
         {
             movedLevelIndex = Mathf.Max(0, movedLevelIndex);
-            if (scrollRect.selectedIndex[scrollRect.axis] == movedLevelIndex)
+            if (scrollRect.index[scrollRect.axis] == movedLevelIndex)
             {
                 /*var submitHandlers = scrollRect.submitHandlers;
                 var submitHandler = submitHandlers != null && submitHandlers.Count > movedLevelIndex
@@ -2173,7 +2178,7 @@ public sealed class LoginManager : MonoBehaviour
         if (scrollRect != null)
         {
             int levelIndex = levelStage.levelIndex;
-            if (scrollRect.selectedIndex[scrollRect.axis] == levelIndex)
+            if (scrollRect.index[scrollRect.axis] == levelIndex)
             {
                 /*var submitHandlers = scrollRect.submitHandlers;
                 var submitHandler = submitHandlers != null && submitHandlers.Count > levelIndex
