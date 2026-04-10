@@ -40,7 +40,13 @@ public enum ClientMessageType
     /// <summary>
     /// 好友或队友状态改变，接收消息为<see cref="ClientMessageRemotePlayerStatus"/>，无发送消息
     /// </summary>
-    Status, 
+    Status = NetworkRelayMessageType.Status, 
+    
+    /// <summary>
+    /// 申请匹配，队长先发送ApplyMatch，队员接收后发送<see cref="ApplyMatch"/>同意、<see cref="Mismatch"/>拒绝或者<see cref="ApplyMatchFail"/>门票不足，当队员发送同意时，匹配将自动开始。
+    /// 无接收消息，发送消息为<see cref="ClientMessageApplyMatch"/>
+    /// </summary>
+    ApplyMatch = ApplyFriend + 1,
     
     //匹配中，无接收消息，无发送消息
     Matching = NetworkRelayMessageType.Matching, 
@@ -54,6 +60,12 @@ public enum ClientMessageType
     /// 匹配失败&取消匹配，无接收消息，发送消息为<see cref="ClientMessageMismatch"/>
     /// </summary>
     Mismatch = NetworkRelayMessageType.Mismatch, 
+    
+    /// <summary>
+    /// 门票不足
+    /// 无接收消息，发送消息为<see cref="ClientMessageApplyMatchFail"/>
+    /// </summary>
+    ApplyMatchFail = ApplyMatch + 1, 
 
     /// <summary>
     /// 队伍已满，加入失败，无接收消息，无发送消息
@@ -100,7 +112,11 @@ public enum ClientMessageType
     /// </summary>
     RemoveFriend = NetworkRelayMessageType.Remove, 
 
-    Page = ApplyFriend + 1, 
+    /// <summary>
+    /// 切换到对应页面，用来同步页面切换（排位赛或者战斗等）
+    /// 接收消息，接收和发送消息为<see cref="ClientMessagePage"/>
+    /// </summary>
+    Page = ApplyMatchFail + 1, 
     
     ChapterStage, 
     Play, 
@@ -312,6 +328,16 @@ public struct ClientMessageMatchToSend : IClientMessageToSend
 public struct ClientMessageMismatch : IClientMessageToSend
 {
     public ClientMessageType messageType => ClientMessageType.Mismatch;
+}
+
+public struct ClientMessageApplyMatch : IClientMessageToSend
+{
+    public ClientMessageType messageType => ClientMessageType.ApplyMatch;
+}
+
+public struct ClientMessageApplyMatchFail : IClientMessageToSend
+{
+    public ClientMessageType messageType => ClientMessageType.ApplyMatchFail;
 }
 
 public struct ClientMessageChatToRead : IClientMessageToRead
@@ -918,7 +944,6 @@ public class ClientData : MonoBehaviour, IClientData
                                     __Save(message);
                                     return (int)ClientMessageType.ApplyFriend;
                                 }
-                                    break;
                                 /*case ClientMessageType.PlayerProperty:
                                     var playerProperty = new ClientMessagePlayerProperty(ref reader);
                                     LevelPlayerShared<RemotePlayer>.property = playerProperty.value;
@@ -1031,7 +1056,7 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Add, streamCompressionModel);
-                    writer.WritePackedInt((int)__Load<ClientMessageAddFriend>().userID, streamCompressionModel);
+                    writer.WritePackedUInt(__Load<ClientMessageAddFriend>().userID, streamCompressionModel);
                     sendBuffer.EndWrite(writer);
                 }
                 break;
@@ -1040,7 +1065,7 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Remove, streamCompressionModel);
-                    writer.WritePackedInt((int)__Load<ClientMessageRemoveFriend>().userID, streamCompressionModel);
+                    writer.WritePackedUInt(__Load<ClientMessageRemoveFriend>().userID, streamCompressionModel);
                     sendBuffer.EndWrite(writer);
                 }
                 break;
