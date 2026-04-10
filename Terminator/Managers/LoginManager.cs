@@ -590,8 +590,17 @@ public sealed class LoginManager : MonoBehaviour
         {
             int selectedLevelIndex = __levelStyles.Length - 1;
             if (scrollRect.index[scrollRect.axis] == selectedLevelIndex)
-                __levelStyles[selectedLevelIndex].toggle?.onValueChanged.Invoke(true);
-            
+            {
+                var toggle = __levelStyles[selectedLevelIndex].toggle;
+                if (toggle != null)
+                {
+                    if (toggle.isOn)
+                        toggle.onValueChanged.Invoke(true);
+                    else
+                        toggle.isOn = true;
+                }
+            }
+
             scrollRect.MoveTo(selectedLevelIndex);
         }
         else
@@ -1501,13 +1510,14 @@ public sealed class LoginManager : MonoBehaviour
             int targetIndex = Mathf.Max(0, movedLevelIndex);
             if (scrollRect.index[scrollRect.axis] == targetIndex)
             {
-                /*var submitHandlers = scrollRect.submitHandlers;
-                var submitHandler = submitHandlers != null && submitHandlers.Count > movedLevelIndex
-                    ? submitHandlers[movedLevelIndex]
-                    : null;
-                if(submitHandler != null)
-                    submitHandler.OnSubmit(null);*/
-                __levelStyles[targetIndex].toggle?.onValueChanged.Invoke(true);
+                var toggle = __levelStyles[targetIndex].toggle;
+                if (toggle != null)
+                {
+                    if (toggle.isOn)
+                        toggle.onValueChanged.Invoke(true);
+                    else
+                        toggle.isOn = true;
+                }
             }
             
             scrollRect.MoveTo(targetIndex);
@@ -2187,13 +2197,14 @@ public sealed class LoginManager : MonoBehaviour
             int levelIndex = levelStage.levelIndex;
             if (scrollRect.index[scrollRect.axis] == levelIndex)
             {
-                /*var submitHandlers = scrollRect.submitHandlers;
-                var submitHandler = submitHandlers != null && submitHandlers.Count > levelIndex
-                    ? submitHandlers[levelIndex]
-                    : null;
-                if(submitHandler != null)
-                    submitHandler.OnSubmit(null);*/
-                __levelStyles[levelIndex].toggle?.onValueChanged.Invoke(true);
+                var toggle = __levelStyles[levelIndex].toggle;
+                if (toggle != null)
+                {
+                    if (toggle.isOn)
+                        toggle.onValueChanged.Invoke(true);
+                    else
+                        toggle.isOn = true;
+                }
             }
             
             scrollRect.MoveTo(levelIndex);
