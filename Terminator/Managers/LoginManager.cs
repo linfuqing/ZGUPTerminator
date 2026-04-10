@@ -731,8 +731,15 @@ public sealed class LoginManager : MonoBehaviour
         
         if (__levelStyles != null)
         {
+            Toggle toggle;
             foreach (var levelStyle in __levelStyles)
+            {
+                toggle = levelStyle.toggle;
+                if(toggle != null)
+                    toggle.group = null;
+                
                 Destroy(levelStyle.gameObject);
+            }
         }
 
         if (__loaders == null)

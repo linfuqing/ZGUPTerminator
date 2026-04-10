@@ -515,15 +515,15 @@ public partial class LevelManager : MonoBehaviour
                         }
                     }
                 }
+            }
 
-                if (__stageRewardStyles != null)
-                {
-                    int totalStageRewardCount = 0;
-                    foreach (var pair in __stageRewardStyles)
-                        totalStageRewardCount += pair.Value.count;
+            if (__stageRewardStyles != null)
+            {
+                int totalStageRewardCount = 0;
+                foreach (var pair in __stageRewardStyles)
+                    totalStageRewardCount += pair.Value.count;
                     
-                    _onTotalStageRewardCount?.Invoke(totalStageRewardCount.ToString());
-                }
+                _onTotalStageRewardCount?.Invoke(totalStageRewardCount.ToString());
             }
         }
         
