@@ -944,12 +944,12 @@ public class ClientData : MonoBehaviour, IClientData
                                     __Save(message);
                                     return (int)ClientMessageType.ApplyFriend;
                                 }
-                                /*case ClientMessageType.PlayerProperty:
-                                    var playerProperty = new ClientMessagePlayerProperty(ref reader);
-                                    LevelPlayerShared<RemotePlayer>.property = playerProperty.value;
-
-                                    RemotePlayer.status = RemotePlayer.Status.Joined;
-                                    break;*/
+                                case ClientMessageType.ApplyMatch:
+                                    header = __header;
+                                    return (int)ClientMessageType.ApplyMatch;
+                                case ClientMessageType.ApplyMatchFail:
+                                    header = __header;
+                                    return (int)ClientMessageType.ApplyMatchFail;
                                 case ClientMessageType.ChapterStage:
                                     LoginManager.instance?.MoveTo(new ClientMessageChapterStage(ref reader, streamCompressionModel).userStageID);
                                     break;
@@ -1131,11 +1131,23 @@ public class ClientData : MonoBehaviour, IClientData
                 }
                 break;
             case ClientMessageType.Mismatch:
-                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                if (ReplyMessageShared.isHost)
                 {
-                    var streamCompressionModel = StreamCompressionModel.Default;
-                    writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, streamCompressionModel);
-                    sendBuffer.EndWrite(writer);
+                    if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                    {
+                        var streamCompressionModel = StreamCompressionModel.Default;
+                        writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, streamCompressionModel);
+                        sendBuffer.EndWrite(writer);
+                    }
+                }
+                else
+                {
+                    if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                    {
+                        writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
+                    
+                        sendBuffer.EndWrite(writer);
+                    }
                 }
 
                 break;
