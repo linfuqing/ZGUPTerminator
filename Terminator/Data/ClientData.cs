@@ -69,6 +69,7 @@ public enum ClientMessageType
 
     /// <summary>
     /// 拒绝匹配
+    /// 无接收消息，发送消息为<see cref="ClientMessageRejectMatch"/>
     /// </summary>
     RejectMatch = ApplyMatchFail + 1, 
 
@@ -960,6 +961,10 @@ public class ClientData : MonoBehaviour, IClientData
                                 case ClientMessageType.ApplyMatchFail:
                                     header = __header;
                                     return (int)ClientMessageType.ApplyMatchFail;
+                                case ClientMessageType.RejectMatch:
+                                    header = __header;
+                                    
+                                    return (int)ClientMessageType.RejectMatch;
                                 case ClientMessageType.Page:
                                     header = __header;
                                     
