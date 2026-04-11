@@ -828,6 +828,8 @@ public sealed class LoginManager : MonoBehaviour
             isSelected = false;
 
             isUnlock = true;
+
+            maxMultiplayerStageID = 0;
             
             numStages = userLevel.stages == null ? 0 : userLevel.stages.Length;
             for (j = 0; j < numStages; ++j)
@@ -874,17 +876,20 @@ public sealed class LoginManager : MonoBehaviour
                 }
             }
 
-            isMoved = isSelected;
-            if (__selectedUserLevelID == 0)
-                isMoved |= __sceneActiveDepth == 0;
-            else if (__sceneActiveDepth == 0)
-                isMoved = __selectedUserLevelID == userLevel.id;
-            else if (isMoved && movedLevelIndex != -1 &&
-                     levelChapters.levels[movedLevelIndex].id == __selectedUserLevelID)
-                isMoved = false;
+            if (ReplyMessageShared.remotePlayerCount < 1 || ReplyMessageShared.isHost || maxMultiplayerStageID != 0)
+            {
+                isMoved = isSelected;
+                if (__selectedUserLevelID == 0)
+                    isMoved |= __sceneActiveDepth == 0;
+                else if (__sceneActiveDepth == 0)
+                    isMoved = __selectedUserLevelID == userLevel.id;
+                else if (isMoved && movedLevelIndex != -1 &&
+                         levelChapters.levels[movedLevelIndex].id == __selectedUserLevelID)
+                    isMoved = false;
 
-            if (isMoved)
-                movedLevelIndex = userLevelIndex;
+                if (isMoved)
+                    movedLevelIndex = userLevelIndex;
+            }
 
             if (__selectedUserLevelID == 0 || __selectedUserLevelID == userLevel.id)
                 isSelected = true;
@@ -2270,7 +2275,6 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
 
-    
     void OnDestroy()
     {
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
