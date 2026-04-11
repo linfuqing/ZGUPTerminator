@@ -1930,6 +1930,9 @@ public sealed class LoginManager : MonoBehaviour
                 {
                     if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                     {
+                        if (RemotePlayer.Status.StandBy == RemotePlayer.status)
+                            RemotePlayer.status = RemotePlayer.Status.Joined;
+                        
                         if (RemotePlayer.Status.Joined != RemotePlayer.status)
                         {
                             __status = Status.None;
