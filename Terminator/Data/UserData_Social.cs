@@ -13,6 +13,11 @@ public struct UserFriend
     public int chapter;
 
     /// <summary>
+    /// 战力
+    /// </summary>
+    public int power;
+
+    /// <summary>
     /// 最后登录时间
     /// </summary>
     public long ticks;
@@ -25,6 +30,7 @@ public struct UserFriend
         avatar = string.Empty;
         id = uint.Parse(parameters[0]);
         chapter = 1;
+        power = 0;
         ticks = DateTime.UtcNow.Ticks;
     }
 

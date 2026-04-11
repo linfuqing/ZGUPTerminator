@@ -15,6 +15,7 @@ public partial class UserDataMain
             result.name = "客户端测试";
             result.avatar = string.Empty;
             result.chapter = UserData.chapter;
+            result.power = UnityEngine.Random.Range(10000, 20000);
             result.ticks = DateTime.UtcNow.Ticks;
 
             return result;
