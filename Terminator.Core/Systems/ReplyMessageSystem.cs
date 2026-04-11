@@ -670,7 +670,8 @@ public partial struct ReplyMessageSystem : ISystem
         collect.outputs = messages;
         var jobHandle = collect.ScheduleByRef(state.Dependency);
 
-        if (LevelPlayerShared<RemotePlayer>.version == RemotePlayer.version)
+        if (LevelPlayerShared<RemotePlayer>.isOnline && 
+            LevelPlayerShared<RemotePlayer>.channelStatus == LevelPlayerShared<LocalPlayer>.channelStatus)
         {
             var sendBuffer = driver.sendBuffer.AsParallelWriter();
 
