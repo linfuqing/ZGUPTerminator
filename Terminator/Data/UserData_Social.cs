@@ -8,15 +8,6 @@ public struct UserFriend
     public uint id;
     
     /// <summary>
-    /// 到达的最大章节数
-    /// </summary>
-    public int chapter;
-    
-    /// <summary>
-    /// 战力
-    /// </summary>
-    public int power;
-    /// <summary>
     /// 最后登录时间
     /// </summary>
     public long ticks;
@@ -28,8 +19,6 @@ public struct UserFriend
         name = string.Empty;
         avatar = string.Empty;
         id = uint.Parse(parameters[0]);
-        chapter = 1;
-        power = 0;
         ticks = DateTime.UtcNow.Ticks;
     }
 
@@ -43,7 +32,21 @@ public partial interface IUserData
 {
     public struct Friend
     {
+        /// <summary>
+        /// 到达的最大章节数
+        /// </summary>
+        public int chapter;
+    
+        /// <summary>
+        /// 战力
+        /// </summary>
+        public int power;
+        
+        /// <summary>
+        /// 排位赛积分
+        /// </summary>
         public int rankedPoints;
+        
         public UserRole role;
         public UserCard[] cards;
         public UserCardBond[] cardBonds;
