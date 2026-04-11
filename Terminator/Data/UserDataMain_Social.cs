@@ -14,6 +14,7 @@ public partial class UserDataMain
             result.id = (uint)UnityEngine.Random.Range(1, int.MaxValue);
             result.name = "客户端测试";
             result.avatar = string.Empty;
+            result.chapter = UserData.chapter;
             result.ticks = DateTime.UtcNow.Ticks;
 
             return result;
@@ -27,7 +28,6 @@ public partial class UserDataMain
         //客户端没有这种信息，取自己的做展示
         IUserData.Friend result;
 
-        result.chapter = UserData.chapter;
         result.power = UnityEngine.Random.Range(10000, 20000);
         result.rankedPoints = rankedPoints;
         
