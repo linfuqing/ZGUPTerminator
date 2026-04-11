@@ -950,6 +950,13 @@ public class ClientData : MonoBehaviour, IClientData
                                 case ClientMessageType.ApplyMatchFail:
                                     header = __header;
                                     return (int)ClientMessageType.ApplyMatchFail;
+                                case ClientMessageType.Page:
+                                    header = __header;
+                                    
+                                    ClientMessagePage page;
+                                    page.value = reader.ReadPackedInt(streamCompressionModel);
+                                    __Save(page);
+                                    return (int)ClientMessageType.Page;
                                 case ClientMessageType.ChapterStage:
                                     LoginManager.instance?.MoveTo(new ClientMessageChapterStage(ref reader, streamCompressionModel).userStageID);
                                     break;
