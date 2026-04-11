@@ -432,12 +432,27 @@ public partial class UserData
         onComplete(status, id);
     }
     
+    [SerializeField]
+    internal string _replyServerAddressOverride;
+    
+    [SerializeField]
+    internal ushort _replyServerPortOverride;
+    
     public IEnumerator QueryUser(
         string channelName, 
         string channelUser, 
         Action<User, UserEnergy> onComplete)
     {
-        return UserDataMain.instance.QueryUser(channelName, channelUser, onComplete);
+        return UserDataMain.instance.QueryUser(channelName, channelUser, (x, y) =>
+        {
+            if(!string.IsNullOrEmpty(_replyServerAddressOverride))
+                x.replyServerAddress = _replyServerAddressOverride;
+            
+            if(0 != _replyServerPortOverride)
+                x.replyServerPort = _replyServerPortOverride;
+            
+            onComplete(x, y);
+        });
     }
 
     public IEnumerator Rename(uint userID, string name, Action<bool> onComplete)

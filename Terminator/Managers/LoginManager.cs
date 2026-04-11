@@ -159,6 +159,7 @@ public sealed class LoginManager : MonoBehaviour
         public uint maxMultiplayerStageID;
         public int stageIndex;
         public int levelIndex;
+        public int energy;
     }
 
     /*[Serializable]
@@ -702,6 +703,7 @@ public sealed class LoginManager : MonoBehaviour
         levelStage.maxMultiplayerStageID = 0;
         levelStage.stageIndex = stageIndex;
         levelStage.levelIndex = -1;
+        levelStage.energy = 0;
         __levelStages.Add(userStageID, levelStage);
     }
 
@@ -846,6 +848,7 @@ public sealed class LoginManager : MonoBehaviour
                 levelStage.maxMultiplayerStageID = maxMultiplayerStageID;
                 levelStage.stageIndex = j;
                 levelStage.levelIndex = userLevelIndex;
+                levelStage.energy = userStage.energy;
 
                 __levelStages[userStage.id] = levelStage;
 
@@ -2025,7 +2028,46 @@ public sealed class LoginManager : MonoBehaviour
                     }
                 }
                 else
+                {
                     RemotePlayer.status = RemotePlayer.Status.Waiting;
+
+                    if (__levelStages.TryGetValue(stageID, out var levelStage))
+                    {
+                        bool isSend = false;
+                        while (levelStage.energy > __energy)
+                        {
+                            if (!isSend)
+                            {
+                                isSend = true;
+                                
+                                if (clientData != null)
+                                {
+                                    var writer = clientData.BeginSend(ClientMessageType.Error, 0);
+                                    clientData.EndSend(writer);
+                                }
+                            }
+                            
+                            yield return null;
+                            
+                            if (!LevelPlayerShared<RemotePlayer>.isOnline ||
+                                RemotePlayer.Status.Canceled == RemotePlayer.status)
+                            {
+                                print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
+
+                                RemotePlayer.status = RemotePlayer.Status.Disabled;
+                            }
+
+                            if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                            {
+                                __status = Status.None;
+
+                                print($"[Start]Disabled.");
+
+                                yield break;
+                            }
+                        }
+                    }
+                }
             }
             else
             {
@@ -2070,6 +2112,7 @@ public sealed class LoginManager : MonoBehaviour
 
             __status = Status.Error;
 
+            bool isSend = false;
             int channelStatus;
             do
             {
@@ -2115,6 +2158,14 @@ public sealed class LoginManager : MonoBehaviour
                 else
                 {
                     print("[Start]Failed!Retry..");
+
+                    if (!isSend)
+                    {
+                        isSend = true;
+                                
+                        var writer = clientData.BeginSend(ClientMessageType.Error, 0);
+                        clientData.EndSend(writer);
+                    }
 
                     if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                     {
