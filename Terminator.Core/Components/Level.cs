@@ -555,7 +555,7 @@ public struct LevelStageOption
                             //    spawnerStatusBuffer.ElementAt(spawnerEntity.spawnerIndex) = default;
 
                             foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
-                                entityManager.DestroyEntity(0, entity);
+                                entityManager.DestroyEntity(int.MaxValue - 1, entity);
                         }
 
                         spawnerEntities.Dispose();
@@ -596,7 +596,7 @@ public struct LevelStageOption
                                 continue;
 
                             foreach (var entity in spawnerSingleton.entities.GetValuesForKey(spawnerEntity))
-                                entityManager.DestroyEntity(0, entity);
+                                entityManager.DestroyEntity(int.MaxValue - 1, entity);
                         }
 
                         spawnerEntities.Dispose();

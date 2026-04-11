@@ -132,10 +132,10 @@ public partial struct PickableSystem : ISystem
                         if (index < delayDestroys.Length)
                             delayDestroys[index] = delayDestroy;
                         else
-                            entityManager.AddComponent(0, entity, delayDestroy);
+                            entityManager.AddComponent(1, entity, delayDestroy);
                     }
                     else
-                        entityManager.DestroyEntity(0, entity);
+                        entityManager.DestroyEntity(int.MaxValue - 1, entity);
 
                     //source.Position = destination.Position;
                     physicsVelocity.Linear = float3.zero;
