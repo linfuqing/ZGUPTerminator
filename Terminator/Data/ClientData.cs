@@ -1186,6 +1186,17 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
+            case ClientMessageType.Page:
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
+                    
+                    var temp = __Load<ClientMessagePage>();
+                    writer.WritePackedInt(temp.value, StreamCompressionModel.Default);
+                    
+                    sendBuffer.EndWrite(writer);
+                }
+                break;
             default:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
