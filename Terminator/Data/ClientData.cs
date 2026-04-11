@@ -42,12 +42,6 @@ public enum ClientMessageType
     /// </summary>
     Status = NetworkRelayMessageType.Status, 
     
-    /// <summary>
-    /// 申请匹配，队长先发送ApplyMatch，队员接收后发送<see cref="ApplyMatch"/>同意、<see cref="Mismatch"/>拒绝或者<see cref="ApplyMatchFail"/>门票不足，当队员发送同意时，匹配将自动开始。
-    /// 无接收消息，发送消息为<see cref="ClientMessageApplyMatch"/>
-    /// </summary>
-    ApplyMatch = ApplyFriend + 1,
-    
     //匹配中，无接收消息，无发送消息
     Matching = NetworkRelayMessageType.Matching, 
     
@@ -62,10 +56,21 @@ public enum ClientMessageType
     Mismatch = NetworkRelayMessageType.Mismatch, 
     
     /// <summary>
+    /// 申请匹配，队长先发送ApplyMatch，队员接收后发送<see cref="ApplyMatch"/>同意、<see cref="RejectMatch"/>拒绝或者<see cref="ApplyMatchFail"/>门票不足，当队员发送同意时，匹配将自动开始。
+    /// 无接收消息，发送消息为<see cref="ClientMessageApplyMatch"/>
+    /// </summary>
+    ApplyMatch = ApplyFriend + 1,
+
+    /// <summary>
     /// 门票不足
     /// 无接收消息，发送消息为<see cref="ClientMessageApplyMatchFail"/>
     /// </summary>
-    ApplyMatchFail = ApplyMatch + 1, 
+    ApplyMatchFail, 
+
+    /// <summary>
+    /// 拒绝匹配
+    /// </summary>
+    RejectMatch = ApplyMatchFail + 1, 
 
     /// <summary>
     /// 队伍已满，加入失败，无接收消息，无发送消息
@@ -116,7 +121,7 @@ public enum ClientMessageType
     /// 切换到对应页面，用来同步页面切换（排位赛或者战斗等）
     /// 接收消息，接收和发送消息为<see cref="ClientMessagePage"/>
     /// </summary>
-    Page = ApplyMatchFail + 1, 
+    Page = RejectMatch + 1, 
     
     ChapterStage, 
     Play, 
@@ -338,6 +343,11 @@ public struct ClientMessageApplyMatch : IClientMessageToSend
 public struct ClientMessageApplyMatchFail : IClientMessageToSend
 {
     public ClientMessageType messageType => ClientMessageType.ApplyMatchFail;
+}
+
+public struct ClientMessageRejectMatch : IClientMessageToSend
+{
+    public ClientMessageType messageType => ClientMessageType.RejectMatch;
 }
 
 public struct ClientMessageChatToRead : IClientMessageToRead
@@ -1138,23 +1148,11 @@ public class ClientData : MonoBehaviour, IClientData
                 }
                 break;
             case ClientMessageType.Mismatch:
-                if (ReplyMessageShared.isHost)
+                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
-                    {
-                        var streamCompressionModel = StreamCompressionModel.Default;
-                        writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, streamCompressionModel);
-                        sendBuffer.EndWrite(writer);
-                    }
-                }
-                else
-                {
-                    if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
-                    {
-                        writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
-                    
-                        sendBuffer.EndWrite(writer);
-                    }
+                    var streamCompressionModel = StreamCompressionModel.Default;
+                    writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, streamCompressionModel);
+                    sendBuffer.EndWrite(writer);
                 }
 
                 break;

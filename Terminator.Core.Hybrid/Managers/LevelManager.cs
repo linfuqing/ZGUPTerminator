@@ -523,6 +523,7 @@ public partial class LevelManager : MonoBehaviour
                 foreach (var pair in __stageRewardStyles)
                     totalStageRewardCount += pair.Value.count;
                     
+                print($"TotalStageRewardCount {totalStageRewardCount}");
                 _onTotalStageRewardCount?.Invoke(totalStageRewardCount.ToString());
             }
         }
