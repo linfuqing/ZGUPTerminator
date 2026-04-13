@@ -13,7 +13,7 @@ public class ReplyMessageChatManager : MonoBehaviour
     internal Dropdown _dropdown;
     
     [SerializeField]
-    internal string _format;
+    internal string _format = "{0}:{1}";
 
     private void __OnValueChanged(int value)
     {
