@@ -130,9 +130,10 @@ public partial interface IUserData
     /// 好友推荐，每次点换一批查询一次
     /// </summary>
     /// <param name="userID"></param>
+    /// <param name="filter">筛选，有值的时候对名字进行模糊搜索</param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete);
+    IEnumerator QueryFriendRecommendations(uint userID, string filter, Action<Memory<UserFriend>> onComplete);
     
     /// <summary>
     /// 好友消息记录

@@ -540,17 +540,9 @@ public class ClientData : MonoBehaviour, IClientData
     private NativeList<byte> __bytes;
     private ClientMessageSquadInviteToSend __squadInviteMessage;
 
-    private static ClientHeader __header;
     private static Entity __entity;
     private static string __address;
     private static ushort __port;
-
-    /*public SquadInviteStatus squadInviteStatus
-    {
-        get;
-
-        private set;
-    }*/
 
     public NetworkClientDriver driver
     {
@@ -584,8 +576,21 @@ public class ClientData : MonoBehaviour, IClientData
             return entityManager.GetComponentData<NetworkClientDriver>(__entity);
         }
     }
-    
-    public ClientHeader header => __header;
+
+    public ClientHeader header
+    {
+        get
+        {
+            ClientHeader header;
+            header.userID = LevelPlayerShared<LocalPlayer>.id;
+            
+            var levelPlayerHeader = LevelPlayerShared<LocalPlayer>.header;
+            header.userName = levelPlayerHeader.name;
+            header.userAvatar = levelPlayerHeader.avatar;
+
+            return header;
+        }
+    }
     
     public void Connect(in ClientHeader header, string address, ushort port)
     {
@@ -604,8 +609,7 @@ public class ClientData : MonoBehaviour, IClientData
         var driver = this.driver.instance;
         bool isDisconnected = NetworkConnection.State.Disconnected == driver.connectionState, isChanged = false;
 
-        if (__address == null)
-            __address = _address;
+        __address ??= _address;
         
         if(__port == 0)
             __port = _port;
@@ -639,9 +643,15 @@ public class ClientData : MonoBehaviour, IClientData
             }
         }
         
-        __header = header;
-
         SetStatus(0);
+    }
+
+    public void SetHeaderOverride(in FixedString32Bytes userName, in FixedString32Bytes userAvatar)
+    {
+        ref var levelPlayerHeader = ref LevelPlayerShared<LocalPlayer>.header;
+        
+        levelPlayerHeader.name = userName;
+        levelPlayerHeader.avatar = userAvatar;
     }
 
     public void SetStatus(int value)
@@ -688,7 +698,7 @@ public class ClientData : MonoBehaviour, IClientData
 
                     if (ReplyMessageShared.CHANNEL_NULL != ReplyMessageShared.channel)
                     {
-                        header = __header;
+                        header = this.header;
                         
                         ClientMessageSquadJoinToRead message;
                         message.playerStatus.flag = ClientRemotePlayerFlag.Online;
@@ -791,11 +801,11 @@ public class ClientData : MonoBehaviour, IClientData
                         }
                         case NetworkRelayMessageType.Matching:
                         case NetworkRelayMessageType.Mismatch:
-                            header = __header;
+                            header = this.header;
                             return type;
                         case NetworkRelayMessageType.Match:
                         {
-                            header = __header;
+                            header = this.header;
                             int match = reader.ReadPackedInt(streamCompressionModel), distance = reader.ReadPackedInt(streamCompressionModel);
                             ClientMessageMatchToRead message;
                             message.matchID = match;
@@ -820,7 +830,7 @@ public class ClientData : MonoBehaviour, IClientData
                                 reader.Flush();
                                 header = new ClientHeader(ref reader, streamCompressionModel);
                                 
-                                UnityEngine.Assertions.Assert.AreNotEqual(__header.userID, header.userID);
+                                UnityEngine.Assertions.Assert.AreNotEqual(this.header.userID, header.userID);
                                 
                                 if ((int)NetworkRelayMessageType.Leave == type)
                                 {
@@ -844,7 +854,7 @@ public class ClientData : MonoBehaviour, IClientData
                             }
                             else
                             {
-                                header = __header;
+                                header = this.header;
 
                                 var sendBuffer = driver.sendBuffer;
                                 switch ((NetworkRelayMessageType)type)
@@ -898,7 +908,7 @@ public class ClientData : MonoBehaviour, IClientData
                             return (int)ClientMessageType.SquadJoin;
                         }
                         case NetworkRelayMessageType.JoinFailed:
-                            header = __header;
+                            header = this.header;
                             return (int)ClientMessageType.SquadJoinFail;
                         case NetworkRelayMessageType.Query:
                             break;
@@ -956,17 +966,17 @@ public class ClientData : MonoBehaviour, IClientData
                                     return (int)ClientMessageType.ApplyFriend;
                                 }
                                 case ClientMessageType.ApplyMatch:
-                                    header = __header;
+                                    header = this.header;
                                     return (int)ClientMessageType.ApplyMatch;
                                 case ClientMessageType.ApplyMatchFail:
-                                    header = __header;
+                                    header = this.header;
                                     return (int)ClientMessageType.ApplyMatchFail;
                                 case ClientMessageType.RejectMatch:
-                                    header = __header;
+                                    header = this.header;
                                     
                                     return (int)ClientMessageType.RejectMatch;
                                 case ClientMessageType.Page:
-                                    header = __header;
+                                    header = this.header;
                                     
                                     ClientMessagePage page;
                                     page.value = reader.ReadPackedInt(streamCompressionModel);
@@ -1165,7 +1175,7 @@ public class ClientData : MonoBehaviour, IClientData
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var temp = __Load<ClientMessageChatToSend>();
-                    __header.Write(
+                    this.header.Write(
                         ref writer, 
                         StreamCompressionModel.Default, 
                         (int)ClientMessageType.Chat, ClientChannel.Private == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);
@@ -1179,7 +1189,7 @@ public class ClientData : MonoBehaviour, IClientData
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var temp = __Load<ClientMessageApplyFriendToSend>();
-                    __header.Write(
+                    this.header.Write(
                         ref writer, 
                         StreamCompressionModel.Default, 
                         (int)ClientMessageType.ApplyFriend, temp.userID.RelayType());

@@ -319,7 +319,7 @@ public partial class UserDataMain
         onComplete(friends);
     }
 
-    public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)
+    public IEnumerator QueryFriendRecommendations(uint userID, string filter, Action<Memory<UserFriend>> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -476,9 +476,9 @@ public partial class UserData
         return UserDataMain.instance.QueryFriendsToSquadInvite(userID, levelID, stage, targetUserIDs, onComplete);
     }
     
-    public IEnumerator QueryFriendRecommendations(uint userID, Action<Memory<UserFriend>> onComplete)
+    public IEnumerator QueryFriendRecommendations(uint userID, string filter, Action<Memory<UserFriend>> onComplete)
     {
-        return UserDataMain.instance.QueryFriendRecommendations(userID, onComplete);
+        return UserDataMain.instance.QueryFriendRecommendations(userID, filter, onComplete);
     }
     
     public IEnumerator QueryFriendMessages(uint userID, uint targetUserID, Action<Memory<IUserData.FriendMessage>> onComplete)
