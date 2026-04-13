@@ -756,12 +756,11 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
         {
             Entity entity = GetEntity(TransformUsageFlags.None);
 
-            int numBullets = authoring._bullets.Length;
-
             var prefabIndices = new Dictionary<GameObject, int>();
             var prefabs = AddBuffer<BulletPrefab>(entity);
             BulletDefinitionData instance;
-            int i, j;
+            int i, j, numBullets = authoring._bullets.Length;
+            bool isSharedMessages = false;
             using (var builder = new BlobBuilder(Allocator.Temp))
             {
                 ref var root = ref builder.ConstructRoot<BulletDefinition>();
@@ -925,6 +924,9 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                             ref var sourceMessage = ref authoring._messages[k];
                             if (sourceMessage.name == messageName)
                             {
+                                if (sourceMessage.type == BulletMessage.Type.Shared)
+                                    isSharedMessages = true;
+                                
                                 //destinationMessage.key = sourceMessage.name;
                                 destinationMessage.type = sourceMessage.type;
                                 destinationMessage.layerMaskAndTags = sourceMessage.layerMaskAndTags;
@@ -990,6 +992,9 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
             AddBlobAsset(ref instance.definition, out _);
             
             AddComponent(entity, instance);
+            
+            if(isSharedMessages)
+                AddComponent<BulletMessageSharedIndex>(entity);
 
             BulletLayerMaskAndTags bulletLayerMaskAndTags;
             bulletLayerMaskAndTags.value = authoring._layerMaskAndTags;

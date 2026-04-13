@@ -210,6 +210,8 @@ public partial struct BulletSystem : ISystem
 
         public BufferAccessor<DelayTime> delayTimes;
 
+        public BufferAccessor<BulletMessageSharedIndex> messageSharedIndices;
+
         public BufferAccessor<BulletStatus> states;
 
         public BufferAccessor<BulletTargetStatus> targetStates;
@@ -330,6 +332,11 @@ public partial struct BulletSystem : ISystem
             else if(layerMaskAndTags.isEmpty)
                 layerMaskAndTags = LayerMaskAndTags.AllLayers;
 
+            var messageSharedIndices =
+                index < this.messageSharedIndices.Length ? this.messageSharedIndices[index] : default;
+            if(messageSharedIndices.IsCreated)
+                messageSharedIndices.Clear();
+            
             var localToWorld = fixedLocalToWorld.GetMatrix(entity);
             var inputMessages = this.inputMessages[index].AsNativeArray();
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
@@ -358,6 +365,7 @@ public partial struct BulletSystem : ISystem
                 prefabs[index].AsNativeArray(),
                 activeIndices[index].AsNativeArray(),
                 inputMessages,
+                ref messageSharedIndices, 
                 ref outputMessages,
                 ref characterStandTimes, 
                 ref targetStates,
@@ -396,7 +404,6 @@ public partial struct BulletSystem : ISystem
 
             return outputMessages.IsCreated && outputMessages.Length > 0;
         }
-
     }
 
     [BurstCompile]
@@ -490,6 +497,8 @@ public partial struct BulletSystem : ISystem
 
         public BufferTypeHandle<DelayTime> delayTimeType;
 
+        public BufferTypeHandle<BulletMessageSharedIndex> messageSharedIndexType;
+
         public BufferTypeHandle<BulletStatus> statusType;
 
         public BufferTypeHandle<BulletTargetStatus> targetStatusType;
@@ -540,6 +549,7 @@ public partial struct BulletSystem : ISystem
             collect.colliders = chunk.GetBufferAccessor(ref colliderType);
             collect.prefabs = chunk.GetBufferAccessor(ref prefabType);
             collect.inputMessages = chunk.GetBufferAccessor(ref inputMessageType);
+            collect.messageSharedIndices = chunk.GetBufferAccessor(ref messageSharedIndexType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
@@ -556,6 +566,80 @@ public partial struct BulletSystem : ISystem
                 if(collect.Execute(i))
                     chunk.SetComponentEnabled(ref outputMessageType, i, true);
             }
+        }
+    }
+
+    private struct SharedMessages
+    {
+        [ReadOnly]
+        public NativeArray<BulletEntity> entities;
+
+        [ReadOnly] 
+        public NativeArray<BulletMessageShared> instances;
+        
+        [ReadOnly]
+        public BufferLookup<BulletMessageSharedIndex> messageSharedIndices;
+
+        [ReadOnly]
+        public BufferLookup<BulletMessage> inputMessages;
+
+        public BufferAccessor<Message> outputMessages;
+
+        public void Execute(int index)
+        {
+            Entity entity = entities[index].parent;
+            if(!this.messageSharedIndices.TryGetBuffer(entity, out var messageSharedIndices) || 
+               messageSharedIndices.Length < 1)
+                return;
+
+            var instance = instances[index];
+            BulletMessage inputMessage;
+            Message outputMessage;
+            var outputMessages = this.outputMessages[index];
+            var inputMessages = this.inputMessages[entity];
+            foreach (var messageSharedIndex in messageSharedIndices)
+            {
+                inputMessage = inputMessages[messageSharedIndex.value];
+                if(!inputMessage.layerMaskAndTags.Overlaps(instance.layerMaskAndTags))
+                    continue;
+
+                outputMessage.key = 0;
+                outputMessage.name = inputMessage.name;
+                outputMessage.value = inputMessage.value;
+
+                outputMessages.Add(outputMessage);
+            }
+        }
+    }
+
+    [BurstCompile]
+    private struct SharedMessagesEx : IJobChunk
+    {
+        [ReadOnly]
+        public ComponentTypeHandle<BulletEntity> entityType;
+        [ReadOnly]
+        public ComponentTypeHandle<BulletMessageShared> instanceType;
+        
+        [ReadOnly]
+        public BufferLookup<BulletMessageSharedIndex> messageSharedIndices;
+        
+        [ReadOnly]
+        public BufferLookup<BulletMessage> inputMessages;
+
+        public BufferTypeHandle<Message> outputMessageType;
+
+        public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
+        {
+            SharedMessages sharedMessages;
+            sharedMessages.entities = chunk.GetNativeArray(ref entityType);
+            sharedMessages.instances = chunk.GetNativeArray(ref instanceType);
+            sharedMessages.messageSharedIndices = messageSharedIndices;
+            sharedMessages.inputMessages = inputMessages;
+            sharedMessages.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
+            
+            var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
+            while(iterator.NextEntityIndex(out int i))
+                sharedMessages.Execute(i);
         }
     }
 
@@ -611,16 +695,27 @@ public partial struct BulletSystem : ISystem
 
     private BufferTypeHandle<BulletTargetStatus> __targetStatusType;
 
+    private BufferTypeHandle<BulletMessageSharedIndex> __messageSharedIndexType;
+
     private BufferTypeHandle<Message> __outputMessageType;
 
     private BufferTypeHandle<DelayTime> __delayTimeType;
 
     private ComponentTypeHandle<BulletVersion> __versionType;
 
+    private ComponentTypeHandle<BulletEntity> __bulletEntityType;
+    
+    private ComponentTypeHandle<BulletMessageShared> __messageSharedType;
+        
+    private BufferLookup<BulletMessageSharedIndex> __messageSharedIndices;
+        
+    private BufferLookup<BulletMessage> __inputMessages;
+
     private BufferLookup<ThirdPersonCharacterStandTime> __characterStandTimes;
 
-    private EntityQuery __group;
     private EntityQuery __targetGroup;
+    private EntityQuery __shooterGroup;
+    private EntityQuery __bulletGroup;
 
     private PrefabLoader __prefabLoader;
 
@@ -653,23 +748,33 @@ public partial struct BulletSystem : ISystem
         __instanceType = state.GetBufferTypeHandle<BulletInstance>();
         __statusType = state.GetBufferTypeHandle<BulletStatus>();
         __targetStatusType = state.GetBufferTypeHandle<BulletTargetStatus>();
+        __messageSharedIndexType = state.GetBufferTypeHandle<BulletMessageSharedIndex>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __versionType = state.GetComponentTypeHandle<BulletVersion>();
+        __bulletEntityType = state.GetComponentTypeHandle<BulletEntity>(true);
+        __messageSharedType = state.GetComponentTypeHandle<BulletMessageShared>(true);
+        __messageSharedIndices = state.GetBufferLookup<BulletMessageSharedIndex>(true);
+        __inputMessages = state.GetBufferLookup<BulletMessage>(true);
         __characterStandTimes = state.GetBufferLookup<ThirdPersonCharacterStandTime>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __group = builder
+            __targetGroup = builder
+                .WithAll<EffectTargetData>()
+                .Build(ref state);
+
+        using (var builder = new EntityQueryBuilder(Allocator.Temp))
+            __shooterGroup = builder
                 .WithAll<LocalToWorld, BulletDefinitionData, BulletActiveIndex>()
                 .WithAllRW<BulletStatus, BulletTargetStatus>()
                 .WithAllRW<BulletInstance, BulletVersion>()
                 .Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
-            __targetGroup = builder
-                .WithAll<EffectTargetData>()
+            __bulletGroup = builder
+                .WithAll<BulletEntity, BulletMessageShared>()
                 .Build(ref state);
-        
+
         __prefabLoader = new PrefabLoader(ref state);
 
         state.RequireForUpdate<MainCameraTransform>();
@@ -713,6 +818,7 @@ public partial struct BulletSystem : ISystem
         __statusType.Update(ref state);
         __targetStatusType.Update(ref state);
         __inputMessageType.Update(ref state);
+        __messageSharedIndexType.Update(ref state);
         __outputMessageType.Update(ref state);
         __delayTimeType.Update(ref state);
         __versionType.Update(ref state);
@@ -755,13 +861,29 @@ public partial struct BulletSystem : ISystem
         collect.statusType = __statusType;
         collect.targetStatusType = __targetStatusType;
         collect.inputMessageType = __inputMessageType;
+        collect.messageSharedIndexType = __messageSharedIndexType;
         collect.outputMessageType = __outputMessageType;
         collect.delayTimeType = __delayTimeType;
         collect.versionType = __versionType;
         collect.characterStandTimes = __characterStandTimes;
-        collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
+            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         collect.prefabLoader = __prefabLoader.AsParallelWriter();
 
-        state.Dependency = collect.ScheduleParallelByRef(__group, state.Dependency);
+        var jobHandle = collect.ScheduleParallelByRef(__shooterGroup, state.Dependency);
+        
+        __bulletEntityType.Update(ref state);
+        __messageSharedType.Update(ref state);
+        __messageSharedIndices.Update(ref state);
+        __inputMessages.Update(ref state);
+
+        SharedMessagesEx sharedMessages;
+        sharedMessages.entityType = __bulletEntityType;
+        sharedMessages.instanceType = __messageSharedType;
+        sharedMessages.messageSharedIndices = __messageSharedIndices;
+        sharedMessages.inputMessages = __inputMessages;
+        sharedMessages.outputMessageType = __outputMessageType;
+        
+        state.Dependency = sharedMessages.ScheduleParallelByRef(__bulletGroup, jobHandle);
     }
 }

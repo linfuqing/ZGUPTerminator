@@ -568,6 +568,7 @@ public struct BulletDefinition
         in NativeArray<BulletCollider> colliders,
         in NativeArray<BulletPrefab> prefabs,
         in NativeArray<BulletMessage> inputMessages,
+        ref DynamicBuffer<BulletMessageSharedIndex> messageSharedIndices, 
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
@@ -739,18 +740,28 @@ public struct BulletDefinition
         int numMessageIndices = data.messageIndices.Length;
         if (numMessageIndices > 0)
         {
+            BulletMessageSharedIndex messageSharedIndex;
             Message outputMessage;
             for (int i = 0; i < numMessageIndices; ++i)
             {
-                var inputMessage = inputMessages[data.messageIndices[i]];
-                if(BulletMessage.Type.Shooter != inputMessage.type || 
-                   !inputMessage.layerMaskAndTags.Overlaps(layerMaskAndTags))
-                    continue;
+                messageSharedIndex.value = data.messageIndices[i];
+                var inputMessage = inputMessages[messageSharedIndex.value];
+                
+                switch (inputMessage.type)
+                {
+                    case BulletMessage.Type.Shared:
+                        messageSharedIndices.Add(messageSharedIndex);
+                        break;
+                    case BulletMessage.Type.Shooter:
+                        if(!inputMessage.layerMaskAndTags.Overlaps(layerMaskAndTags))
+                            continue;
 
-                outputMessage.key = 0;//random.NextInt();
-                outputMessage.name = inputMessage.name;
-                outputMessage.value = inputMessage.value;
-                outputMessages.Add(outputMessage);
+                        outputMessage.key = 0;//random.NextInt();
+                        outputMessage.name = inputMessage.name;
+                        outputMessage.value = inputMessage.value;
+                        outputMessages.Add(outputMessage);
+                        break;
+                }
             }
         }
 
@@ -890,6 +901,7 @@ public struct BulletDefinition
         in NativeArray<BulletPrefab> prefabs,
         in NativeArray<BulletActiveIndex> activeIndices, 
         in NativeArray<BulletMessage> inputMessages,
+        ref DynamicBuffer<BulletMessageSharedIndex> messageSharedIndices, 
         ref DynamicBuffer<Message> outputMessages,
         ref DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes,
         ref DynamicBuffer<BulletTargetStatus> targetStates,
@@ -952,6 +964,7 @@ public struct BulletDefinition
                 colliders, 
                 prefabs, 
                 inputMessages,
+                ref messageSharedIndices, 
                 ref outputMessages,
                 ref characterStandTimes, 
                 ref targetStates,
@@ -1307,13 +1320,20 @@ public struct BulletPrefab : IBufferElementData
     public EntityPrefabReference entityPrefabReference;
 }
 
+public struct BulletActiveIndex : IBufferElementData
+{
+    public int value;
+    public float damageScale;
+}
+
 public struct BulletMessage : IBufferElementData
 {
     //public FixedString128Bytes key;
     public enum Type
     {
         Shooter, 
-        Bullet
+        Bullet,
+        Shared
     }
 
     public Type type;
@@ -1325,10 +1345,14 @@ public struct BulletMessage : IBufferElementData
     public UnityObjectRef<Object> value;
 }
 
-public struct BulletActiveIndex : IBufferElementData
+public struct BulletMessageSharedIndex : IBufferElementData
 {
     public int value;
-    public float damageScale;
+}
+
+public struct BulletMessageShared : IComponentData
+{
+    public LayerMaskAndTags layerMaskAndTags;
 }
 
 public struct BulletVersion : IComponentData
