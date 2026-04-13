@@ -13,6 +13,11 @@ using Math = ZG.Mathematics.Math;
 using Object = UnityEngine.Object;
 using Random = Unity.Mathematics.Random;
 
+public enum BulletAttributeID
+{
+    ShooterTransform = 10
+}
+
 [Flags]
 public enum BulletLocation
 {
@@ -738,6 +743,9 @@ public struct BulletDefinition
             for (int i = 0; i < numMessageIndices; ++i)
             {
                 var inputMessage = inputMessages[data.messageIndices[i]];
+                if(BulletMessage.Type.Shooter != inputMessage.type || 
+                   !inputMessage.layerMaskAndTags.Overlaps(layerMaskAndTags))
+                    continue;
 
                 outputMessage.key = 0;//random.NextInt();
                 outputMessage.name = inputMessage.name;
@@ -1037,6 +1045,7 @@ public struct BulletInstance : IBufferElementData
     public EntityPrefabReference entityPrefabReference;
 
     public bool Apply(
+        int instanceID, 
         in double time, 
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
@@ -1044,9 +1053,13 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in ComponentLookup<FollowTargetVelocity> followTargetVelocities,
+        in BufferLookup<Message> messages,
+        in BufferLookup<MessageParameter> messageParameters,
+        in NativeArray<BulletMessage> bulletMessages,
         ref BulletDefinition definition, 
         ref PrefabLoader.ParallelWriter prefabLoader,
-        ref EntityCommandBuffer.ParallelWriter entityManager)
+        ref EntityCommandBuffer.ParallelWriter entityManager, 
+        ref Random random)
     {
         if (time < this.time)
             return false;
@@ -1057,6 +1070,7 @@ public struct BulletInstance : IBufferElementData
         Entity entity = entityManager.Instantiate(0, prefabRoot);
         
         __Apply(
+            instanceID, 
             entity, 
             prefabRoot, 
             collisionWorld, 
@@ -1065,13 +1079,18 @@ public struct BulletInstance : IBufferElementData
             characterControls, 
             animationCurveDeltas, 
             followTargetVelocities, 
+            messages, 
+            messageParameters, 
+            bulletMessages, 
             ref definition.bullets[index], 
-            ref entityManager);
+            ref entityManager, 
+            ref random);
         
         return true;
     }
 
     private Entity __Apply(
+        int instanceID, 
         in Entity entity, 
         in Entity prefabRoot, 
         in CollisionWorld collisionWorld,
@@ -1080,8 +1099,12 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
         in ComponentLookup<FollowTargetVelocity> followTargetVelocities,
+        in BufferLookup<Message> messages,
+        in BufferLookup<MessageParameter> messageParameters,
+        in NativeArray<BulletMessage> bulletMessages,
         ref BulletDefinition.Bullet data, 
-        ref EntityCommandBuffer.ParallelWriter entityManager)
+        ref EntityCommandBuffer.ParallelWriter entityManager, 
+        ref Random random)
     {
         BulletEntity bulletEntity;
         bulletEntity.index = index;
@@ -1204,6 +1227,45 @@ public struct BulletInstance : IBufferElementData
             }
         }
 
+        int numMessageIndices = data.messageIndices.Length;
+        if (numMessageIndices > 0 && messages.HasBuffer(prefabRoot))
+        {
+            var outputMessageParameters = messageParameters.HasBuffer(prefabRoot)
+                ? entityManager.SetBuffer<MessageParameter>(1, entity)
+                : default;
+            var outputMessages = entityManager.SetBuffer<Message>(1, entity);
+            Message outputMessage;
+            MessageParameter outputMessageParameter;
+            BulletMessage inputMessage;
+            bool result = false;
+            for (int i = 0; i < numMessageIndices; ++i)
+            {
+                inputMessage = bulletMessages[data.messageIndices[i]];
+                if(BulletMessage.Type.Bullet != inputMessage.type || 
+                   !inputMessage.layerMaskAndTags.Overlaps(layerMaskAndTags))
+                    continue;
+
+                outputMessage.key = random.NextInt();
+                outputMessage.name = inputMessage.name;
+                outputMessage.value = inputMessage.value;
+                outputMessages.Add(outputMessage);
+
+                if (outputMessageParameters.IsCreated)
+                {
+                    outputMessageParameter.messageKey = outputMessage.key;
+                    outputMessageParameter.id = (int)BulletAttributeID.ShooterTransform;
+                    outputMessageParameter.value = instanceID;
+                    
+                    outputMessageParameters.Add(outputMessageParameter);
+                }
+
+                result = true;
+            }
+            
+            if(result)
+                entityManager.SetComponentEnabled<Message>(1, entity, true);
+        }
+
         EffectDamage effectDamage;
         effectDamage.scale = math.abs(damageScale) > math.FLT_MIN_NORMAL ? damageScale : 1.0f;
         effectDamage.layerMaskAndTags = layerMaskAndTags;
@@ -1248,6 +1310,15 @@ public struct BulletPrefab : IBufferElementData
 public struct BulletMessage : IBufferElementData
 {
     //public FixedString128Bytes key;
+    public enum Type
+    {
+        Shooter, 
+        Bullet
+    }
+
+    public Type type;
+    
+    public LayerMaskAndTags layerMaskAndTags;
 
     public FixedString128Bytes name;
 

@@ -1,5 +1,6 @@
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 public class PlayerArrow : MonoBehaviour
 {
@@ -15,6 +16,8 @@ public class PlayerArrow : MonoBehaviour
     [SerializeField] 
     internal Vector3 _playerOffset;
 
+    private Transform __transform;
+    
     private Renderer __renderer;
     
     public 
@@ -31,16 +34,23 @@ public class PlayerArrow : MonoBehaviour
             return __renderer;
         }
     }
+
+    [Preserve]
+    public void SetPlayerTransform(Parameters parameters)
+    {
+        if (parameters.TryGet((int)BulletAttributeID.ShooterTransform, out int instanceID))
+            __transform = Resources.InstanceIDToObject(instanceID) as Transform;
+    }
     
     protected void LateUpdate()
     {
-        var player = PlayerPosition.instance;
+        var player = __transform == null ? (PlayerPosition.instances == null ? null : PlayerPosition.instances[(int)PlayerType.Local].transform) : __transform;
         if (player == null)
             return;
 
         var material = renderer.material;
         var transform = this.transform;
-        var distance = player.transform.position + _playerOffset - transform.position;
+        var distance = player.position + _playerOffset - transform.position;
         if(!_isUp)
             distance.y = 0.0f;
         

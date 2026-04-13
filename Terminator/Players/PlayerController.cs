@@ -2,6 +2,14 @@ using System;
 using UnityEngine;
 using UnityEngine.Scripting;
 
+public enum PlayerType
+{
+    Local,
+    Remote,
+    
+    Total
+}
+
 public class PlayerController : MonoBehaviour
 {
     [Flags]
@@ -241,13 +249,19 @@ public class PlayerController : MonoBehaviour
 
         if (__isLocal || PlayerEvents.isFocusRemotePlayer)
         {
-            var positionInstance = PlayerPosition.instance;
-            if (positionInstance != null)
-                positionInstance.transform.position = position;
+            var playerPosition = PlayerPosition.instances == null ? null : PlayerPosition.instances[(int)PlayerType.Local];
+            if (playerPosition != null)
+                playerPosition.transform.position = position;
 
             var rotationInstance = PlayerRotation.instance;
             if (rotationInstance != null)
                 rotationInstance.transform.rotation = transform.rotation;
+        }
+        else
+        {
+            var playerPosition = PlayerPosition.instances == null ? null : PlayerPosition.instances[(int)PlayerType.Remote];
+            if (playerPosition != null)
+                playerPosition.transform.position = position;
         }
 
         if(__isLocal)

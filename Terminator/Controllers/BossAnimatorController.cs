@@ -92,14 +92,15 @@ public class BossAnimatorController : MonoBehaviour
             Mathf.SmoothDampAngle(__previousRotation, rotation, ref __rotationVelocity, _rotationSmoothTime);
         __animator.SetFloat(Parameter, __rotationVelocity);
 
-        if (PlayerPosition.instance != null)
+        var playerPosition = PlayerPosition.instances == null ? null : PlayerPosition.instances[0];
+        if (playerPosition != null)
         {
             int numLookAtPlayers = _lookAtPlayers == null ? 0 : _lookAtPlayers.Length;
             if (numLookAtPlayers > 0)
             {
                 Array.Resize(ref __lookAtWeights, numLookAtPlayers);
                 
-                Vector3 position = PlayerPosition.instance.transform.position + _lookAtOffset;
+                Vector3 position = playerPosition.transform.position + _lookAtOffset;
                 var transform = base.transform;
                 for(int i = 0; i < numLookAtPlayers; ++i)
                     _lookAtPlayers[i].Execute(ref __lookAtWeights[i], position, transform);

@@ -22,6 +22,7 @@ public partial struct ReplyMessageSystem : ISystem
     [BurstCompile]
     private struct Collect : IJob
     {
+        public FixedString512Bytes input;
         [ReadOnly]
         public NetworkClient.Messages inputs;
         public NetworkClientSendBuffer sendBuffer;
@@ -29,6 +30,14 @@ public partial struct ReplyMessageSystem : ISystem
 
         public void Execute()
         {
+            if (!input.IsEmpty && sendBuffer.BeginWrite(0, out var writer))
+            {
+                writer.WriteReplyHeader((int)ReplyMessageType.Chat, NetworkRelayType.Channel);
+                writer.WriteFixedString512(input);
+                
+                sendBuffer.EndWrite(writer);
+            }
+            
             outputs.Collect(inputs, ref sendBuffer);
         }
     }
@@ -665,6 +674,7 @@ public partial struct ReplyMessageSystem : ISystem
         var clientBuffer = driver.instance.buffer;
         
         Collect collect;
+        collect.input = ReplyMessageChatShared.input;
         collect.inputs = client;
         collect.sendBuffer = driver.sendBuffer;
         collect.outputs = messages;

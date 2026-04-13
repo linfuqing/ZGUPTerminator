@@ -64,7 +64,11 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
     public struct MessageData
     {
         public string name;
+
+        public BulletMessage.Type type;
         
+        public LayerMaskAndTagsAuthoring layerMaskAndTags;
+
         [Tooltip("填Play")]
         [UnityEngine.Serialization.FormerlySerializedAs("name")]
         public string messageName;
@@ -922,6 +926,8 @@ public class BulletAuthoring : MonoBehaviour, IEffectAuthoring
                             if (sourceMessage.name == messageName)
                             {
                                 //destinationMessage.key = sourceMessage.name;
+                                destinationMessage.type = sourceMessage.type;
+                                destinationMessage.layerMaskAndTags = sourceMessage.layerMaskAndTags;
                                 destinationMessage.name = sourceMessage.messageName;
                                 destinationMessage.value = sourceMessage.messageValue;
 

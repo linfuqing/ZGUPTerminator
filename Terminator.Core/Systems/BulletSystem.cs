@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.CharacterController;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -175,6 +176,15 @@ public partial struct BulletSystem : ISystem
         [ReadOnly]
         public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
 
+        [ReadOnly]
+        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
+
+        [ReadOnly]
+        public BufferLookup<Message> messages;
+
+        [ReadOnly]
+        public BufferLookup<MessageParameter> messageParameters;
+
         [ReadOnly] 
         public NativeArray<Entity> entityArray;
 
@@ -236,6 +246,7 @@ public partial struct BulletSystem : ISystem
                 out var character);
     
             bool isFire = this.isFire;
+            int instanceID;
             BulletLocation location = 0;
             float3 up = math.up();
             quaternion cameraRotation;
@@ -243,14 +254,22 @@ public partial struct BulletSystem : ISystem
             DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes;
             if (character == Entity.Null)
             {
-                cameraRotation = cameraRotations.TryGetComponent(entity, out var temp) ? temp.value : this.cameraRotation;
-                //characterStandTimes = default;
                 this.characterStandTimes.TryGetBuffer(entity, out characterStandTimes);
+
+                cameraRotation = cameraRotations.TryGetComponent(entity, out var temp) ? temp.value : this.cameraRotation;
                 
+                //characterStandTimes = default;
                 location = (BulletLocation)~0;
+
+                instanceID =
+                    copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID)
+                        ? copyMatrixToTransformInstanceID.value
+                        : 0;
             }
             else
             {
+                this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
+
                 cameraRotation = cameraRotations.TryGetComponent(character, out var temp) ? temp.value : this.cameraRotation;
                 
                 up = characterBody.GroundingUp;
@@ -264,8 +283,11 @@ public partial struct BulletSystem : ISystem
                         location = BulletLocation.Air;
                 }
 
-                this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
-                
+                instanceID =
+                    copyMatrixToTransformInstanceIDs.TryGetComponent(character, out var copyMatrixToTransformInstanceID)
+                        ? copyMatrixToTransformInstanceID.value
+                        : 0;
+
                 isFire &= characterBodies.IsComponentEnabled(character);
             }
 
@@ -309,6 +331,7 @@ public partial struct BulletSystem : ISystem
                 layerMaskAndTags = LayerMaskAndTags.AllLayers;
 
             var localToWorld = fixedLocalToWorld.GetMatrix(entity);
+            var inputMessages = this.inputMessages[index].AsNativeArray();
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
             var targetStates = this.targetStates[index];
             var states = this.states[index];
@@ -334,7 +357,7 @@ public partial struct BulletSystem : ISystem
                 colliders[index].AsNativeArray(), 
                 prefabs[index].AsNativeArray(),
                 activeIndices[index].AsNativeArray(),
-                inputMessages[index].AsNativeArray(),
+                inputMessages,
                 ref outputMessages,
                 ref characterStandTimes, 
                 ref targetStates,
@@ -349,6 +372,7 @@ public partial struct BulletSystem : ISystem
             for (int i = 0; i < numInstances; i++)
             {
                 if (instances[i].Apply(
+                        instanceID, 
                         time,
                         collisionWorld,
                         physicsGraphicalInterpolationBuffers,
@@ -356,9 +380,13 @@ public partial struct BulletSystem : ISystem
                         characterControls,
                         animationCurveDeltas,
                         followTargetVelocities, 
+                        messages, 
+                        messageParameters, 
+                        inputMessages, 
                         ref definition,
                         ref prefabLoader, 
-                        ref entityManager))
+                        ref entityManager, 
+                        ref random))
                 {
                     instances.RemoveAtSwapBack(i--);
                     
@@ -427,6 +455,15 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<LevelStatus> levelStates;
 
+        [ReadOnly]
+        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
+
+        [ReadOnly]
+        public BufferLookup<Message> messages;
+
+        [ReadOnly]
+        public BufferLookup<MessageParameter> messageParameters;
+
         [ReadOnly] 
         public EntityTypeHandle entityType;
 
@@ -448,6 +485,7 @@ public partial struct BulletSystem : ISystem
         [ReadOnly]
         public BufferTypeHandle<BulletMessage> inputMessageType;
 
+        [NativeDisableContainerSafetyRestriction]
         public BufferTypeHandle<Message> outputMessageType;
 
         public BufferTypeHandle<DelayTime> delayTimeType;
@@ -492,6 +530,9 @@ public partial struct BulletSystem : ISystem
             collect.effectDamageParents = effectDamageParents;
             collect.effectTargets = effectTargets;
             collect.bulletLayerMaskAndTags = bulletLayerMaskAndTags;
+            collect.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
+            collect.messages = messages;
+            collect.messageParameters = messageParameters;
             collect.entityArray = chunk.GetNativeArray(entityType);
             collect.lookAtTargets = chunk.GetNativeArray(ref lookAtTargetType);
             collect.definitions = chunk.GetNativeArray(ref definitionType);
@@ -544,6 +585,12 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<LevelStatus> __levelStates;
 
+    private ComponentLookup<CopyMatrixToTransformInstanceID> __copyMatrixToTransformInstanceIDs;
+
+    private BufferLookup<Message> __messages;
+
+    private BufferLookup<MessageParameter> __messageParameters;
+
     private EntityTypeHandle __entityType;
 
     private ComponentTypeHandle<LookAtTarget> __lookAtType;
@@ -593,6 +640,9 @@ public partial struct BulletSystem : ISystem
         __effectTargets = state.GetComponentLookup<EffectTarget>(true);
         __bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>(true);
+        __copyMatrixToTransformInstanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>(true);
+        __messages = state.GetBufferLookup<Message>(true);
+        __messageParameters = state.GetBufferLookup<MessageParameter>(true);
         __entityType = state.GetEntityTypeHandle();
         __lookAtType = state.GetComponentTypeHandle<LookAtTarget>(true);
         __definitionType = state.GetComponentTypeHandle<BulletDefinitionData>(true);
@@ -650,6 +700,9 @@ public partial struct BulletSystem : ISystem
         __effectTargets.Update(ref state);
         __bulletLayerMaskAndTags.Update(ref state);
         __levelStates.Update(ref state);
+        __copyMatrixToTransformInstanceIDs.Update(ref state);
+        __messages.Update(ref state);
+        __messageParameters.Update(ref state);
         __entityType.Update(ref state);
         __lookAtType.Update(ref state);
         __definitionType.Update(ref state);
@@ -689,6 +742,9 @@ public partial struct BulletSystem : ISystem
         collect.effectTargets = __effectTargets;
         collect.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         collect.levelStates = __levelStates;
+        collect.copyMatrixToTransformInstanceIDs = __copyMatrixToTransformInstanceIDs;
+        collect.messages = __messages;
+        collect.messageParameters = __messageParameters;
         collect.entityType = __entityType;
         collect.lookAtTargetType = __lookAtType;
         collect.definitionType = __definitionType;

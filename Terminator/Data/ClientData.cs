@@ -74,6 +74,11 @@ public enum ClientMessageType
     RejectMatch = ApplyMatchFail + 1, 
 
     /// <summary>
+    /// 聊天，接收消息为<see cref="ClientMessageChatToRead"/>，发送消息为<see cref="ClientMessageChatToSend"/>
+    /// </summary>
+    Chat = ReplyMessageType.Chat, 
+
+    /// <summary>
     /// 队伍已满，加入失败，无接收消息，无发送消息
     /// </summary>
     SquadJoinFail = NetworkRelayMessageType.JoinFailed, 
@@ -96,11 +101,6 @@ public enum ClientMessageType
     /// 组队邀请，接收消息为<see cref="ClientMessageSquadInviteToRead"/>，发送消息为<see cref="ClientMessageSquadInviteToSend"/>
     /// </summary>
     SquadInvite = NetworkRelayMessageType.Query + 1, 
-    
-    /// <summary>
-    /// 聊天，接收消息为<see cref="ClientMessageChatToRead"/>，发送消息为<see cref="ClientMessageChatToSend"/>
-    /// </summary>
-    Chat, 
     
     /// <summary>
     /// 申请好友，接收消息为<see cref="ClientMessageApplyFriendToRead"/>，发送消息为<see cref="ClientMessageApplyFriendToSend"/>

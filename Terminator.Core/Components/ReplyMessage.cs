@@ -7,7 +7,8 @@ using ZG;
 
 public enum ReplyMessageType
 {
-    Camera = 100, 
+    Chat = 100, 
+    Camera, 
     Move, 
     Damage, 
     HP, 
@@ -313,11 +314,12 @@ public struct ReplyMessages : IComponentData
 
                             break;
                         default:
-                            if (key.type < ReplyMessageType.Camera || key.type > ReplyMessageType.PlayerProperty)
+                            if (key.type < ReplyMessageType.Chat || key.type > ReplyMessageType.PlayerProperty)
                                 continue;
 
                             channel = reader.ReadPackedInt(streamCompressionModel);
-                            UnityEngine.Assertions.Assert.AreEqual((int)NetworkRelayType.Channel, channel);
+                            if(NetworkRelayType.Channel != (NetworkRelayType)channel)
+                                continue;
 
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
 
@@ -329,34 +331,38 @@ public struct ReplyMessages : IComponentData
                             value.offset += size;
                             value.size -= size;
 
-                            if (ReplyMessageType.PlayerProperty == key.type)
+                            switch (key.type)
                             {
-                                reader = new NetworkClient.MessageElement(value, messages).reader;
+                                case ReplyMessageType.Chat:
+                                    reader = new NetworkClient.MessageElement(value, messages).reader;
+                                    ReplyMessageChatShared.output = reader.ReadFixedString512();
+                                    break;
+                                case ReplyMessageType.PlayerProperty:
+                                    reader = new NetworkClient.MessageElement(value, messages).reader;
 
-                                LevelPlayerShared<RemotePlayer>.property =
-                                    new LevelPlayerProperty(ref reader, streamCompressionModel);
+                                    LevelPlayerShared<RemotePlayer>.property =
+                                        new LevelPlayerProperty(ref reader, streamCompressionModel);
 
-                                if(RemotePlayer.Status.StandBy != RemotePlayer.status)
-                                    RemotePlayer.status = RemotePlayer.Status.Joined;
+                                    if(RemotePlayer.Status.StandBy != RemotePlayer.status)
+                                        RemotePlayer.status = RemotePlayer.Status.Joined;
+                                    break;
+                                default:
+                                    if (isBuffer)
+                                    {
+                                        temp.type = value.type;
+                                        temp.size = value.size;
+                                        temp.offset = __buffer.Length;
+
+                                        __buffer.AddRange(new NetworkClient.MessageElement(value, messages).AsArray());
+
+                                        value = temp;
+                                    }
+                                    else
+                                        value.offset += bufferLength;
+
+                                    __values.Add(key, value);
+                                    break;
                             }
-                            else
-                            {
-                                if (isBuffer)
-                                {
-                                    temp.type = value.type;
-                                    temp.size = value.size;
-                                    temp.offset = __buffer.Length;
-
-                                    __buffer.AddRange(new NetworkClient.MessageElement(value, messages).AsArray());
-
-                                    value = temp;
-                                }
-                                else
-                                    value.offset += bufferLength;
-
-                                __values.Add(key, value);
-                            }
-
                             break;
                     }
 
@@ -395,11 +401,6 @@ public static class ReplyMessageShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<RemotePlayerCount>();
     }
 
-    private struct RemotePlayerHeader
-    {
-        public static readonly SharedStatic<FixedBytes64> Value = SharedStatic<FixedBytes64>.GetOrCreate<RemotePlayerHeader>();
-    }
-
     public const int CHANNEL_NULL = -1;
 
     public static ref bool isHost => ref IsHost.Value.Data;
@@ -435,5 +436,80 @@ public static class ReplyMessageShared
     static ReplyMessageShared()
     {
         channel = CHANNEL_NULL;
+    }
+}
+
+public static class ReplyMessageChatShared
+{
+    private struct InputVersionOverride
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<InputVersionOverride>();
+    }
+
+    private struct InputVersion
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<InputVersion>();
+    }
+
+    private struct Input
+    {
+        public static readonly SharedStatic<FixedString512Bytes> Value = SharedStatic<FixedString512Bytes>.GetOrCreate<Input>();
+    }
+
+    private struct Output
+    {
+        public static readonly SharedStatic<FixedString512Bytes> Value = SharedStatic<FixedString512Bytes>.GetOrCreate<Output>();
+    }
+
+    private struct OutputVersion
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<OutputVersion>();
+    }
+    
+    private struct OutputVersionOverride
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<OutputVersionOverride>();
+    }
+    
+    public static FixedString512Bytes input
+    {
+        get
+        {
+            int version = InputVersion.Value.Data;
+            if (version == InputVersionOverride.Value.Data)
+                return default;
+            
+            InputVersionOverride.Value.Data = version;
+
+            return Input.Value.Data;
+        }
+
+        set
+        {
+            Input.Value.Data = value;
+
+            ++InputVersion.Value.Data;
+        }
+    }
+    
+    public static FixedString512Bytes output
+    {
+        get
+        {
+            int version = OutputVersion.Value.Data;
+            if (version == OutputVersionOverride.Value.Data)
+                return default;
+            
+            OutputVersionOverride.Value.Data = version;
+
+            return Output.Value.Data;
+        }
+
+        set
+        {
+            Output.Value.Data = value;
+
+            ++OutputVersion.Value.Data;
+        }
     }
 }
