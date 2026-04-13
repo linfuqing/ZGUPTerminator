@@ -1,5 +1,6 @@
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
+using Unity.CharacterController;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -21,6 +22,12 @@ public partial struct PickableSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<PhysicsCollider> physicsColliders;
+
+        [ReadOnly]
+        public ComponentLookup<KinematicCharacterBody> characterBodies;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
         public BufferAccessor<SimulationEvent> simulationEvents;
@@ -62,7 +69,11 @@ public partial struct PickableSystem : ISystem
             }
             else
             {
-                status.entity = __FilterEntity(instance.layerMask, simulationEvents[index].AsNativeArray(),
+                status.entity = __FilterEntity(
+                    instance.permission, 
+                    instance.layerMask,
+                    entityArray[index], 
+                    simulationEvents[index].AsNativeArray(),
                     out status.colliderKey);
                 if (status.entity == Entity.Null)
                     return status.value;
@@ -169,14 +180,46 @@ public partial struct PickableSystem : ISystem
                    (physicsCollider.Value.Value.GetCollisionFilter(colliderKey).BelongsTo & belongsTo) != 0;
         }
 
-        private Entity __FilterEntity(uint belongsTo, in NativeArray<SimulationEvent> simulationEvents, out ColliderKey colliderKey)
+        private Entity __FilterEntity(
+            Pickable.Permission permission, 
+            uint belongsTo, 
+            in Entity entity, 
+            in NativeArray<SimulationEvent> simulationEvents, 
+            out ColliderKey colliderKey)
         {
-            foreach (var simulationEvent in simulationEvents)
+            Entity character = Entity.Null;
+            switch (permission)
             {
-                if (__IsValidEntity(belongsTo, simulationEvent.entity, simulationEvent.colliderKey))
+                case Pickable.Permission.Local:
+                    EffectDamageParent.TryGetComponent(
+                        entity,
+                        effectDamageParents,
+                        characterBodies,
+                        out _,
+                        out character);
+                    break;
+            }
+
+            if (character == Entity.Null)
+            {
+                foreach (var simulationEvent in simulationEvents)
                 {
-                    colliderKey = simulationEvent.colliderKey;
-                    return simulationEvent.entity;
+                    if (__IsValidEntity(belongsTo, simulationEvent.entity, simulationEvent.colliderKey))
+                    {
+                        colliderKey = simulationEvent.colliderKey;
+                        return simulationEvent.entity;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var simulationEvent in simulationEvents)
+                {
+                    if (simulationEvent.entity == character)
+                    {
+                        colliderKey = simulationEvent.colliderKey;
+                        return simulationEvent.entity;
+                    }
                 }
             }
             
@@ -197,6 +240,12 @@ public partial struct PickableSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<PhysicsCollider> physicsColliders;
+
+        [ReadOnly]
+        public ComponentLookup<KinematicCharacterBody> characterBodies;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectDamageParent> effectDamageParents;
 
         [ReadOnly] 
         public BufferTypeHandle<SimulationEvent> simulationEventType;
@@ -225,6 +274,8 @@ public partial struct PickableSystem : ISystem
             pick.time = time;
             pick.localTransforms = localTransforms;
             pick.physicsColliders = physicsColliders;
+            pick.characterBodies = characterBodies;
+            pick.effectDamageParents = effectDamageParents;
             pick.simulationEvents = chunk.GetBufferAccessor(ref simulationEventType);
             pick.entityArray = chunk.GetNativeArray(entityType);
             pick.instances = chunk.GetNativeArray(ref instanceType);
@@ -266,6 +317,10 @@ public partial struct PickableSystem : ISystem
     private ComponentLookup<LocalTransform> __localTransforms;
 
     private ComponentLookup<PhysicsCollider> __physicsColliders;
+    
+    private ComponentLookup<KinematicCharacterBody> __characterBodies;
+
+    private ComponentLookup<EffectDamageParent> __effectDamageParents;
 
     private BufferTypeHandle<SimulationEvent> __simulationEventType;
 
@@ -289,6 +344,8 @@ public partial struct PickableSystem : ISystem
     {
         __localTransforms = state.GetComponentLookup<LocalTransform>(true);
         __physicsColliders = state.GetComponentLookup<PhysicsCollider>(true);
+        __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
+        __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>(true);
         __entityType = state.GetEntityTypeHandle();
         __instanceType = state.GetComponentTypeHandle<Pickable>();
@@ -314,6 +371,8 @@ public partial struct PickableSystem : ISystem
     {
         __localTransforms.Update(ref state);
         __physicsColliders.Update(ref state);
+        __characterBodies.Update(ref state);
+        __effectDamageParents.Update(ref state);
         __simulationEventType.Update(ref state);
         __entityType.Update(ref state);
         __instanceType.Update(ref state);
@@ -328,6 +387,8 @@ public partial struct PickableSystem : ISystem
         pick.time = SystemAPI.Time.ElapsedTime;
         pick.localTransforms = __localTransforms;
         pick.physicsColliders = __physicsColliders;
+        pick.characterBodies = __characterBodies;
+        pick.effectDamageParents = __effectDamageParents;
         pick.entityType = __entityType;
         pick.simulationEventType = __simulationEventType;
         pick.instanceType = __instanceType;

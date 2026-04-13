@@ -19,6 +19,7 @@ public class PickableAuthoring : MonoBehaviour
             //AddComponent<SimulationEvent>(entity);
 
             Pickable pickable;
+            pickable.permission = authoring._permission;
             pickable.pickedUpTime = authoring._pickedUpTime;
             pickable.startTime = authoring._startTime;
             pickable.speed = authoring._speed;
@@ -41,6 +42,9 @@ public class PickableAuthoring : MonoBehaviour
             }
         }
     }
+
+    [SerializeField] 
+    internal Pickable.Permission _permission;
     
     [SerializeField] 
     internal float _pickedUpTime;

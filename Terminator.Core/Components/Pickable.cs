@@ -1,9 +1,16 @@
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.Content;
 
 public struct Pickable : IComponentData, IEnableableComponent
 {
+    public enum Permission
+    {
+        All, 
+        Local
+    }
+    
+    public Permission permission;
+    
     public float pickedUpTime;
     public float startTime;
     public float speed;
