@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 public class ReplyMessageChatManager : MonoBehaviour
 {
@@ -10,7 +10,7 @@ public class ReplyMessageChatManager : MonoBehaviour
     internal StringEvent _onInput;
 
     [SerializeField]
-    internal Dropdown _dropdown;
+    internal TMP_Dropdown _dropdown;
     
     [SerializeField]
     internal string _format = "{0}:{1}";
