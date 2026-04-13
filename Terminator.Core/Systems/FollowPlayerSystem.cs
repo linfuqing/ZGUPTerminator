@@ -15,6 +15,15 @@ public partial struct FollowPlayerSystem : ISystem
         public double time;
         public Entity playerEntity;
         
+        [ReadOnly] 
+        public ComponentLookup<KinematicCharacterBody> characterBodies;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectDamageParent> effectDamageParents;
+
+        [ReadOnly]
+        public NativeArray<Entity> entityArray;
+
         [ReadOnly]
         public NativeArray<LocalToWorld> localToWorlds;
 
@@ -27,15 +36,30 @@ public partial struct FollowPlayerSystem : ISystem
         
         public void Execute(int index)
         {
+            var instance = instances[index];
+
+            Entity character;
+            if (instance.type == FollowPlayer.Type.Character)
+            {
+                EffectDamageParent.TryGetComponent(
+                    entityArray[index],
+                    effectDamageParents,
+                    characterBodies,
+                    out _,
+                    out character);
+
+                character = character == Entity.Null ? playerEntity : character;
+            }
+            else
+                character = playerEntity;
+            
             if (index < followTargets.Length)
             {
-                var instance = instances[index];
-                
                 FollowTarget followTarget;
                 //followTarget.flag = 0;
                 followTarget.space = instance.space;
                 followTarget.offset = instance.offset;
-                followTarget.entity = playerEntity;
+                followTarget.entity = character;
                 followTargets[index] = followTarget;
             }
 
@@ -44,7 +68,7 @@ public partial struct FollowPlayerSystem : ISystem
                 LookAtTarget lookAtTarget;
                 lookAtTarget.time = time;
                 lookAtTarget.origin = localToWorlds[index].Rotation;
-                lookAtTarget.entity = playerEntity;
+                lookAtTarget.entity = character;
                 lookAtTargets[index] = lookAtTarget;
             }
         }
@@ -56,6 +80,15 @@ public partial struct FollowPlayerSystem : ISystem
         public double time;
         public Entity playerEntity;
         
+        [ReadOnly] 
+        public ComponentLookup<KinematicCharacterBody> characterBodies;
+
+        [ReadOnly] 
+        public ComponentLookup<EffectDamageParent> effectDamageParents;
+
+        [ReadOnly]
+        public EntityTypeHandle entityType;
+
         [ReadOnly]
         public ComponentTypeHandle<LocalToWorld> localToWorldType;
 
@@ -71,6 +104,9 @@ public partial struct FollowPlayerSystem : ISystem
             Apply apply;
             apply.time = time;
             apply.playerEntity = playerEntity;
+            apply.characterBodies = characterBodies;
+            apply.effectDamageParents = effectDamageParents;
+            apply.entityArray = chunk.GetNativeArray(entityType);
             apply.localToWorlds = chunk.GetNativeArray(ref localToWorldType);
             apply.instances = chunk.GetNativeArray(ref instanceType);
             apply.followTargets = chunk.GetNativeArray(ref followTargetType);
@@ -92,6 +128,12 @@ public partial struct FollowPlayerSystem : ISystem
         }
     }
     
+    private ComponentLookup<KinematicCharacterBody> __characterBodies;
+
+    private ComponentLookup<EffectDamageParent> __effectDamageParents;
+
+    private EntityTypeHandle __entityType;
+
     private ComponentTypeHandle<LocalToWorld> __localToWorldType;
 
     private ComponentTypeHandle<FollowPlayer> __instanceType;
@@ -105,6 +147,9 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
+        __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
+        __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
+        __entityType = state.GetEntityTypeHandle();
         __localToWorldType = state.GetComponentTypeHandle<LocalToWorld>(true);
         __instanceType = state.GetComponentTypeHandle<FollowPlayer>(true);
         __followTargetType = state.GetComponentTypeHandle<FollowTarget>();
@@ -129,6 +174,9 @@ public partial struct FollowPlayerSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        __characterBodies.Update(ref state);
+        __effectDamageParents.Update(ref state);
+        __entityType.Update(ref state);
         __localToWorldType.Update(ref state);
         __instanceType.Update(ref state);
         __followTargetType.Update(ref state);
@@ -137,6 +185,9 @@ public partial struct FollowPlayerSystem : ISystem
         ApplyEx apply;
         apply.time = SystemAPI.Time.ElapsedTime;
         apply.playerEntity = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
+        apply.characterBodies = __characterBodies;
+        apply.effectDamageParents = __effectDamageParents;
+        apply.entityType = __entityType;
         apply.localToWorldType = __localToWorldType;
         apply.instanceType = __instanceType;
         apply.followTargetType = __followTargetType;

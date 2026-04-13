@@ -14,11 +14,15 @@ public class FollowPlayerAuthoring : MonoBehaviour
             
             var entity = GetEntity(TransformUsageFlags.None);
             FollowPlayer followPlayer;
+            followPlayer.type = authoring._type;
             followPlayer.space = authoring._space;
             followPlayer.offset = authoring._offset;
             AddComponent(entity, followPlayer);
         }
     }
+
+    [SerializeField]
+    internal FollowPlayer.Type _type;
     
     [SerializeField]
     internal FollowTargetSpace _space = FollowTargetSpace.World;
