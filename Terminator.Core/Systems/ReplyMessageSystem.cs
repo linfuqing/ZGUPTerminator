@@ -12,13 +12,6 @@ using ZG;
 [BurstCompile, UpdateInGroup(typeof(PresentationSystemGroup)), UpdateAfter(typeof(NetworkClientSystem))]
 public partial struct ReplyMessageSystem : ISystem
 {
-    [Flags]
-    private enum ReadEffectTargetFlag
-    {
-        Damage = 0x01, 
-        HP = 0x02
-    }
-    
     [BurstCompile]
     private struct Collect : IJob
     {
@@ -55,81 +48,41 @@ public partial struct ReplyMessageSystem : ISystem
 
         public BufferAccessor<RemoteEffectTargetDamage> effectTargetDamages;
 
-        public BufferAccessor<RemoteEffectTargetHP> effectTargetHPs;
-
-        public ReadEffectTargetFlag Execute(int index)
+        public bool Execute(int index)
         {
-            ReadEffectTargetFlag result = 0;
-            uint id = remoteIdentities[index].id;
-
             NativeList<NetworkClient.MessageElement> messageElements = default;
+
+            foreach (var message in messages.GetValues(ReplyMessageType.Damage, remoteIdentities[index].id,
+                         clientBuffer))
+            {
+                if (!messageElements.IsCreated)
+                    messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
+
+                messageElements.Add(message);
+            }
+
+            if (!messageElements.IsCreated)
+                return false;
+
+            messageElements.Sort();
+
             DataStreamReader reader;
             StreamCompressionModel streamCompressionModel = StreamCompressionModel.Default;
-            if (index < effectTargetDamages.Length)
+            var effectTargetDamages = this.effectTargetDamages[index];
+            foreach (var messageElement in messageElements)
             {
-                foreach (var message in messages.GetValues(ReplyMessageType.Damage, id, clientBuffer))
+                reader = messageElement.reader;
+                do
                 {
-                    if(!messageElements.IsCreated)
-                        messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
-                    
-                    messageElements.Add(message);
-                }
-
-                if (messageElements.IsCreated)
-                {
-                    result |= ReadEffectTargetFlag.Damage;
-                    
-                    messageElements.Sort();
-                    
-                    var effectTargetDamages = this.effectTargetDamages[index];
-                    foreach (var messageElement in messageElements)
-                    {
-                        reader = messageElement.reader;
-                        do
-                        {
-                            effectTargetDamages.Add(new RemoteEffectTargetDamage(ref reader,
-                                streamCompressionModel));
-                        } while (reader.GetBytesRead() < reader.Length);
-                    }
-                }
-            }
-            
-            if (index < effectTargetHPs.Length)
-            {
-                if(messageElements.IsCreated)
-                    messageElements.Clear();
-
-                foreach (var message in messages.GetValues(ReplyMessageType.HP, id, clientBuffer))
-                {
-                    if(!messageElements.IsCreated)
-                        messageElements = new NativeList<NetworkClient.MessageElement>(Allocator.Temp);
-                    
-                    messageElements.Add(message);
-                }
-
-                if (messageElements.IsCreated && messageElements.Length > 0)
-                {
-                    result |= ReadEffectTargetFlag.HP;
-
-                    messageElements.Sort();
-                    
-                    var effectTargetHPs = this.effectTargetHPs[index];
-                    foreach (var messageElement in messageElements)
-                    {
-                        reader = messageElement.reader;
-                        do
-                        {
-                            effectTargetHPs.Add(new RemoteEffectTargetHP(ref reader,
-                                streamCompressionModel));
-                        } while (reader.GetBytesRead() < reader.Length);
-                    }
-                }
+                    effectTargetDamages.Add(new RemoteEffectTargetDamage(ref reader,
+                        streamCompressionModel));
+                } while (reader.GetBytesRead() < reader.Length);
             }
 
-            if(messageElements.IsCreated)
+            if (messageElements.IsCreated)
                 messageElements.Dispose();
 
-            return result;
+            return true;
         }
     }
 
@@ -139,14 +92,12 @@ public partial struct ReplyMessageSystem : ISystem
 
         public BufferAccessor<RemoteEffectTargetDamage> effectTargetDamages;
 
-        public BufferAccessor<RemoteEffectTargetHP> effectTargetHPs;
-
         public void Execute(int index)
         {
             var streamCompressionModel = StreamCompressionModel.Default;
             
-            var effectTargetDamages = index < this.effectTargetDamages.Length ? this.effectTargetDamages[index] : default;
-            if (effectTargetDamages.IsCreated && effectTargetDamages.Length > 0)
+            var effectTargetDamages = this.effectTargetDamages[index];
+            if (effectTargetDamages.Length > 0)
             {
                 if (sendBuffer.BeginWrite(0, out var writer))
                 {
@@ -157,22 +108,6 @@ public partial struct ReplyMessageSystem : ISystem
 
                     effectTargetDamages.Clear();
                     
-                    sendBuffer.EndWrite(writer);
-                }
-            }
-            
-            var effectTargetHPs = index < this.effectTargetHPs.Length ? this.effectTargetHPs[index] : default;
-            if (effectTargetHPs.IsCreated && effectTargetHPs.Length > 0)
-            {
-                if (sendBuffer.BeginWrite(0, out var writer))
-                {
-                    writer.WriteReplyHeader((int)ReplyMessageType.HP, NetworkRelayType.Channel);
-                    
-                    foreach (var effectTargetHP in effectTargetHPs)
-                        effectTargetHP.Write(ref writer, streamCompressionModel);
-
-                    effectTargetHPs.Clear();
-
                     sendBuffer.EndWrite(writer);
                 }
             }
@@ -195,11 +130,7 @@ public partial struct ReplyMessageSystem : ISystem
 
         public ComponentTypeHandle<EffectTargetDamage> effectTargetDamageType;
 
-        public ComponentTypeHandle<EffectTargetHP> effectTargetHPType;
-
         public BufferTypeHandle<RemoteEffectTargetDamage> remoteEffectTargetDamageType;
-
-        public BufferTypeHandle<RemoteEffectTargetHP> remoteEffectTargetHPType;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
@@ -211,17 +142,11 @@ public partial struct ReplyMessageSystem : ISystem
                 readEffectTargets.clientBuffer = clientBuffer;
                 readEffectTargets.remoteIdentities = chunk.GetNativeArray(ref remoteIdentityType);
                 readEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref remoteEffectTargetDamageType);
-                readEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref remoteEffectTargetHPType);
 
-                ReadEffectTargetFlag flag;
                 while (iterator.NextEntityIndex(out int i))
                 {
-                    flag = readEffectTargets.Execute(i);
-                    if((flag & ReadEffectTargetFlag.Damage) == ReadEffectTargetFlag.Damage)
+                    if(readEffectTargets.Execute(i))
                         chunk.SetComponentEnabled(ref effectTargetDamageType, i, true);
-                    
-                    if((flag & ReadEffectTargetFlag.HP) == ReadEffectTargetFlag.HP)
-                        chunk.SetComponentEnabled(ref effectTargetHPType, i, true);
                 }
             }
             else
@@ -229,7 +154,6 @@ public partial struct ReplyMessageSystem : ISystem
                 WriteEffectTargets writeEffectTargets;
                 writeEffectTargets.sendBuffer = sendBuffer;
                 writeEffectTargets.effectTargetDamages = chunk.GetBufferAccessor(ref remoteEffectTargetDamageType);
-                writeEffectTargets.effectTargetHPs = chunk.GetBufferAccessor(ref remoteEffectTargetHPType);
 
                 while (iterator.NextEntityIndex(out int i))
                     writeEffectTargets.Execute(i);
@@ -610,13 +534,9 @@ public partial struct ReplyMessageSystem : ISystem
 
     private ComponentTypeHandle<EffectTargetDamage> __effectTargetDamageType;
 
-    private ComponentTypeHandle<EffectTargetHP> __effectTargetHPType;
-
     private ComponentTypeHandle<RemoteCameraForward> __remoteCameraForwardType;
 
     private BufferTypeHandle<RemoteEffectTargetDamage> __remoteEffectTargetDamageType;
-
-    private BufferTypeHandle<RemoteEffectTargetHP> __remoteEffectTargetHPType;
 
     private BufferTypeHandle<RemotePosition> __remotePositionType;
 
@@ -633,23 +553,21 @@ public partial struct ReplyMessageSystem : ISystem
         __localTransformType = state.GetComponentTypeHandle<LocalTransform>();
         __cameraRotationType = state.GetComponentTypeHandle<CameraRotation>();
         __effectTargetDamageType = state.GetComponentTypeHandle<EffectTargetDamage>();
-        __effectTargetHPType = state.GetComponentTypeHandle<EffectTargetHP>();
         __remoteCameraForwardType = state.GetComponentTypeHandle<RemoteCameraForward>();
         __remoteEffectTargetDamageType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
-        __remoteEffectTargetHPType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
         __remotePositionType = state.GetBufferTypeHandle<RemotePosition>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __effectTargetGroup =
-                builder.WithAny<RemoteEffectTargetDamage, RemoteEffectTargetHP>().Build(ref state);
+                builder.WithAllRW<RemoteEffectTargetDamage>().Build(ref state);
         
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __positionGroup =
-                builder.WithAll<LocalTransform, RemotePosition>().Build(ref state);
+                builder.WithAllRW<LocalTransform, RemotePosition>().Build(ref state);
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __cameraGroup =
-                builder.WithAll<CameraRotation>().Build(ref state);
+                builder.WithAllRW<CameraRotation>().Build(ref state);
 
         state.RequireForUpdate<NetworkClientDriver>();
         state.RequireForUpdate<ReplyMessages>();
@@ -687,9 +605,7 @@ public partial struct ReplyMessageSystem : ISystem
 
             __remoteIdentityType.Update(ref state);
             __effectTargetDamageType.Update(ref state);
-            __effectTargetHPType.Update(ref state);
             __remoteEffectTargetDamageType.Update(ref state);
-            __remoteEffectTargetHPType.Update(ref state);
 
             ReplyEffectTargets replyEffectTargets;
             replyEffectTargets.sendBuffer = sendBuffer;
@@ -697,9 +613,7 @@ public partial struct ReplyMessageSystem : ISystem
             replyEffectTargets.clientBuffer = clientBuffer;
             replyEffectTargets.remoteIdentityType = __remoteIdentityType;
             replyEffectTargets.effectTargetDamageType = __effectTargetDamageType;
-            replyEffectTargets.effectTargetHPType = __effectTargetHPType;
             replyEffectTargets.remoteEffectTargetDamageType = __remoteEffectTargetDamageType;
-            replyEffectTargets.remoteEffectTargetHPType = __remoteEffectTargetHPType;
             jobHandle = replyEffectTargets.ScheduleParallelByRef(__effectTargetGroup, jobHandle);
 
             __characterBodyType.Update(ref state);

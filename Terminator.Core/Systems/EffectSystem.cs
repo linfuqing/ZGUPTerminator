@@ -1506,7 +1506,7 @@ public partial struct EffectSystem : ISystem
 
         public BufferAccessor<RemoteEffectTargetDamage> targetDamageRemotes;
 
-        public BufferAccessor<RemoteEffectTargetHP> targetHPRemotes;
+        //public BufferAccessor<RemoteEffectTargetHP> targetHPRemotes;
 
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
@@ -1526,54 +1526,24 @@ public partial struct EffectSystem : ISystem
             var targetDamage = targetDamages[index];
             var targetHP = targetHPs[index];
 
+            var targetDamageRemotes = index < this.targetDamageRemotes.Length ? this.targetDamageRemotes[index] : default;
             if (isRemote)
             {
-                if (index < targetDamageRemotes.Length)
+                if (targetDamageRemotes.Length > 0)
                 {
-                    var targetDamageRemotes = this.targetDamageRemotes[index];
-                    if (targetDamageRemotes.Length > 0)
-                    {
-                        targetDamage = targetDamageRemotes[0].value;
-                        targetDamageRemotes.RemoveAt(0);
-
-                        if (targetDamageRemotes.Length > 0)
-                            result |= EnabledFlags.KeepDamage;
-                    }
-                    else
-                        targetDamage = default;
+                    targetDamageRemotes[0].Apply(target, ref targetDamage, ref targetHP);
+                    targetDamageRemotes.RemoveAt(0);
                 }
-
-                if (index < targetHPRemotes.Length)
-                {
-                    var targetHPRemotes = this.targetHPRemotes[index];
-                    if (targetHPRemotes.Length > 0)
-                    {
-                        targetHP = targetHPRemotes[0].value;
-                        targetHPRemotes.RemoveAt(0);
-                        
-                        if (targetHPRemotes.Length > 0)
-                            result |= EnabledFlags.KeepHP;
-                    }
-                    else
-                        targetHP = default;
-                }
+                else
+                    targetDamage = default;
             }
-            else
+
+            /*if (index < targetHPRemotes.Length && !targetHP.isEmpty)
             {
-                if (index < targetDamageRemotes.Length && !targetDamage.isEmpty)
-                {
-                    RemoteEffectTargetDamage targetDamageRemote;
-                    targetDamageRemote.value = targetDamage;
-                    targetDamageRemotes[index].Add(targetDamageRemote);
-                }
-                
-                if (index < targetHPRemotes.Length && !targetHP.isEmpty)
-                {
-                    RemoteEffectTargetHP targetHPRemote;
-                    targetHPRemote.value = targetHP;
-                    targetHPRemotes[index].Add(targetHPRemote);
-                }
-            }
+                RemoteEffectTargetHP targetHPRemote;
+                targetHPRemote.value = targetHP;
+                targetHPRemotes[index].Add(targetHPRemote);
+            }*/
             
             if ((isFallToDestroy || 
                  targetHP.value != 0 || 
@@ -2014,6 +1984,22 @@ public partial struct EffectSystem : ISystem
                 }
 
                 targetHPs[index] = targetHP;
+                
+                if (isRemote)
+                {
+                    if(targetDamageRemotes.Length > 0)
+                        targetDamageRemotes.RemoveAt(0);
+                }
+                else
+                {
+                    RemoteEffectTargetDamage targetDamageRemote;
+                    targetDamageRemote.hp = target.hp;
+                    targetDamageRemote.shield = target.shield;
+                    targetDamageRemote.layerMask = damageLayerMask;
+                    targetDamageRemote.messageLayerMask = messageLayerMask;
+                    targetDamageRemotes.Add(targetDamageRemote);
+                }
+
             }
             else
                 result |= EnabledFlags.Invincible;
@@ -2022,6 +2008,9 @@ public partial struct EffectSystem : ISystem
 
             targets[index] = target;
 
+            if (isRemote && targetDamageRemotes.Length > 0)
+                result |= EnabledFlags.KeepDamage;
+            
             return result;
         }
     }
@@ -2107,8 +2096,6 @@ public partial struct EffectSystem : ISystem
 
         public BufferTypeHandle<MessageParameter> messageParameterType;
 
-        public BufferTypeHandle<RemoteEffectTargetHP> targetHPRemoteType;
-
         public BufferTypeHandle<RemoteEffectTargetDamage> targetDamageRemoteType;
 
         [NativeDisableParallelForRestriction]
@@ -2157,7 +2144,6 @@ public partial struct EffectSystem : ISystem
             apply.messages = chunk.GetBufferAccessor(ref messageType);
             apply.messageParameters = chunk.GetBufferAccessor(ref messageParameterType);
             apply.targetDamageRemotes = chunk.GetBufferAccessor(ref targetDamageRemoteType);
-            apply.targetHPRemotes = chunk.GetBufferAccessor(ref targetHPRemoteType);
             apply.instanceIDs = instanceIDs;
             apply.entityManager = entityManager;
             apply.prefabLoader = prefabLoader;
@@ -2321,7 +2307,6 @@ public partial struct EffectSystem : ISystem
     private BufferTypeHandle<DelayTime> __delayTimeType;
 
     private BufferTypeHandle<RemoteEffectTargetDamage> __targetDamageRemoteType;
-    private BufferTypeHandle<RemoteEffectTargetHP> __targetHPRemoteType;
 
     private BufferTypeHandle<MessageParameter> __messageParameterType;
 
@@ -2432,7 +2417,6 @@ public partial struct EffectSystem : ISystem
         __simulationEventType = state.GetBufferTypeHandle<SimulationEvent>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
         __targetDamageRemoteType = state.GetBufferTypeHandle<RemoteEffectTargetDamage>();
-        __targetHPRemoteType = state.GetBufferTypeHandle<RemoteEffectTargetHP>();
         __messageParameterType = state.GetBufferTypeHandle<MessageParameter>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __inputMessageType = state.GetBufferTypeHandle<EffectMessage>(true);
@@ -2691,7 +2675,6 @@ public partial struct EffectSystem : ISystem
         __outputMessageType.Update(ref state);
         __messageParameterType.Update(ref state);
         __targetDamageRemoteType.Update(ref state);
-        __targetHPRemoteType.Update(ref state);
         __delayTimeType.Update(ref state);
 
         /*if (deltaTime > math.FLT_MIN_NORMAL)
@@ -2737,7 +2720,6 @@ public partial struct EffectSystem : ISystem
         apply.messageType = __outputMessageType;
         apply.messageParameterType = __messageParameterType;
         apply.targetDamageRemoteType = __targetDamageRemoteType;
-        apply.targetHPRemoteType = __targetHPRemoteType;
         apply.instanceIDs = __instanceIDs;
         apply.entityManager = entityManager;
         apply.prefabLoader = prefabLoader;

@@ -57,26 +57,67 @@ public struct RemotePosition : IBufferElementData
 
 public struct RemoteEffectTargetDamage : IBufferElementData
 {
-    public EffectTargetDamage value;
+    public int hp;
+    public int shield;
+    public int layerMask;
+    public int messageLayerMask;
 
     public RemoteEffectTargetDamage(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
     {
-        value.value = reader.ReadPackedInt(streamCompressionModel);
-        value.valueImmunized = reader.ReadPackedInt(streamCompressionModel);
-        value.layerMask = reader.ReadPackedInt(streamCompressionModel);
-        value.messageLayerMask = reader.ReadPackedInt(streamCompressionModel);
+        hp = reader.ReadPackedInt(streamCompressionModel);
+        shield = reader.ReadPackedInt(streamCompressionModel);
+        layerMask = reader.ReadPackedInt(streamCompressionModel);
+        messageLayerMask = reader.ReadPackedInt(streamCompressionModel);
     }
 
     public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
     {
-        writer.WritePackedInt(value.value,  streamCompressionModel);
-        writer.WritePackedInt(value.valueImmunized, streamCompressionModel);
-        writer.WritePackedInt(value.layerMask, streamCompressionModel);
-        writer.WritePackedInt(value.messageLayerMask, streamCompressionModel);
+        writer.WritePackedInt(hp,  streamCompressionModel);
+        writer.WritePackedInt(shield, streamCompressionModel);
+        writer.WritePackedInt(layerMask, streamCompressionModel);
+        writer.WritePackedInt(messageLayerMask, streamCompressionModel);
+    }
+
+    public void Apply(in EffectTarget target, ref EffectTargetDamage damage, ref EffectTargetHP hp)
+    {
+        damage.value = 0;
+        if (this.hp > target.hp)
+        {
+            damage.valueImmunized = 0;
+            damage.layerMask = 0;
+            damage.messageLayerMask = 0;
+            
+            hp.value = this.hp - target.hp;
+            hp.messageLayerMask = messageLayerMask;
+        }
+        else
+        {
+            damage.valueImmunized = target.hp - this.hp;
+            damage.layerMask = layerMask;
+            damage.messageLayerMask = messageLayerMask;
+            
+            hp.value = 0;
+            hp.messageLayerMask = 0;
+        }
+
+        if (shield < target.shield)
+        {
+            damage.valueImmunized += target.shield - shield;
+            damage.layerMask |= layerMask;
+            damage.messageLayerMask |= messageLayerMask;
+
+            hp.shield = 0;
+        }
+        else
+        {
+            hp.shield = shield - target.shield;
+            if (hp.shield > 0)
+                hp.messageLayerMask |= messageLayerMask;
+        }
     }
 }
 
-public struct RemoteEffectTargetHP : IBufferElementData
+/*public struct RemoteEffectTargetHP : IBufferElementData
 {
     public EffectTargetHP value;
 
@@ -93,4 +134,4 @@ public struct RemoteEffectTargetHP : IBufferElementData
         writer.WritePackedInt(value.shield, streamCompressionModel);
         writer.WritePackedInt(value.messageLayerMask, streamCompressionModel);
     }
-}
+}*/

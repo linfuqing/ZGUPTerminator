@@ -371,8 +371,7 @@ public partial struct LevelPlayerSystem : ISystem
                         ComponentType.ReadWrite<RemotePlayer>(), 
                         ComponentType.ReadWrite<RemoteIdentity>(), 
                         ComponentType.ReadWrite<RemotePosition>(), 
-                        ComponentType.ReadWrite<RemoteEffectTargetDamage>(), 
-                        ComponentType.ReadWrite<RemoteEffectTargetHP>()));
+                        ComponentType.ReadWrite<RemoteEffectTargetDamage>()));
 
                 entityManager.AddComponent(remotePlayers,
                     new ComponentTypeSet(
@@ -387,11 +386,7 @@ public partial struct LevelPlayerSystem : ISystem
                 new ComponentTypeSet(
                     ComponentType.ReadWrite<RemotePosition>(), 
                     ComponentType.ReadWrite<RemoteEffectTargetDamage>(),
-                    ComponentType.ReadWrite<RemoteEffectTargetHP>()));
-            
-            entityManager.AddComponent(localPlayers,
-                new ComponentTypeSet(
-                    ComponentType.ReadWrite<EffectDamageDistribution>(), 
+                    ComponentType.ReadWrite<EffectDamageDistribution>(),
                     ComponentType.ReadWrite<CameraRotation>(),
                     ComponentType.ReadWrite<RemoteCameraForward>()));
             
