@@ -188,6 +188,8 @@ public partial struct EffectSystem : ISystem
                         targetMessageParameters.Add(targetMessageParameter);
                     }
                 }
+                
+                entityManager.SetComponentEnabled<Message>(entity, true);
             }
 
             return entity;
