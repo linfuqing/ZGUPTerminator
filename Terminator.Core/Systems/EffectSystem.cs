@@ -74,6 +74,7 @@ public partial struct EffectSystem : ISystem
         public RigidTransform transform;
         public Entity entity;
         public Entity parent;
+        public Entity root;
         public LayerMaskAndTags layerMaskAndTags;
         public FixedList32Bytes<int> messageIndices;
         public EntityPrefabReference entityPrefabReference;
@@ -132,11 +133,11 @@ public partial struct EffectSystem : ISystem
                 entityManager.AddComponent(entity, parent);
             }
 
-            if (this.entity != Entity.Null)
+            if (root != Entity.Null)
             {
                 EffectDamageParent damageParent;
                 damageParent.index = index;
-                damageParent.entity = this.entity;
+                damageParent.entity = root;
                 entityManager.AddComponent(entity, damageParent);
             }
 
@@ -752,7 +753,7 @@ public partial struct EffectSystem : ISystem
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
-        public PrefabLoader.ParallelWriter prefabLoader;
+        //public PrefabLoader.ParallelWriter prefabLoader;
         
         public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
 
@@ -1058,6 +1059,7 @@ public partial struct EffectSystem : ISystem
                             targetBelongsTo, 
                             cameraRotation, 
                             math.RigidTransform(destination.Value),
+                            entity, 
                             simulationEvent.entity,
                             instanceDamage,
                             instanceDamageParent,
@@ -1218,6 +1220,7 @@ public partial struct EffectSystem : ISystem
                                     cameraRotation,
                                     transform,
                                     entity, 
+                                    entity, 
                                     instanceDamage,
                                     instanceDamageParent,
                                     prefabs,
@@ -1246,6 +1249,7 @@ public partial struct EffectSystem : ISystem
                             damageLayerMask, 
                             cameraRotation, 
                             transform,
+                            entity, 
                             entity,
                             instanceDamage,
                             instanceDamageParent,
@@ -1359,7 +1363,7 @@ public partial struct EffectSystem : ISystem
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
-        public PrefabLoader.ParallelWriter prefabLoader;
+        //public PrefabLoader.ParallelWriter prefabLoader;
 
         public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
 
@@ -1401,7 +1405,7 @@ public partial struct EffectSystem : ISystem
             collect.outputMessages = outputMessages;
             collect.damageStatistics = damageStatistics;
             collect.entityManager = entityManager;
-            collect.prefabLoader = prefabLoader;
+            //collect.prefabLoader = prefabLoader;
             collect.damageInstances = damageInstances;
 
             EnabledFlags enabledFlags;
@@ -1993,6 +1997,7 @@ public partial struct EffectSystem : ISystem
                                     damageLayerMask, 
                                     cameraRotation,
                                     math.RigidTransform(localToWorlds[index].Value),
+                                    entity, 
                                     entity, 
                                     instanceDamage,
                                     instanceDamageParent,
@@ -2663,7 +2668,7 @@ public partial struct EffectSystem : ISystem
             collect.damageStatistics = __damageStatistics;
             collect.outputMessages = __outputMessages;
             collect.entityManager = entityManager;
-            collect.prefabLoader = prefabLoader;
+            //collect.prefabLoader = prefabLoader;
             collect.damageInstances = damageInstances;
             //jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
             jobHandle = collect.ScheduleParallelByRef(__groupToCollect, jobHandle);
@@ -2800,6 +2805,7 @@ public partial struct EffectSystem : ISystem
         int damageLayerMask, 
         in quaternion cameraRotation, 
         in RigidTransform transform,
+        in Entity entity, 
         in Entity parent,
         in EffectDamage instanceDamage,
         in EffectDamageParent instanceDamageParent,
@@ -2820,7 +2826,8 @@ public partial struct EffectSystem : ISystem
 
         DamageInstance damageInstance;
         damageInstance.index = instanceDamageParent.index;
-        damageInstance.entity = instanceDamageParent.entity;
+        damageInstance.entity = entity;
+        damageInstance.root = instanceDamageParent.entity;
         damageInstance.layerMaskAndTags = instanceDamage.layerMaskAndTags;
 
         var randomSelector = new RandomSelector(ref random);
