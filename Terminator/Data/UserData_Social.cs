@@ -156,10 +156,11 @@ public partial interface IUserData
     /// 好友申请
     /// </summary>
     /// <param name="userID"></param>
-    /// <param name="targetUserID"></param>
+    /// <param name="targetUserIDs"></param>
+    /// <param name="description"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator FriendRequestApply(uint userID, uint targetUserID, string description, Action<bool> onComplete);
+    IEnumerator FriendRequestApply(uint userID, uint[] targetUserIDs, string description, Action<bool> onComplete);
     
     /// <summary>
     /// 同意好友申请
