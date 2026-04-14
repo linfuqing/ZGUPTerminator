@@ -425,7 +425,7 @@ public partial struct EffectSystem : ISystem
         public double time;
 
         [ReadOnly] 
-        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
+        public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
         [ReadOnly]
         public ComponentLookup<EffectDamageParent> damageParents;
         [ReadOnly] 
@@ -488,7 +488,7 @@ public partial struct EffectSystem : ISystem
                 else*/
                 if(!damageInstance.Instantiate(
                        time, 
-                       copyMatrixToTransformInstanceIDs, 
+                       instanceIDs, 
                        damageParents, 
                        children, 
                        inputMessages, 
@@ -2456,7 +2456,7 @@ public partial struct EffectSystem : ISystem
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
-        __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>(true);
+        __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
         __outputMessages = state.GetBufferLookup<Message>();
         __inputMessages = state.GetBufferLookup<EffectMessage>(true);
@@ -2564,7 +2564,7 @@ public partial struct EffectSystem : ISystem
 
             Instantiate instantiate;
             instantiate.time = time;
-            instantiate.copyMatrixToTransformInstanceIDs = __instanceIDs;
+            instantiate.instanceIDs = __instanceIDs;
             instantiate.damageParents = __damageParents;
             instantiate.children = __children;
             instantiate.inputMessages = __inputMessages;

@@ -1255,7 +1255,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp ||
                                                 //重新进入关卡创建风格时候
                                                 movedLevelIndex != -1 && movedLevelIndex != userLevelIndex || 
-                                                LevelPlayerShared<RemotePlayer>.isOnline)
+                                                LevelPlayerShared<RemotePlayer>.isOnline || 
+                                                !__sceneIndices.Add((userLevelIndex, currentSceneIndex)))
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
