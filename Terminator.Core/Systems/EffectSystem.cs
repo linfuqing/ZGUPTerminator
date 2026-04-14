@@ -1517,12 +1517,12 @@ public partial struct EffectSystem : ISystem
             var targetHP = targetHPs[index];
 
             var targetDamageRemotes = index < this.targetDamageRemotes.Length ? this.targetDamageRemotes[index] : default;
-            if (isRemote)
+            if (isRemote && targetDamageRemotes.IsCreated)
             {
                 if (targetDamageRemotes.Length > 0)
                 {
                     targetDamageRemotes[0].Apply(target, ref targetDamage, ref targetHP);
-                    targetDamageRemotes.RemoveAt(0);
+                    //targetDamageRemotes.RemoveAt(0);
                 }
                 else
                     targetDamage = default;
@@ -1974,22 +1974,24 @@ public partial struct EffectSystem : ISystem
                 }
 
                 targetHPs[index] = targetHP;
-                
-                if (isRemote)
-                {
-                    if(targetDamageRemotes.Length > 0)
-                        targetDamageRemotes.RemoveAt(0);
-                }
-                else
-                {
-                    RemoteEffectTargetDamage targetDamageRemote;
-                    targetDamageRemote.hp = target.hp;
-                    targetDamageRemote.shield = target.shield;
-                    targetDamageRemote.layerMask = damageLayerMask;
-                    targetDamageRemote.messageLayerMask = messageLayerMask;
-                    targetDamageRemotes.Add(targetDamageRemote);
-                }
 
+                if (targetDamageRemotes.IsCreated)
+                {
+                    if (isRemote)
+                    {
+                        if (targetDamageRemotes.Length > 0)
+                            targetDamageRemotes.RemoveAt(0);
+                    }
+                    else
+                    {
+                        RemoteEffectTargetDamage targetDamageRemote;
+                        targetDamageRemote.hp = target.hp;
+                        targetDamageRemote.shield = target.shield;
+                        targetDamageRemote.layerMask = damageLayerMask;
+                        targetDamageRemote.messageLayerMask = messageLayerMask;
+                        targetDamageRemotes.Add(targetDamageRemote);
+                    }
+                }
             }
             else
                 result |= EnabledFlags.Invincible;
@@ -1998,7 +2000,7 @@ public partial struct EffectSystem : ISystem
 
             targets[index] = target;
 
-            if (isRemote && targetDamageRemotes.Length > 0)
+            if (isRemote && targetDamageRemotes.IsCreated && targetDamageRemotes.Length > 0)
                 result |= EnabledFlags.KeepDamage;
             
             return result;
