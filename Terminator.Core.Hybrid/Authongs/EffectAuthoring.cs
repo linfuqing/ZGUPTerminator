@@ -72,9 +72,12 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
 
         public GameObject gameObject;
 
+        public string[] messageNames;
+
         public void ToAsset(
             ref EffectDefinition.Prefab prefab, 
             Dictionary<GameObject, int> prefabIndices, 
+            Dictionary<string, int> messageIndices, 
             BuffData[] buffs)
         {
             prefab.space = space;
@@ -105,6 +108,17 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
             prefab.randomAngleMax = randomAngleMax * Mathf.Deg2Rad;
             prefab.damageLayerMask = damageLayerMask;
             prefab.layerMaskAndTags = layerMaskAndTags;
+            prefab.messageIndices = default;
+
+            if (messageNames != null)
+            {
+                int messageIndex;
+                foreach (var messageName in messageNames)
+                {
+                    if(messageIndices.TryGetValue(messageName, out messageIndex))
+                        prefab.messageIndices.Add(messageIndex);
+                }
+            }
         }
     }
     
@@ -220,29 +234,33 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
         {
             var entity = GetEntity(TransformUsageFlags.None);
 
+            var messageIndices = new Dictionary<string, int>();
             int numMessages = authoring._messages.Length;
             if (numMessages > 0)
             {
                 var messages = AddBuffer<EffectMessage>(entity);
                 messages.ResizeUninitialized(numMessages);
                 
-                var prefabLoaders = new Dictionary<GameObject, EntityPrefabReference>();
+                //var prefabLoaders = new Dictionary<GameObject, EntityPrefabReference>();
                 for (int i = 0; i < numMessages; ++i)
                 {
                     ref var source = ref authoring._messages[i];
+                    
+                    messageIndices.Add(source.name, i);
+                    
                     ref var destination = ref messages.ElementAt(i);
 
                     destination.name = source.messageName;
                     destination.value = source.value;
                     
-                    if (source.receiverPrefab == null)
+                    /*if (source.receiverPrefab == null)
                         destination.entityPrefabReference = default;
                     else if (!prefabLoaders.TryGetValue(source.receiverPrefab, out destination.entityPrefabReference))
                     {
                         destination.entityPrefabReference = new EntityPrefabReference(source.receiverPrefab);
 
                         prefabLoaders[source.receiverPrefab] = destination.entityPrefabReference;
-                    }
+                    }*/
                 }
                 
                 //AddComponent<Message>(entity);
@@ -273,7 +291,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                 
                 int j, k, damageIndex, numDamages, numPrefabs, numMessageNames, numEffects = authoring._effects.Length;
                 string messageName;
-                BlobBuilderArray<int> messageIndices, damageIndices;
+                BlobBuilderArray<int> indices;
                 BlobBuilderArray<EffectDefinition.Prefab> prefabs;
                 var damageDataIndices = new Dictionary<DamageData, int>();
                 var damageDatas = new List<DamageData>();
@@ -289,7 +307,7 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.endTime = source.endTime;
 
                     numDamages = source.damages.Length;
-                    damageIndices = builder.Allocate(ref destination.damageIndices, numDamages);
+                    indices = builder.Allocate(ref destination.damageIndices, numDamages);
                     for (j = 0; j < numDamages; ++j)
                     {
                         ref var damage = ref source.damages[j];
@@ -301,13 +319,13 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                             damageDataIndices[damage] = damageIndex;
                         }
 
-                        damageIndices[j] = damageIndex;
+                        indices[j] = damageIndex;
                     }
                     
                     numPrefabs = source.prefabs == null ? 0 : source.prefabs.Length;
                     prefabs = builder.Allocate(ref destination.prefabs, numPrefabs);
                     for(j = 0; j < numPrefabs; ++j)
-                        source.prefabs[j].ToAsset(ref prefabs[j], prefabIndices, authoring._buffs);
+                        source.prefabs[j].ToAsset(ref prefabs[j], prefabIndices, messageIndices, authoring._buffs);
                 }
 
                 numDamages = damageDatas.Count;
@@ -332,36 +350,36 @@ public class EffectAuthoring : MonoBehaviour, IEffectAuthoring
                     destination.delayDestroyTime = source.delayDestroyTime;
                     
                     numMessageNames = source.messageNames == null ? 0 : source.messageNames.Length;
-                    messageIndices = builder.Allocate(ref destination.messageIndices, numMessageNames);
+                    indices = builder.Allocate(ref destination.messageIndices, numMessageNames);
                     for(j = 0; j < numMessageNames; ++j)
                     {
-                        messageIndices[j] = -1;
+                        indices[j] = -1;
                         
                         messageName = source.messageNames[j];
                         for (k = 0; k < numMessages; ++k)
                         {
                             if (authoring._messages[k].name == messageName)
                             {
-                                messageIndices[j] = k;
+                                indices[j] = k;
                                 
                                 break;
                             }
                         }
                          
-                        if(messageIndices[j] == -1)
+                        if(indices[j] == -1)
                             Debug.LogError($"Message {messageName} of effect damage {i} in {authoring} can not been found!");
                     }
                     
                     numPrefabs = source.prefabs == null ? 0 : source.prefabs.Length;
                     prefabs = builder.Allocate(ref destination.prefabs, numPrefabs);
                     for(j = 0; j < numPrefabs; ++j)
-                        source.prefabs[j].ToAsset(ref prefabs[j], prefabIndices, authoring._buffs);
+                        source.prefabs[j].ToAsset(ref prefabs[j], prefabIndices, messageIndices, authoring._buffs);
                 }
 
                 numPrefabs = authoring._prefabs == null ? 0 : authoring._prefabs.Length;
                 prefabs = builder.Allocate(ref root.prefabs, numPrefabs);
                 for (i = 0; i < numPrefabs; ++i)
-                    authoring._prefabs[i].ToAsset(ref prefabs[i], prefabIndices, authoring._buffs);
+                    authoring._prefabs[i].ToAsset(ref prefabs[i], prefabIndices, messageIndices, authoring._buffs);
                 
                 instance.definition = builder.CreateBlobAssetReference<EffectDefinition>(Allocator.Persistent);
             }

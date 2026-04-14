@@ -13,11 +13,6 @@ using Math = ZG.Mathematics.Math;
 using Object = UnityEngine.Object;
 using Random = Unity.Mathematics.Random;
 
-public enum BulletAttributeID
-{
-    ShooterTransform = 10
-}
-
 [Flags]
 public enum BulletLocation
 {
@@ -1266,7 +1261,7 @@ public struct BulletInstance : IBufferElementData
                 if (outputMessageParameters.IsCreated)
                 {
                     outputMessageParameter.messageKey = outputMessage.key;
-                    outputMessageParameter.id = (int)BulletAttributeID.ShooterTransform;
+                    outputMessageParameter.id = (int)EffectAttributeID.InstanceID;
                     outputMessageParameter.value = instanceID;
                     
                     outputMessageParameters.Add(outputMessageParameter);

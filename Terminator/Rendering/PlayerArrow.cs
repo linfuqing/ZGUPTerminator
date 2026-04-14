@@ -38,7 +38,7 @@ public class PlayerArrow : MonoBehaviour
     [Preserve]
     public void SetPlayerTransform(Parameters parameters)
     {
-        if (parameters.TryGet((int)BulletAttributeID.ShooterTransform, out int instanceID))
+        if (parameters.TryGet((int)EffectAttributeID.InstanceID, out int instanceID))
             __transform = Resources.InstanceIDToObject(instanceID) as Transform;
     }
     

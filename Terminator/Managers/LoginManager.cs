@@ -408,6 +408,7 @@ public sealed class LoginManager : MonoBehaviour
     private Dictionary<string, int> __levelIndices;
     private Dictionary<uint, LevelStage> __levelStages;
     private Dictionary<(uint, int), uint> __stageIDs;
+    private HashSet<(int, int)> __sceneIndices;
     private LinkedList<Loaders> __loaders;
     
     private UnityEvent __onLevelActivatedFirst;
@@ -802,6 +803,7 @@ public sealed class LoginManager : MonoBehaviour
 
         __levelStages = new Dictionary<uint, LevelStage>();
         __stageIDs = new Dictionary<(uint, int), uint>();
+        __sceneIndices = new HashSet<(int, int)>();
         
         numLevels = levelChapters.levels.Length;
         bool isHot = false, isMoved, isUnlock;

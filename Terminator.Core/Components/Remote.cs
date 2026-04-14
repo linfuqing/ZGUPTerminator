@@ -58,7 +58,7 @@ public struct RemotePosition : IBufferElementData
 public struct RemoteEffectTargetDamage : IBufferElementData
 {
     public EffectTargetDamage value;
-    
+
     public RemoteEffectTargetDamage(ref DataStreamReader reader, in StreamCompressionModel streamCompressionModel)
     {
         value.value = reader.ReadPackedInt(streamCompressionModel);

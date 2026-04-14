@@ -75,6 +75,7 @@ public partial struct EffectSystem : ISystem
         public Entity entity;
         public Entity parent;
         public LayerMaskAndTags layerMaskAndTags;
+        public FixedList32Bytes<int> messageIndices;
         public EntityPrefabReference entityPrefabReference;
 
         /*public float GetScale()
@@ -90,10 +91,16 @@ public partial struct EffectSystem : ISystem
 
         public Entity Instantiate(
             double time,
+            in ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs, 
+            in ComponentLookup<EffectDamageParent> damageParents, 
+            in BufferLookup<EffectMessage> inputMessages, 
+            ref BufferLookup<Message> outputMessages, 
+            ref BufferLookup<MessageParameter> messageParameters, 
             ref ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers,
             ref ComponentLookup<CharacterInterpolation> characterInterpolations, 
             ref EntityCommandBuffer entityManager,
-            ref PrefabLoader.Writer prefabLoader)
+            ref PrefabLoader.Writer prefabLoader, 
+            ref Random random)
         {
             if (!prefabLoader.TryGetOrLoadPrefabRoot(entityPrefabReference, out Entity prefabRoot))
                 return Entity.Null;
@@ -147,12 +154,56 @@ public partial struct EffectSystem : ISystem
                 entityManager.AddComponent(entity, buff);
             }
 
+            int numMessageIndices = messageIndices.Length;
+            if (numMessageIndices > 0 && 
+                inputMessages.TryGetBuffer(this.entity, out var effectMessages) && 
+                outputMessages.HasBuffer(prefabRoot))
+            {
+                int instanceID;
+                if (EffectDamageParent.TryGetComponent(this.entity, damageParents, copyMatrixToTransformInstanceIDs,
+                        out var copyMatrixToTransformInstanceID, out _))
+                    instanceID = copyMatrixToTransformInstanceID.value;
+                else
+                    instanceID = 0;
+                
+                MessageParameter parameter;
+                Message message;
+                EffectMessage effectMessage;
+                var messages = entityManager.SetBuffer<Message>(entity);
+                var parameters = messageParameters.HasBuffer(prefabRoot)
+                    ? entityManager.SetBuffer<MessageParameter>(entity)
+                    : default;
+                for (int i = 0; i < numMessageIndices; ++i)
+                {
+                    effectMessage = effectMessages[messageIndices[i]];
+
+                    message.key = random.NextInt();
+                    message.name = effectMessage.name;
+                    message.value = effectMessage.value;
+                    messages.Add(message);
+
+                    if (parameters.IsCreated)
+                    {
+                        parameter.messageKey = message.key;
+                        parameter.id = (int)EffectAttributeID.InstanceID;
+                        parameter.value = instanceID;
+                    
+                        parameters.Add(parameter);
+                    }
+                }
+            }
+
             return entity;
         }
 
         public bool Instantiate(
             double time, 
+            in ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs, 
+            in ComponentLookup<EffectDamageParent> damageParents, 
             in BufferLookup<Child> children, 
+            in BufferLookup<EffectMessage> inputMessages, 
+            ref BufferLookup<Message> outputMessages, 
+            ref BufferLookup<MessageParameter> messageParameters, 
             ref BufferLookup<EffectStatusTarget> statusTargets, 
             ref ComponentLookup<EffectStatus> states,
             ref ComponentLookup<EffectDamage> damages,
@@ -161,7 +212,8 @@ public partial struct EffectSystem : ISystem
             ref ComponentLookup<CharacterInterpolation> characterInterpolations, 
             ref UnsafeHashMap<BuffKey, BuffValue> buffs, 
             ref EntityCommandBuffer entityManager,
-            ref PrefabLoader.Writer prefabLoader)
+            ref PrefabLoader.Writer prefabLoader, 
+            ref Random random)
         {
             BuffKey buffKey;
             buffKey.name = buffName;
@@ -237,10 +289,16 @@ public partial struct EffectSystem : ISystem
 
             Entity entity = Instantiate(
                 time, 
+                copyMatrixToTransformInstanceIDs, 
+                damageParents, 
+                inputMessages, 
+                ref outputMessages, 
+                ref messageParameters, 
                 ref physicsGraphicalInterpolationBuffers,
                 ref characterInterpolations, 
                 ref entityManager, 
-                ref prefabLoader);
+                ref prefabLoader, 
+                ref random);
             if (entity != Entity.Null)
             {
                 if (isBuff)
@@ -366,8 +424,16 @@ public partial struct EffectSystem : ISystem
     {
         public double time;
 
+        [ReadOnly] 
+        public ComponentLookup<CopyMatrixToTransformInstanceID> copyMatrixToTransformInstanceIDs;
         [ReadOnly]
+        public ComponentLookup<EffectDamageParent> damageParents;
+        [ReadOnly] 
         public BufferLookup<Child> children;
+        [ReadOnly] 
+        public BufferLookup<EffectMessage> inputMessages;
+        public BufferLookup<Message> outputMessages;
+        public BufferLookup<MessageParameter> messageParameters; 
         public BufferLookup<EffectStatusTarget> statusTargets;
         public ComponentLookup<EffectStatus> states;
         public ComponentLookup<EffectDamage> damages;
@@ -387,6 +453,8 @@ public partial struct EffectSystem : ISystem
             //EffectDamageParent damageParent;
             //damageParent.index = -1;
 
+            long hash = math.aslong(time);
+            var random = Random.CreateFromIndex((uint)(hash >> 32) ^ (uint)hash);
             UnsafeHashMap<BuffKey, BuffValue> buffs = default;
             DamageInstance damageInstance;
             int count = damageInstances.Count;
@@ -420,7 +488,12 @@ public partial struct EffectSystem : ISystem
                 else*/
                 if(!damageInstance.Instantiate(
                        time, 
+                       copyMatrixToTransformInstanceIDs, 
+                       damageParents, 
                        children, 
+                       inputMessages, 
+                       ref outputMessages,
+                       ref messageParameters, 
                        ref statusTargets, 
                        ref states, 
                        ref damages, 
@@ -429,7 +502,8 @@ public partial struct EffectSystem : ISystem
                        ref characterInterpolations, 
                        ref buffs, 
                        ref entityManager, 
-                       ref prefabLoader))
+                       ref prefabLoader, 
+                       ref random))
                     damageInstances.Enqueue(damageInstance);
             }
 
@@ -764,8 +838,8 @@ public partial struct EffectSystem : ISystem
                     RefRW<KinematicCharacterBody> characterBody;
                     EffectMessage inputMessage;
                     Message outputMessage;
-                    MessageParameter messageParameter;
-                    Entity instance;
+                    //MessageParameter messageParameter;
+                    //Entity instance;
                     LocalToWorld destination;
                     quaternion cameraRotation;
                     float3 forceResult, force;
@@ -1034,7 +1108,7 @@ public partial struct EffectSystem : ISystem
                             outputMessage.name = inputMessage.name;
                             outputMessage.value = inputMessage.value;
 
-                            if (inputMessage.entityPrefabReference.Equals(default))
+                            //if (inputMessage.entityPrefabReference.Equals(default))
                             {
                                 if (outputMessages.IsCreated)
                                 {
@@ -1045,7 +1119,7 @@ public partial struct EffectSystem : ISystem
                                     this.outputMessages.SetBufferEnabled(messageEntity, true);
                                 }
                             }
-                            else if (!outputMessage.name.IsEmpty &&
+                            /*else if (!outputMessage.name.IsEmpty &&
                                      prefabLoader.TryGetOrLoadPrefabRoot(
                                          inputMessage.entityPrefabReference,
                                          out instance))
@@ -1067,7 +1141,7 @@ public partial struct EffectSystem : ISystem
                                 entityManager.SetComponent(1, instance,
                                     LocalTransform.FromPositionRotation(destination.Position,
                                         cameraRotation));
-                            }
+                            }*/
                         }
                     }
 
@@ -2301,7 +2375,9 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
     
+    private BufferLookup<MessageParameter> __messageParameters; 
     private BufferLookup<Message> __outputMessages;
+    private BufferLookup<EffectMessage> __inputMessages;
 
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
 
@@ -2380,8 +2456,10 @@ public partial struct EffectSystem : ISystem
         __dropToDamages = state.GetComponentLookup<DropToDamage>();
         __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
-        __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>();
+        __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>(true);
+        __messageParameters = state.GetBufferLookup<MessageParameter>();
         __outputMessages = state.GetBufferLookup<Message>();
+        __inputMessages = state.GetBufferLookup<EffectMessage>(true);
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
         __statusTargets = state.GetBufferLookup<EffectStatusTarget>();
         __children = state.GetBufferLookup<Child>(true);
@@ -2453,6 +2531,7 @@ public partial struct EffectSystem : ISystem
         __targetType.Update(ref state);
         __characterBodyType.Update(ref state);
         __instanceIDs.Update(ref state);
+        __outputMessages.Update(ref state);
         
         double time = SystemAPI.Time.ElapsedTime;
 
@@ -2475,6 +2554,8 @@ public partial struct EffectSystem : ISystem
         {
             __frameCount = fixedFrame.count;
             
+            __inputMessages.Update(ref state);
+            __messageParameters.Update(ref state);
             __characterInterpolations.Update(ref state);
             __physicsGraphicalInterpolationBuffers.Update(ref state);
             __statusTargets.Update(ref state);
@@ -2483,7 +2564,12 @@ public partial struct EffectSystem : ISystem
 
             Instantiate instantiate;
             instantiate.time = time;
+            instantiate.copyMatrixToTransformInstanceIDs = __instanceIDs;
+            instantiate.damageParents = __damageParents;
             instantiate.children = __children;
+            instantiate.inputMessages = __inputMessages;
+            instantiate.outputMessages = __outputMessages;
+            instantiate.messageParameters = __messageParameters;
             instantiate.statusTargets = __statusTargets;
             instantiate.states = __states;
             instantiate.damages = __damages;
@@ -2542,7 +2628,6 @@ public partial struct EffectSystem : ISystem
             __dropToDamages.Update(ref state);
             __characterBodies.Update(ref state);
             __localToWorlds.Update(ref state);
-            __outputMessages.Update(ref state);
             __damageStatistics.Update(ref state);
 
             CollectEx collect;
@@ -2772,6 +2857,7 @@ public partial struct EffectSystem : ISystem
                 damageInstance.buffScalePerCount = 0;
             }
 
+            damageInstance.messageIndices = prefab.messageIndices;
             damageInstance.entityPrefabReference = prefabs[prefab.index].entityPrefabReference;
             switch (prefab.space)
             {

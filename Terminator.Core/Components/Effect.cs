@@ -14,7 +14,8 @@ public enum EffectAttributeID
     HPMax, 
     HP,
     Shield, 
-    Damage
+    Damage, 
+    InstanceID
 }
 
 public enum EffectSpace
@@ -59,6 +60,7 @@ public struct EffectDefinition
         public float randomAngleMin;
         public float randomAngleMax;
         public LayerMaskAndTags layerMaskAndTags;
+        public FixedList32Bytes<int> messageIndices;
     }
     
     public struct Damage
@@ -227,7 +229,7 @@ public struct EffectMessage : IBufferElementData
 {
     public FixedString128Bytes name;
     public UnityObjectRef<Object> value;
-    public EntityPrefabReference entityPrefabReference;
+    //public EntityPrefabReference entityPrefabReference;
 }
 
 public struct EffectStatusTarget : IBufferElementData, IEnableableComponent
