@@ -1300,6 +1300,9 @@ public class ClientData : MonoBehaviour, IClientData
 
     private void __Connect()
     {
+        if (string.IsNullOrEmpty(__address))
+            return;
+        
         var client = driver.instance;
         if(__isConnected)
             client.Shutdown();
