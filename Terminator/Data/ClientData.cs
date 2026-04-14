@@ -460,8 +460,10 @@ public interface IClientData
     
     ClientHeader header { get; }
 
+    void SetHeaderOverride(in FixedString32Bytes userName, in FixedString32Bytes userAvatar);
+    
     void Connect(in ClientHeader header, string address, ushort port);
-
+    
     void SetStatus(int value);
     
     /// <summary>
@@ -536,10 +538,11 @@ public class ClientData : MonoBehaviour, IClientData
     private int __frameCount;
     private int __pipelineIndex;
     private int __messageIndex;
+    private ClientMessageSquadInviteToSend __squadInviteMessage;
     private NativeList<NetworkClient.Message> __messages;
     private NativeList<byte> __bytes;
-    private ClientMessageSquadInviteToSend __squadInviteMessage;
-
+    
+    private static NativeHashSet<uint> __friendIDs;
     private static Entity __entity;
     private static string __address;
     private static ushort __port;
@@ -607,7 +610,7 @@ public class ClientData : MonoBehaviour, IClientData
         __initStatus = InitStatus.None;
         
         var driver = this.driver.instance;
-        bool isDisconnected = NetworkConnection.State.Disconnected == driver.connectionState, isChanged = false;
+        bool isChanged = false;
 
         __address ??= _address;
         
@@ -628,20 +631,8 @@ public class ClientData : MonoBehaviour, IClientData
             isChanged = true;
         }
         
-        if (isDisconnected || isChanged)
-        {
-            if(!isDisconnected)
-                driver.Shutdown();
-            
-            using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
-            {
-                var writer = new DataStreamWriter(bytes);
-                header.Write(ref writer, StreamCompressionModel.Default);
-                driver.Connect(__address, __port, bytes.GetSubArray(0, writer.Length));
-                
-                print($"{this} has been connected to {__address}:{__port}");
-            }
-        }
+        if (!__isConnected || isChanged)
+            __Connect();
         
         SetStatus(0);
     }
@@ -793,7 +784,15 @@ public class ClientData : MonoBehaviour, IClientData
                             switch ((NetworkRelayMessageType)type)
                             {
                                 case NetworkRelayMessageType.Add:
+                                    if(!__friendIDs.IsCreated)
+                                        __friendIDs = new NativeHashSet<uint>(1, Allocator.Persistent);
+
+                                    __friendIDs.Add(header.userID);
+                                    return type;
                                 case NetworkRelayMessageType.Remove:
+                                    if(__friendIDs.IsCreated)
+                                        __friendIDs.Remove(header.userID);
+                                    
                                     return type;
                                 default:
                                     return (int)ClientMessageType.Status;
@@ -1083,24 +1082,53 @@ public class ClientData : MonoBehaviour, IClientData
                     sendBuffer.EndWrite(writer);
                 }
                 break;
+            case ClientMessageType.ApplyFriend:
+            {
+                var temp = __Load<ClientMessageApplyFriendToSend>();
+                if ((!__friendIDs.IsCreated || !__friendIDs.Contains(temp.userID)) &&
+                    sendBuffer.BeginWrite(__pipelineIndex, out writer))
+                {
+                    this.header.Write(
+                        ref writer,
+                        StreamCompressionModel.Default,
+                        (int)ClientMessageType.ApplyFriend, 
+                        temp.userID.RelayType());
+
+                    writer.WriteFixedString512(temp.text);
+
+                    sendBuffer.EndWrite(writer);
+                }
+
+                break;
+            }
             case ClientMessageType.AddFriend:
-                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+            {
+                var temp = __Load<ClientMessageAddFriend>();
+                if ((!__friendIDs.IsCreated || !__friendIDs.Contains(temp.userID)) && 
+                    sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Add, streamCompressionModel);
-                    writer.WritePackedUInt(__Load<ClientMessageAddFriend>().userID, streamCompressionModel);
+                    writer.WritePackedUInt(temp.userID, streamCompressionModel);
                     sendBuffer.EndWrite(writer);
                 }
+
                 break;
+            }
             case ClientMessageType.RemoveFriend:
-                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
+            {
+                var temp = __Load<ClientMessageRemoveFriend>();
+                if (__friendIDs.IsCreated && __friendIDs.Contains(temp.userID) && 
+                    sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)NetworkRelayMessageType.Remove, streamCompressionModel);
-                    writer.WritePackedUInt(__Load<ClientMessageRemoveFriend>().userID, streamCompressionModel);
+                    writer.WritePackedUInt(temp.userID, streamCompressionModel);
                     sendBuffer.EndWrite(writer);
                 }
+
                 break;
+            }
             case ClientMessageType.SquadJoin:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
@@ -1181,20 +1209,6 @@ public class ClientData : MonoBehaviour, IClientData
                         (int)ClientMessageType.Chat, ClientChannel.Private == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);
 
                     writer.WriteFixedString512(temp.value);
-                    
-                    sendBuffer.EndWrite(writer);
-                }
-                break;
-            case ClientMessageType.ApplyFriend:
-                if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
-                {
-                    var temp = __Load<ClientMessageApplyFriendToSend>();
-                    this.header.Write(
-                        ref writer, 
-                        StreamCompressionModel.Default, 
-                        (int)ClientMessageType.ApplyFriend, temp.userID.RelayType());
-
-                    writer.WriteFixedString512(temp.text);
                     
                     sendBuffer.EndWrite(writer);
                 }
@@ -1282,6 +1296,38 @@ public class ClientData : MonoBehaviour, IClientData
         EndSend(writer);
     }
 
+    private bool __isConnected;
+
+    private void __Connect()
+    {
+        var client = driver.instance;
+        if(__isConnected)
+            client.Shutdown();
+        
+        using (var bytes = new NativeArray<byte>(1024, Allocator.Temp))
+        {
+            var writer = new DataStreamWriter(bytes);
+            header.Write(ref writer, StreamCompressionModel.Default);
+            client.Connect(__address, __port, bytes.GetSubArray(0, writer.Length));
+            
+            print($"{this} is connecting to {__address}:{__port}");
+        }
+
+        __isConnected = true;
+    }
+
+    private void __Disconnect()
+    {
+        if (!__isConnected)
+            return;
+        
+        __isConnected = false;
+        
+        driver.instance.Shutdown();
+        
+        print($"{this} has been disconnected");
+    }
+    
     void Start()
     {
         IClientData.instance = this;
@@ -1320,7 +1366,32 @@ public class ClientData : MonoBehaviour, IClientData
 
     void OnDestroy()
     {
-        __bytes.Dispose();
+        if(__messages.IsCreated)
+            __messages.Dispose();
+        
+        if(__bytes.IsCreated)
+            __bytes.Dispose();
+
+        if(__friendIDs.IsCreated)
+            __friendIDs.Dispose();
+    }
+
+    void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+            Invoke(nameof(__Disconnect), _disconnectTimeoutMS * 0.001f);
+        else
+        {
+            CancelInvoke(nameof(__Disconnect));
+            
+            if(!__isConnected)
+                __Connect();
+        }
+    }
+
+    void OnApplicationQuit()
+    {
+        __Disconnect();
     }
 }
 
