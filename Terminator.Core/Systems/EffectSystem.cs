@@ -157,7 +157,7 @@ public partial struct EffectSystem : ISystem
                 messages.HasBuffer(prefabRoot))
             {
                 int instanceID;
-                if (copyMatrixToTransformInstanceIDs.TryGetComponent(parent,
+                if (copyMatrixToTransformInstanceIDs.TryGetComponent(root,
                         out var copyMatrixToTransformInstanceID))
                     instanceID = copyMatrixToTransformInstanceID.value;
                 else
