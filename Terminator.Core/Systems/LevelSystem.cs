@@ -256,6 +256,8 @@ public partial struct LevelSystem : ISystem
                     
                     stageConditionStates.Resize(conditionCount, NativeArrayOptions.UninitializedMemory);
                     
+                    UnityEngine.Debug.Log($"Level stage from {stage.value}:{stageDefinition.name} to {nextStage.index}:{nextStageDefinition.name}");
+
                     stage.value = nextStage.index;
 
                     if (numResults < 1 && i == definition.mainStageIndex)
@@ -266,7 +268,7 @@ public partial struct LevelSystem : ISystem
                 
                 if(j == numNextStages)
                     continue;
-
+                
                 numResults = stageDefinition.results.Length;
                 if (numResults > 0)
                 {
