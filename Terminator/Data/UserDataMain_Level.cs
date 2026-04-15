@@ -869,7 +869,6 @@ public partial class UserDataMain
             userStage.flag = 0;
             if (isUnlockTemp)
             {
-                userStage.rewards = null;
                 numStageRewards = stage.indirectRewards.Length;
                 userStage.rewardFlags = new UserStageReward.Flag[numStageRewards];
                 for (j = 0; j < numStageRewards; ++j)
@@ -894,7 +893,10 @@ public partial class UserDataMain
                     isUnlock = true;
                     
                     userStage.flag |= UserStage.Flag.Unlocked;
+                    userStage.rewards = null;
                 }
+                else
+                    userStage.rewards = stage.directRewards;
             }
             else
             {
