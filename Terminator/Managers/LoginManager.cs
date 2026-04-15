@@ -1932,7 +1932,7 @@ public sealed class LoginManager : MonoBehaviour
                 if (ReplyMessageShared.isHost)
                 {
                     bool isWaitingToPlay = false;
-                    if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
+                    if (stageID != 0 && stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                     {
                         if (RemotePlayer.Status.StandBy == RemotePlayer.status)
                             RemotePlayer.status = RemotePlayer.Status.Joined;
