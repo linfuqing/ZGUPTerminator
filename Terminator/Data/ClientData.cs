@@ -535,6 +535,7 @@ public class ClientData : MonoBehaviour, IClientData
     };
 
     private InitStatus __initStatus;
+    private bool __waitingForSend;
     private int __frameCount;
     private int __pipelineIndex;
     private int __messageIndex;
@@ -859,11 +860,13 @@ public class ClientData : MonoBehaviour, IClientData
                                 switch ((NetworkRelayMessageType)type)
                                 {
                                     case NetworkRelayMessageType.Create:
-                                        if (sendBuffer.BeginWrite(__pipelineIndex, out var writer))
+                                        if (__waitingForSend && sendBuffer.BeginWrite(__pipelineIndex, out var writer))
                                         {
                                             __WriteSquadInvite(ref writer, streamCompressionModel, channel);
                                             
                                             sendBuffer.EndWrite(writer);
+
+                                            __waitingForSend = false;
                                         }
 
                                         if ((channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus) != 0)
@@ -1165,6 +1168,8 @@ public class ClientData : MonoBehaviour, IClientData
                         __WriteSquadInvite(ref writer, streamCompressionModel, ReplyMessageShared.channel);
                     else
                     {
+                        __waitingForSend = true;
+                        
                         writer.WritePackedInt((int)NetworkRelayMessageType.Create, streamCompressionModel);
                         writer.WritePackedInt(2, streamCompressionModel);
                     }
