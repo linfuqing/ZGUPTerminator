@@ -1923,7 +1923,7 @@ public sealed class LoginManager : MonoBehaviour
         var clientData = IClientData.instance;
         int sourceVersion = 0, destinationVersion;
         bool hasStage = __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID);
-        if (ReplyMessageShared.remotePlayerCount > 0)
+        if (ReplyMessageShared.remotePlayerCount > 0 && LevelPlayerShared<RemotePlayer>.isOnline)
         {
             if (hasStage)
             {
@@ -1931,21 +1931,16 @@ public sealed class LoginManager : MonoBehaviour
 
                 if (ReplyMessageShared.isHost)
                 {
+                    bool isWaitingToPlay = false;
                     if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                     {
                         if (RemotePlayer.Status.StandBy == RemotePlayer.status)
                             RemotePlayer.status = RemotePlayer.Status.Joined;
-                        
-                        if (RemotePlayer.Status.Joined != RemotePlayer.status)
-                        {
-                            __status = Status.None;
-                            
-                            Debug.LogError("WTF???");
-                            
-                            yield break;
-                        }
+
+                        isWaitingToPlay = RemotePlayer.Status.Joined != RemotePlayer.status;
                     }
-                    else
+                    
+                    if(isWaitingToPlay)
                     {
                         RemotePlayer.status = RemotePlayer.Status.Waiting;
 
