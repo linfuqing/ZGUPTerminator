@@ -1944,7 +1944,7 @@ public sealed class LoginManager : MonoBehaviour
                     {
                         RemotePlayer.status = RemotePlayer.Status.Waiting;
 
-                        print("[Start:Host]Waiting for remotePlayer login..");
+                        print($"[Start:Host]Waiting for remotePlayer login..(Remote Status: {LevelPlayerShared<RemotePlayer>.channelStatus}, Stage ID: {stageID})");
                         while (0 != LevelPlayerShared<RemotePlayer>.channelStatus &&
                                LevelPlayerShared<RemotePlayer>.isOnline)
                         {

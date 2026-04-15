@@ -170,8 +170,8 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<EffectDamage> effectDamages;
 
-        [ReadOnly] 
-        public ComponentLookup<EffectTarget> effectTargets;
+        //[ReadOnly] 
+        //public ComponentLookup<EffectTarget> effectTargets;
         
         [ReadOnly]
         public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
@@ -230,7 +230,7 @@ public partial struct BulletSystem : ISystem
         public bool Execute(int index)
         {
             Entity entity = entityArray[index];
-            EffectDamageParent.TryGetComponent(
+            /*EffectDamageParent.TryGetComponent(
                 entity,
                 effectDamageParents,
                 effectTargets,
@@ -238,7 +238,7 @@ public partial struct BulletSystem : ISystem
                 out var effectTarget);
             
             if (effectTarget != Entity.Null && !effectTargets.IsComponentEnabled(effectTarget))
-                return false;
+                return false;*/
             
             EffectDamageParent.TryGetComponent(
                 entity,
@@ -270,6 +270,9 @@ public partial struct BulletSystem : ISystem
             }
             else
             {
+                if (!characterBodies.IsComponentEnabled(character))
+                    return false;
+                
                 this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
 
                 cameraRotation = cameraRotations.TryGetComponent(character, out var temp) ? temp.value : this.cameraRotation;
@@ -453,8 +456,8 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<EffectDamageParent> effectDamageParents;
 
-        [ReadOnly] 
-        public ComponentLookup<EffectTarget> effectTargets;
+        //[ReadOnly] 
+        //public ComponentLookup<EffectTarget> effectTargets;
 
         [ReadOnly] 
         public ComponentLookup<BulletLayerMaskAndTags> bulletLayerMaskAndTags;
@@ -537,7 +540,7 @@ public partial struct BulletSystem : ISystem
             collect.followTargetVelocities = followTargetVelocities;
             collect.effectDamages = effectDamages;
             collect.effectDamageParents = effectDamageParents;
-            collect.effectTargets = effectTargets;
+            //collect.effectTargets = effectTargets;
             collect.bulletLayerMaskAndTags = bulletLayerMaskAndTags;
             collect.copyMatrixToTransformInstanceIDs = copyMatrixToTransformInstanceIDs;
             collect.messages = messages;
@@ -663,7 +666,7 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<EffectDamageParent> __effectDamageParents;
 
-    private ComponentLookup<EffectTarget> __effectTargets;
+    //private ComponentLookup<EffectTarget> __effectTargets;
 
     private ComponentLookup<BulletLayerMaskAndTags> __bulletLayerMaskAndTags;
 
@@ -732,7 +735,7 @@ public partial struct BulletSystem : ISystem
         __followTargetVelocities = state.GetComponentLookup<FollowTargetVelocity>(true);
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
-        __effectTargets = state.GetComponentLookup<EffectTarget>(true);
+        //__effectTargets = state.GetComponentLookup<EffectTarget>(true);
         __bulletLayerMaskAndTags = state.GetComponentLookup<BulletLayerMaskAndTags>(true);
         __levelStates = state.GetComponentLookup<LevelStatus>(true);
         __copyMatrixToTransformInstanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>(true);
@@ -802,7 +805,7 @@ public partial struct BulletSystem : ISystem
         __followTargetVelocities.Update(ref state);
         __effectDamages.Update(ref state);
         __effectDamageParents.Update(ref state);
-        __effectTargets.Update(ref state);
+        //__effectTargets.Update(ref state);
         __bulletLayerMaskAndTags.Update(ref state);
         __levelStates.Update(ref state);
         __copyMatrixToTransformInstanceIDs.Update(ref state);
@@ -845,7 +848,7 @@ public partial struct BulletSystem : ISystem
         collect.followTargetVelocities = __followTargetVelocities;
         collect.effectDamages = __effectDamages;
         collect.effectDamageParents = __effectDamageParents;
-        collect.effectTargets = __effectTargets;
+        //collect.effectTargets = __effectTargets;
         collect.bulletLayerMaskAndTags = __bulletLayerMaskAndTags;
         collect.levelStates = __levelStates;
         collect.copyMatrixToTransformInstanceIDs = __copyMatrixToTransformInstanceIDs;

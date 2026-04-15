@@ -186,6 +186,9 @@ public partial struct LookAtSystem : ISystem
         public void Execute(int index)
         {
             Entity entity = entityArray[index];
+            if (characterBodies.HasComponent(entity) && !characterBodies.IsComponentEnabled(entity))
+                return;
+            
             var instance = instances[index];
             var localTransform = localTransforms[entity];
 
