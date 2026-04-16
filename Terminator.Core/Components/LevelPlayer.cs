@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
@@ -185,21 +186,25 @@ public struct LevelPlayerProperty
     }
 }
 
+[StructLayout(LayoutKind.Explicit, Size=68)]
 public struct LevelPlayerHeader
 {
+    [FieldOffset(0)]
     public int power;
+    [FieldOffset(4)]
     public FixedString32Bytes name;
+    [FieldOffset(36)]
     public FixedString32Bytes avatar;
         
     public LevelPlayerHeader(in FixedBytes80 bytes)
     {
-        this = bytes.AsArray().Reinterpret<LevelPlayerHeader>(1)[0];
+        this = bytes.AsArray().GetSubArray(0, 68).Reinterpret<LevelPlayerHeader>(1)[0];
     }
 
     public void Write(ref DataStreamWriter writer)
     {
         FixedBytes80 bytes = default;
-        var blocks = bytes.AsArray().Reinterpret<LevelPlayerHeader>(1);
+        var blocks = bytes.AsArray().GetSubArray(0, 68).Reinterpret<LevelPlayerHeader>(1);
         blocks[0] = this;
         bytes.Write(ref writer);
     }
