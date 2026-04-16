@@ -143,14 +143,16 @@ public interface IClientMessageToSend
 public struct ClientHeader : IEquatable<ClientHeader>
 {
     public uint userID;
+    public int power;
     public FixedString32Bytes userName;
     public FixedString32Bytes userAvatar;
 
     public ClientHeader(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
         userID = reader.ReadPackedUInt(streamCompressionModel);
-        var bytes = new FixedBytes64(ref reader);
+        var bytes = new FixedBytes80(ref reader);
         var header = new LevelPlayerHeader(bytes);
+        power = header.power;
         userName = header.name;
         userAvatar = header.avatar;
     }
@@ -159,6 +161,7 @@ public struct ClientHeader : IEquatable<ClientHeader>
     {
         writer.WritePackedUInt(userID, streamCompressionModel);
         LevelPlayerHeader header;
+        header.power = power;
         header.name = userName;
         header.avatar = userAvatar;
         header.Write(ref writer);
@@ -460,7 +463,7 @@ public interface IClientData
     
     ClientHeader header { get; }
 
-    void SetHeaderOverride(in FixedString32Bytes userName, in FixedString32Bytes userAvatar);
+    void SetHeaderOverride(in FixedString32Bytes userName, in FixedString32Bytes userAvatar, int power = 0);
     
     void Connect(in ClientHeader header, string address, ushort port);
     
@@ -589,6 +592,7 @@ public class ClientData : MonoBehaviour, IClientData
             header.userID = LevelPlayerShared<LocalPlayer>.id;
             
             var levelPlayerHeader = LevelPlayerShared<LocalPlayer>.header;
+            header.power = levelPlayerHeader.power;
             header.userName = levelPlayerHeader.name;
             header.userAvatar = levelPlayerHeader.avatar;
 
@@ -604,6 +608,7 @@ public class ClientData : MonoBehaviour, IClientData
         LevelPlayerShared<LocalPlayer>.id = header.userID;
 
         LevelPlayerHeader levelPlayerHeader;
+        levelPlayerHeader.power = header.power;
         levelPlayerHeader.name = header.userName;
         levelPlayerHeader.avatar = header.userAvatar;
         LevelPlayerShared<LocalPlayer>.header = levelPlayerHeader;
@@ -638,12 +643,13 @@ public class ClientData : MonoBehaviour, IClientData
         SetStatus(0);
     }
 
-    public void SetHeaderOverride(in FixedString32Bytes userName, in FixedString32Bytes userAvatar)
+    public void SetHeaderOverride(in FixedString32Bytes userName, in FixedString32Bytes userAvatar, int power = 0)
     {
         ref var levelPlayerHeader = ref LevelPlayerShared<LocalPlayer>.header;
         
         levelPlayerHeader.name = userName;
         levelPlayerHeader.avatar = userAvatar;
+        levelPlayerHeader.power = power;
     }
 
     public void SetStatus(int value)
@@ -672,6 +678,7 @@ public class ClientData : MonoBehaviour, IClientData
 
                         var levelPlayerHeader = LevelPlayerShared<RemotePlayer>.header;
 
+                        header.power = levelPlayerHeader.power;
                         header.userName = levelPlayerHeader.name;
                         header.userAvatar = levelPlayerHeader.avatar;
 
@@ -768,11 +775,13 @@ public class ClientData : MonoBehaviour, IClientData
                             {
                                 var levelPlayerHeader = LevelPlayerShared<RemotePlayer>.header;
 
+                                header.power = levelPlayerHeader.power;
                                 header.userName = levelPlayerHeader.name;
                                 header.userAvatar = levelPlayerHeader.avatar;
                             }
                             else
                             {
+                                header.power = 0;
                                 header.userName = default;
                                 header.userAvatar = default;
                             }

@@ -826,7 +826,10 @@ public sealed class LoginManager : MonoBehaviour
         __sceneIndices = new HashSet<(int, int)>();
         
         numLevels = levelChapters.levels.Length;
-        bool isHot = false, isMoved, isUnlock;
+        bool isSinglePlayer = ReplyMessageShared.remotePlayerCount < 1 || 
+                              ReplyMessageShared.isHost || 
+                              !LevelPlayerShared<RemotePlayer>.isOnline || 
+                              LevelPlayerShared<RemotePlayer>.channelStatus != 0, isHot = false, isMoved, isUnlock;
         int movedLevelIndex = -1, 
             selectedLevelIndex = -1,
             endLevelIndex = -1, 
@@ -898,7 +901,8 @@ public sealed class LoginManager : MonoBehaviour
                 }
             }
 
-            if (ReplyMessageShared.remotePlayerCount < 1 || ReplyMessageShared.isHost || maxMultiplayerStageID != 0)
+            if (isSinglePlayer ||
+                maxMultiplayerStageID != 0)
             {
                 isMoved = isSelected;
                 if (__selectedUserLevelID == 0)
@@ -1770,6 +1774,7 @@ public sealed class LoginManager : MonoBehaviour
         {
             ClientHeader header;
             header.userID = user.id;
+            header.power = user.power;
             header.userName = user.name;
             header.userAvatar = user.avatar;
             

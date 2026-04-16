@@ -4,7 +4,7 @@ using Unity.Collections;
 
 [StructLayout(LayoutKind.Explicit, Size=64)]
 [GenerateTestsForBurstCompatibility]
-public struct FixedBytes64
+public struct FixedBytes80
 {
     [FieldOffset(0)]
     public FixedBytes16 offset00;
@@ -14,8 +14,10 @@ public struct FixedBytes64
     public FixedBytes16 offset32;
     [FieldOffset(48)]
     public FixedBytes16 offset48;
+    [FieldOffset(64)]
+    public FixedBytes16 offset64;
 
-    public FixedBytes64(ref DataStreamReader reader)
+    public FixedBytes80(ref DataStreamReader reader)
     {
         this = default;
         reader.ReadBytes(AsArray());
@@ -30,6 +32,6 @@ public struct FixedBytes64
     {
         fixed (void* ptr = &this)
             return CollectionHelper.ConvertExistingDataToNativeArray<byte>(ptr,
-                64, Allocator.Temp, true);
+                80, Allocator.Temp, true);
     }
 }

@@ -6,6 +6,15 @@ using UnityEngine;
 
 public partial class UserDataMain
 {
+    private const string NAME_SPACE_USER_POWER = "UserPower";
+
+    public static int power
+    {
+        get => PlayerPrefs.GetInt(NAME_SPACE_USER_POWER);
+        
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_POWER, value);
+    }
+
     public static UserFriend friend
     {
         get
@@ -15,7 +24,7 @@ public partial class UserDataMain
             result.name = "客户端测试";
             result.avatar = string.Empty;
             result.chapter = UserData.chapter;
-            result.power = UnityEngine.Random.Range(10000, 20000);
+            result.power = power;
             result.ticks = DateTime.UtcNow.Ticks;
 
             return result;
@@ -452,6 +461,8 @@ public partial class UserDataMain
     public IEnumerator UpdatePowerForFriends(uint userID, int power, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
+
+        UserDataMain.power = power;
 
         onComplete(true);
     }

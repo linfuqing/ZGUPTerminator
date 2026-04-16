@@ -187,17 +187,18 @@ public struct LevelPlayerProperty
 
 public struct LevelPlayerHeader
 {
+    public int power;
     public FixedString32Bytes name;
     public FixedString32Bytes avatar;
         
-    public LevelPlayerHeader(in FixedBytes64 bytes)
+    public LevelPlayerHeader(in FixedBytes80 bytes)
     {
         this = bytes.AsArray().Reinterpret<LevelPlayerHeader>(1)[0];
     }
 
     public void Write(ref DataStreamWriter writer)
     {
-        FixedBytes64 bytes = default;
+        FixedBytes80 bytes = default;
         var blocks = bytes.AsArray().Reinterpret<LevelPlayerHeader>(1);
         blocks[0] = this;
         bytes.Write(ref writer);

@@ -235,7 +235,7 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
-                                    FixedBytes64 bytes = default;
+                                    FixedBytes80 bytes = default;
                                     reader.ReadBytes(bytes.AsArray());
 
                                     LevelPlayerShared<RemotePlayer>.header = new LevelPlayerHeader(bytes);

@@ -166,6 +166,7 @@ public sealed partial class UserDataMain : MonoBehaviour
         user.replyServerPort = _replyServerPort;
         user.id = UserData.id;
         user.gold = gold;
+        user.power = power;
         //user.level = UserData.level;
 
         onComplete(user, userEnergy);

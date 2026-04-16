@@ -106,6 +106,7 @@ public struct User
     public ushort replyServerPort;
     public uint id;
     public int gold;
+    public int power;
     //public int level;
 }
 
