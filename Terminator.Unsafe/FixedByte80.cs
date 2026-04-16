@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 
-[StructLayout(LayoutKind.Explicit, Size=64)]
+[StructLayout(LayoutKind.Explicit, Size=80)]
 [GenerateTestsForBurstCompatibility]
 public struct FixedBytes80
 {
