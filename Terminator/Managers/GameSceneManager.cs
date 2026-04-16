@@ -21,7 +21,7 @@ public class GameSceneManager : MonoBehaviour
             assetManager = gameObject.AddComponent<GameAssetManager>();
         }
 
-        assetManager.LoadScene(_defaultSceneName, null, null, true);
+        assetManager.LoadScene(_defaultSceneName, null, null);
     }
 
     void Start()

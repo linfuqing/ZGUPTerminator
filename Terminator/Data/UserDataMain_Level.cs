@@ -548,6 +548,9 @@ public partial class UserDataMain
 
         IUserData.LevelChapters result;
         result.flag = (flag & Flag.UnlockFirst) == 0 ? 0 : IUserData.LevelChapters.Flag.UnlockFirst;
+        if ((flag & Flag.TicketsUnlockFirst) == Flag.TicketsUnlockFirst)
+            result.flag |= IUserData.LevelChapters.Flag.TicketsUnlockFirst;
+        
         result.stageRewardCount = stageRewardCount;
         result.levels = userLevels.ToArray();
         

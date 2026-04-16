@@ -113,11 +113,14 @@ public class PlayerEvents : MonoBehaviour
             foreach (var instance in __instances)
                 instance._dontKeepRecoveryTime?.Invoke();
         }
-        
-        if (RemotePlayer.Status.Disabled != RemotePlayer.status)
+
+        switch (RemotePlayer.status)
         {
-            foreach (var instance in __instances)
-                instance._multiplayer?.Invoke();
+            case RemotePlayer.Status.Joined:
+            case RemotePlayer.Status.StandBy:
+                foreach (var instance in __instances)
+                    instance._multiplayer?.Invoke();
+                break;
         }
     }
 

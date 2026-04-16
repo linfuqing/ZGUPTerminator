@@ -859,7 +859,7 @@ public class GameMain : GameUser
         string scenePath = GameConstantManager.Get(AssetScenePath);
         assetPaths[1] = new GameAssetManager.AssetPath(scenePath, GameLanguage.overrideLanguage);
         yield return GameAssetManager.instance.Init(
-            activation != null, 
+            true,//activation != null, 
             defaultSceneName, 
             path, 
             GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 

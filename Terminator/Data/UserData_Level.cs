@@ -81,7 +81,8 @@ public partial interface IUserData
         [Flags]
         public enum Flag
         {
-            UnlockFirst = 0x01
+            UnlockFirst = 0x01, 
+            TicketsUnlockFirst = 0x02,
         }
 
         public Flag flag;

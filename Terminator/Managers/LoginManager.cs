@@ -738,6 +738,26 @@ public sealed class LoginManager : MonoBehaviour
     
     private void __ApplyLevelChapters(IUserData.LevelChapters levelChapters)
     {
+        if ((levelChapters.flag & IUserData.LevelChapters.Flag.TicketsUnlockFirst) == IUserData.LevelChapters.Flag.TicketsUnlockFirst && 
+            ReplyMessageShared.remotePlayerCount > 0)
+        {
+            var clientData = IClientData.instance;
+            if (clientData != null)
+            {
+                if (ReplyMessageShared.isHost)
+                {
+                    ClientMessageSquadDrop squadDrop;
+                    squadDrop.userID = LevelPlayerShared<RemotePlayer>.id;
+                    clientData.SendMessage(squadDrop);
+                }
+                else
+                {
+                    ClientMessageSquadLeave squadLeave;
+                    clientData.SendMessage(squadLeave);
+                }
+            }
+        }
+        
         __onLevelActivatedFirst = null;
         __levelActivatedFirst = null;
         //__levelActivated = false;
