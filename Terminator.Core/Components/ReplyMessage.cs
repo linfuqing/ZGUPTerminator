@@ -181,7 +181,7 @@ public struct ReplyMessages : IComponentData
                         case NetworkRelayMessageType.Disconnect:
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
-                                LevelPlayerShared<RemotePlayer>.channelFlag = 0;
+                                LevelPlayerShared<RemotePlayer>.channelFlag &= (int)~NetworkRelayChannelFlag.Online;
 
                             __Log($"Reply Message Disconnect {key.id}");
                             break;
