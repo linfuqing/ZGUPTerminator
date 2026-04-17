@@ -1273,7 +1273,7 @@ public partial class UserDataMain
         List<string> skillNames;
         foreach (var skill in skills)
         {
-            if (string.IsNullOrEmpty(skill.name))
+            if (string.IsNullOrEmpty(skill.name) || __skillNameToInfos.ContainsKey(skill.name))
                 continue;
 
             info.groupIndex = -1;
