@@ -779,7 +779,7 @@ public class ClientData : MonoBehaviour, IClientData
                                 header.userName = levelPlayerHeader.name;
                                 header.userAvatar = levelPlayerHeader.avatar;
                                 
-                                if((int)NetworkRelayMessageType.Disconnect == type && ReplyMessageShared.isHost)
+                                if((int)NetworkRelayMessageType.Connect == type && ReplyMessageShared.isHost)
                                     LoginManager.instance?.SendChapterStageMessage();
                             }
                             else
