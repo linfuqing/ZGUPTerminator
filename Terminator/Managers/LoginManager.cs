@@ -1701,16 +1701,17 @@ public sealed class LoginManager : MonoBehaviour
             playerProperty.effectTargetRecovery = playerProperty.effectTargetRecoveryTimes;
 
             EffectShared.keepRecoveryTime = true;
-        }
 
-        var clientData = IClientData.instance;
-        if (clientData != null)
-        {
-            ClientMessagePlayerProperty playerPropertyMessage;
-            playerPropertyMessage.value = playerProperty;
-            var writer = clientData.BeginSend(ClientMessagePlayerProperty.messageType, ClientMessagePlayerProperty.capacity);
-            playerPropertyMessage.Write(ref writer);
-            clientData.EndSend(writer);
+            var clientData = IClientData.instance;
+            if (clientData != null)
+            {
+                ClientMessagePlayerProperty playerPropertyMessage;
+                playerPropertyMessage.value = playerProperty;
+                var writer = clientData.BeginSend(ClientMessagePlayerProperty.messageType,
+                    ClientMessagePlayerProperty.capacity);
+                playerPropertyMessage.Write(ref writer);
+                clientData.EndSend(writer);
+            }
         }
 
         uint userID = LoginManager.userID.Value;

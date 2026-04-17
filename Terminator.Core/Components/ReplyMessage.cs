@@ -343,7 +343,7 @@ public struct ReplyMessages : IComponentData
                                     LevelPlayerShared<RemotePlayer>.property =
                                         new LevelPlayerProperty(ref reader, streamCompressionModel);
 
-                                    if(RemotePlayer.Status.StandBy != RemotePlayer.status)
+                                    if (RemotePlayer.Status.Waiting == RemotePlayer.status)
                                         RemotePlayer.status = RemotePlayer.Status.Joined;
                                     break;
                                 default:
