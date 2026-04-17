@@ -859,8 +859,8 @@ public class ClientData : MonoBehaviour, IClientData
                                     //对面离开
                                     //--remotePlayerCount;
 
-                                    ClientMessageSquadLeave temp;
-                                    SendMessage(temp);
+                                    //ClientMessageSquadLeave temp;
+                                    //SendMessage(temp);
                                 }
                                 else
                                 {
