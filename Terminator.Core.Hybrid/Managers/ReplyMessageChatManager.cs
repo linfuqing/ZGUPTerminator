@@ -17,7 +17,13 @@ public class ReplyMessageChatManager : MonoBehaviour
 
     private void __OnValueChanged(int value)
     {
-        _onInput?.Invoke(string.Format(_format, LevelPlayerShared<LocalPlayer>.header.name, _dropdown.options[value].text));
+        var text = _dropdown.options[value].text;
+        if (string.IsNullOrEmpty(text))
+            return;
+        
+        ReplyMessageChatShared.input = text;
+        
+        _onInput?.Invoke(string.Format(_format, LevelPlayerShared<LocalPlayer>.header.name, text));
     }
 
     void Start()
