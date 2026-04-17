@@ -853,13 +853,16 @@ public sealed class LoginManager : MonoBehaviour
                     __stageIDs[(userLevel.id, j)] = userStage.id;
                 }
 
-                levelStage.levelID = userLevel.id;
-                levelStage.maxMultiplayerStageID = maxMultiplayerStageID;
-                levelStage.stageIndex = j;
-                levelStage.levelIndex = userLevelIndex;
-                levelStage.energy = userStage.energy;
+                if (maxMultiplayerStageID != 0)
+                {
+                    levelStage.levelID = userLevel.id;
+                    levelStage.maxMultiplayerStageID = maxMultiplayerStageID;
+                    levelStage.stageIndex = j;
+                    levelStage.levelIndex = userLevelIndex;
+                    levelStage.energy = userStage.energy;
 
-                __levelStages[userStage.id] = levelStage;
+                    __levelStages[userStage.id] = levelStage;
+                }
 
                 if (isUnlock)
                     isUnlock = (userStage.flag & UserStage.Flag.Unlocked) != 0;
