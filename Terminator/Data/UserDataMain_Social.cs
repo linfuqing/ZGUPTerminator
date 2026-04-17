@@ -38,7 +38,8 @@ public partial class UserDataMain
         //客户端没有这种信息，取自己的做展示
         IUserData.Friend result;
 
-        result.power = UnityEngine.Random.Range(10000, 20000);
+        result.chapter = UserData.chapter;
+        result.power = power;
         result.rankedPoints = rankedPoints;
         
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);

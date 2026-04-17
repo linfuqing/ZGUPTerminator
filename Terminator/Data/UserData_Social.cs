@@ -45,10 +45,15 @@ public partial interface IUserData
     public struct Friend
     {
         /// <summary>
+        /// 章节
+        /// </summary>
+        public int chapter;
+
+        /// <summary>
         /// 战力
         /// </summary>
         public int power;
-        
+
         /// <summary>
         /// 排位赛积分
         /// </summary>

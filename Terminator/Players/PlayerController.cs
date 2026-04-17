@@ -251,17 +251,21 @@ public class PlayerController : MonoBehaviour
         {
             var playerPosition = PlayerPosition.instances == null ? null : PlayerPosition.instances[(int)PlayerType.Local];
             if (playerPosition != null)
-                playerPosition.transform.position = position;
+                playerPosition.SetPosition(position);
 
-            var rotationInstance = PlayerRotation.instance;
+            var rotationInstance = PlayerRotation.instances == null ? null : PlayerRotation.instances[(int)PlayerType.Local];
             if (rotationInstance != null)
-                rotationInstance.transform.rotation = transform.rotation;
+                rotationInstance.SetRotation(transform.rotation);
         }
         else
         {
             var playerPosition = PlayerPosition.instances == null ? null : PlayerPosition.instances[(int)PlayerType.Remote];
             if (playerPosition != null)
                 playerPosition.transform.position = position;
+            
+            var rotationInstance = PlayerRotation.instances == null ? null : PlayerRotation.instances[(int)PlayerType.Remote];
+            if (rotationInstance != null)
+                rotationInstance.SetRotation(transform.rotation);
         }
 
         if(__isLocal)

@@ -7,6 +7,25 @@ public class PlayerPosition : MonoBehaviour
 
     [SerializeField] 
     internal PlayerType _type;
+
+    [SerializeField] 
+    internal Transform[] _children;
+
+    public void SetPosition(in Vector3 position)
+    {
+        transform.position = position;
+        
+        if (_children != null)
+        {
+            foreach (var child in _children)
+            {
+                if (child == null)
+                    continue;
+
+                child.position = position;
+            }
+        }
+    }
     
     void OnEnable()
     {
