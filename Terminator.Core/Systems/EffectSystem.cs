@@ -33,8 +33,7 @@ public partial struct EffectSystem : ISystem
         Drop = 0x10 | Die,
         Recovery = 0x20, 
         Invincible = 0x40,
-        KeepDamage = 0x80,
-        KeepHP = 0x100,
+        KeepDamage = 0x80
     }
 
     private struct BuffKey : IEquatable<BuffKey>
@@ -1526,13 +1525,13 @@ public partial struct EffectSystem : ISystem
             }*/
             
             bool isVincible = target.invincibleTime < 0.0f;
-            if (isRemote || 
-                isFallToDestroy || 
-                (targetHP.value != 0 || 
-                 targetHP.shield != 0 || 
-                 targetDamage.value != 0 || 
-                 targetDamage.valueImmunized != 0 && 
-                 target.immunizedTime < 0.0f) && 
+            if (isFallToDestroy ||
+                (isRemote ||
+                 targetHP.value != 0 ||
+                 targetHP.shield != 0 ||
+                 targetDamage.value != 0 ||
+                 targetDamage.valueImmunized != 0 &&
+                 target.immunizedTime < 0.0f) &&
                 isVincible)
             {
                 var origin = target;
@@ -1544,7 +1543,7 @@ public partial struct EffectSystem : ISystem
                     damage = 0;
 
                     damageLayerMask = 0;
-                    
+
                     messageLayerMask = 0;
                 }
                 else if (target.hp > 0)
@@ -1574,7 +1573,7 @@ public partial struct EffectSystem : ISystem
                         isHPDirty = true;
 
                         damageLayerMask = 0; //targetHP.layerMask;
-                        messageLayerMask = 0;//targetHP.messageLayerMask;
+                        messageLayerMask = 0; //targetHP.messageLayerMask;
 
                         targetHP.value -= damage;
 
@@ -1698,6 +1697,38 @@ public partial struct EffectSystem : ISystem
                             }
                         }
                     }
+
+                    var targetDamageRemotes = index < this.targetDamageRemotes.Length
+                        ? this.targetDamageRemotes[index]
+                        : default;
+                    if (targetDamageRemotes.IsCreated)
+                    {
+                        if (isRemote)
+                        {
+                            if (isVincible && targetDamageRemotes.Length > 0)
+                            {
+                                var targetDamageRemote = targetDamageRemotes[0];
+                                target.hp = targetDamageRemote.hp;
+                                target.shield = targetDamageRemote.shield;
+                                damageLayerMask = targetDamageRemote.layerMask;
+                                messageLayerMask = targetDamageRemote.messageLayerMask;
+
+                                targetDamageRemotes.RemoveAt(0);
+                            }
+                            else
+                                target = origin;
+                        }
+                        else
+                        {
+                            RemoteEffectTargetDamage targetDamageRemote;
+                            targetDamageRemote.hp = target.hp;
+                            targetDamageRemote.shield = target.shield;
+                            targetDamageRemote.layerMask = damageLayerMask;
+                            targetDamageRemote.messageLayerMask = messageLayerMask;
+                            targetDamageRemotes.Add(targetDamageRemote);
+                        }
+                    }
+
                 }
                 else
                 {
@@ -1713,297 +1744,261 @@ public partial struct EffectSystem : ISystem
 
                     result |= EnabledFlags.Recovery;
 
-                    messageLayerMask = 0;//targetHP.messageLayerMask;
+                    messageLayerMask = 0; //targetHP.messageLayerMask;
 
                     damageLayerMask = 0;
 
                     damage = 0;
                 }
 
-                var targetDamageRemotes = index < this.targetDamageRemotes.Length ? 
-                    this.targetDamageRemotes[index] : default;
-                if (targetDamageRemotes.IsCreated)
+                float delayTime = 0.0f, deadTime = 0.0f;
+                var cameraRotation = index < cameraRotations.Length
+                    ? cameraRotations[index].value
+                    : this.cameraRotation;
+                Message message;
+                var messages = index < outputMessages.Length ? outputMessages[index] : default;
+                if (index < targetMessages.Length &&
+                    ((targetHP.value != 0 || targetHP.shield != 0) /* && targetHP.messageLayerMask != 0*/ ||
+                     damage != 0 && messageLayerMask != 0))
                 {
-                    if (isRemote)
+                    float3 position = localToWorlds[index].Position;
+                    var randomSelector = new RandomSelector(ref random);
+                    Entity messageReceiver;
+                    MessageParameter messageParameter;
+                    var messageParameters = index < this.messageParameters.Length
+                        ? this.messageParameters[index]
+                        : default;
+                    var targetMessages = this.targetMessages[index];
+                    foreach (var targetMessage in targetMessages)
                     {
-                        if (isVincible && targetDamageRemotes.Length > 0)
+                        if (targetMessage.layerMask == 0 ||
+                            (targetMessage.layerMask & (targetHP.messageLayerMask | messageLayerMask)) != 0)
                         {
-                            var targetDamageRemote = targetDamageRemotes[0];
-                            target.hp = targetDamageRemote.hp;
-                            target.shield = targetDamageRemote.shield;
-                            damageLayerMask = targetDamageRemote.layerMask;
-                            messageLayerMask = targetDamageRemote.messageLayerMask;
+                            if (!randomSelector.Select(ref random, targetMessage.chance))
+                                continue;
 
-                            targetDamageRemotes.RemoveAt(0);
-                        }
-                        else
-                            target = origin;
-
-                        if (targetDamageRemotes.Length > 0)
-                            result |= EnabledFlags.KeepDamage;
-                    }
-                    else
-                    {
-                        RemoteEffectTargetDamage targetDamageRemote;
-                        targetDamageRemote.hp = target.hp;
-                        targetDamageRemote.shield = target.shield;
-                        targetDamageRemote.layerMask = damageLayerMask;
-                        targetDamageRemote.messageLayerMask = messageLayerMask;
-                        targetDamageRemotes.Add(targetDamageRemote);
-                    }
-                }
-
-                if (isVincible || isFallToDestroy)
-                {
-                    float delayTime = 0.0f, deadTime = 0.0f;
-                    var cameraRotation = index < cameraRotations.Length
-                        ? cameraRotations[index].value
-                        : this.cameraRotation;
-                    Message message;
-                    var messages = index < outputMessages.Length ? outputMessages[index] : default;
-                    if (index < targetMessages.Length &&
-                        ((targetHP.value != 0 || targetHP.shield != 0) /* && targetHP.messageLayerMask != 0*/ ||
-                         damage != 0 && messageLayerMask != 0))
-                    {
-                        float3 position = localToWorlds[index].Position;
-                        var randomSelector = new RandomSelector(ref random);
-                        Entity messageReceiver;
-                        MessageParameter messageParameter;
-                        var messageParameters = index < this.messageParameters.Length
-                            ? this.messageParameters[index]
-                            : default;
-                        var targetMessages = this.targetMessages[index];
-                        foreach (var targetMessage in targetMessages)
-                        {
-                            if (targetMessage.layerMask == 0 ||
-                                (targetMessage.layerMask & (targetHP.messageLayerMask | messageLayerMask)) != 0)
+                            if (targetMessage.deadTime > math.FLT_MIN_NORMAL)
                             {
-                                if (!randomSelector.Select(ref random, targetMessage.chance))
+                                if (target.hp > 0)
                                     continue;
 
-                                if (targetMessage.deadTime > math.FLT_MIN_NORMAL)
+                                deadTime = targetMessage.deadTime; ////math.max(deadTime, targetMessage.deadTime);
+                            }
+
+                            delayTime = math.max(delayTime, targetMessage.delayTime);
+
+                            message.key = random.NextInt();
+                            message.name = targetMessage.messageName;
+                            message.value = targetMessage.messageValue;
+
+                            if (!targetMessage.entityPrefabReference.Equals(default))
+                            {
+                                if (prefabLoader.TryGetOrLoadPrefabRoot(
+                                        targetMessage.entityPrefabReference, out messageReceiver))
                                 {
-                                    if (target.hp > 0)
-                                        continue;
+                                    messageReceiver = entityManager.Instantiate(0, messageReceiver);
 
-                                    deadTime = targetMessage.deadTime; ////math.max(deadTime, targetMessage.deadTime);
-                                }
-
-                                delayTime = math.max(delayTime, targetMessage.delayTime);
-
-                                message.key = random.NextInt();
-                                message.name = targetMessage.messageName;
-                                message.value = targetMessage.messageValue;
-
-                                if (!targetMessage.entityPrefabReference.Equals(default))
-                                {
-                                    if (prefabLoader.TryGetOrLoadPrefabRoot(
-                                            targetMessage.entityPrefabReference, out messageReceiver))
+                                    if (!targetMessage.messageName.IsEmpty)
                                     {
-                                        messageReceiver = entityManager.Instantiate(0, messageReceiver);
+                                        entityManager.SetBuffer<Message>(1, messageReceiver).Add(message);
+                                        entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
 
-                                        if (!targetMessage.messageName.IsEmpty)
-                                        {
-                                            entityManager.SetBuffer<Message>(1, messageReceiver).Add(message);
-                                            entityManager.SetComponentEnabled<Message>(1, messageReceiver, true);
-
-                                            messageParameter.messageKey = message.key;
-                                            messageParameter.value = -damage;
-                                            messageParameter.id = (int)EffectAttributeID.Damage;
-                                            entityManager.SetBuffer<MessageParameter>(1, messageReceiver)
-                                                .Add(messageParameter);
-                                        }
-
-                                        entityManager.SetComponent(1, messageReceiver,
-                                            LocalTransform.FromPositionRotation(position,
-                                                cameraRotation));
-                                    }
-                                }
-                                else if (messages.IsCreated)
-                                {
-                                    messages.Add(message);
-
-                                    if (messageParameters.IsCreated)
-                                    {
                                         messageParameter.messageKey = message.key;
-
-                                        if ((targetMessage.layerMask & messageLayerMask) != 0)
-                                        {
-                                            messageParameter.value = -damage;
-                                            messageParameter.id = (int)EffectAttributeID.Damage;
-                                            messageParameters.Add(messageParameter);
-                                        }
-
-                                        if (isHPDirty)
-                                        {
-                                            messageParameter.value = target.hp;
-                                            messageParameter.id = (int)EffectAttributeID.HP;
-                                            messageParameters.Add(messageParameter);
-                                        }
-
-                                        if (isShieldDirty)
-                                        {
-                                            messageParameter.value = target.shield;
-                                            messageParameter.id = (int)EffectAttributeID.Shield;
-                                            messageParameters.Add(messageParameter);
-                                        }
+                                        messageParameter.value = -damage;
+                                        messageParameter.id = (int)EffectAttributeID.Damage;
+                                        entityManager.SetBuffer<MessageParameter>(1, messageReceiver)
+                                            .Add(messageParameter);
                                     }
 
-                                    result |= EnabledFlags.Message;
+                                    entityManager.SetComponent(1, messageReceiver,
+                                        LocalTransform.FromPositionRotation(position,
+                                            cameraRotation));
                                 }
                             }
-                        }
-                    }
-
-                    targetHP = default;
-                    if (target.hp > 0 && !isFallToDestroy)
-                    {
-                        if (delayTime > math.FLT_MIN_NORMAL)
-                        {
-                            var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
-                            DelayTime.Append(ref delayTimes, time, delayTime);
-                        }
-                    }
-                    else
-                    {
-                        if (deadTime > math.FLT_MIN_NORMAL)
-                        {
-                            result |= EnabledFlags.Die;
-
-                            Entity entity = entityArray[index];
-
-                            DelayDestroy delayDestroy;
-                            delayDestroy.time = deadTime;
-                            if (index < delayDestroys.Length)
-                                delayDestroys[index] = delayDestroy;
-                            else
-                                entityManager.AddComponent(1, entity, delayDestroy);
-
-                            entityManager.RemoveComponent<PhysicsCollider>(0, entity);
-
-                            DestroyEntity(true, entity, children, ref instanceIDs, ref entityManager);
-                        }
-                        else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
-                        {
-                            result |= EnabledFlags.Drop;
-
-                            target.immunizedTime = 0.0f;
-                            target.invincibleTime = 0.0f;
-
-                            if (index < characterGravityFactors.Length)
+                            else if (messages.IsCreated)
                             {
-                                ThirdPersionCharacterGravityFactor characterGravityFactor;
-                                characterGravityFactor.value = 1.0f;
-                                characterGravityFactors[index] = characterGravityFactor;
-                            }
+                                messages.Add(message);
 
-                            entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
-                        }
-
-                        if ((result & EnabledFlags.Die) != EnabledFlags.Die)
-                        {
-                            result |= EnabledFlags.Die;
-
-                            if (target.times > 0 && targetInstance.recoveryChance > random.NextFloat())
-                            {
-                                result |= EnabledFlags.Recovery;
-
-                                target.invincibleTime =
-                                    target.times-- > targetInstance.recoveryTimeBeenKeptOfMaxTimes &&
-                                    EffectShared.keepRecoveryTime
-                                        ? targetInstance.recoveryTime
-                                        : float.MaxValue;
-
-                                target.hp = 0;
-
-                                targetHP.value = targetInstance.hpMax;
-                                targetHP.shield = 0;
-                                //targetHP.layerMask = damageLayerMask;
-                                targetHP.messageLayerMask = 1; //messageLayerMask;
-
-                                if (!targetInstance.recoveryMessageName.IsEmpty && messages.IsCreated)
+                                if (messageParameters.IsCreated)
                                 {
-                                    message.key = 0;
-                                    message.name = targetInstance.recoveryMessageName;
-                                    message.value = targetInstance.recoveryMessageValue;
-                                    messages.Add(message);
-                                }
+                                    messageParameter.messageKey = message.key;
 
-                                if (isFallToDestroy)
-                                    entityManager.RemoveComponent<FallToDestroy>(0, entityArray[index]);
-                            }
-                            else if (index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
-                                DestroyEntity(false, entityArray[index], children, ref instanceIDs, ref entityManager);
-                        }
-
-                        if (!isFallToDestroy)
-                        {
-                            if (index < targetLevels.Length &&
-                                this.levelStatus.IsValid)
-                            {
-                                var targetLevel = targetLevels[index];
-
-                                ref var levelStatus = ref this.levelStatus.ValueRW;
-                                Interlocked.Add(ref levelStatus.value, targetLevel.value);
-                                Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
-                                Interlocked.Add(ref levelStatus.gold,
-                                    math.abs(targetLevel.goldMultiplier) > math.FLT_MIN_NORMAL
-                                        ? ComputeDamage(targetLevel.gold, targetLevel.goldMultiplier, ref random)
-                                        : targetLevel.gold);
-
-                                Interlocked.Increment(ref levelStatus.killCount);
-
-                                if (EffectTargetData.TargetType.Boss == targetInstance.targetType)
-                                    Interlocked.Increment(ref levelStatus.killBossCount);
-                            }
-
-                            if (index < instances.Length && index < prefabs.Length)
-                            {
-                                ref var definition = ref instances[index].definition.Value;
-                                if (definition.prefabs.Length > 0)
-                                {
-                                    Entity entity = entityArray[index];
-
-                                    if (!EffectDamageParent.TryGetComponent(
-                                            entity,
-                                            damageParentMap,
-                                            damages,
-                                            out EffectDamage instanceDamage,
-                                            out _))
-                                        instanceDamage.scale = 1.0f;
-
-                                    EffectDamageParent instanceDamageParent;
-                                    if (index < damageParents.Length)
-                                        instanceDamageParent =
-                                            damageParents[index].GetRoot(damageParentMap /*, damages*/);
-                                    else
+                                    if ((targetMessage.layerMask & messageLayerMask) != 0)
                                     {
-                                        instanceDamageParent.index = -1;
-                                        instanceDamageParent.entity = entity;
+                                        messageParameter.value = -damage;
+                                        messageParameter.id = (int)EffectAttributeID.Damage;
+                                        messageParameters.Add(messageParameter);
                                     }
 
-                                    __Drop(
-                                        damageLayerMask,
-                                        cameraRotation,
-                                        math.RigidTransform(localToWorlds[index].Value),
-                                        entity,
-                                        instanceDamage,
-                                        instanceDamageParent,
-                                        index < inputMessages.Length ? inputMessages[index] : default,
-                                        prefabs[index],
-                                        ref damageInstances,
-                                        //ref entityManager,
-                                        //ref prefabLoader,
-                                        ref definition.buffs,
-                                        ref definition.prefabs,
-                                        ref random);
+                                    if (isHPDirty)
+                                    {
+                                        messageParameter.value = target.hp;
+                                        messageParameter.id = (int)EffectAttributeID.HP;
+                                        messageParameters.Add(messageParameter);
+                                    }
+
+                                    if (isShieldDirty)
+                                    {
+                                        messageParameter.value = target.shield;
+                                        messageParameter.id = (int)EffectAttributeID.Shield;
+                                        messageParameters.Add(messageParameter);
+                                    }
                                 }
+
+                                result |= EnabledFlags.Message;
                             }
                         }
                     }
-
-                    targetHPs[index] = targetHP;
                 }
+
+                targetHP = default;
+                if (target.hp > 0 && !isFallToDestroy)
+                {
+                    if (delayTime > math.FLT_MIN_NORMAL)
+                    {
+                        var delayTimes = index < this.delayTimes.Length ? this.delayTimes[index] : default;
+                        DelayTime.Append(ref delayTimes, time, delayTime);
+                    }
+                }
+                else
+                {
+                    if (deadTime > math.FLT_MIN_NORMAL)
+                    {
+                        result |= EnabledFlags.Die;
+
+                        Entity entity = entityArray[index];
+
+                        DelayDestroy delayDestroy;
+                        delayDestroy.time = deadTime;
+                        if (index < delayDestroys.Length)
+                            delayDestroys[index] = delayDestroy;
+                        else
+                            entityManager.AddComponent(1, entity, delayDestroy);
+
+                        entityManager.RemoveComponent<PhysicsCollider>(0, entity);
+
+                        DestroyEntity(true, entity, children, ref instanceIDs, ref entityManager);
+                    }
+                    else if (index < characterBodies.Length && !characterBodies[index].IsGrounded)
+                    {
+                        result |= EnabledFlags.Drop;
+
+                        target.immunizedTime = 0.0f;
+                        target.invincibleTime = 0.0f;
+
+                        if (index < characterGravityFactors.Length)
+                        {
+                            ThirdPersionCharacterGravityFactor characterGravityFactor;
+                            characterGravityFactor.value = 1.0f;
+                            characterGravityFactors[index] = characterGravityFactor;
+                        }
+
+                        entityManager.AddComponent<FallToDestroy>(0, entityArray[index]);
+                    }
+
+                    if ((result & EnabledFlags.Die) != EnabledFlags.Die)
+                    {
+                        result |= EnabledFlags.Die;
+
+                        if (target.times > 0 && targetInstance.recoveryChance > random.NextFloat())
+                        {
+                            result |= EnabledFlags.Recovery;
+
+                            target.invincibleTime =
+                                target.times-- > targetInstance.recoveryTimeBeenKeptOfMaxTimes &&
+                                EffectShared.keepRecoveryTime
+                                    ? targetInstance.recoveryTime
+                                    : float.MaxValue;
+
+                            target.hp = 0;
+
+                            targetHP.value = targetInstance.hpMax;
+                            targetHP.shield = 0;
+                            //targetHP.layerMask = damageLayerMask;
+                            targetHP.messageLayerMask = 1; //messageLayerMask;
+
+                            if (!targetInstance.recoveryMessageName.IsEmpty && messages.IsCreated)
+                            {
+                                message.key = 0;
+                                message.name = targetInstance.recoveryMessageName;
+                                message.value = targetInstance.recoveryMessageValue;
+                                messages.Add(message);
+                            }
+
+                            if (isFallToDestroy)
+                                entityManager.RemoveComponent<FallToDestroy>(0, entityArray[index]);
+                        }
+                        else if (index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
+                            DestroyEntity(false, entityArray[index], children, ref instanceIDs, ref entityManager);
+                    }
+
+                    if (!isFallToDestroy)
+                    {
+                        if (index < targetLevels.Length &&
+                            this.levelStatus.IsValid)
+                        {
+                            var targetLevel = targetLevels[index];
+
+                            ref var levelStatus = ref this.levelStatus.ValueRW;
+                            Interlocked.Add(ref levelStatus.value, targetLevel.value);
+                            Interlocked.Add(ref levelStatus.exp, targetLevel.exp);
+                            Interlocked.Add(ref levelStatus.gold,
+                                math.abs(targetLevel.goldMultiplier) > math.FLT_MIN_NORMAL
+                                    ? ComputeDamage(targetLevel.gold, targetLevel.goldMultiplier, ref random)
+                                    : targetLevel.gold);
+
+                            Interlocked.Increment(ref levelStatus.killCount);
+
+                            if (EffectTargetData.TargetType.Boss == targetInstance.targetType)
+                                Interlocked.Increment(ref levelStatus.killBossCount);
+                        }
+
+                        if (index < instances.Length && index < prefabs.Length)
+                        {
+                            ref var definition = ref instances[index].definition.Value;
+                            if (definition.prefabs.Length > 0)
+                            {
+                                Entity entity = entityArray[index];
+
+                                if (!EffectDamageParent.TryGetComponent(
+                                        entity,
+                                        damageParentMap,
+                                        damages,
+                                        out EffectDamage instanceDamage,
+                                        out _))
+                                    instanceDamage.scale = 1.0f;
+
+                                EffectDamageParent instanceDamageParent;
+                                if (index < damageParents.Length)
+                                    instanceDamageParent =
+                                        damageParents[index].GetRoot(damageParentMap /*, damages*/);
+                                else
+                                {
+                                    instanceDamageParent.index = -1;
+                                    instanceDamageParent.entity = entity;
+                                }
+
+                                __Drop(
+                                    damageLayerMask,
+                                    cameraRotation,
+                                    math.RigidTransform(localToWorlds[index].Value),
+                                    entity,
+                                    instanceDamage,
+                                    instanceDamageParent,
+                                    index < inputMessages.Length ? inputMessages[index] : default,
+                                    prefabs[index],
+                                    ref damageInstances,
+                                    //ref entityManager,
+                                    //ref prefabLoader,
+                                    ref definition.buffs,
+                                    ref definition.prefabs,
+                                    ref random);
+                            }
+                        }
+                    }
+                }
+
+                targetHPs[index] = targetHP;
             }
             else
                 result |= EnabledFlags.Invincible;
@@ -2012,6 +2007,9 @@ public partial struct EffectSystem : ISystem
 
             targets[index] = target;
 
+            if (isRemote && targetDamageRemotes.Length > 0)
+                result |= EnabledFlags.KeepDamage;
+            
             return result;
         }
     }
@@ -2182,8 +2180,7 @@ public partial struct EffectSystem : ISystem
                         chunk.SetComponentEnabled(ref characterBodyType, i, true);
 
                     chunk.SetComponentEnabled(ref targetHPType, i,
-                        (result & EnabledFlags.Invincible) == EnabledFlags.Invincible || 
-                        (result & EnabledFlags.KeepHP) == EnabledFlags.KeepHP);
+                        (result & EnabledFlags.Invincible) == EnabledFlags.Invincible);
                 }
 
                 chunk.SetComponentEnabled(ref targetDamageType, i, (result & EnabledFlags.KeepDamage) == EnabledFlags.KeepDamage);
