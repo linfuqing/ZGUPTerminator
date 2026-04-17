@@ -263,7 +263,7 @@ public struct ReplyMessages : IComponentData
                                 channelFlag = reader.ReadPackedInt(streamCompressionModel);
                                 if (reader.GetBytesRead() < reader.Length)
                                 {
-                                    if (((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Creator) ==
+                                    /*if (((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Creator) ==
                                         NetworkRelayChannelFlag.Creator)
                                     {
                                         if (sendBuffer.BeginWrite(0, out var writer))
@@ -273,7 +273,7 @@ public struct ReplyMessages : IComponentData
 
                                             sendBuffer.EndWrite(writer);
                                         }
-                                    }
+                                    }*/
                                     
                                     reader.Flush();
                                     

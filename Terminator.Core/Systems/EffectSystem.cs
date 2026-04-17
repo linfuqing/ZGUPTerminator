@@ -1525,6 +1525,7 @@ public partial struct EffectSystem : ISystem
                 targetHPRemotes[index].Add(targetHPRemote);
             }*/
             
+            bool isVincible = target.invincibleTime < 0.0f;
             if (isRemote || 
                 isFallToDestroy || 
                 (targetHP.value != 0 || 
@@ -1532,7 +1533,7 @@ public partial struct EffectSystem : ISystem
                  targetDamage.value != 0 || 
                  targetDamage.valueImmunized != 0 && 
                  target.immunizedTime < 0.0f) && 
-                target.invincibleTime < 0.0f)
+                isVincible)
             {
                 var targetInstance = targetInstances[index];
 
@@ -1719,14 +1720,13 @@ public partial struct EffectSystem : ISystem
                     damage = 0;
                 }
 
-                bool isApply = target.invincibleTime < 0.0f;
                 var targetDamageRemotes = index < this.targetDamageRemotes.Length ? 
                     this.targetDamageRemotes[index] : default;
                 if (targetDamageRemotes.IsCreated)
                 {
                     if (isRemote)
                     {
-                        if (isApply && targetDamageRemotes.Length > 0)
+                        if (isVincible && targetDamageRemotes.Length > 0)
                         {
                             var targetDamageRemote = targetDamageRemotes[0];
                             target.hp = targetDamageRemote.hp;
@@ -1756,7 +1756,7 @@ public partial struct EffectSystem : ISystem
                     }
                 }
 
-                if (isApply)
+                if (isVincible)
                 {
                     float delayTime = 0.0f, deadTime = 0.0f;
                     var cameraRotation = index < cameraRotations.Length
