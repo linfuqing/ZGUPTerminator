@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using ZG;
 using Random = UnityEngine.Random;
 
 public partial class UserDataMain
@@ -1172,8 +1173,11 @@ public partial class UserDataMain
                     info.groupIndex = j;
                     __skillNameToInfos.Add(skillNames[j], info);
                 }
+                
+                __CollectSkillNameToInfo(SkillInfo.BelongTo.Card,
+                    i, card.property.skills);
             }
-            
+
             info.belongTo = SkillInfo.BelongTo.Role;
 
             string skillGroupName;
@@ -1200,6 +1204,14 @@ public partial class UserDataMain
                         }
                     }
                 }
+            }
+            
+            int numRoleRanks = _roleRanks.Length;
+            for (i = 0; i < numRoleRanks; ++i)
+            {
+                ref var roleRank = ref _roleRanks[i];
+                __CollectSkillNameToInfo(SkillInfo.BelongTo.Role,
+                    __GetRoleIndex(roleRank.roleName), roleRank.property.skills);
             }
             
             info.belongTo = SkillInfo.BelongTo.Accessory;
@@ -1230,10 +1242,59 @@ public partial class UserDataMain
                         }
                     }
                 }
+                
+                __CollectSkillNameToInfo(SkillInfo.BelongTo.Accessory,
+                    i, accessory.property.skills);
+            }
+
+            int numAccessoryStages = _accessoryStages.Length;
+            for (i = 0; i < numAccessoryStages; ++i)
+            {
+                ref var accessoryStage = ref _accessoryStages[i];
+                __CollectSkillNameToInfo(SkillInfo.BelongTo.Accessory,
+                    __GetAccessoryIndex(accessoryStage.accessoryName), accessoryStage.property.skills);
             }
         }
 
         return __skillNameToInfos.TryGetValue(name, out info);
+    }
+
+    private void __CollectSkillNameToInfo(SkillInfo.BelongTo belongTo, int index, UserPropertyData.Skill[] skills)
+    {
+        if (skills == null || skills.Length < 1)
+            return;
+            
+        SkillInfo info;
+        info.belongTo = belongTo;
+        info.index = index;
+        
+        int i, numSkillNames;
+        string skillGroupName;
+        List<string> skillNames;
+        foreach (var skill in skills)
+        {
+            if (string.IsNullOrEmpty(skill.name))
+                continue;
+
+            info.groupIndex = -1;
+            if(UserSkillType.Group != skill.type)
+            {
+                skillGroupName = __GetSkillGroupName(skill.name);
+                if(!string.IsNullOrEmpty(skillGroupName))
+                {
+                    skillNames = __GetSkillGroupSkillNames(skillGroupName);
+                    numSkillNames = skillNames.Count;
+                    for (i = 0; i < numSkillNames; ++i)
+                    {
+                        info.groupIndex = i;
+                        __skillNameToInfos.Add(skillNames[i], info);
+                    }
+                }
+            }
+                    
+            if(info.groupIndex == -1)
+                __skillNameToInfos.Add(skill.name, info);
+        }
     }
     
     private IUserData.Property __ApplyProperty(uint userID, string[] cacheSkills)
