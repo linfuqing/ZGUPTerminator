@@ -1535,10 +1535,10 @@ public partial struct EffectSystem : ISystem
                  target.immunizedTime < 0.0f) && 
                 isVincible)
             {
+                var origin = target;
                 var targetInstance = targetInstances[index];
-
+                int damage, damageLayerMask, messageLayerMask;
                 bool isShieldDirty = false, isHPDirty = false;
-                int hp = target.hp, shield = target.shield, damage, damageLayerMask, messageLayerMask;
                 if (isFallToDestroy)
                 {
                     damage = 0;
@@ -1737,10 +1737,7 @@ public partial struct EffectSystem : ISystem
                             targetDamageRemotes.RemoveAt(0);
                         }
                         else
-                        {
-                            target.hp = hp;
-                            target.shield = shield;
-                        }
+                            target = origin;
 
                         if (targetDamageRemotes.Length > 0)
                             result |= EnabledFlags.KeepDamage;
@@ -1756,7 +1753,7 @@ public partial struct EffectSystem : ISystem
                     }
                 }
 
-                if (isVincible)
+                if (isVincible || isFallToDestroy)
                 {
                     float delayTime = 0.0f, deadTime = 0.0f;
                     var cameraRotation = index < cameraRotations.Length
