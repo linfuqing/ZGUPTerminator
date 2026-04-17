@@ -1537,7 +1537,7 @@ public partial struct EffectSystem : ISystem
                 var targetInstance = targetInstances[index];
 
                 bool isShieldDirty = false, isHPDirty = false;
-                int damage, damageLayerMask, messageLayerMask;
+                int hp = target.hp, shield = target.shield, damage, damageLayerMask, messageLayerMask;
                 if (isFallToDestroy)
                 {
                     damage = 0;
@@ -1739,7 +1739,10 @@ public partial struct EffectSystem : ISystem
                                 result |= EnabledFlags.KeepDamage;
                         }
                         else
-                            target.hp = math.max(target.hp, 1);
+                        {
+                            target.hp = hp;
+                            target.shield = shield;
+                        }
                     }
                     else
                     {

@@ -587,36 +587,18 @@ public sealed class LoginManager : MonoBehaviour
         else
             return;
         
-        var scrollRect = _style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true);
-        if (scrollRect != null/* && scrollRect.selectedIndex[scrollRect.axis] != selectedLevelIndex*/)
-        {
-            int selectedLevelIndex = __levelStyles.Length - 1;
-            if (scrollRect.index[scrollRect.axis] == selectedLevelIndex)
-            {
-                var toggle = __levelStyles[selectedLevelIndex].toggle;
-                if (toggle != null)
-                {
-                    if (toggle.isOn)
-                        toggle.onValueChanged.Invoke(true);
-                    else
-                        toggle.isOn = true;
-                }
-            }
-
-            scrollRect.MoveTo(selectedLevelIndex);
-        }
-        else
+        if (!__MoveTo(_style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true),
+                __levelStyles.Length - 1))
         {
             foreach (var levelStyle in __levelStyles)
             {
                 if (levelStyle.toggle.isOn)
                 {
                     levelStyle.toggle.onValueChanged.Invoke(true);
-                
+
                     break;
                 }
             }
-
         }
     }
     
@@ -838,11 +820,11 @@ public sealed class LoginManager : MonoBehaviour
             numStages, 
             index, 
             j;
-        uint maxMultiplayerStageID = 0;
         LevelStage levelStage;
         UserStage userStage;
         UserLevel userLevel;
         Transform parent = _style.transform.parent;
+        var scrollRect = parent.GetComponentInParent<ScrollRectComponentEx>(true);
         __levelStyles = new LevelStyle[numLevels];
         for(i = 0; i < numLevels; ++i)
         {
@@ -854,7 +836,7 @@ public sealed class LoginManager : MonoBehaviour
 
             isUnlock = true;
 
-            maxMultiplayerStageID = 0;
+            uint maxMultiplayerStageID = 0;
             
             numStages = userLevel.stages == null ? 0 : userLevel.stages.Length;
             for (j = 0; j < numStages; ++j)
@@ -991,6 +973,23 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
+                    if (__targetUserStageID == 0 && 
+                        maxMultiplayerStageID == 0 && 
+                        ReplyMessageShared.isHost && 
+                        LevelPlayerShared<RemotePlayer>.isOnline)
+                    {
+                        LevelStage levelStage = default;
+                        foreach (var pair in __levelStages)
+                            levelStage = pair.Value;
+
+                        if (levelStage.maxMultiplayerStageID != 0)
+                        {
+                            __targetUserStageID = levelStage.maxMultiplayerStageID;
+                            
+                            __MoveTo(scrollRect, levelStage.levelIndex);
+                        }
+                    }
+                    
                     if ((selectedLevel.flag & UserLevel.Flag.Multiplayer) == UserLevel.Flag.Multiplayer &&
                         (endLevelIndex != userLevelIndex || numStageRewards >= levelChapters.stageRewardCount))
                         style.onMultiplayerEnable?.Invoke();
@@ -1538,24 +1537,7 @@ public sealed class LoginManager : MonoBehaviour
             __levelStyles[i] = style;
         }
 
-        var scrollRect = parent.GetComponentInParent<ScrollRectComponentEx>(true);
-        if (scrollRect != null)
-        {
-            int targetIndex = Mathf.Max(0, movedLevelIndex);
-            if (scrollRect.index[scrollRect.axis] == targetIndex)
-            {
-                var toggle = __levelStyles[targetIndex].toggle;
-                if (toggle != null)
-                {
-                    if (toggle.isOn)
-                        toggle.onValueChanged.Invoke(true);
-                    else
-                        toggle.isOn = true;
-                }
-            }
-            
-            scrollRect.MoveTo(targetIndex);
-        }
+        __MoveTo(scrollRect, Mathf.Max(0, movedLevelIndex));
 
         if (isHot)
         {
@@ -2281,10 +2263,13 @@ public sealed class LoginManager : MonoBehaviour
         if(__targetUserStageID != userStageID)
             SendChapterStageMessage(__targetUserStageID);
 
-        var scrollRect = _style.GetComponentInParent<ScrollRectComponentEx>(true);
+        __MoveTo(_style.GetComponentInParent<ScrollRectComponentEx>(true), levelStage.levelIndex);
+    }
+
+    private bool __MoveTo(ScrollRectComponentEx scrollRect, int levelIndex)
+    {
         if (scrollRect != null)
         {
-            int levelIndex = levelStage.levelIndex;
             if (scrollRect.index[scrollRect.axis] == levelIndex)
             {
                 var toggle = __levelStyles[levelIndex].toggle;
@@ -2298,7 +2283,11 @@ public sealed class LoginManager : MonoBehaviour
             }
             
             scrollRect.MoveTo(levelIndex);
+
+            return true;
         }
+
+        return false;
     }
 
     void OnDestroy()
