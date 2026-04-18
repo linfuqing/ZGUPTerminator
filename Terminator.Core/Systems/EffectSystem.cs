@@ -1771,7 +1771,7 @@ public partial struct EffectSystem : ISystem
                     var targetMessages = this.targetMessages[index];
                     foreach (var targetMessage in targetMessages)
                     {
-                        if (targetMessage.layerMask == 0 ||
+                        if (targetMessage.layerMask == 0 || targetMessage.layerMask == ~0u ||
                             (targetMessage.layerMask & (targetHP.messageLayerMask | messageLayerMask)) != 0)
                         {
                             if (!randomSelector.Select(ref random, targetMessage.chance))

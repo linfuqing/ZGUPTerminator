@@ -989,7 +989,7 @@ public sealed class LoginManager : MonoBehaviour
                         {
                             __targetUserStageID = levelStage.maxMultiplayerStageID;
                             
-                            __MoveTo(scrollRect, levelStage.levelIndex);
+                            scrollRect.MoveTo(levelStage.levelIndex);
                         }
                     }
                     
@@ -1694,7 +1694,7 @@ public sealed class LoginManager : MonoBehaviour
 
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
         
-        property.Apply<LocalPlayer>(hasSweepCard ? 2 : 1, rage, out var playerProperty);
+        ref var playerProperty = ref property.Apply<LocalPlayer>(hasSweepCard ? 2 : 1, rage);
 
         if (RemotePlayer.Status.Disabled == RemotePlayer.status)
             EffectShared.keepRecoveryTime = (purchaseFlag & IUserData.PurchaseFlag.AdvertisingFreeCard) ==
@@ -1708,11 +1708,11 @@ public sealed class LoginManager : MonoBehaviour
             var clientData = IClientData.instance;
             if (clientData != null)
             {
-                ClientMessagePlayerProperty playerPropertyMessage;
-                playerPropertyMessage.value = playerProperty;
+                //ClientMessagePlayerProperty playerPropertyMessage;
+                //playerPropertyMessage.value = playerProperty;
                 var writer = clientData.BeginSend(ClientMessagePlayerProperty.messageType,
                     ClientMessagePlayerProperty.capacity);
-                playerPropertyMessage.Write(ref writer);
+                playerProperty.Write(ref writer, StreamCompressionModel.Default);
                 clientData.EndSend(writer);
             }
         }
@@ -1934,7 +1934,7 @@ public sealed class LoginManager : MonoBehaviour
         var clientData = IClientData.instance;
         int sourceVersion = 0, destinationVersion;
         bool hasStage = __stageIDs.TryGetValue((levelID, stageIndex), out uint stageID);
-        if (ReplyMessageShared.remotePlayerCount > 0 && LevelPlayerShared<RemotePlayer>.isOnline)
+        if (ReplyMessageShared.remotePlayerCount > 0/* && LevelPlayerShared<RemotePlayer>.isOnline*/)
         {
             if (hasStage)
             {
@@ -2004,12 +2004,12 @@ public sealed class LoginManager : MonoBehaviour
 
                             yield return null;
 
-                            if (!LevelPlayerShared<RemotePlayer>.isOnline)
+                            /*if (!LevelPlayerShared<RemotePlayer>.isOnline)
                             {
                                 print("[Start:Host]Remote player offline.");
 
                                 RemotePlayer.status = RemotePlayer.Status.Disabled;
-                            }
+                            }*/
 
                             if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                             {
@@ -2066,7 +2066,8 @@ public sealed class LoginManager : MonoBehaviour
                             
                             yield return null;
                             
-                            if (!LevelPlayerShared<RemotePlayer>.isOnline ||
+                            if (ReplyMessageShared.remotePlayerCount < 1 || 
+                                !LevelPlayerShared<RemotePlayer>.isOnline ||
                                 RemotePlayer.Status.Canceled == RemotePlayer.status)
                             {
                                 print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
@@ -2157,7 +2158,8 @@ public sealed class LoginManager : MonoBehaviour
 
                     clientData.SetStatus((int)stageID);
 
-                    if (!LevelPlayerShared<RemotePlayer>.isOnline ||
+                    if (ReplyMessageShared.remotePlayerCount < 1 || 
+                        !LevelPlayerShared<RemotePlayer>.isOnline ||
                         RemotePlayer.Status.Canceled == RemotePlayer.status)
                     {
                         print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");

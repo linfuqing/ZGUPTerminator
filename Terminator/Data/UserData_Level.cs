@@ -149,10 +149,11 @@ public partial interface IUserData
         
         public bool isVail => skills != null || attributes != null;
 
-        public void Apply<T>(int effectTargetRecoveryTimes, int rage, out LevelPlayerProperty playerProperty) where T : ILevelPlayer
+        public ref LevelPlayerProperty Apply<T>(int effectTargetRecoveryTimes, int rage) where T : ILevelPlayer
         {
             SpawnerShared.layerMaskAndTags = spawnerLayerMaskAndTags;
 
+            LevelPlayerProperty playerProperty;
             playerProperty.effectTargetRecoveryTimes = effectTargetRecoveryTimes;
             playerProperty.effectRage = rage;
             
@@ -231,6 +232,8 @@ public partial interface IUserData
 
             LevelPlayerShared<T>.property = playerProperty;
             //LevelPlayerShared<T>.offset = playerOffset;
+
+            return ref LevelPlayerShared<T>.property;
         }
     }
 

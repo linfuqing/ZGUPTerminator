@@ -875,7 +875,7 @@ public class GameMain : GameUser
     {
         LevelShared.stage = property.stage;
 
-        property.value.Apply<LocalPlayer>(0, 0, out _);
+        property.value.Apply<LocalPlayer>(0, 0);
     }
 
     private void __ApplyStage(IUserData.StageProperty property)
@@ -885,7 +885,7 @@ public class GameMain : GameUser
         
         LevelShared.stage = property.stage;
         
-        property.value.Apply<LocalPlayer>(0, property.cache.rage, out _);
+        property.value.Apply<LocalPlayer>(0, property.cache.rage);
     }
 
     private void __OnConfirmCancel()
