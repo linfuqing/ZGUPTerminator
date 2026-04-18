@@ -679,7 +679,7 @@ public sealed class LoginManager : MonoBehaviour
         UnityEngine.Assertions.Assert.AreNotEqual(0, userStageID);
         UnityEngine.Assertions.Assert.AreNotEqual(0, userLevelID);
         
-        __stageIDs.Add((userLevelID, stageIndex), userStageID);
+        __stageIDs[(userLevelID, stageIndex)] = userStageID;
 
         LevelStage levelStage;
         levelStage.levelID = userLevelID;
@@ -687,7 +687,7 @@ public sealed class LoginManager : MonoBehaviour
         levelStage.stageIndex = stageIndex;
         levelStage.levelIndex = -1;
         levelStage.energy = 0;
-        __levelStages.Add(userStageID, levelStage);
+        __levelStages[userStageID] = levelStage;
     }
 
     public void ApplyStart(

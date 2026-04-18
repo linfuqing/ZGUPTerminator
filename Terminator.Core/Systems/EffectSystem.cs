@@ -1759,7 +1759,7 @@ public partial struct EffectSystem : ISystem
                 var messages = index < outputMessages.Length ? outputMessages[index] : default;
                 if (index < targetMessages.Length &&
                     ((targetHP.value != 0 || targetHP.shield != 0) /* && targetHP.messageLayerMask != 0*/ ||
-                     damage != 0 && messageLayerMask != 0))
+                     damage != 0 || messageLayerMask != 0))
                 {
                     float3 position = localToWorlds[index].Position;
                     var randomSelector = new RandomSelector(ref random);
