@@ -78,7 +78,7 @@ public partial struct LevelPlayerSystem : ISystem
             thirdPersonPlayer.ControlledCharacter = localPlayerEntity;
             thirdPersonPlayers[entityArray[index]] = thirdPersonPlayer;
 
-            if (RemotePlayer.Status.Joined == RemotePlayer.status)
+            if (RemotePlayer.SetStatus(RemotePlayer.Status.StandBy, 1 << (int)RemotePlayer.Status.Joined))
             {
                 Entity remotePlayerEntity = remotePlayerEntities[index];
                 __Apply(LevelPlayerShared<RemotePlayer>.property, remotePlayerEntity);
@@ -87,8 +87,6 @@ public partial struct LevelPlayerSystem : ISystem
                 remoteIdentity.id = LevelPlayerShared<RemotePlayer>.id;
 
                 remoteIdentities[remotePlayerEntity] = remoteIdentity;
-                
-                RemotePlayer.status = RemotePlayer.Status.StandBy;
             }
         }
 

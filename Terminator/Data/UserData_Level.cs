@@ -396,10 +396,10 @@ public partial class UserData
             __SubmitStageFlag(hpPercentage > 0, /*flag, */temp.name, temp.stage, stage);
 
             temp.stage = stage;
+            temp.killCount = Mathf.Max(temp.killCount, killCount);
+            temp.killBossCount = Mathf.Max(temp.killBossCount, killBossCount);
         }
 
-        temp.killCount = killCount;
-        temp.killBossCount = killBossCount;
         temp.gold = gold;
         UserData.levelCache = temp;
         

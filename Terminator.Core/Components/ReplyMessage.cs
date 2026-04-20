@@ -189,8 +189,16 @@ public struct ReplyMessages : IComponentData
                             channelFlag = reader.ReadPackedInt(streamCompressionModel);
                             //reader.Flush();
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
-                            if( key.id == LevelPlayerShared<RemotePlayer>.id)
+                            if (key.id == LevelPlayerShared<RemotePlayer>.id)
+                            {
                                 LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
+
+                                if (LevelPlayerShared<RemotePlayer>.channelStatus == 0)
+                                    RemotePlayer.SetStatus(RemotePlayer.Status.None,
+                                        (1 << (int)RemotePlayer.Status.Joined) |
+                                        (1 << (int)RemotePlayer.Status.StandBy));
+                            }
+
                             break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;
@@ -213,6 +221,7 @@ public struct ReplyMessages : IComponentData
                                     key.id = reader.ReadPackedUInt(streamCompressionModel);
                                     
                                     __Log($"Reply Message {(NetworkRelayMessageType)key.type} {channel}:{channelFlag}:{key.id}");
+                                    //++ReplyMessageShared.remotePlayerCount;
                                     if ((++ReplyMessageShared.remotePlayerCount > 1 ||
                                          RemotePlayer.status >= RemotePlayer.Status.Joined &&
                                          LevelPlayerShared<RemotePlayer>.id != 0 && 
@@ -235,6 +244,10 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
+                                    RemotePlayer.SetStatus(RemotePlayer.Status.None,
+                                        (1 << (int)RemotePlayer.Status.Joined) |
+                                        (1 << (int)RemotePlayer.Status.StandBy));
+                                    
                                     FixedBytes80 bytes = default;
                                     reader.ReadBytes(bytes.AsArray());
 
@@ -343,8 +356,8 @@ public struct ReplyMessages : IComponentData
                                     LevelPlayerShared<RemotePlayer>.property =
                                         new LevelPlayerProperty(ref reader, streamCompressionModel);
 
-                                    if (RemotePlayer.Status.Waiting == RemotePlayer.status)
-                                        RemotePlayer.status = RemotePlayer.Status.Joined;
+                                    RemotePlayer.SetStatus(RemotePlayer.Status.Joined,
+                                        1 << (int)RemotePlayer.Status.Waiting);
                                     break;
                                 default:
                                     if (isBuffer)

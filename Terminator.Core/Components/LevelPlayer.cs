@@ -15,6 +15,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
     public enum Status
     {
         //Error, 
+        None,
         Canceled,
         Disabled, 
         Waiting,
@@ -22,18 +23,13 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         StandBy
     }
 
-    private static readonly SharedStatic<Status> StatusValue = SharedStatic<Status>.GetOrCreate<Status>();
+    private static readonly SharedStatic<int> StatusValue = SharedStatic<int>.GetOrCreate<Status>();
 
     private static readonly SharedStatic<int> Version = SharedStatic<int>.GetOrCreate<RemotePlayer>();
 
     public static Status status
     {
-        get => StatusValue.Data;
-
-        set
-        {
-            StatusValue.Data = value;
-        }
+        get => (Status)StatusValue.Data;
     }
 
     public static int version
@@ -43,6 +39,20 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
         set => Version.Data = value;
     }
 
+    public static bool SetStatus(Status value, int comparandFlag = -1)
+    {
+        int comparand;
+        do
+        {
+            comparand = StatusValue.Data;
+            if (((1 << comparand) & comparandFlag) == 0)
+                return false;
+
+        } while (System.Threading.Interlocked.CompareExchange(ref StatusValue.Data, (int)value, comparand) !=
+                 comparand);
+
+        return true;
+    }
 }
 
 public struct LocalPlayer : IComponentData, ILevelPlayer

@@ -542,10 +542,12 @@ public class ClientData : MonoBehaviour, IClientData
     private int __frameCount;
     private int __pipelineIndex;
     private int __messageIndex;
+    private ClientHeader __remoteHeader;
     private ClientMessageSquadInviteToSend __squadInviteMessage;
     private NativeList<NetworkClient.Message> __messages;
     private NativeList<byte> __bytes;
     
+    //private static NativeHashMap<uint, ClientRemotePlayerFlag> __friends;
     private static NativeHashSet<uint> __friendIDs;
     private static Entity __entity;
     private static string __address;
@@ -615,7 +617,7 @@ public class ClientData : MonoBehaviour, IClientData
 
         __initStatus = InitStatus.None;
         
-        var driver = this.driver.instance;
+        //var driver = this.driver.instance;
         bool isChanged = false;
 
         __address ??= _address;
@@ -856,6 +858,7 @@ public class ClientData : MonoBehaviour, IClientData
                                 
                                 if ((int)NetworkRelayMessageType.Leave == type)
                                 {
+                                    __remoteHeader = default;
                                     //对面离开
                                     //--remotePlayerCount;
 
@@ -864,6 +867,8 @@ public class ClientData : MonoBehaviour, IClientData
                                 }
                                 else
                                 {
+                                    __remoteHeader = header;
+                                    
                                     if (ReplyMessageShared.isHost)
                                         LoginManager.instance?.SendChapterStageMessage();
                                 }
@@ -1044,6 +1049,12 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 }
                 case NetworkClientMessageType.Disconnect:
+                    if (__remoteHeader.userID != 0)
+                    {
+                        header = __remoteHeader;
+
+                        return (int)ClientMessageType.SquadLeave;
+                    }
                     /*if (SquadInviteStatus.None != squadInviteStatus)
                     {
                         header = default;
