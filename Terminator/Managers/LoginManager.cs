@@ -2195,6 +2195,10 @@ public sealed class LoginManager : MonoBehaviour
                         else if (RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
                                      ~(1 << (int)RemotePlayer.Status.Joined)))
                         {
+                            print("[Start]Failed and canceled.");
+
+                            clientData.SetStatus(0);
+
                             __status = Status.None;
                             
                             _onEnd?.Invoke();
