@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
@@ -505,9 +506,11 @@ public class ClientData : MonoBehaviour, IClientData
     {
         None, 
         Remote, 
-        Local
+        Local, 
+        Friends,
+        Complete
     }
-    
+
     [SerializeField]
     internal int _connectTimeoutMS = 1000;
     [SerializeField]
@@ -667,55 +670,76 @@ public class ClientData : MonoBehaviour, IClientData
 
     public int ReadMessageType(out ClientHeader header)
     {
-        while (InitStatus.Local != __initStatus)
+        switch (__initStatus)
         {
-            switch (__initStatus)
-            {
-                case InitStatus.None:
-                    __initStatus = InitStatus.Remote;
+            case InitStatus.None:
+                if (ReplyMessageShared.remotePlayerCount > 0)
+                {
+                    header.userID = LevelPlayerShared<RemotePlayer>.id;
 
-                    if (ReplyMessageShared.remotePlayerCount > 0)
+                    var levelPlayerHeader = LevelPlayerShared<RemotePlayer>.header;
+
+                    header.power = levelPlayerHeader.power;
+                    header.userName = levelPlayerHeader.name;
+                    header.userAvatar = levelPlayerHeader.avatar;
+
+                    ClientMessageSquadJoinToRead message;
+                    message.playerStatus.flag = (ClientRemotePlayerFlag)LevelPlayerShared<RemotePlayer>.channelFlag;
+                    message.squadInviteID = (uint)ReplyMessageShared.channel;
+
+                    __Save(message);
+
+                    return (int)ClientMessageType.SquadJoin;
+                }
+
+                break;
+            case InitStatus.Remote:
+                if (ReplyMessageShared.CHANNEL_NULL != ReplyMessageShared.channel)
+                {
+                    header = this.header;
+                    
+                    ClientMessageSquadJoinToRead message;
+                    message.playerStatus.flag = ClientRemotePlayerFlag.Online;
+                    if(ReplyMessageShared.isHost)
+                        message.playerStatus.flag |= ClientRemotePlayerFlag.Creator;
+                    
+                    message.squadInviteID = (uint)ReplyMessageShared.channel;
+
+                    __Save(message);
+
+                    return (int)ClientMessageType.SquadJoin;
+                }
+
+                break;
+            case InitStatus.Friends:
+                int friendIndex = __initStatus - InitStatus.Friends, friendCount = __friends.IsCreated ? __friends.Count : 0;
+                if (friendCount > friendIndex)
+                {
+                    foreach (var friend in __friends)
                     {
-                        header.userID = LevelPlayerShared<RemotePlayer>.id;
+                        if (--friendIndex < 0)
+                        {
+                            header.userID = friend.Key;
+                            header.userName = default;
+                            header.userAvatar = default;
+                            header.power = 0;
 
-                        var levelPlayerHeader = LevelPlayerShared<RemotePlayer>.header;
+                            ClientMessageRemotePlayerStatus message;
+                            message.flag = friend.Value;
 
-                        header.power = levelPlayerHeader.power;
-                        header.userName = levelPlayerHeader.name;
-                        header.userAvatar = levelPlayerHeader.avatar;
+                            __Save(message);
 
-                        ClientMessageSquadJoinToRead message;
-                        message.playerStatus.flag = (ClientRemotePlayerFlag)LevelPlayerShared<RemotePlayer>.channelFlag;
-                        message.squadInviteID = (uint)ReplyMessageShared.channel;
-
-                        __Save(message);
-
-                        return (int)ClientMessageType.SquadJoin;
+                            return (int)ClientMessageType.AddFriend;
+                        }
                     }
-
-                    break;
-                case InitStatus.Remote:
-                    __initStatus = InitStatus.Local;
-
-                    if (ReplyMessageShared.CHANNEL_NULL != ReplyMessageShared.channel)
-                    {
-                        header = this.header;
-                        
-                        ClientMessageSquadJoinToRead message;
-                        message.playerStatus.flag = ClientRemotePlayerFlag.Online;
-                        if(ReplyMessageShared.isHost)
-                            message.playerStatus.flag |= ClientRemotePlayerFlag.Creator;
-                        
-                        message.squadInviteID = (uint)ReplyMessageShared.channel;
-
-                        __Save(message);
-
-                        return (int)ClientMessageType.SquadJoin;
-                    }
-
-                    break;
-            }
+                }
+                else
+                    __initStatus = friendCount + InitStatus.Friends;
+                
+                break;
         }
+
+        ++__initStatus;
 
         var driver = this.driver;
         var instance = driver.instance;
@@ -821,6 +845,9 @@ public class ClientData : MonoBehaviour, IClientData
                                     
                                     return type;
                                 default:
+                                    if (__friends.IsCreated && __friends.ContainsKey(header.userID))
+                                        __friends[header.userID] = message.flag;
+                                    
                                     return (int)ClientMessageType.Status;
                             }
                         }
@@ -1052,6 +1079,9 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 }
                 case NetworkClientMessageType.Disconnect:
+                    if(__friends.IsCreated)
+                        __friends.Clear();
+                    
                     if (__remoteHeader.userID != 0)
                     {
                         header = __remoteHeader;
