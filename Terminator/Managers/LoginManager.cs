@@ -1951,18 +1951,29 @@ public sealed class LoginManager : MonoBehaviour
 
                 if (ReplyMessageShared.isHost)
                 {
-                    bool isWaitingToPlay = true;
+                    /*bool isWaitingToPlay = true;
                     if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                     {
                         RemotePlayer.SetStatus(RemotePlayer.Status.Joined, 1 << (int)RemotePlayer.Status.StandBy);
-
+                        
                         isWaitingToPlay = RemotePlayer.Status.Joined != RemotePlayer.status;
-                    }
-                    
-                    if(isWaitingToPlay)
-                    {
-                        RemotePlayer.SetStatus(RemotePlayer.Status.Waiting);
+                    }*/
 
+                    do
+                    {
+                        if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
+                        {
+                            RemotePlayer.SetStatus(RemotePlayer.Status.Joined, 1 << (int)RemotePlayer.Status.StandBy);
+
+                            if (RemotePlayer.Status.Joined == RemotePlayer.status)
+                                break;
+                        }
+                        
+                    } while (!RemotePlayer.SetStatus(RemotePlayer.Status.Waiting,
+                                 ~((1 << (int)RemotePlayer.Status.Joined) | (1 << (int)RemotePlayer.Status.StandBy))));
+
+                    if(RemotePlayer.Status.Waiting == RemotePlayer.status)
+                    {
                         print($"[Start:Host]Waiting for remotePlayer login..(Remote Status: {LevelPlayerShared<RemotePlayer>.channelStatus}, Stage ID: {stageID})");
                         while (0 != LevelPlayerShared<RemotePlayer>.channelStatus &&
                                LevelPlayerShared<RemotePlayer>.isOnline)

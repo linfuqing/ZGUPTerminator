@@ -15,7 +15,6 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
     public enum Status
     {
         //Error, 
-        None,
         Canceled,
         Disabled, 
         Waiting,

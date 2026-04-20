@@ -1923,6 +1923,8 @@ public partial struct EffectSystem : ISystem
                                 message.name = targetInstance.recoveryMessageName;
                                 message.value = targetInstance.recoveryMessageValue;
                                 messages.Add(message);
+
+                                result |= EnabledFlags.Message;
                             }
 
                             if (isFallToDestroy)

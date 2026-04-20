@@ -194,7 +194,7 @@ public struct ReplyMessages : IComponentData
                                 LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
                                 if (LevelPlayerShared<RemotePlayer>.channelStatus == 0)
-                                    RemotePlayer.SetStatus(RemotePlayer.Status.None,
+                                    RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
                                         (1 << (int)RemotePlayer.Status.Joined) |
                                         (1 << (int)RemotePlayer.Status.StandBy));
                             }
@@ -244,7 +244,7 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
-                                    RemotePlayer.SetStatus(RemotePlayer.Status.None,
+                                    RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
                                         (1 << (int)RemotePlayer.Status.Joined) |
                                         (1 << (int)RemotePlayer.Status.StandBy));
                                     
