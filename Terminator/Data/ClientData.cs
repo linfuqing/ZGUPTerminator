@@ -670,7 +670,7 @@ public class ClientData : MonoBehaviour, IClientData
 
     public int ReadMessageType(out ClientHeader header)
     {
-        switch (__initStatus)
+        switch (__initStatus++)
         {
             case InitStatus.None:
                 if (ReplyMessageShared.remotePlayerCount > 0)
@@ -738,8 +738,6 @@ public class ClientData : MonoBehaviour, IClientData
                 
                 break;
         }
-
-        ++__initStatus;
 
         var driver = this.driver;
         var instance = driver.instance;
