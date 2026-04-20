@@ -1978,7 +1978,8 @@ public sealed class LoginManager : MonoBehaviour
                             if (RemotePlayer.Status.Joined == RemotePlayer.status)
                                 break;
                         }
-                        
+
+                        yield return null;
                     } while (!RemotePlayer.SetStatus(RemotePlayer.Status.Waiting,
                                  ~((1 << (int)RemotePlayer.Status.Joined) | (1 << (int)RemotePlayer.Status.StandBy))));
 
@@ -2195,7 +2196,9 @@ public sealed class LoginManager : MonoBehaviour
                         else if (RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
                                      ~(1 << (int)RemotePlayer.Status.Joined)))
                         {
-                            print("[Start]Failed and canceled.");
+                            print("[Start]Match failed and canceled.");
+
+                            LevelShared.match = 0;
 
                             clientData.SetStatus(0);
 
