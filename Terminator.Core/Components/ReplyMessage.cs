@@ -245,9 +245,10 @@ public struct ReplyMessages : IComponentData
 
                                     LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
-                                    RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
+                                    //断线后会傻逼
+                                    /*RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
                                         (1 << (int)RemotePlayer.Status.Joined) |
-                                        (1 << (int)RemotePlayer.Status.StandBy));
+                                        (1 << (int)RemotePlayer.Status.StandBy));*/
                                     
                                     FixedBytes80 bytes = default;
                                     reader.ReadBytes(bytes.AsArray());

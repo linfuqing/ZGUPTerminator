@@ -2188,9 +2188,19 @@ public sealed class LoginManager : MonoBehaviour
                     clientData.SetStatus((int)stageID);
 
                     if (ReplyMessageShared.remotePlayerCount < 1 ||
-                        !LevelPlayerShared<RemotePlayer>.isOnline && LevelShared.match == 0)
+                        !LevelPlayerShared<RemotePlayer>.isOnline)
                     {
-                        RemotePlayer.SetStatus(RemotePlayer.Status.Disabled, ~(1 << (int)RemotePlayer.Status.Joined));
+                        if(LevelShared.match == 0)
+                            RemotePlayer.SetStatus(RemotePlayer.Status.Disabled, ~(1 << (int)RemotePlayer.Status.Joined));
+                        else if (RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
+                                     ~(1 << (int)RemotePlayer.Status.Joined)))
+                        {
+                            __status = Status.None;
+                            
+                            _onEnd?.Invoke();
+                            
+                            yield break; 
+                        }
                         
                         print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
                     }

@@ -1089,13 +1089,7 @@ public class ClientData : MonoBehaviour, IClientData
 
                         return (int)ClientMessageType.SquadLeave;
                     }
-                    /*if (SquadInviteStatus.None != squadInviteStatus)
-                    {
-                        header = default;
-                        
-                        return (int)ClientMessageType.SquadLeave;
-                    }*/
-
+                    
                     break;
             }
         }
