@@ -462,6 +462,11 @@ public sealed class LoginManager : MonoBehaviour
         remove => _onGold.RemoveListener(value);
     }
 
+    public bool canMoveToSinglePlayer => ReplyMessageShared.remotePlayerCount < 1 ||
+                                         ReplyMessageShared.isHost ||
+                                         !LevelPlayerShared<RemotePlayer>.isOnline ||
+                                         LevelPlayerShared<RemotePlayer>.channelStatus != 0;
+
     public bool isEnergyActive
     {
         get => __isEnergyActive;
@@ -586,20 +591,23 @@ public sealed class LoginManager : MonoBehaviour
         }
         else
             return;
-        
-        if (!__MoveTo(_style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true),
-                __levelStyles.Length - 1))
-        {
-            foreach (var levelStyle in __levelStyles)
-            {
-                if (levelStyle.toggle.isOn)
-                {
-                    levelStyle.toggle.onValueChanged.Invoke(true);
 
-                    break;
-                }
+        int levelIndex;
+        if (canMoveToSinglePlayer)
+            levelIndex = __levelStyles.Length - 1;
+        else
+        {
+            levelIndex = -1;
+            foreach (var levelStage in __levelStages.Values)
+            {
+                if (levelStage.maxMultiplayerStageID != 0)
+                    levelIndex = levelStage.levelIndex;
             }
         }
+
+        if (!__MoveTo(_style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true),
+                levelIndex))
+            __levelStyles[levelIndex].toggle.onValueChanged.Invoke(true);
     }
     
     [Preserve]
