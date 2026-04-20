@@ -547,8 +547,8 @@ public class ClientData : MonoBehaviour, IClientData
     private NativeList<NetworkClient.Message> __messages;
     private NativeList<byte> __bytes;
     
-    //private static NativeHashMap<uint, ClientRemotePlayerFlag> __friends;
-    private static NativeHashSet<uint> __friendIDs;
+    private static NativeHashMap<uint, ClientRemotePlayerFlag> __friends;
+    //private static NativeHashSet<uint> __friendIDs;
     private static Entity __entity;
     private static string __address;
     private static ushort __port;
@@ -809,14 +809,15 @@ public class ClientData : MonoBehaviour, IClientData
                             switch ((NetworkRelayMessageType)type)
                             {
                                 case NetworkRelayMessageType.Add:
-                                    if(!__friendIDs.IsCreated)
-                                        __friendIDs = new NativeHashSet<uint>(1, Allocator.Persistent);
+                                    if (!__friends.IsCreated)
+                                        __friends = new NativeHashMap<uint, ClientRemotePlayerFlag>(1,
+                                            Allocator.Persistent);
 
-                                    __friendIDs.Add(header.userID);
+                                    __friends.Add(header.userID, message.flag);
                                     return type;
                                 case NetworkRelayMessageType.Remove:
-                                    if(__friendIDs.IsCreated)
-                                        __friendIDs.Remove(header.userID);
+                                    if(__friends.IsCreated)
+                                        __friends.Remove(header.userID);
                                     
                                     return type;
                                 default:
@@ -825,6 +826,8 @@ public class ClientData : MonoBehaviour, IClientData
                         }
                         case NetworkRelayMessageType.Matching:
                         case NetworkRelayMessageType.Mismatch:
+                            LevelShared.match = 0;
+
                             header = this.header;
                             return type;
                         case NetworkRelayMessageType.Match:
@@ -1121,7 +1124,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.ApplyFriend:
             {
                 var temp = __Load<ClientMessageApplyFriendToSend>();
-                if ((!__friendIDs.IsCreated || !__friendIDs.Contains(temp.userID)) &&
+                if ((!__friends.IsCreated || !__friends.ContainsKey(temp.userID)) &&
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     this.header.Write(
@@ -1140,7 +1143,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.AddFriend:
             {
                 var temp = __Load<ClientMessageAddFriend>();
-                if ((!__friendIDs.IsCreated || !__friendIDs.Contains(temp.userID)) && 
+                if ((!__friends.IsCreated || !__friends.ContainsKey(temp.userID)) && 
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
@@ -1154,7 +1157,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.RemoveFriend:
             {
                 var temp = __Load<ClientMessageRemoveFriend>();
-                if (__friendIDs.IsCreated && __friendIDs.Contains(temp.userID) && 
+                if (__friends.IsCreated && __friends.ContainsKey(temp.userID) && 
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
@@ -1413,8 +1416,8 @@ public class ClientData : MonoBehaviour, IClientData
         if(__bytes.IsCreated)
             __bytes.Dispose();
 
-        if(__friendIDs.IsCreated)
-            __friendIDs.Dispose();
+        if(__friends.IsCreated)
+            __friends.Dispose();
     }
 
     void OnApplicationPause(bool pauseStatus)

@@ -2031,12 +2031,12 @@ public sealed class LoginManager : MonoBehaviour
 
                             yield return null;
 
-                            /*if (!LevelPlayerShared<RemotePlayer>.isOnline)
+                            if (ReplyMessageShared.remotePlayerCount < 1)
                             {
                                 print("[Start:Host]Remote player offline.");
 
-                                RemotePlayer.status = RemotePlayer.Status.Disabled;
-                            }*/
+                                RemotePlayer.SetStatus(RemotePlayer.Status.Canceled);
+                            }
 
                             if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                             {
