@@ -323,7 +323,7 @@ public struct ReplyMessages : IComponentData
                                 }
                             }
                             else
-                                UnityEngine.Debug.LogError($"WTF Channel {channel} For Leave!");
+                                UnityEngine.Debug.LogError($"WTF Channel {channel} For {(NetworkRelayMessageType)key.type}!");
 
                             break;
                         default:

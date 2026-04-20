@@ -454,6 +454,9 @@ public struct ClientMessagePlay
 
     public void Apply()
     {
+        if (LevelShared.match != 0)
+            return;
+        
         LoginManager.instance.ApplyStart(isRestart, levelID, stage, levelName.ToString(), sceneName.ToString());
     }
 }
