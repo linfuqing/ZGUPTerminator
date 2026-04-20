@@ -2270,6 +2270,7 @@ public sealed class LoginManager : MonoBehaviour
             }
         }
         
+        print($"[Start]Load scene({RemotePlayer.status})");
         var analytics = IAnalytics.instance as IAnalyticsEx;
         analytics?.StartLevel(sceneName /*_levels[__selectedLevelIndex].name*/);
 

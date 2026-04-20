@@ -26,10 +26,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
     private static readonly SharedStatic<int> Version = SharedStatic<int>.GetOrCreate<RemotePlayer>();
 
-    public static Status status
-    {
-        get => (Status)StatusValue.Data;
-    }
+    public static Status status => (Status)StatusValue.Data;
 
     public static int version
     {
@@ -49,6 +46,8 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
         } while (System.Threading.Interlocked.CompareExchange(ref StatusValue.Data, (int)value, comparand) !=
                  comparand);
+        
+        UnityEngine.Debug.Log($"[Set Status]({value})");
 
         return true;
     }
