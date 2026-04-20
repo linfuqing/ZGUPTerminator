@@ -683,6 +683,8 @@ public sealed class LoginManager : MonoBehaviour
         uint userLevelID, 
         int stageIndex)
     {
+        print($"[Register]Level {userLevelID}, Stage {stageIndex}:{userStageID})");
+
         UnityEngine.Assertions.Assert.AreNotEqual(0, userStageID);
         UnityEngine.Assertions.Assert.AreNotEqual(0, userLevelID);
         
@@ -2094,11 +2096,12 @@ public sealed class LoginManager : MonoBehaviour
                             yield return null;
                             
                             if (ReplyMessageShared.remotePlayerCount < 1 || 
-                                !LevelPlayerShared<RemotePlayer>.isOnline ||
-                                RemotePlayer.SetStatus(RemotePlayer.Status.Disabled, 1 << (int)RemotePlayer.Status.Canceled))
+                                !LevelPlayerShared<RemotePlayer>.isOnline)
                             {
+                                RemotePlayer.SetStatus(RemotePlayer.Status.Disabled,
+                                    1 << (int)RemotePlayer.Status.Canceled);
+                                
                                 print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
-;
                             }
 
                             if (RemotePlayer.Status.Disabled == RemotePlayer.status)
@@ -2115,7 +2118,7 @@ public sealed class LoginManager : MonoBehaviour
             }
             else
             {
-                print("[Start]Dont has stage.");
+                print($"[Start]Dont has stage.(Level {levelID}, Stage {stageIndex})");
 
                 if (ReplyMessageShared.isHost)
                     RemotePlayer.SetStatus(RemotePlayer.Status.Disabled);
@@ -2185,9 +2188,12 @@ public sealed class LoginManager : MonoBehaviour
                     clientData.SetStatus((int)stageID);
 
                     if (ReplyMessageShared.remotePlayerCount < 1 ||
-                        !LevelPlayerShared<RemotePlayer>.isOnline ||
-                        RemotePlayer.SetStatus(RemotePlayer.Status.Disabled, 1 << (int)RemotePlayer.Status.Canceled))
+                        !LevelPlayerShared<RemotePlayer>.isOnline)
+                    {
+                        RemotePlayer.SetStatus(RemotePlayer.Status.Disabled, ~(1 << (int)RemotePlayer.Status.Joined));
+                        
                         print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
+                    }
 
                     if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                     {
