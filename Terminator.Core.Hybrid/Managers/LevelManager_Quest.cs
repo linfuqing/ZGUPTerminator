@@ -191,7 +191,7 @@ public partial class LevelManager
                         switch (questStatus.Value.type)
                         {
                             case LevelQuestType.Once:
-                                if (LevelShared.stage != questStatus.Value.value)
+                                if (LevelShared.stageStart != questStatus.Value.value)
                                     questStatus.SetResult(false);
                                 break;
                             case LevelQuestType.DamagePercentage:
