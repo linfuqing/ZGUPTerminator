@@ -2022,17 +2022,20 @@ public sealed class LoginManager : MonoBehaviour
                         print("[Start:Host]Waiting for play..");
                         do
                         {
-                            destinationVersion = LevelPlayerShared<RemotePlayer>.version;
-                            if (destinationVersion != sourceVersion)
+                            if (LevelShared.match == 0)
                             {
-                                sourceVersion = destinationVersion;
-
-                                if (clientData != null)
+                                destinationVersion = LevelPlayerShared<RemotePlayer>.version;
+                                if (destinationVersion != sourceVersion)
                                 {
-                                    var writer = clientData.BeginSend(ClientMessageType.Play,
-                                        ClientMessagePlay.capacity);
-                                    play.Write(ref writer);
-                                    clientData.EndSend(writer);
+                                    sourceVersion = destinationVersion;
+
+                                    if (clientData != null)
+                                    {
+                                        var writer = clientData.BeginSend(ClientMessageType.Play,
+                                            ClientMessagePlay.capacity);
+                                        play.Write(ref writer);
+                                        clientData.EndSend(writer);
+                                    }
                                 }
                             }
 
