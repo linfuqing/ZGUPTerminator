@@ -797,6 +797,11 @@ public static class LevelShared
         public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<Stage>();
     }
     
+    private struct StageStart
+    {
+        public static readonly SharedStatic<int> Value = SharedStatic<int>.GetOrCreate<StageStart>();
+    }
+
     private struct Stages
     {
         private static readonly SharedStatic<UnsafeList<Stage>> Value = SharedStatic<UnsafeList<Stage>>.GetOrCreate<Stages>();
@@ -857,6 +862,13 @@ public static class LevelShared
         set => Stage.Value.Data = value;
     }
     
+    public static int stageStart
+    {
+        get => StageStart.Value.Data;
+        
+        set => StageStart.Value.Data = value;
+    }
+
     public static int userGroup
     {
         get => UserGroup.Value.Data;

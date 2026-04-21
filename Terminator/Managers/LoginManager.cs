@@ -1696,6 +1696,8 @@ public sealed class LoginManager : MonoBehaviour
             return;
         }
         
+        LevelShared.stageStart = stage;
+        
         LevelShared.stage = stage;
 
         bool hasSweepCard = (purchaseFlag & IUserData.PurchaseFlag.SweepCard) == IUserData.PurchaseFlag.SweepCard;
