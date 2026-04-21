@@ -592,22 +592,27 @@ public sealed class LoginManager : MonoBehaviour
         else
             return;
 
-        int levelIndex;
-        if (canMoveToSinglePlayer)
-            levelIndex = __levelStyles.Length - 1;
-        else
+        if (__targetUserStageID == 0)
         {
-            levelIndex = -1;
-            foreach (var levelStage in __levelStages.Values)
+            int levelIndex;
+            if (canMoveToSinglePlayer)
+                levelIndex = __levelStyles.Length - 1;
+            else
             {
-                if (levelStage.maxMultiplayerStageID != 0)
-                    levelIndex = levelStage.levelIndex;
+                levelIndex = -1;
+                foreach (var levelStage in __levelStages.Values)
+                {
+                    if (levelStage.maxMultiplayerStageID != 0)
+                        levelIndex = levelStage.levelIndex;
+                }
             }
-        }
 
-        if (!__MoveTo(_style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true),
-                levelIndex))
-            __levelStyles[levelIndex].toggle.onValueChanged.Invoke(true);
+            if (!__MoveTo(_style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true),
+                    levelIndex))
+                __levelStyles[levelIndex].toggle.onValueChanged.Invoke(true);
+        }
+        else
+            MoveTo(__targetUserStageID);
     }
     
     [Preserve]
@@ -1287,7 +1292,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp ||
                                                 //重新进入关卡创建风格时候
                                                 movedLevelIndex != -1 && movedLevelIndex != userLevelIndex || 
-                                                LevelPlayerShared<RemotePlayer>.isOnline || 
+                                                !this.canMoveToSinglePlayer || 
+                                                scrollRect.targetIndex[scrollRect.axis] != userLevelIndex ||
                                                 !__sceneIndices.Add((userLevelIndex, currentSceneIndex)))
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
@@ -1321,6 +1327,7 @@ public sealed class LoginManager : MonoBehaviour
                                             }
                                             else
                                             {
+                                                print($"[LevelActivatedFirst]{__sceneActiveDepth}:{movedLevelIndex}:{this.canMoveToSinglePlayer}");
                                                 //__sceneActiveDepth = -1;
 
                                                 var progressbar = GameProgressbar.instance;

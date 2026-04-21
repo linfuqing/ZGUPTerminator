@@ -1079,7 +1079,16 @@ public class ClientData : MonoBehaviour, IClientData
                     {
                         header = __remoteHeader;
 
+                        LevelShared.match = 0;
+
                         return (int)ClientMessageType.SquadLeave;
+                    }
+
+                    if (LevelShared.match != 0)
+                    {
+                        header = this.header;
+                        
+                        return (int)ClientMessageType.Mismatch;
                     }
                     
                     break;
