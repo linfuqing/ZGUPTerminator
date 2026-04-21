@@ -1969,19 +1969,24 @@ public sealed class LoginManager : MonoBehaviour
                         isWaitingToPlay = RemotePlayer.Status.Joined != RemotePlayer.status;
                     }*/
 
+                    int comparandFlag;
                     do
                     {
+                        yield return null;
+
                         if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
                         {
                             RemotePlayer.SetStatus(RemotePlayer.Status.Joined, 1 << (int)RemotePlayer.Status.StandBy);
 
                             if (RemotePlayer.Status.Joined == RemotePlayer.status)
                                 break;
-                        }
 
-                        yield return null;
-                    } while (!RemotePlayer.SetStatus(RemotePlayer.Status.Waiting,
-                                 ~((1 << (int)RemotePlayer.Status.Joined) | (1 << (int)RemotePlayer.Status.StandBy))));
+                            comparandFlag = ~((1 << (int)RemotePlayer.Status.Joined) |
+                                              (1 << (int)RemotePlayer.Status.StandBy));
+                        }
+                        else
+                            comparandFlag = -1;
+                    } while (!RemotePlayer.SetStatus(RemotePlayer.Status.Waiting, comparandFlag));
 
                     if(RemotePlayer.Status.Waiting == RemotePlayer.status)
                     {
@@ -1994,6 +1999,8 @@ public sealed class LoginManager : MonoBehaviour
                             if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                             {
                                 print("[Start:Host]Canceled.");
+
+                                LevelShared.match = 0;
 
                                 __status = Status.None;
 
@@ -2052,6 +2059,8 @@ public sealed class LoginManager : MonoBehaviour
                             {
                                 print("[Start:Host]Canceled.");
 
+                                LevelShared.match = 0;
+
                                 __status = Status.None;
 
                                 if (clientData != null)
@@ -2107,6 +2116,8 @@ public sealed class LoginManager : MonoBehaviour
 
                             if (RemotePlayer.Status.Disabled == RemotePlayer.status)
                             {
+                                LevelShared.match = 0;
+
                                 __status = Status.None;
 
                                 print($"[Start]Disabled.");
@@ -2121,12 +2132,14 @@ public sealed class LoginManager : MonoBehaviour
             {
                 print($"[Start]Dont has stage.(Level {levelID}, Stage {stageIndex})");
 
-                if (ReplyMessageShared.isHost)
+                if (ReplyMessageShared.isHost && LevelShared.match == 0)
                     RemotePlayer.SetStatus(RemotePlayer.Status.Disabled);
                 else
                 {
                     print("[Start]Canceled.");
 
+                    LevelShared.match = 0;
+                    
                     __status = Status.None;
                     
                     if (clientData != null)
@@ -2200,11 +2213,17 @@ public sealed class LoginManager : MonoBehaviour
 
                             LevelShared.match = 0;
 
-                            clientData.SetStatus(0);
-
                             __status = Status.None;
                             
+                            clientData.SetStatus(0);
+
                             _onEnd?.Invoke();
+                            
+                            if (clientData != null)
+                            {
+                                var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
+                                clientData.EndSend(writer);
+                            }
                             
                             yield break; 
                         }
@@ -2235,9 +2254,11 @@ public sealed class LoginManager : MonoBehaviour
                     {
                         print("[Start]Failed and canceled.");
 
-                        clientData.SetStatus(0);
+                        LevelShared.match = 0;
 
                         __status = Status.None;
+
+                        clientData.SetStatus(0);
 
                         _onEnd?.Invoke();
 

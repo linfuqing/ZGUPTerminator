@@ -191,9 +191,10 @@ public struct ReplyMessages : IComponentData
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
                             {
+                                int source = LevelPlayerShared<RemotePlayer>.channelStatus;
                                 LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
-
-                                if (LevelPlayerShared<RemotePlayer>.channelStatus == 0)
+                                int destination = LevelPlayerShared<RemotePlayer>.channelStatus;
+                                if (destination == 0 && destination != source && LevelShared.match == 0)
                                     RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
                                         (1 << (int)RemotePlayer.Status.Joined) |
                                         (1 << (int)RemotePlayer.Status.StandBy));
