@@ -463,9 +463,9 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     public bool canMoveToSinglePlayer => ReplyMessageShared.remotePlayerCount < 1 ||
-                                         ReplyMessageShared.isHost ||
+                                         ReplyMessageShared.isHost/* ||
                                          !LevelPlayerShared<RemotePlayer>.isOnline ||
-                                         LevelPlayerShared<RemotePlayer>.channelStatus != 0;
+                                         LevelPlayerShared<RemotePlayer>.channelStatus != 0*/;
 
     public bool isEnergyActive
     {
@@ -817,10 +817,7 @@ public sealed class LoginManager : MonoBehaviour
         __sceneIndices = new HashSet<(int, int)>();
         
         numLevels = levelChapters.levels.Length;
-        bool canMoveToSinglePlayer = ReplyMessageShared.remotePlayerCount < 1 || 
-                              ReplyMessageShared.isHost || 
-                              !LevelPlayerShared<RemotePlayer>.isOnline || 
-                              LevelPlayerShared<RemotePlayer>.channelStatus != 0, isHot = false, isMoved, isUnlock;
+        bool canMoveToSinglePlayer = this.canMoveToSinglePlayer, isHot = false, isMoved, isUnlock;
         int movedLevelIndex = -1, 
             selectedLevelIndex = -1,
             endLevelIndex = -1, 

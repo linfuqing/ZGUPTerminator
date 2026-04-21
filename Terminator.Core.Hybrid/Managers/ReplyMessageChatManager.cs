@@ -10,25 +10,27 @@ public class ReplyMessageChatManager : MonoBehaviour
     internal StringEvent _onInput;
 
     [SerializeField]
-    internal TMP_Dropdown _dropdown;
+    internal TMP_Dropdown[] _dropdowns;
     
     [SerializeField]
     internal string _format = "{0}:{1}";
 
-    private void __OnValueChanged(int value)
-    {
-        var text = _dropdown.options[value].text;
-        if (string.IsNullOrEmpty(text))
-            return;
-        
-        ReplyMessageChatShared.input = text;
-        
-        _onInput?.Invoke(string.Format(_format, LevelPlayerShared<LocalPlayer>.header.name, text));
-    }
-
     void Start()
     {
-        _dropdown.onValueChanged.AddListener(__OnValueChanged);
+        foreach (var dropdown in _dropdowns)
+        {
+            var temp = dropdown;
+            temp.onValueChanged.AddListener(x =>
+            {
+                var text = temp.options[x].text;
+                if (string.IsNullOrEmpty(text))
+                    return;
+        
+                ReplyMessageChatShared.input = text;
+        
+                _onInput?.Invoke(string.Format(_format, LevelPlayerShared<LocalPlayer>.header.name, text));
+            });
+        }
     }
     
     // Update is called once per frame

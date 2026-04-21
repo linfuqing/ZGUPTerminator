@@ -2253,9 +2253,9 @@ public partial struct EffectSystem : ISystem
                     valueClamp += statistic.valueClamp;
                 }
                 
-                distribution.countRatio =  count * 1.0f / totalCount;
-                distribution.valueRatio =  value * 1.0f / totalValue;
-                distribution.valueClampRatio =  valueClamp * 1.0f / totalValueClamp;
+                distribution.countRatio =  totalCount > 0 ? count * 1.0f / totalCount : 0.5f;
+                distribution.valueRatio =  totalValue > 0 ? value * 1.0f / totalValue : 0.5f;
+                distribution.valueClampRatio =  totalValueClamp > 0 ? valueClamp * 1.0f / totalValueClamp : 0.5f;
                 
                 distributions[i] = distribution;
             }

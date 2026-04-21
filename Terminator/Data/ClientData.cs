@@ -886,29 +886,21 @@ public class ClientData : MonoBehaviour, IClientData
                                 header = new ClientHeader(ref reader, streamCompressionModel);
                                 
                                 UnityEngine.Assertions.Assert.AreNotEqual(this.header.userID, header.userID);
-                                
-                                if ((int)NetworkRelayMessageType.Leave == type)
-                                {
-                                    __remoteHeader = default;
-                                    //对面离开
-                                    //--remotePlayerCount;
 
-                                    //ClientMessageSquadLeave temp;
-                                    //SendMessage(temp);
-                                }
-                                else
+                                switch (type)
                                 {
-                                    __remoteHeader = header;
+                                    case (int)NetworkRelayMessageType.Leave:
+                                    case (int)NetworkRelayMessageType.Drop:
+                                        if(header.userID == __remoteHeader.userID)
+                                            __remoteHeader = default;
+                                        break;
+                                    default:
+                                        __remoteHeader = header;
                                     
-                                    if (ReplyMessageShared.isHost)
-                                        LoginManager.instance?.SendChapterStageMessage();
+                                        if (ReplyMessageShared.isHost)
+                                            LoginManager.instance?.SendChapterStageMessage();
+                                        break;
                                 }
-                                /*else
-                                {
-                                    ++remotePlayerCount;
-                                    
-                                    LevelPlayerShared<RemotePlayer>.id = header.userID;
-                                }*/
                             }
                             else
                             {
@@ -1445,7 +1437,7 @@ public class ClientData : MonoBehaviour, IClientData
             __friends.Dispose();
     }
 
-    void OnApplicationPause(bool pauseStatus)
+    /*void OnApplicationPause(bool pauseStatus)
     {
         if (pauseStatus)
             Invoke(nameof(__Disconnect), _disconnectTimeoutMS * 0.001f);
@@ -1461,6 +1453,6 @@ public class ClientData : MonoBehaviour, IClientData
     void OnApplicationQuit()
     {
         __Disconnect();
-    }
+    }*/
 }
 
