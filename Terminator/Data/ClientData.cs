@@ -559,6 +559,13 @@ public class ClientData : MonoBehaviour, IClientData
     private static string __address;
     private static ushort __port;
 
+    public bool isMatching
+    {
+        get;
+
+        private set;
+    }
+
     public NetworkClientDriver driver
     {
         get
@@ -854,6 +861,8 @@ public class ClientData : MonoBehaviour, IClientData
                         }
                         case NetworkRelayMessageType.Matching:
                         case NetworkRelayMessageType.Mismatch:
+                            isMatching = type == (int)NetworkRelayMessageType.Matching;
+
                             LevelShared.match = 0;
 
                             header = this.header;
@@ -891,8 +900,15 @@ public class ClientData : MonoBehaviour, IClientData
                                 {
                                     case (int)NetworkRelayMessageType.Leave:
                                     case (int)NetworkRelayMessageType.Drop:
-                                        if(header.userID == __remoteHeader.userID)
+                                        if (header.userID == __remoteHeader.userID)
+                                        {
+                                            var loginManager = LoginManager.instance;
+                                            if(loginManager != null && loginManager.status == LoginManager.Status.None)
+                                                LevelShared.match = 0;
+
                                             __remoteHeader = default;
+                                        }
+
                                         break;
                                     default:
                                         __remoteHeader = header;
@@ -1077,17 +1093,21 @@ public class ClientData : MonoBehaviour, IClientData
                     
                     if (__remoteHeader.userID != 0)
                     {
-                        header = __remoteHeader;
+                        var loginManager = LoginManager.instance;
+                        if(loginManager != null && loginManager.status == LoginManager.Status.None)
+                            LevelShared.match = 0;
 
-                        LevelShared.match = 0;
+                        header = __remoteHeader;
 
                         return (int)ClientMessageType.SquadLeave;
                     }
 
-                    if (LevelShared.match != 0)
+                    if (isMatching)
                     {
+                        isMatching = false;
+
                         header = this.header;
-                        
+
                         return (int)ClientMessageType.Mismatch;
                     }
                     

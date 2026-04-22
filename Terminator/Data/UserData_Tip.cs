@@ -94,7 +94,9 @@ public partial interface IUserData
 
             bool isContains;
             int uints, numRewards = rewards.Length, accessoryIndex = numRewards;
-            long ticks = (long)Math.Round(Math.Min(deltaTicks == 0 ? DateTime.UtcNow.Ticks - this.ticks : deltaTicks, maxTime) * sweepCardMultiplier);
+            long ticks = Math.Min(deltaTicks == 0 ? DateTime.UtcNow.Ticks - this.ticks : deltaTicks, maxTime);
+            ticks = Mathf.Approximately(sweepCardMultiplier, 1.0f) ? ticks : 
+                (long)Math.Round(ticks / TimeSpan.TicksPerSecond * sweepCardMultiplier) * TimeSpan.TicksPerSecond;
             UserRewardData result;
             var results = new Dictionary<int, UserRewardData>();
             var rewardTimes = new int[numRewards];

@@ -11,7 +11,7 @@ using ZG.UI;
 
 public sealed class LoginManager : MonoBehaviour
 {
-    private enum Status
+    public enum Status
     {
         Init, 
         None,
@@ -434,7 +434,6 @@ public sealed class LoginManager : MonoBehaviour
     private int __sceneActiveDepth;
     
     private int __startLevelIndex;
-    private Status __status;
     private bool __isEnergyActive = true;
     private bool? __levelActivatedFirst;
     private bool? __isLevelActive;
@@ -448,6 +447,13 @@ public sealed class LoginManager : MonoBehaviour
         private set;
     }
 
+    public Status status
+    {
+        get;
+
+        private set;
+    }
+    
     public static LoginManager instance
     {
         get;
@@ -1306,7 +1312,9 @@ public sealed class LoginManager : MonoBehaviour
 
                                                 if (__levelActivatedFirst == null &&
                                                     __sceneActiveDepth == 0 &&
-                                                    (selectedLevelIndex == -1 || selectedLevelIndex == userLevelIndex)
+                                                    (selectedLevelIndex == -1 || 
+                                                     selectedLevelIndex == userLevelIndex || 
+                                                     !this.canMoveToSinglePlayer)
                                                     //selectedLevelIndex == -1 &&
                                                     //finalLevelIndex == userLevelIndex
                                                    )
@@ -1614,7 +1622,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (property.levelStages == null)
         {
-            __status = Status.Error;
+            status = Status.Error;
 
             return;
         }
@@ -1646,7 +1654,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (property.cache.skills == null)
         {
-            __status = Status.Error;
+            status = Status.Error;
 
             //__styles[__selectedLevelIndex].button.interactable = true;
             
@@ -1698,7 +1706,7 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (!property.isVail)
         {
-            __status = Status.Error;
+            status = Status.Error;
 
             return;
         }
@@ -1934,10 +1942,10 @@ public sealed class LoginManager : MonoBehaviour
         string levelName,
         string sceneName)
     {
-        if (__status != Status.None)
+        if (status != Status.None)
             yield break;
 
-        __status = Status.Waiting;
+        status = Status.Waiting;
 
         //__styles[__selectedLevelIndex].button.interactable = false;
 
@@ -2008,7 +2016,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                 LevelShared.match = 0;
 
-                                __status = Status.None;
+                                status = Status.None;
 
                                 yield break;
                             }
@@ -2070,7 +2078,7 @@ public sealed class LoginManager : MonoBehaviour
 
                                 LevelShared.match = 0;
 
-                                __status = Status.None;
+                                status = Status.None;
 
                                 if (clientData != null)
                                 {
@@ -2127,7 +2135,7 @@ public sealed class LoginManager : MonoBehaviour
                             {
                                 LevelShared.match = 0;
 
-                                __status = Status.None;
+                                status = Status.None;
 
                                 print($"[Start]Disabled.");
 
@@ -2149,7 +2157,7 @@ public sealed class LoginManager : MonoBehaviour
 
                     LevelShared.match = 0;
                     
-                    __status = Status.None;
+                    status = Status.None;
                     
                     if (clientData != null)
                     {
@@ -2180,15 +2188,15 @@ public sealed class LoginManager : MonoBehaviour
         {
             print("[Start]Waiting for start..");
 
-            __status = Status.Error;
+            status = Status.Error;
 
             bool isSend = false;
             int channelStatus;
             do
             {
-                if (Status.Error == __status)
+                if (Status.Error == status)
                 {
-                    __status = Status.Start;
+                    status = Status.Start;
 
                     if (isRestart)
                         yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
@@ -2204,7 +2212,7 @@ public sealed class LoginManager : MonoBehaviour
                     RemotePlayer.SetStatus(RemotePlayer.Status.Canceled);
                 }
 
-                if (Status.Start == __status)
+                if (Status.Start == status)
                 {
                     print($"[Start]Success!Waiting for remote player into stage {stageID}..");
 
@@ -2222,7 +2230,7 @@ public sealed class LoginManager : MonoBehaviour
 
                             LevelShared.match = 0;
 
-                            __status = Status.None;
+                            status = Status.None;
                             
                             clientData.SetStatus(0);
 
@@ -2265,7 +2273,7 @@ public sealed class LoginManager : MonoBehaviour
 
                         LevelShared.match = 0;
 
-                        __status = Status.None;
+                        status = Status.None;
 
                         clientData.SetStatus(0);
 
@@ -2279,7 +2287,7 @@ public sealed class LoginManager : MonoBehaviour
                 yield return null;
             } while (RemotePlayer.Status.Joined != RemotePlayer.status);
 
-            if (Status.Start != __status)
+            if (Status.Start != status)
             {
                 _onEnd?.Invoke();
 
@@ -2292,18 +2300,18 @@ public sealed class LoginManager : MonoBehaviour
         }
         else
         {
-            __status = Status.Start;
+            status = Status.Start;
 
             if (isRestart)
                 yield return userData.ApplyLevel(userID, levelID, stageIndex, __ApplyLevel);
             else
                 yield return userData.ApplyStage(userID, levelID, stageIndex, __ApplyStage);
 
-            if (Status.Start == __status)
+            if (Status.Start == status)
                 clientData?.SetStatus(-1);
             else
             {
-                __status = Status.None;
+                status = Status.None;
 
                 _onEnd?.Invoke();
 
@@ -2326,7 +2334,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private IEnumerator __MoveTo(uint userStageID)
     {
-        while (Status.Init == __status)
+        while (Status.Init == status)
             yield return null;
         
         if (!__levelStages.TryGetValue(userStageID, out var levelStage) || levelStage.maxMultiplayerStageID == 0)
@@ -2462,7 +2470,7 @@ public sealed class LoginManager : MonoBehaviour
         
         _onEnd?.Invoke();
         
-        __status = Status.None;
+        status = Status.None;
 
         while (manager != null && manager.isNoticeShow)
             yield return null;
