@@ -42,6 +42,13 @@ public struct UserFriend
 
 public partial interface IUserData
 {
+    public struct RoleTalent
+    {
+        public uint roleID;
+
+        public UserTalent talent;
+    }
+    
     public struct Friend
     {
         /// <summary>
@@ -65,7 +72,7 @@ public partial interface IUserData
         public UserAccessory[] accessories;
         public UserAccessorySlot[] accessorySlots;
         public UserTalent[] talents;
-        public UserTalent[] roleTalents;
+        public RoleTalent[] roleTalents;
     }
     
     public struct FriendRequest

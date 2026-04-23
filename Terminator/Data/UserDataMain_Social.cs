@@ -268,7 +268,9 @@ public partial class UserDataMain
         int numTalents = _talents.Length;
         Talent talent;
         UserTalent userTalent;
-        List<UserTalent> talents = new List<UserTalent>(), roleTalents = new List<UserTalent>();
+        IUserData.RoleTalent roleTalent;
+        var roleTalents = new List<IUserData.RoleTalent>();
+        var talents = new List<UserTalent>();
         for (i = 0; i < numTalents; ++i)
         {
             talent = _talents[i];
@@ -286,7 +288,11 @@ public partial class UserDataMain
             if (string.IsNullOrEmpty(talent.roleName))
                 talents.Add(userTalent);
             else
-                roleTalents.Add(userTalent);
+            {
+                roleTalent.talent = userTalent;
+                roleTalent.roleID = __ToID(__GetRoleIndex(talent.roleName));
+                roleTalents.Add(roleTalent);
+            }
         }
         
         result.talents = talents.ToArray();
