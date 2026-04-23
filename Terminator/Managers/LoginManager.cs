@@ -870,7 +870,7 @@ public sealed class LoginManager : MonoBehaviour
                     __stageIDs[(userLevel.id, j)] = userStage.id;
                 }
 
-                if (maxMultiplayerStageID != 0)
+                //if (maxMultiplayerStageID != 0)
                 {
                     levelStage.levelID = userLevel.id;
                     levelStage.maxMultiplayerStageID = maxMultiplayerStageID;
@@ -998,9 +998,7 @@ public sealed class LoginManager : MonoBehaviour
                         ReplyMessageShared.isHost && 
                         LevelPlayerShared<RemotePlayer>.isOnline)
                     {
-                        LevelStage levelStage = default;
-                        foreach (var pair in __levelStages)
-                            levelStage = pair.Value;
+                        var levelStage = __GetLastMultiplayerLevelStage();
 
                         if (levelStage.maxMultiplayerStageID != 0)
                         {
@@ -1297,10 +1295,9 @@ public sealed class LoginManager : MonoBehaviour
                                                 sceneUnlocked != null &&
                                                 sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp ||
                                                 //重新进入关卡创建风格时候
-                                                movedLevelIndex != -1 && 
+                                                /*movedLevelIndex != -1 && 
                                                 (movedLevelIndex != userLevelIndex || 
-                                                 selectedSceneIndex == -1 || 
-                                                 selectedSceneIndex != currentSceneIndex) || 
+                                                 selectedSceneIndex != currentSceneIndex) || */
                                                 !this.canMoveToSinglePlayer || 
                                                 scrollRect.targetIndex[scrollRect.axis] != userLevelIndex ||
                                                 !__sceneIndices.Add((userLevelIndex, currentSceneIndex)))
@@ -1368,8 +1365,8 @@ public sealed class LoginManager : MonoBehaviour
                                                 }
                                             }
                                             
-                                            if (movedLevelIndex == userLevelIndex)
-                                                movedLevelIndex = -1;
+                                            //if (movedLevelIndex == userLevelIndex)
+                                            //    movedLevelIndex = -1;
                                             
                                             /*if (isLevelActive)
                                             {
@@ -2341,22 +2338,22 @@ public sealed class LoginManager : MonoBehaviour
     {
         while (Status.Init == status)
             yield return null;
-        
-        if (!__levelStages.TryGetValue(userStageID, out var levelStage) || levelStage.maxMultiplayerStageID == 0)
+
+        LevelStage levelStage;
+        if (ReplyMessageShared.remotePlayerCount > 0)
         {
-            /*SendChapterStageMessage();
+            if (!__levelStages.TryGetValue(userStageID, out levelStage) || levelStage.maxMultiplayerStageID == 0)
+                levelStage = __GetLastMultiplayerLevelStage();
 
-            return;*/
-            foreach (var pair in __levelStages)
-                levelStage = pair.Value;
+            if (levelStage.maxMultiplayerStageID == 0)
+                yield break;
+
+            __targetUserStageID = levelStage.maxMultiplayerStageID;
+            if (__targetUserStageID != userStageID)
+                SendChapterStageMessage(__targetUserStageID);
         }
-
-        if (levelStage.maxMultiplayerStageID == 0)
+        else if(!__levelStages.TryGetValue(userStageID, out levelStage))
             yield break;
-
-        __targetUserStageID = levelStage.maxMultiplayerStageID;
-        if(__targetUserStageID != userStageID)
-            SendChapterStageMessage(__targetUserStageID);
 
         __MoveTo(_style.GetComponentInParent<ScrollRectComponentEx>(true), levelStage.levelIndex);
     }
@@ -2383,6 +2380,19 @@ public sealed class LoginManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    private LevelStage __GetLastMultiplayerLevelStage()
+    {
+        LevelStage levelStage, result = default;
+        foreach (var pair in __levelStages)
+        {
+            levelStage = pair.Value;
+            if (levelStage.maxMultiplayerStageID != 0)
+                result = levelStage;
+        }
+
+        return result;
     }
 
     void OnDestroy()
