@@ -2365,6 +2365,8 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (scrollRect != null)
         {
+            scrollRect.MoveTo(levelIndex);
+
             if (scrollRect.index[scrollRect.axis] == levelIndex)
             {
                 var toggle = __levelStyles[levelIndex].toggle;
@@ -2377,8 +2379,6 @@ public sealed class LoginManager : MonoBehaviour
                 }
             }
             
-            scrollRect.MoveTo(levelIndex);
-
             return true;
         }
 
