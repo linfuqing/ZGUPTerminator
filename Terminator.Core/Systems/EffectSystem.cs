@@ -2601,7 +2601,7 @@ public partial struct EffectSystem : ISystem
             //collect.deltaTime = deltaTime;
             collect.time = time;
             collect.cameraRotation = cameraRotation;
-            collect.messages = __outputMessages.results;
+            collect.messages = results;
             collect.children = __children;
             collect.physicsColliders = __physicsColliders;
             collect.characterProperties = __characterProperties;
