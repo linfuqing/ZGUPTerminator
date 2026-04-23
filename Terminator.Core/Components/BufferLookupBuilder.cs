@@ -78,7 +78,7 @@ public struct BufferLookupBuffer<T> where T : unmanaged, IBufferElementData
         {
             results[element.entity].Add(element.value);
 
-            switch (element.value)
+            switch (element.opcode)
             {
                 case BufferLookupBufferOpcode.Enabled:
                     results.SetBufferEnabled(element.entity, true);
