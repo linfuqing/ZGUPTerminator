@@ -9,69 +9,67 @@ using Unity.Transforms;
 using Unity.CharacterController;
 using Unity.Collections.LowLevel.Unsafe;
 
+[assembly:RegisterGenericJobType(typeof(BufferLookupBuffer<SimulationEvent>))]
+
 [UpdateInGroup(typeof(KinematicCharacterPhysicsUpdateGroup))]
 [BurstCompile]
 public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
 {
-    private EntityQuery _characterQuery;
-    private ThirdPersonCharacterUpdateContext _context;
-    private KinematicCharacterUpdateContext _baseContext;
+    private EntityQuery __group;
+    private BufferLookupBuffer<SimulationEvent> __simulationEventResults;
+    private ThirdPersonCharacterUpdateContext __context;
+    private KinematicCharacterUpdateContext __baseContext;
     
     //private NativeQueue<ThirdPersonCharacterSimulationEventResult> __simulationEventResults;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        _characterQuery = KinematicCharacterUtilities.GetBaseCharacterQueryBuilder()
+        __group = KinematicCharacterUtilities.GetBaseCharacterQueryBuilder()
             .WithAll<
                 ThirdPersonCharacterComponent,
                 ThirdPersonCharacterControl>()
             .WithAllRW<ThirdPersonCharacterStandTime>()
             .Build(ref state);
 
-        _context = new ThirdPersonCharacterUpdateContext();
-        _context.OnSystemCreate(ref state);
-        _baseContext = new KinematicCharacterUpdateContext();
-        _baseContext.OnSystemCreate(ref state);
+        __simulationEventResults = new BufferLookupBuffer<SimulationEvent>(ref state, Allocator.Persistent);
 
-        //__simulationEventResults = new NativeQueue<ThirdPersonCharacterSimulationEventResult>(Allocator.Persistent);
+        __context.OnSystemCreate(ref __simulationEventResults, ref state);
+        __baseContext.OnSystemCreate(ref state);
 
-        state.RequireForUpdate(_characterQuery);
+        state.RequireForUpdate(__group);
         state.RequireForUpdate<PhysicsWorldSingleton>();
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
-        //__simulationEventResults.Dispose();
+        __simulationEventResults.Dispose();
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        _context.OnSystemUpdate(ref state);
-        _baseContext.OnSystemUpdate(ref state, SystemAPI.Time, SystemAPI.GetSingleton<PhysicsWorldSingleton>());
-        
-        ThirdPersonCharacterPhysicsUpdateJob job = new ThirdPersonCharacterPhysicsUpdateJob
+        __context.OnSystemUpdate(ref state);
+        __baseContext.OnSystemUpdate(ref state, SystemAPI.Time, SystemAPI.GetSingleton<PhysicsWorldSingleton>());
+
+        ThirdPersonCharacterPhysicsUpdateJob job = new ThirdPersonCharacterPhysicsUpdateJob()
         {
-            Context = _context,
-            BaseContext = _baseContext//,
+            context = __context,
+            baseContext = __baseContext//,
             //simulationEventResults = __simulationEventResults.AsParallelWriter()
         };
-        job.ScheduleParallelByRef(_characterQuery);
+        job.ScheduleParallelByRef(__group);
 
-        /*Apply apply;
-        apply.simulationEventResults = __simulationEventResults;
-        apply.simulationEvents = _context.simulationEvents;
-        state.Dependency = apply.ScheduleByRef(state.Dependency);*/
+        state.Dependency = __simulationEventResults.Schedule(ref state, state.Dependency);
     }
 
     [BurstCompile]
     [WithAll(typeof(Simulate))]
     public partial struct ThirdPersonCharacterPhysicsUpdateJob : IJobEntity, IJobEntityChunkBeginEnd
     {
-        public ThirdPersonCharacterUpdateContext Context;
-        public KinematicCharacterUpdateContext BaseContext;
+        public ThirdPersonCharacterUpdateContext context;
+        public KinematicCharacterUpdateContext baseContext;
 
         //public NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults;
 
@@ -79,12 +77,12 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
             in Entity entity, 
             ThirdPersonCharacterAspect characterAspect)
         {
-            characterAspect.PhysicsUpdate(entity, ref Context, ref BaseContext/*, ref simulationEventResults*/);
+            characterAspect.PhysicsUpdate(entity, ref context, ref baseContext/*, ref simulationEventResults*/);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
-            BaseContext.EnsureCreationOfTmpCollections();
+            baseContext.EnsureCreationOfTmpCollections();
             return true;
         }
 
@@ -92,25 +90,6 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         {
         }
     }
-    
-    /*[BurstCompile]
-    private struct Apply : IJob
-    {
-        public NativeQueue<ThirdPersonCharacterSimulationEventResult> simulationEventResults;
-        
-        public BufferLookup<SimulationEvent> simulationEvents;
-
-        public void Execute()
-        {
-            DynamicBuffer<SimulationEvent> simulationEvents;
-            while (simulationEventResults.TryDequeue(out var result))
-            {
-                simulationEvents = this.simulationEvents[result.entity];
-                if(SimulationEvent.AppendOrReplace(ref simulationEvents, result.value))
-                    this.simulationEvents.SetBufferEnabled(result.entity, true);
-            }
-        }
-    }*/
 }
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -120,26 +99,27 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
 [BurstCompile]
 public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
 {
-    private EntityQuery _characterQuery;
-    private ThirdPersonCharacterUpdateContext _context;
-    private KinematicCharacterUpdateContext _baseContext;
+    private EntityQuery __group;
+    private BufferLookupBuffer<SimulationEvent> __simulationEventResults;
+    private ThirdPersonCharacterUpdateContext __context;
+    private KinematicCharacterUpdateContext __baseContext;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        _characterQuery = KinematicCharacterUtilities.GetBaseCharacterQueryBuilder()
+        __group = KinematicCharacterUtilities.GetBaseCharacterQueryBuilder()
             .WithAll<
                 ThirdPersonCharacterComponent,
                 ThirdPersonCharacterControl>()
             .WithAllRW<ThirdPersonCharacterStandTime>()
             .Build(ref state);
-
-        _context = new ThirdPersonCharacterUpdateContext();
-        _context.OnSystemCreate(ref state);
-        _baseContext = new KinematicCharacterUpdateContext();
-        _baseContext.OnSystemCreate(ref state);
         
-        state.RequireForUpdate(_characterQuery);
+        __simulationEventResults = new BufferLookupBuffer<SimulationEvent>(ref state, Allocator.Persistent);
+
+        __context.OnSystemCreate(ref __simulationEventResults, ref state);
+        __baseContext.OnSystemCreate(ref state);
+        
+        state.RequireForUpdate(__group);
     }
 
     [BurstCompile]
@@ -149,15 +129,15 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        _context.OnSystemUpdate(ref state);
-        _baseContext.OnSystemUpdate(ref state, SystemAPI.Time, SystemAPI.GetSingleton<PhysicsWorldSingleton>());
+        __context.OnSystemUpdate(ref state);
+        __baseContext.OnSystemUpdate(ref state, SystemAPI.Time, SystemAPI.GetSingleton<PhysicsWorldSingleton>());
         
         ThirdPersonCharacterVariableUpdateJob job = new ThirdPersonCharacterVariableUpdateJob
         {
-            Context = _context,
-            BaseContext = _baseContext
+            Context = __context,
+            BaseContext = __baseContext
         };
-        job.ScheduleParallel(_characterQuery);
+        job.ScheduleParallel(__group);
     }
 
     [BurstCompile]

@@ -8,6 +8,17 @@ public struct SimulationEvent : IBufferElementData, IEnableableComponent, IEquat
     public Entity entity;
     public ColliderKey colliderKey;
 
+    public static bool Contains(in DynamicBuffer<SimulationEvent> values, in SimulationEvent value)
+    {
+        foreach (var temp in values)
+        {
+            if (temp.entity == value.entity)
+                return true;
+        }
+
+        return false;
+    }
+
     public static bool Append(DynamicBuffer<SimulationEvent> values, in SimulationEvent value)
     {
         foreach (var temp in values)

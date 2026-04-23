@@ -52,15 +52,13 @@ public struct BufferLookupBuffer<T> where T : unmanaged, IBufferElementData
     }
 
     private NativeQueue<Element> __elements;
+    private BufferLookup<T> __results;
 
-    public BufferLookup<T> results
-    {
-        get;
-    }
+    public BufferLookup<T> results => __results;
 
     public BufferLookupBuffer(ref SystemState systemState, in AllocatorManager.AllocatorHandle allocator)
     {
-        results = systemState.GetBufferLookup<T>();
+        __results = systemState.GetBufferLookup<T>();
         __elements = new NativeQueue<Element>(allocator);
     }
 
@@ -94,7 +92,7 @@ public struct BufferLookupBuffer<T> where T : unmanaged, IBufferElementData
 
     public JobHandle Schedule(ref SystemState systemState, in JobHandle dependsOn)
     {
-        results.Update(ref systemState);
+        __results.Update(ref systemState);
         
         BufferLookupBufferJob<T> job;
         job.buffer = this;

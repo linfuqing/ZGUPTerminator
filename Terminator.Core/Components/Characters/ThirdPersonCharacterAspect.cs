@@ -35,15 +35,18 @@ public struct ThirdPersonCharacterUpdateContext
     [ReadOnly]
     public ComponentLookup<CharacterFrictionSurface> characterFrictionSurfaceLookup;
 
-    [NativeDisableParallelForRestriction]
+    [ReadOnly]
     public BufferLookup<SimulationEvent> simulationEvents;
+
+    public BufferLookupBuffer<SimulationEvent>.ParallelWriter simulationEventResults;
 
     // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
     // Here, you can get the component lookups.
-    public void OnSystemCreate(ref SystemState state)
+    public void OnSystemCreate(ref BufferLookupBuffer<SimulationEvent> simulationEventResults, ref SystemState state)
     {
         characterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
-        simulationEvents = state.GetBufferLookup<SimulationEvent>();
+        simulationEvents = simulationEventResults.results;
+        this.simulationEventResults = simulationEventResults.AsParallelWriter();
     }
     
     // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
@@ -101,7 +104,8 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
             {
                 simulationEvent.entity = characterHit.Entity;
                 simulationEvent.colliderKey = characterHit.ColliderKey;
-                SimulationEvent.Append(simulationEvents, simulationEvent);
+                if(!SimulationEvent.Contains(simulationEvents, simulationEvent))
+                    context.simulationEventResults.Enqueue(entity, simulationEvent, BufferLookupBufferOpcode.Enabled);
             }
         }
         

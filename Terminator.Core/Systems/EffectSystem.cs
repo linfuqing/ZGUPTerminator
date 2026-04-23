@@ -17,7 +17,6 @@ using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
 
 [assembly:RegisterGenericJobType(typeof(BufferLookupBufferJob<Message>))]
-[assembly:RegisterGenericJobType(typeof(BufferLookupBufferJob<EffectDamageStatistic>))]
 
 [BurstCompile, 
  CreateAfter(typeof(PrefabLoaderSystem)), 
@@ -2499,7 +2498,9 @@ public partial struct EffectSystem : ISystem
         __characterBodyType.Update(ref state);
         __instanceIDs.Update(ref state);
 
-        __outputMessages.results.Update(ref state);
+        var results = __outputMessages.results;
+        
+        results.Update(ref state);
 
         double time = SystemAPI.Time.ElapsedTime;
 
@@ -2535,7 +2536,7 @@ public partial struct EffectSystem : ISystem
             instantiate.instanceIDs = __instanceIDs;
             //instantiate.damageParents = __damageParents;
             instantiate.children = __children;
-            instantiate.messages = __outputMessages.results;
+            instantiate.messages = results;
             instantiate.messageParameters = __messageParameters;
             instantiate.statusTargets = __statusTargets;
             instantiate.states = __states;
