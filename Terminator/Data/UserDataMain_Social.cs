@@ -268,12 +268,12 @@ public partial class UserDataMain
         int numTalents = _talents.Length;
         Talent talent;
         UserTalent userTalent;
-        result.talents = new UserTalent[numTalents];
+        List<UserTalent> talents = new List<UserTalent>(), roleTalents = new List<UserTalent>();
         for (i = 0; i < numTalents; ++i)
         {
             talent = _talents[i];
-            //if (!string.IsNullOrEmpty(talent.roleName))
-            //    continue;
+            if (!string.IsNullOrEmpty(talent.roleName) && talent.roleName != result.role.name)
+                continue;
 
             userTalent.name = talent.name;
             userTalent.id = __ToID(i);
@@ -282,8 +282,15 @@ public partial class UserDataMain
             userTalent.exp = talent.exp;
             userTalent.skillGroupDamage = talent.skillGroupDamage;
             userTalent.attribute = talent.attribute;
-            result.talents[i] = userTalent;
+            
+            if (string.IsNullOrEmpty(talent.roleName))
+                talents.Add(userTalent);
+            else
+                roleTalents.Add(userTalent);
         }
+        
+        result.talents = talents.ToArray();
+        result.roleTalents = roleTalents.ToArray();
 
         onComplete(result);
     }

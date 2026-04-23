@@ -105,7 +105,6 @@ public partial struct LevelPickableSystem : ISystem
 
         public Entity levelEntity;
         
-        [NativeDisableParallelForRestriction]
         public BufferLookup<LevelItem> levelItems;
 
         [ReadOnly] 
@@ -332,7 +331,7 @@ public partial struct LevelPickableSystem : ISystem
         collect.statusType = __statusType;
         collect.results = __results.AsParallelWriter();
 
-        var jobHandle = collect.ScheduleParallelByRef(__group, state.Dependency);
+        var jobHandle = collect.ScheduleByRef(__group, state.Dependency);
 
         __versions.Update(ref state);
         __definitions.Update(ref state);

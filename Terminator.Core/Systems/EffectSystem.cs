@@ -16,6 +16,9 @@ using ZG;
 using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
 
+[assembly:RegisterGenericJobType(typeof(BufferLookupBufferJob<Message>))]
+[assembly:RegisterGenericJobType(typeof(BufferLookupBufferJob<EffectDamageStatistic>))]
+
 [BurstCompile, 
  CreateAfter(typeof(PrefabLoaderSystem)), 
  UpdateInGroup(typeof(TransformSystemGroup), OrderLast = true), 
@@ -656,6 +659,9 @@ public partial struct EffectSystem : ISystem
         
         public Random random;
 
+        [ReadOnly]
+        public BufferLookup<Message> messages;
+
         [ReadOnly] 
         public BufferLookup<Child> children;
 
@@ -732,11 +738,10 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
 
-        [NativeDisableParallelForRestriction]
-        public BufferLookup<Message> outputMessages;
-
-        [NativeDisableParallelForRestriction]
+        [NativeDisableParallelForRestriction] 
         public BufferLookup<EffectDamageStatistic> damageStatistics;
+
+        public BufferLookupBuffer<Message>.ParallelWriter outputMessages;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
@@ -810,15 +815,12 @@ public partial struct EffectSystem : ISystem
 
                     var targetHP = targetHPs.GetRefRWOptional(instanceDamageParent.entity);
 
-                    Entity messageEntity = this.outputMessages.HasBuffer(entity)
+                    Entity messageEntity = messages.HasBuffer(entity)
                         ? entity
                         : (instanceDamageParent.entity != entity &&
-                           this.outputMessages.HasBuffer(instanceDamageParent.entity)
+                           messages.HasBuffer(instanceDamageParent.entity)
                             ? instanceDamageParent.entity
                             : Entity.Null);
-                    var outputMessages = messageEntity == Entity.Null
-                        ? default
-                        : this.outputMessages[messageEntity];
                     var simulationEvents = this.simulationEvents[index];
                     EffectTarget targetInstance;
                     EffectTargetDamageScale targetDamageScale;
@@ -1098,40 +1100,9 @@ public partial struct EffectSystem : ISystem
                             outputMessage.name = inputMessage.name;
                             outputMessage.value = inputMessage.value;
 
-                            //if (inputMessage.entityPrefabReference.Equals(default))
-                            {
-                                if (outputMessages.IsCreated)
-                                {
-                                    enabledFlags |= EnabledFlags.Message;
+                            enabledFlags |= EnabledFlags.Message;
 
-                                    outputMessages.Add(outputMessage);
-
-                                    this.outputMessages.SetBufferEnabled(messageEntity, true);
-                                }
-                            }
-                            /*else if (!outputMessage.name.IsEmpty &&
-                                     prefabLoader.TryGetOrLoadPrefabRoot(
-                                         inputMessage.entityPrefabReference,
-                                         out instance))
-                            {
-                                instance = entityManager.Instantiate(0, instance);
-
-                                if (!outputMessage.name.IsEmpty)
-                                {
-                                    entityManager.SetBuffer<Message>(1, instance).Add(outputMessage);
-                                    entityManager.SetComponentEnabled<Message>(1, instance, true);
-
-                                    messageParameter.messageKey = outputMessage.key;
-                                    messageParameter.value = -damageValueResult;
-                                    messageParameter.id = (int)EffectAttributeID.Damage;
-                                    entityManager.SetBuffer<MessageParameter>(1, instance)
-                                        .Add(messageParameter);
-                                }
-
-                                entityManager.SetComponent(1, instance,
-                                    LocalTransform.FromPositionRotation(destination.Position,
-                                        cameraRotation));
-                            }*/
+                            outputMessages.Enqueue(messageEntity, outputMessage, BufferLookupBufferOpcode.Enabled);
                         }
                     }
 
@@ -1267,6 +1238,9 @@ public partial struct EffectSystem : ISystem
 
         public quaternion cameraRotation;
 
+        [ReadOnly]
+        public BufferLookup<Message> messages;
+
         [ReadOnly] 
         public BufferLookup<Child> children;
 
@@ -1344,14 +1318,11 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<CopyMatrixToTransformInstanceID> instanceIDs;
 
         [NativeDisableParallelForRestriction]
-        public BufferLookup<Message> outputMessages;
-
-        [NativeDisableParallelForRestriction]
         public BufferLookup<EffectDamageStatistic> damageStatistics;
 
-        public EntityCommandBuffer.ParallelWriter entityManager;
+        public BufferLookupBuffer<Message>.ParallelWriter outputMessages;
 
-        //public PrefabLoader.ParallelWriter prefabLoader;
+        public EntityCommandBuffer.ParallelWriter entityManager;
 
         public NativeQueue<DamageInstance>.ParallelWriter damageInstances;
 
@@ -1364,6 +1335,7 @@ public partial struct EffectSystem : ISystem
             collect.time = time;
             collect.random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32) ^ (uint)unfilteredChunkIndex);
             collect.cameraRotation = cameraRotation;
+            collect.messages = messages;
             collect.children = children;
             collect.physicsColliders = physicsColliders;
             collect.characterProperties = characterProperties;
@@ -1390,8 +1362,8 @@ public partial struct EffectSystem : ISystem
             collect.characterBodies = characterBodies;
             collect.localToWorlds = localToWorlds;
             collect.instanceIDs = instanceIDs;
-            collect.outputMessages = outputMessages;
             collect.damageStatistics = damageStatistics;
+            collect.outputMessages = outputMessages;
             collect.entityManager = entityManager;
             //collect.prefabLoader = prefabLoader;
             collect.damageInstances = damageInstances;
@@ -2369,8 +2341,9 @@ public partial struct EffectSystem : ISystem
 
     private ComponentLookup<CopyMatrixToTransformInstanceID> __instanceIDs;
     
+    private BufferLookupBuffer<Message> __outputMessages;
+    
     private BufferLookup<MessageParameter> __messageParameters; 
-    private BufferLookup<Message> __outputMessages;
 
     private BufferLookup<EffectDamageStatistic> __damageStatistics;
 
@@ -2450,7 +2423,6 @@ public partial struct EffectSystem : ISystem
         __localToWorlds = state.GetComponentLookup<LocalToWorld>();
         __instanceIDs = state.GetComponentLookup<CopyMatrixToTransformInstanceID>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
-        __outputMessages = state.GetBufferLookup<Message>();
         __damageStatistics = state.GetBufferLookup<EffectDamageStatistic>();
         __statusTargets = state.GetBufferLookup<EffectStatusTarget>();
         __children = state.GetBufferLookup<Child>(true);
@@ -2499,12 +2471,15 @@ public partial struct EffectSystem : ISystem
 
         __prefabLoader = new PrefabLoader(ref state);
 
+        __outputMessages = new BufferLookupBuffer<Message>(ref state, Allocator.Persistent);
+
         __damageInstances = new NativeQueue<DamageInstance>(Allocator.Persistent);
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
+        __outputMessages.Dispose();
         __damageInstances.Dispose();
     }
 
@@ -2523,8 +2498,9 @@ public partial struct EffectSystem : ISystem
         __targetType.Update(ref state);
         __characterBodyType.Update(ref state);
         __instanceIDs.Update(ref state);
-        __outputMessages.Update(ref state);
-        
+
+        __outputMessages.results.Update(ref state);
+
         double time = SystemAPI.Time.ElapsedTime;
 
         var jobHandle = state.Dependency;
@@ -2542,10 +2518,11 @@ public partial struct EffectSystem : ISystem
             : quaternion.identity;
 
         var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
-        if (fixedFrame.count > __frameCount)
+        bool isFixedFrame = fixedFrame.count > __frameCount;
+        if (isFixedFrame)
         {
             __frameCount = fixedFrame.count;
-            
+
             __messageParameters.Update(ref state);
             __characterInterpolations.Update(ref state);
             __physicsGraphicalInterpolationBuffers.Update(ref state);
@@ -2558,7 +2535,7 @@ public partial struct EffectSystem : ISystem
             instantiate.instanceIDs = __instanceIDs;
             //instantiate.damageParents = __damageParents;
             instantiate.children = __children;
-            instantiate.messages = __outputMessages;
+            instantiate.messages = __outputMessages.results;
             instantiate.messageParameters = __messageParameters;
             instantiate.statusTargets = __statusTargets;
             instantiate.states = __states;
@@ -2623,6 +2600,7 @@ public partial struct EffectSystem : ISystem
             //collect.deltaTime = deltaTime;
             collect.time = time;
             collect.cameraRotation = cameraRotation;
+            collect.messages = __outputMessages.results;
             collect.children = __children;
             collect.physicsColliders = __physicsColliders;
             collect.characterProperties = __characterProperties;
@@ -2650,14 +2628,14 @@ public partial struct EffectSystem : ISystem
             collect.localToWorlds = __localToWorlds;
             collect.instanceIDs = __instanceIDs;
             collect.damageStatistics = __damageStatistics;
-            collect.outputMessages = __outputMessages;
+            collect.outputMessages = __outputMessages.AsParallelWriter();
             collect.entityManager = entityManager;
             //collect.prefabLoader = prefabLoader;
             collect.damageInstances = damageInstances;
             //jobHandle = JobHandle.CombineDependencies(jobHandle, destroyJobHandle);
             jobHandle = collect.ScheduleParallelByRef(__groupToCollect, jobHandle);
         }
-        
+
         __levelStates.Update(ref state);
         __localToWorldType.Update(ref state);
         __cameraRotationType.Update(ref state);
@@ -2687,7 +2665,7 @@ public partial struct EffectSystem : ISystem
         //deltaTime = fixedFrame.deltaTime * (fixedFrame.count - __frameCount);
 
         ApplyEx apply;
-            SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
+        SystemAPI.TryGetSingletonEntity<LevelStatus>(out apply.levelStatusEntity);
 
         apply.deltaTime = LevelShared.unscaledDeltaTime;
         apply.time = time;
@@ -2726,14 +2704,14 @@ public partial struct EffectSystem : ISystem
         apply.prefabLoader = prefabLoader;
         apply.damageInstances = damageInstances;
         var applyJobHandle = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
-        
+
         __damageStatisticType.Update(ref state);
         var totalDamages = CollectionHelper.CreateNativeArray<int>(3, state.WorldUpdateAllocator);
         ComputeDamageStatistics computeDamageStatistics;
         computeDamageStatistics.total = totalDamages;
         computeDamageStatistics.statisticType = __damageStatisticType;
         var computeDamagesJobHandle = computeDamageStatistics.ScheduleParallelByRef(__groupToDamages, jobHandle);
-        
+
         __damageDistributionType.Update(ref state);
         ComputeDamageDistributions computeDamageDistributions;
         computeDamageDistributions.total = totalDamages;
@@ -2741,10 +2719,14 @@ public partial struct EffectSystem : ISystem
         computeDamageDistributions.distributionType = __damageDistributionType;
         computeDamagesJobHandle =
             computeDamageDistributions.ScheduleParallelByRef(__groupToDamages, computeDamagesJobHandle);
-        
-        state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle);
+
+        if (isFixedFrame)
+            state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle,
+                __outputMessages.Schedule(ref state, jobHandle));
+        else
+            state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle);
     }
-    
+
     public static int ComputeDamage(int value, float scale, ref Random random)
     {
         float result = value * scale;
