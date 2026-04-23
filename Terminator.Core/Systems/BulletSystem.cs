@@ -210,6 +210,8 @@ public partial struct BulletSystem : ISystem
 
         public BufferAccessor<DelayTime> delayTimes;
 
+        public BufferAccessor<ThirdPersonCharacterStandTime> characterStandTimes;
+
         public BufferAccessor<BulletMessageSharedIndex> messageSharedIndices;
 
         public BufferAccessor<BulletStatus> states;
@@ -219,9 +221,6 @@ public partial struct BulletSystem : ISystem
         public BufferAccessor<BulletInstance> instances;
 
         public NativeArray<BulletVersion> versions;
-
-        [NativeDisableParallelForRestriction] 
-        public BufferLookup<ThirdPersonCharacterStandTime> characterStandTimes;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -253,11 +252,8 @@ public partial struct BulletSystem : ISystem
             float3 up = math.up();
             quaternion cameraRotation;
             ref var definition = ref definitions[index].definition.Value;
-            DynamicBuffer<ThirdPersonCharacterStandTime> characterStandTimes;
             if (character == Entity.Null)
             {
-                this.characterStandTimes.TryGetBuffer(entity, out characterStandTimes);
-
                 cameraRotation = cameraRotations.TryGetComponent(entity, out var temp) ? temp.value : this.cameraRotation;
                 
                 //characterStandTimes = default;
@@ -273,8 +269,6 @@ public partial struct BulletSystem : ISystem
                 if (!characterBodies.IsComponentEnabled(character))
                     return false;
                 
-                this.characterStandTimes.TryGetBuffer(character, out characterStandTimes);
-
                 cameraRotation = cameraRotations.TryGetComponent(character, out var temp) ? temp.value : this.cameraRotation;
                 
                 up = characterBody.GroundingUp;
@@ -343,6 +337,7 @@ public partial struct BulletSystem : ISystem
             var localToWorld = fixedLocalToWorld.GetMatrix(entity);
             var inputMessages = this.inputMessages[index].AsNativeArray();
             var outputMessages = index < this.outputMessages.Length ? this.outputMessages[index] : default;
+            var characterStandTimes = index < this.characterStandTimes.Length ? this.characterStandTimes[index] : default;
             var targetStates = this.targetStates[index];
             var states = this.states[index];
             var version = versions[index];
@@ -500,6 +495,8 @@ public partial struct BulletSystem : ISystem
 
         public BufferTypeHandle<DelayTime> delayTimeType;
 
+        public BufferTypeHandle<ThirdPersonCharacterStandTime> characterStandTimeType;
+
         public BufferTypeHandle<BulletMessageSharedIndex> messageSharedIndexType;
 
         public BufferTypeHandle<BulletStatus> statusType;
@@ -509,9 +506,6 @@ public partial struct BulletSystem : ISystem
         public BufferTypeHandle<BulletInstance> instanceType;
 
         public ComponentTypeHandle<BulletVersion> versionType;
-
-        [NativeDisableParallelForRestriction] 
-        public BufferLookup<ThirdPersonCharacterStandTime> characterStandTimes;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
 
@@ -555,11 +549,11 @@ public partial struct BulletSystem : ISystem
             collect.messageSharedIndices = chunk.GetBufferAccessor(ref messageSharedIndexType);
             collect.outputMessages = chunk.GetBufferAccessor(ref outputMessageType);
             collect.delayTimes = chunk.GetBufferAccessor(ref delayTimeType);
+            collect.characterStandTimes = chunk.GetBufferAccessor(ref characterStandTimeType);
             collect.states = chunk.GetBufferAccessor(ref statusType);
             collect.targetStates = chunk.GetBufferAccessor(ref targetStatusType);
             collect.instances = chunk.GetBufferAccessor(ref instanceType);
             collect.versions = chunk.GetNativeArray(ref versionType);
-            collect.characterStandTimes = characterStandTimes;
             collect.entityManager = entityManager;
             collect.prefabLoader = prefabLoader;
 
@@ -704,6 +698,8 @@ public partial struct BulletSystem : ISystem
 
     private BufferTypeHandle<DelayTime> __delayTimeType;
 
+    private BufferTypeHandle<ThirdPersonCharacterStandTime> __characterStandTimeType;
+
     private ComponentTypeHandle<BulletVersion> __versionType;
 
     private ComponentTypeHandle<BulletEntity> __bulletEntityType;
@@ -713,8 +709,6 @@ public partial struct BulletSystem : ISystem
     private BufferLookup<BulletMessageSharedIndex> __messageSharedIndices;
         
     private BufferLookup<BulletMessage> __inputMessages;
-
-    private BufferLookup<ThirdPersonCharacterStandTime> __characterStandTimes;
 
     private EntityQuery __targetGroup;
     private EntityQuery __shooterGroup;
@@ -754,12 +748,12 @@ public partial struct BulletSystem : ISystem
         __messageSharedIndexType = state.GetBufferTypeHandle<BulletMessageSharedIndex>();
         __outputMessageType = state.GetBufferTypeHandle<Message>();
         __delayTimeType = state.GetBufferTypeHandle<DelayTime>();
+        __characterStandTimeType = state.GetBufferTypeHandle<ThirdPersonCharacterStandTime>();
         __versionType = state.GetComponentTypeHandle<BulletVersion>();
         __bulletEntityType = state.GetComponentTypeHandle<BulletEntity>(true);
         __messageSharedType = state.GetComponentTypeHandle<BulletMessageShared>(true);
         __messageSharedIndices = state.GetBufferLookup<BulletMessageSharedIndex>(true);
         __inputMessages = state.GetBufferLookup<BulletMessage>(true);
-        __characterStandTimes = state.GetBufferLookup<ThirdPersonCharacterStandTime>();
 
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __targetGroup = builder
@@ -824,8 +818,8 @@ public partial struct BulletSystem : ISystem
         __messageSharedIndexType.Update(ref state);
         __outputMessageType.Update(ref state);
         __delayTimeType.Update(ref state);
+        __characterStandTimeType.Update(ref state);
         __versionType.Update(ref state);
-        __characterStandTimes.Update(ref state);
         //__prefabLoader.Update(ref state);
 
         var mainCameraEntity = SystemAPI.GetSingletonEntity<MainCameraTransform>();
@@ -867,8 +861,8 @@ public partial struct BulletSystem : ISystem
         collect.messageSharedIndexType = __messageSharedIndexType;
         collect.outputMessageType = __outputMessageType;
         collect.delayTimeType = __delayTimeType;
+        collect.characterStandTimeType = __characterStandTimeType;
         collect.versionType = __versionType;
-        collect.characterStandTimes = __characterStandTimes;
         collect.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         collect.prefabLoader = __prefabLoader.AsParallelWriter();

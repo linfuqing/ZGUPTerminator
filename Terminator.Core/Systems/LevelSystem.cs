@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using ZG;
@@ -15,6 +16,8 @@ public partial struct LevelSystem : ISystem
         public float deltaTime;
         
         public double time;
+        
+        public Entity playerEntity;
 
         [ReadOnly]
         public RefRO<SpawnerLayerMaskAndTagsOverride> spawnerLayerMaskAndTagsOverride;
@@ -28,8 +31,6 @@ public partial struct LevelSystem : ISystem
         public RefRW<LocalTransform> playerTransform;
 
         public RefRW<LevelVersion> version;
-
-        public DynamicBuffer<RemotePosition> remotePositions;
 
         public Random random;
         
@@ -61,6 +62,8 @@ public partial struct LevelSystem : ISystem
 
         [NativeDisableParallelForRestriction]
         public BufferLookup<SpawnerStatus> spawnerStates;
+
+        public BufferLookupBuffer<RemotePosition>.ParallelWriter remotePositions;
 
         public EntityCommandBuffer.ParallelWriter entityManager;
         
@@ -335,14 +338,11 @@ public partial struct LevelSystem : ISystem
                         : float3.zero;*/
                     playerTransform.ValueRW.Position = playerPosition;
 
-                    if (remotePositions.IsCreated)
-                    {
-                        RemotePosition remotePosition;
-                        remotePosition.type = RemotePosition.Type.Warp;
-                        remotePosition.value = playerPosition.xz;
+                    RemotePosition remotePosition;
+                    remotePosition.type = RemotePosition.Type.Warp;
+                    remotePosition.value = playerPosition.xz;
 
-                        remotePositions.Add(remotePosition);
-                    }
+                    remotePositions.Enqueue(playerEntity, remotePosition, BufferLookupBufferOpcode.None);
                 }
             }
 
@@ -384,9 +384,6 @@ public partial struct LevelSystem : ISystem
         [NativeDisableParallelForRestriction]
         public ComponentLookup<SpawnerTime> spawnerTimes;
 
-        [NativeDisableParallelForRestriction]
-        public BufferLookup<RemotePosition> remotePositions;
-
         [ReadOnly]
         public ComponentLookup<SpawnerLayerMaskAndTagsOverride> spawnerLayerMaskAndTagsOverrides;
 
@@ -417,6 +414,8 @@ public partial struct LevelSystem : ISystem
         [NativeDisableParallelForRestriction]
         public BufferLookup<SpawnerStatus> spawnerStates;
 
+        public BufferLookupBuffer<RemotePosition>.ParallelWriter remotePositions;
+
         public EntityCommandBuffer.ParallelWriter entityManager;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -437,12 +436,12 @@ public partial struct LevelSystem : ISystem
             Update update;
             update.deltaTime = deltaTime;
             update.time = time;
+            update.playerEntity = playerEntity;
             update.spawnerLayerMaskAndTagsOverride = spawnerLayerMaskAndTagsOverrides.GetRefRO(spawnerLayerMaskAndTagsEntity);
             update.spawnerLayerMaskAndTagsInclude = spawnerLayerMaskAndTagsIncludes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.spawnerLayerMaskAndTagsExclude = spawnerLayerMaskAndTagsExcludes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.spawnerTime = spawnerTimes.GetRefRW(spawnerLayerMaskAndTagsEntity);
             update.playerTransform = localTransforms.GetRefRW(playerEntity);
-            remotePositions.TryGetBuffer(playerEntity, out update.remotePositions);
             update.version = versions.GetRefRW(levelEntity);
             update.random = Random.CreateFromIndex((uint)(unfilteredChunkIndex ^ (int)hash ^ (int)(hash >> 32)));
             update.spawners = spawners;
@@ -457,6 +456,7 @@ public partial struct LevelSystem : ISystem
             update.stageConditionStates = chunk.GetBufferAccessor(ref stageConditionStatusType);
             update.stageResultStates = chunk.GetBufferAccessor(ref stageResultStatusType);
             update.spawnerStates = spawnerStates;
+            update.remotePositions = remotePositions;
             update.entityManager = entityManager;
 
             bool result = false;
@@ -565,8 +565,6 @@ public partial struct LevelSystem : ISystem
 
     private ComponentLookup<SpawnerTime> __spawnerTimes;
 
-    private BufferLookup<RemotePosition> __remotePositions;
-
     private BufferLookup<SpawnerStatus> __spawnerStates;
 
     private BufferLookup<SpawnerPrefab> __spawnerPrefabs;
@@ -595,6 +593,8 @@ public partial struct LevelSystem : ISystem
     private EntityQuery __group;
     private EntityQuery __itemMessageGroup;
 
+    private BufferLookupBuffer<RemotePosition> __remotePositions;
+
     private LevelSpawners __spawners;
 
     [BurstCompile]
@@ -608,7 +608,6 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskAndTagsIncludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsInclude>();
         __spawnerLayerMaskAndTagsExcludes = state.GetComponentLookup<SpawnerLayerMaskAndTagsExclude>();
         __spawnerTimes = state.GetComponentLookup<SpawnerTime>();
-        __remotePositions = state.GetBufferLookup<RemotePosition>();
         __spawnerStates = state.GetBufferLookup<SpawnerStatus>();
         __spawnerPrefabs = state.GetBufferLookup<SpawnerPrefab>(true);
         __prefabType = state.GetBufferTypeHandle<LevelPrefab>(true);
@@ -640,6 +639,7 @@ public partial struct LevelSystem : ISystem
         state.RequireForUpdate<ThirdPersonPlayer>();
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
 
+        __remotePositions = new BufferLookupBuffer<RemotePosition>(ref state, Allocator.Persistent);
         __spawners = new LevelSpawners(ref state);
     }
 
@@ -660,7 +660,6 @@ public partial struct LevelSystem : ISystem
         __spawnerLayerMaskAndTagsIncludes.Update(ref state);
         __spawnerLayerMaskAndTagsExcludes.Update(ref state);
         __spawnerTimes.Update(ref state);
-        __remotePositions.Update(ref state);
         __spawnerPrefabs.Update(ref state);
         __prefabType.Update(ref state);
         __instanceType.Update(ref state);
@@ -689,7 +688,6 @@ public partial struct LevelSystem : ISystem
         update.spawnerLayerMaskAndTagsIncludes = __spawnerLayerMaskAndTagsIncludes;
         update.spawnerLayerMaskAndTagsExcludes = __spawnerLayerMaskAndTagsExcludes;
         update.spawnerTimes = __spawnerTimes;
-        update.remotePositions = __remotePositions;
         update.spawnerPrefabs = __spawnerPrefabs;
         update.spawnerSingleton = SystemAPI.GetSingleton<SpawnerSingleton>();
         update.spawnerDefinitions = __spawnerDefinitions;
@@ -701,9 +699,12 @@ public partial struct LevelSystem : ISystem
         update.stageConditionStatusType = __stageConditionStatusType;
         update.stageResultStatusType = __stageResultStatusType;
         update.spawnerStates = __spawnerStates;
+        update.remotePositions = __remotePositions.AsParallelWriter();
         update.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
             .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         jobHandle = update.ScheduleParallelByRef(__group, jobHandle);
+        
+        var remotePositionJobHandle = __remotePositions.Schedule(ref state, jobHandle);
 
         if (SystemAPI.TryGetSingletonEntity<LevelItem>(out Entity entity))
         {
@@ -722,7 +723,11 @@ public partial struct LevelSystem : ISystem
             sendMessages.outputType = __outputMessageType;
             sendMessages.parameterType = __messageParameterType;
             jobHandle = sendMessages.ScheduleParallelByRef(__itemMessageGroup, jobHandle);
+            
+            jobHandle = JobHandle.CombineDependencies(jobHandle, remotePositionJobHandle);
         }
+        else
+            jobHandle = remotePositionJobHandle;
 
         state.Dependency = jobHandle;
     }

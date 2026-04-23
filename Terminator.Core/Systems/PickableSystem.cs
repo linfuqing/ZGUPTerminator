@@ -16,6 +16,8 @@ public partial struct PickableSystem : ISystem
     {
         public float deltaTime;
         public double time;
+
+        public Entity localPlayer;
         
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
@@ -198,6 +200,9 @@ public partial struct PickableSystem : ISystem
                         out _,
                         out character);
                     break;
+                case Pickable.Permission.LocalPlayer:
+                    character = localPlayer;
+                    break;
             }
 
             if (character == Entity.Null)
@@ -234,6 +239,8 @@ public partial struct PickableSystem : ISystem
     {
         public float deltaTime;
         public double time;
+
+        public Entity localPlayer;
 
         [ReadOnly]
         public ComponentLookup<LocalTransform> localTransforms;
@@ -272,6 +279,7 @@ public partial struct PickableSystem : ISystem
             Pick pick;
             pick.deltaTime = deltaTime;
             pick.time = time;
+            pick.localPlayer = localPlayer;
             pick.localTransforms = localTransforms;
             pick.physicsColliders = physicsColliders;
             pick.characterBodies = characterBodies;
@@ -362,6 +370,7 @@ public partial struct PickableSystem : ISystem
                 .WithAny<SimulationEvent>()
                 .Build(ref state);
         
+        state.RequireForUpdate<ThirdPersonPlayer>();
         state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
         state.RequireForUpdate<FixedFrame>();
     }
@@ -385,6 +394,7 @@ public partial struct PickableSystem : ISystem
         PickEx pick;
         pick.deltaTime = SystemAPI.GetSingleton<FixedFrame>().deltaTime;
         pick.time = SystemAPI.Time.ElapsedTime;
+        pick.localPlayer = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
         pick.localTransforms = __localTransforms;
         pick.physicsColliders = __physicsColliders;
         pick.characterBodies = __characterBodies;

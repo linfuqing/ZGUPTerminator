@@ -10,7 +10,7 @@ public interface ILevelPlayer
     
 }
 
-public struct RemotePlayer : IComponentData, ILevelPlayer
+public struct RemotePlayer : ILevelPlayer
 {
     public enum Status
     {
@@ -53,7 +53,7 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
     }
 }
 
-public struct LocalPlayer : IComponentData, ILevelPlayer
+public struct LocalPlayer : ILevelPlayer
 {
     private static readonly SharedStatic<int> InstanceID = SharedStatic<int>.GetOrCreate<LevelPlayer>();
 

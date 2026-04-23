@@ -38,7 +38,7 @@ public partial struct LevelPickableSystem : ISystem
 
         public DynamicBuffer<LevelItem> levelItems;
 
-        public NativeQueue<Result>.ParallelWriter results;
+        public NativeQueue<Result> results;
 
         public void Execute(int index)
         {
@@ -117,7 +117,7 @@ public partial struct LevelPickableSystem : ISystem
 
         public ComponentTypeHandle<LevelPickableItem> itemType;
 
-        public NativeQueue<Result>.ParallelWriter results;
+        public NativeQueue<Result> results;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
@@ -329,7 +329,7 @@ public partial struct LevelPickableSystem : ISystem
         collect.itemType = __itemType;
         collect.skillType = __skillType;
         collect.statusType = __statusType;
-        collect.results = __results.AsParallelWriter();
+        collect.results = __results;
 
         var jobHandle = collect.ScheduleByRef(__group, state.Dependency);
 

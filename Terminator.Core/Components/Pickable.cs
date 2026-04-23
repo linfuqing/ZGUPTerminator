@@ -6,7 +6,8 @@ public struct Pickable : IComponentData, IEnableableComponent
     public enum Permission
     {
         All, 
-        Local
+        Local, 
+        LocalPlayer
     }
     
     public Permission permission;
