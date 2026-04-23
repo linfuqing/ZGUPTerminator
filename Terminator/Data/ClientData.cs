@@ -1099,6 +1099,8 @@ public class ClientData : MonoBehaviour, IClientData
 
                         header = __remoteHeader;
 
+                        __remoteHeader = default;
+
                         return (int)ClientMessageType.SquadLeave;
                     }
 
