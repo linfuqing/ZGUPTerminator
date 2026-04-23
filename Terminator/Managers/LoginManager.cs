@@ -1297,8 +1297,10 @@ public sealed class LoginManager : MonoBehaviour
                                                 sceneUnlocked != null &&
                                                 sceneUnlocked.TryGetValue(currentSceneIndex, out temp) && temp ||
                                                 //重新进入关卡创建风格时候
-                                                movedLevelIndex != -1 && movedLevelIndex != userLevelIndex || 
-                                                selectedSceneIndex != -1 && selectedSceneIndex != currentSceneIndex ||
+                                                movedLevelIndex != -1 && 
+                                                (movedLevelIndex != userLevelIndex || 
+                                                 selectedSceneIndex == -1 || 
+                                                 selectedSceneIndex != currentSceneIndex) || 
                                                 !this.canMoveToSinglePlayer || 
                                                 scrollRect.targetIndex[scrollRect.axis] != userLevelIndex ||
                                                 !__sceneIndices.Add((userLevelIndex, currentSceneIndex)))
