@@ -2704,7 +2704,8 @@ public partial struct EffectSystem : ISystem
         apply.entityManager = entityManager;
         apply.prefabLoader = prefabLoader;
         apply.damageInstances = damageInstances;
-        var applyJobHandle = apply.ScheduleParallelByRef(__groupToApply, jobHandle);
+        var applyJobHandle = apply.ScheduleParallelByRef(__groupToApply,
+            isFixedFrame ? __outputMessages.Schedule(ref state, jobHandle) : jobHandle);
 
         __damageStatisticType.Update(ref state);
         var totalDamages = CollectionHelper.CreateNativeArray<int>(3, state.WorldUpdateAllocator);
@@ -2721,11 +2722,7 @@ public partial struct EffectSystem : ISystem
         computeDamagesJobHandle =
             computeDamageDistributions.ScheduleParallelByRef(__groupToDamages, computeDamagesJobHandle);
 
-        if (isFixedFrame)
-            state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle,
-                __outputMessages.Schedule(ref state, jobHandle));
-        else
-            state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle);
+        state.Dependency = JobHandle.CombineDependencies(applyJobHandle, computeDamagesJobHandle);
     }
 
     public static int ComputeDamage(int value, float scale, ref Random random)
