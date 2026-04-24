@@ -42,32 +42,15 @@ public partial class UserDataMain
         result.power = power;
         result.rankedPoints = rankedPoints;
         
-        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
-        uint groupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetRoleGroupIndex(groupName));
+        string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
+        uint groupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetCardGroupIndex(groupName));
         
-        result.role = default;
-        
-        int i, numRoles = _roles.Length;
-        UserRole userRole;
-        List<uint> userRoleGroupIDs = null;
-        List<string> skillNames = null;
-        for (i = 0; i < numRoles; ++i)
-        {
-            if(!__ToUserRole(groupName, i, out userRole, ref userRoleGroupIDs, ref skillNames) || 
-               userRole.groupIDs == null || Array.IndexOf(userRole.groupIDs, groupID) == -1)
-                continue;
-
-            result.role = userRole;
-
-            break;
-        }
-
         Card card;
         UserCard userCard;
         UserCard.Group userCardGroup;
         var userCards = new List<UserCard>();
         var userCardGroups = new List<UserCard.Group>();
-        int j, numCards = _cards.Length, numCardGroups = _cardGroups.Length;
+        int i, j, numCards = _cards.Length, numCardGroups = _cardGroups.Length;
         for (i = 0; i < numCards; ++i)
         {
             card = _cards[i];
@@ -79,6 +62,10 @@ public partial class UserDataMain
             userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
             {
+                userCardGroup.groupID = __ToID(j);
+                if(userCardGroup.groupID  != groupID)
+                    continue;
+                
                 userCardGroup.position =
                     PlayerPrefs.GetInt(
                         $"{NAME_SPACE_USER_CARD_GROUP}{_cardGroups[j].name}{UserData.SEPARATOR}{card.name}",
@@ -87,8 +74,6 @@ public partial class UserDataMain
                 if(userCardGroup.position == -1)
                     continue;
 
-                userCardGroup.groupID = __ToID(j);
-                
                 userCardGroups.Add(userCardGroup);
             }
             
@@ -144,7 +129,28 @@ public partial class UserDataMain
             
             result.cardBonds[i] = userCardBond;
         }
+
+        groupName = PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP);
+        groupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetRoleGroupIndex(groupName));
         
+        result.role = default;
+        
+        int numRoles = _roles.Length;
+        UserRole userRole;
+        List<uint> userRoleGroupIDs = null;
+        List<string> skillNames = null;
+        for (i = 0; i < numRoles; ++i)
+        {
+            if(!__ToUserRole(groupName, i, out userRole, ref userRoleGroupIDs, ref skillNames) || 
+               userRole.groupIDs == null || Array.IndexOf(userRole.groupIDs, groupID) == -1)
+                continue;
+
+            userRole.groupIDs = new[] { groupID };
+            result.role = userRole;
+
+            break;
+        }
+
         int k, l,  
             numAccessoryStages, 
             numAccessorySlots = _accessorySlots.Length, 
@@ -198,20 +204,6 @@ public partial class UserDataMain
                 if (ids == null || ids.Length < 1)
                     continue;
 
-                userAccessory.stage = j;
-
-                if (j > 0)
-                    userAccessory.property = _accessoryStages[accessoryStageIndices[j - 1]].property;
-                else
-                    userAccessory.property = accessory.property;
-
-                accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
-
-                userAccessory.stageDesc.name = accessoryStage.name;
-                //userAccessory.stageDesc.count = accessoryStage.count;
-                userAccessory.stageDesc.property = accessoryStage.property;
-                userAccessory.stageDesc.materials = accessoryStage.materials;
-                
                 foreach (var id in ids)
                 {
                     userAccessory.id = uint.Parse(id);
@@ -239,8 +231,26 @@ public partial class UserDataMain
                         userAccessoryGroup.slotID = __ToID(l);
                         userAccessoryGroups.Add(userAccessoryGroup);
                     }
+                    
+                    if(userAccessoryGroups.Count < 1)
+                        continue;
 
                     userAccessory.groups = userAccessoryGroups.ToArray();
+                    
+                    userAccessory.stage = j;
+
+                    if (j > 0)
+                        userAccessory.property = _accessoryStages[accessoryStageIndices[j - 1]].property;
+                    else
+                        userAccessory.property = accessory.property;
+
+                    accessoryStage = j < numAccessoryStages ? _accessoryStages[accessoryStageIndices[j]] : default;
+
+                    userAccessory.stageDesc.name = accessoryStage.name;
+                    //userAccessory.stageDesc.count = accessoryStage.count;
+                    userAccessory.stageDesc.property = accessoryStage.property;
+                    userAccessory.stageDesc.materials = accessoryStage.materials;
+
                     userAccessories.Add(userAccessory);
                 }
             }
