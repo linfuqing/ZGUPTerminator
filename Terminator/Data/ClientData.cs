@@ -817,8 +817,7 @@ public class ClientData : MonoBehaviour, IClientData
                                 {
                                     case NetworkRelayMessageType.Connect:
                                     case NetworkRelayMessageType.Status:
-                                        //if(ReplyMessageShared.isHost)
-                                        if((channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus) == 0)
+                                        if(ReplyMessageShared.isHost && (channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus) == 0)
                                             LoginManager.instance?.SendChapterStageMessage();
                                         break;
                                     case NetworkRelayMessageType.Disconnect:

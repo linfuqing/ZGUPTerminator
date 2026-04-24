@@ -24,7 +24,7 @@ public struct LookAt : IComponentData
     public float speed;
 }
 
-[WriteGroup(typeof(LocalToWorld))]
+//[WriteGroup(typeof(LocalToWorld))]
 public struct LookAtOrigin : IComponentData
 {
     public quaternion rotation;

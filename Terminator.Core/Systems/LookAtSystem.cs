@@ -596,7 +596,7 @@ public partial struct LookAtSystem : ISystem
     }
 }
 
-[BurstCompile, UpdateInGroup(typeof(TransformSystemGroup)), UpdateBefore(typeof(LocalToWorldSystem))]
+[BurstCompile, UpdateInGroup(typeof(TransformSystemGroup)), UpdateAfter(typeof(LocalToWorldSystem))]//UpdateBefore(typeof(LocalToWorldSystem))]
 public partial struct LookAtTransformSystem : ISystem
 {
     private struct Transform
@@ -621,7 +621,7 @@ public partial struct LookAtTransformSystem : ISystem
 
         public void Execute(int index)
         {
-            var localTransform = localTransforms[index];
+            /*var localTransform = localTransforms[index];
 
             var rotation = math.nlerp(
                 origins[index].rotation, localTransform.Rotation, normalizedTimeAhead);
@@ -636,6 +636,35 @@ public partial struct LookAtTransformSystem : ISystem
                 matrix = math.mul(matrix, postTransformMatrices[index].Value);
 
             LocalToWorld localToWorld;
+            localToWorld.Value = matrix;
+            localToWorlds[index] = localToWorld;*/
+            
+            float4x4 localToParent;
+            if (index >= parents.Length ||
+                !fixedLocalToWorld.TryGetMatrix(parents[index].Value, out localToParent))
+                localToParent = float4x4.identity;
+
+            float4x4 postTransformMatrix;
+            if (index < postTransformMatrices.Length)
+                postTransformMatrix = postTransformMatrices[index].Value;
+            else
+                postTransformMatrix = float4x4.identity;
+            
+            var localToWorld = localToWorlds[index];
+            localToWorld.Value = math.mul(localToWorld.Value, math.inverse(postTransformMatrix));
+            var rs = math.float3x3(math.mul(math.inverse(localToParent), localToWorld.Value));
+            var s = math.mul(math.inverse(math.float3x3(math.orthonormalize(rs))), rs);
+            
+            var localTransform = localTransforms[index];
+
+            var rotation = math.nlerp(
+                origins[index].rotation, localTransform.Rotation, normalizedTimeAhead);
+
+            var matrix = math.float4x4(math.mul(math.float3x3(rotation), s), localToWorld.Position);
+            matrix = math.mul(localToParent, matrix);
+            
+            matrix = math.mul(matrix, postTransformMatrix);
+
             localToWorld.Value = matrix;
             localToWorlds[index] = localToWorld;
         }
