@@ -813,14 +813,16 @@ public class ClientData : MonoBehaviour, IClientData
                                 header.userName = levelPlayerHeader.name;
                                 header.userAvatar = levelPlayerHeader.avatar;
 
-                                switch (type)
+                                switch ((NetworkRelayMessageType)type)
                                 {
-                                    case (int)NetworkRelayMessageType.Connect:
-                                        if(ReplyMessageShared.isHost)
+                                    case NetworkRelayMessageType.Connect:
+                                    case NetworkRelayMessageType.Status:
+                                        //if(ReplyMessageShared.isHost)
+                                        if((channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus) == 0)
                                             LoginManager.instance?.SendChapterStageMessage();
                                         break;
-                                    case (int)NetworkRelayMessageType.Disconnect:
-                                    case (int)NetworkRelayMessageType.Remove:
+                                    case NetworkRelayMessageType.Disconnect:
+                                    case NetworkRelayMessageType.Remove:
                                         channelFlag = LevelPlayerShared<RemotePlayer>.channelFlag &
                                                       (int)~NetworkRelayChannelFlag.Online;
                                         break;
