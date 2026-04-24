@@ -468,8 +468,8 @@ public sealed class LoginManager : MonoBehaviour
         remove => _onGold.RemoveListener(value);
     }
 
-    public bool canMoveToSinglePlayer => ReplyMessageShared.remotePlayerCount < 1 ||
-                                         ReplyMessageShared.isHost/* ||
+    public bool canMoveToSinglePlayer => ReplyMessageShared.remotePlayerCount < 1/* ||
+                                         ReplyMessageShared.isHost ||
                                          !LevelPlayerShared<RemotePlayer>.isOnline ||
                                          LevelPlayerShared<RemotePlayer>.channelStatus != 0*/;
 
