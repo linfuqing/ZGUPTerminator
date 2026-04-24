@@ -2127,19 +2127,18 @@ public sealed class LoginManager : MonoBehaviour
                             if (ReplyMessageShared.remotePlayerCount < 1 || 
                                 !LevelPlayerShared<RemotePlayer>.isOnline)
                             {
-                                RemotePlayer.SetStatus(RemotePlayer.Status.Disabled,
-                                    1 << (int)RemotePlayer.Status.Canceled);
+                                RemotePlayer.SetStatus(RemotePlayer.Status.Canceled);
                                 
                                 print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
                             }
 
-                            if (RemotePlayer.Status.Disabled == RemotePlayer.status)
+                            if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                             {
                                 LevelShared.match = 0;
 
                                 status = Status.None;
 
-                                print($"[Start]Disabled.");
+                                print($"[Start]Canceled.");
 
                                 yield break;
                             }
@@ -2225,26 +2224,31 @@ public sealed class LoginManager : MonoBehaviour
                     {
                         if(LevelShared.match == 0)
                             RemotePlayer.SetStatus(RemotePlayer.Status.Disabled, ~(1 << (int)RemotePlayer.Status.Joined));
-                        else if (RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
-                                     ~(1 << (int)RemotePlayer.Status.Joined)))
+                        else
                         {
-                            print("[Start]Match failed and canceled.");
-
-                            LevelShared.match = 0;
-
-                            status = Status.None;
+                            RemotePlayer.SetStatus(RemotePlayer.Status.Canceled,
+                                ~(1 << (int)RemotePlayer.Status.Joined));
                             
-                            clientData.SetStatus(0);
-
-                            _onEnd?.Invoke();
-                            
-                            if (clientData != null)
+                            if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                             {
-                                var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
-                                clientData.EndSend(writer);
+                                print("[Start]Match failed and canceled.");
+
+                                LevelShared.match = 0;
+
+                                status = Status.None;
+
+                                clientData.SetStatus(0);
+
+                                _onEnd?.Invoke();
+
+                                if (clientData != null)
+                                {
+                                    var writer = clientData.BeginSend(ClientMessageType.Cancel, 0);
+                                    clientData.EndSend(writer);
+                                }
+
+                                yield break;
                             }
-                            
-                            yield break; 
                         }
                         
                         print($"[Start]{RemotePlayer.status}:{LevelPlayerShared<RemotePlayer>.isOnline}");
