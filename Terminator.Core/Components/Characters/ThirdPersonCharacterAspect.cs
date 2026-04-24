@@ -1,19 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Physics;
-using Unity.Physics.Authoring;
-using Unity.Physics.Extensions;
-using Unity.Physics.Systems;
-using Unity.Transforms;
 using Unity.CharacterController;
-using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine;
+
+[assembly:Unity.Jobs.RegisterGenericJobType(typeof(BufferLookupBufferJob<SimulationEvent>))]
 
 /*public struct ThirdPersonCharacterSimulationEventResult
 {

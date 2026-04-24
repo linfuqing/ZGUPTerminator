@@ -8,6 +8,8 @@ using Unity.Transforms;
 using ZG;
 using Random = Unity.Mathematics.Random;
 
+[assembly:RegisterGenericJobType(typeof(BufferLookupBufferJob<RemotePosition>))]
+
 [BurstCompile, /*UpdateBefore(typeof(SpawnerSystem)), UpdateAfter(typeof(SpawnerRecountSystem)), */UpdateBefore(typeof(TransformSystemGroup))]
 public partial struct LevelSystem : ISystem
 {

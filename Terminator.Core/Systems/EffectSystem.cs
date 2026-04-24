@@ -1685,9 +1685,17 @@ public partial struct EffectSystem : ISystem
                                 messageLayerMask = targetDamageRemote.messageLayerMask;
 
                                 targetDamageRemotes.RemoveAt(0);
+
+                                isHPDirty = target.hp != origin.hp;
+                                isShieldDirty = target.shield != origin.shield;
                             }
                             else
+                            {
                                 target = origin;
+
+                                isHPDirty = false;
+                                isShieldDirty = false;
+                            }
                         }
                         else
                         {
