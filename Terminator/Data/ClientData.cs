@@ -509,9 +509,7 @@ public class ClientData : MonoBehaviour, IClientData
     {
         None, 
         Remote, 
-        Local, 
-        Friends,
-        Complete
+        Friends
     }
 
     [SerializeField]
