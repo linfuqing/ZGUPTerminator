@@ -158,6 +158,9 @@ public class ReplyMessageChatManager : MonoBehaviour
                     __loaders.Clear();
                 }
             });
+
+            style.toggle.interactable = true;
+            style.toggle.gameObject.SetActive(true);
         }
     }
     
