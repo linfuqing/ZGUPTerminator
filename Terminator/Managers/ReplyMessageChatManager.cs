@@ -152,6 +152,10 @@ public class ReplyMessageChatManager : MonoBehaviour
 
                                 newLoader.onLoadComplete += x =>
                                 {
+                                    var audioSource = x.GetComponent<AudioSource>();
+                                    if(audioSource != null)
+                                        audioSource.Play();
+
                                     Destroy(x, _emojiDestroyTime);
                                 };
 
@@ -222,6 +226,10 @@ public class ReplyMessageChatManager : MonoBehaviour
             
             loader.onLoadComplete += x =>
             {
+                var audioSource = x.GetComponent<AudioSource>();
+                if(audioSource != null)
+                    audioSource.Play();
+                
                 Destroy(x, _emojiDestroyTime);
             };
 
