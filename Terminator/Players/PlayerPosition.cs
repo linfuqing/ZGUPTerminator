@@ -9,6 +9,9 @@ public class PlayerPosition : MonoBehaviour
     internal PlayerType _type;
 
     [SerializeField] 
+    internal Camera _camera;
+
+    [SerializeField] 
     internal Transform[] _children;
 
     public void SetPosition(in Vector3 position)
@@ -25,12 +28,12 @@ public class PlayerPosition : MonoBehaviour
 
                 if (child is RectTransform rectTransform)
                 {
-                    point = RectTransformUtility.WorldToScreenPoint(null, transform.position);
+                    point = RectTransformUtility.WorldToScreenPoint(_camera, transform.position);
 
                     if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(
                            rectTransform.parent as RectTransform,
                            point,
-                           null,
+                           _camera,
                            out point))
                         continue;
 

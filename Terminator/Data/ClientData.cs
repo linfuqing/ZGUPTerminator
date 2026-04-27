@@ -1464,9 +1464,6 @@ public class ClientData : MonoBehaviour, IClientData
         
         if(__bytes.IsCreated)
             __bytes.Dispose();
-
-        if(__friends.IsCreated)
-            __friends.Dispose();
     }
 
     /*void OnApplicationPause(bool pauseStatus)

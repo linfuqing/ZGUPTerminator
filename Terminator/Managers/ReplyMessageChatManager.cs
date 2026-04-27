@@ -47,11 +47,17 @@ public class ReplyMessageChatManager : MonoBehaviour
     internal Transform _outputEmojiParent;
 
     [SerializeField] 
+    internal StringEvent _onOutputEmoji;
+
+    [SerializeField] 
     internal StringEvent _onOutput;
     
     [SerializeField] 
     internal StringEvent _onInput;
     
+    [SerializeField] 
+    internal StringEvent _onInputEmoji;
+
     [SerializeField]
     internal Style[] _styles;
 
@@ -144,15 +150,19 @@ public class ReplyMessageChatManager : MonoBehaviour
                                 };
 
                                 newLoader.Load(assetManager);
+                                
+                                ReplyMessageChatShared.input = $"{_emojiPrefix}{value}";
 
-                                format = _emojiFormat;
+                                _onInputEmoji?.Invoke(string.Format(_emojiFormat, LevelPlayerShared<LocalPlayer>.header.name, value));
                             }
                             else
-                                format = _format;
-                            
-                            ReplyMessageChatShared.input = value;
-        
-                            _onInput?.Invoke(string.Format(format, LevelPlayerShared<LocalPlayer>.header.name, value));
+                            {
+
+                                ReplyMessageChatShared.input = value;
+
+                                _onInput?.Invoke(string.Format(_format, LevelPlayerShared<LocalPlayer>.header.name,
+                                    value));
+                            }
                         });
                         
                         instance.gameObject.SetActive(true);
@@ -195,21 +205,26 @@ public class ReplyMessageChatManager : MonoBehaviour
         if (output.IsEmpty)
             return;
         
-        string text = output.ToString(), format;
+        string text = output.ToString();
         AssetObjectLoader loader;
         if (text.StartsWith(_emojiPrefix))
         {
-            text = text.Substring(_emojiPrefix.Length);
+            string value = text.Substring(_emojiPrefix.Length);
             loader = new AssetObjectLoader(AssetObjectLoader.Space.Local, _emojiAssetBundleFileName,
-                text, this, _outputEmojiParent);
+                value, this, _outputEmojiParent);
             
+            loader.onLoadComplete += x =>
+            {
+                Destroy(x, _emojiDestroyTime);
+            };
+
             loader.Load(GameAssetManager.instance?.dataManager);
 
-            format = _emojiFormat;
+            _onOutputEmoji.Invoke(string.Format(_emojiFormat, LevelPlayerShared<RemotePlayer>.header.name, text));
         }
         else
-            format = _format;
-        
-        _onOutput?.Invoke(string.Format(format, LevelPlayerShared<RemotePlayer>.header.name, text));
+        {
+            _onOutput?.Invoke(string.Format(_format, LevelPlayerShared<RemotePlayer>.header.name, text));
+        }
     }
 }
