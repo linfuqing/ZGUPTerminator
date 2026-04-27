@@ -50,11 +50,17 @@ public class ReplyMessageChatManager : MonoBehaviour
     internal StringEvent _onOutputEmoji;
 
     [SerializeField] 
+    internal StringEvent _onOutputText;
+
+    [SerializeField] 
     internal StringEvent _onOutput;
     
     [SerializeField] 
     internal StringEvent _onInput;
     
+    [SerializeField] 
+    internal StringEvent _onInputText;
+
     [SerializeField] 
     internal StringEvent _onInputEmoji;
 
@@ -160,6 +166,7 @@ public class ReplyMessageChatManager : MonoBehaviour
 
                                 ReplyMessageChatShared.input = value;
 
+                                _onInputText?.Invoke(value);
                                 _onInput?.Invoke(string.Format(_format, LevelPlayerShared<LocalPlayer>.header.name,
                                     value));
                             }
@@ -224,6 +231,7 @@ public class ReplyMessageChatManager : MonoBehaviour
         }
         else
         {
+            _onOutputText?.Invoke(text);
             _onOutput?.Invoke(string.Format(_format, LevelPlayerShared<RemotePlayer>.header.name, text));
         }
     }
