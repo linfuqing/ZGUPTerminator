@@ -132,7 +132,7 @@ public sealed class LoginManager : MonoBehaviour
                     {
                         temp2 = temp[j].Split('*');
                         ref var stage = ref scene.stages[j];
-                        stage.name = temp2[0];
+                        stage.name = temp2[0].Replace(@"\n", "\n");
                         stage.bossTitle = temp2[1];
                         stage.bossDescription = temp2[2];
                         stage.index = stageIndex++;
