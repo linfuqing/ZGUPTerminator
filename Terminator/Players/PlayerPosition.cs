@@ -17,12 +17,27 @@ public class PlayerPosition : MonoBehaviour
         
         if (_children != null)
         {
+            Vector2 point;
             foreach (var child in _children)
             {
                 if (child == null)
                     continue;
 
-                child.position = position;
+                if (child is RectTransform rectTransform)
+                {
+                    point = RectTransformUtility.WorldToScreenPoint(null, transform.position);
+
+                    if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                           rectTransform.parent as RectTransform,
+                           point,
+                           null,
+                           out point))
+                        continue;
+
+                    rectTransform.anchoredPosition = point;
+                }
+                else
+                    child.position = position;
             }
         }
     }
