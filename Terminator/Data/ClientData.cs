@@ -721,8 +721,8 @@ public class ClientData : MonoBehaviour, IClientData
                 }
 
                 break;
-            case InitStatus.Friends:
-                int friendIndex = __initStatus - InitStatus.Friends, friendCount = __friends.IsCreated ? __friends.Count : 0;
+            default:
+                int friendIndex = __initStatus - InitStatus.Friends - 1, friendCount = __friends.IsCreated ? __friends.Count : 0;
                 if (friendCount > friendIndex)
                 {
                     foreach (var friend in __friends)
