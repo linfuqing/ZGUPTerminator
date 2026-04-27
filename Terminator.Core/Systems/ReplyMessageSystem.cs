@@ -544,6 +544,19 @@ public partial struct ReplyMessageSystem : ISystem
     private EntityQuery __positionGroup;
     private EntityQuery __cameraGroup;
 
+    public Entity messagesEntity
+    {
+        get;
+        private set;
+    }
+
+    public static NativeHashMap<uint, int> GetChannelFlags(in WorldUnmanaged world)
+    {
+        var systemHandle = world.GetExistingUnmanagedSystem<ReplyMessageSystem>();
+        var messagesEntity = world.GetUnsafeSystemRef<ReplyMessageSystem>(systemHandle).messagesEntity;
+        return world.EntityManager.GetComponentData<ReplyMessages>(messagesEntity).channelFlags;
+    }
+
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
@@ -574,7 +587,7 @@ public partial struct ReplyMessageSystem : ISystem
 
         var messages = new ReplyMessages(Allocator.Persistent);
 
-        state.EntityManager.CreateSingleton(messages);
+        messagesEntity = state.EntityManager.CreateSingleton(messages);
     }
 
     [BurstCompile]

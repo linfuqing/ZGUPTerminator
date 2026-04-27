@@ -88,23 +88,27 @@ public struct ReplyMessages : IComponentData
     }
 
     private NativeList<byte> __buffer;
+    private NativeHashMap<uint, int> __channelFlags;
     private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message> __values;
 
     public static void WriteHeader(ref DataStreamWriter writer, ReplyMessageType messageType)
     {
         writer.WriteReplyHeader((int)messageType, NetworkRelayType.Channel);
     }
+    
+    public NativeHashMap<uint, int> channelFlags => __channelFlags;
 
     public ReplyMessages(in AllocatorManager.AllocatorHandle allocator)
     {
         __buffer = new NativeList<byte>(allocator);
+        __channelFlags = new NativeHashMap<uint, int>(1, allocator);
         __values = new NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>(1, allocator);
     }
 
     public void Dispose()
     {
         __buffer.Dispose();
-
+        __channelFlags.Dispose();
         __values.Dispose();
     }
 
@@ -164,6 +168,9 @@ public struct ReplyMessages : IComponentData
                     ReplyMessageShared.channel = ReplyMessageShared.CHANNEL_NULL;
                     ReplyMessageShared.remotePlayerCount = 0;
                     break;
+                case NetworkClientMessageType.Disconnect:
+                    __channelFlags.Clear();
+                    break;
                 case NetworkClientMessageType.Data:
                     reader = messageElement.reader;
 
@@ -176,12 +183,18 @@ public struct ReplyMessages : IComponentData
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
                                 LevelPlayerShared<RemotePlayer>.channelFlag = channelFlag;
 
+                            if (__channelFlags.ContainsKey(key.id))
+                                __channelFlags[key.id] = channelFlag;
+
                             __Log($"Reply Message Connect {key.id} {channelFlag}");
                             break;
                         case NetworkRelayMessageType.Disconnect:
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
                             if (key.id == LevelPlayerShared<RemotePlayer>.id)
                                 LevelPlayerShared<RemotePlayer>.channelFlag &= (int)~NetworkRelayChannelFlag.Online;
+
+                            if (__channelFlags.TryGetValue(key.id, out channelFlag))
+                                __channelFlags[key.id] = channelFlag & ~(int)NetworkRelayChannelFlag.Online;
 
                             __Log($"[Reply Message]Disconnect {key.id}");
                             break;
@@ -200,7 +213,18 @@ public struct ReplyMessages : IComponentData
                                         (1 << (int)RemotePlayer.Status.StandBy));
                             }
 
+                            if (__channelFlags.ContainsKey(key.id))
+                                __channelFlags[key.id] = channelFlag;
+
                             __Log($"[Reply Message]Status {key.id} {channelFlag}");
+                            break;
+                        case NetworkRelayMessageType.Add:
+                            channelFlag = reader.ReadPackedInt(streamCompressionModel);
+                            key.id = reader.ReadPackedUInt(streamCompressionModel);
+                            __channelFlags.Add(key.id, channelFlag);
+                            break;
+                        case NetworkRelayMessageType.Remove:
+                            __channelFlags.Remove(reader.ReadPackedUInt(streamCompressionModel));
                             break;
                         case NetworkRelayMessageType.Create:
                             ReplyMessageShared.isHost = true;

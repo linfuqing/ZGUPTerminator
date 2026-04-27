@@ -551,7 +551,6 @@ public class ClientData : MonoBehaviour, IClientData
     private NativeList<NetworkClient.Message> __messages;
     private NativeList<byte> __bytes;
     
-    private static NativeHashMap<uint, ClientRemotePlayerFlag> __friends;
     //private static NativeHashSet<uint> __friendIDs;
     private static Entity __entity;
     private static string __address;
@@ -596,6 +595,9 @@ public class ClientData : MonoBehaviour, IClientData
             return entityManager.GetComponentData<NetworkClientDriver>(__entity);
         }
     }
+
+    public NativeHashMap<uint, int> friends =>
+        ReplyMessageSystem.GetChannelFlags(World.DefaultGameObjectInjectionWorld.Unmanaged);
 
     public ClientHeader header
     {
@@ -720,10 +722,11 @@ public class ClientData : MonoBehaviour, IClientData
 
                 break;
             default:
-                int friendIndex = __initStatus - InitStatus.Friends - 1, friendCount = __friends.IsCreated ? __friends.Count : 0;
+                var friends = this.friends;
+                int friendIndex = __initStatus - InitStatus.Friends - 1, friendCount = friends.Count;
                 if (friendCount > friendIndex)
                 {
-                    foreach (var friend in __friends)
+                    foreach (var friend in friends)
                     {
                         if (--friendIndex < 0)
                         {
@@ -733,7 +736,7 @@ public class ClientData : MonoBehaviour, IClientData
                             header.power = 0;
 
                             ClientMessageRemotePlayerStatus message;
-                            message.flag = friend.Value;
+                            message.flag = (ClientRemotePlayerFlag)friend.Value;
 
                             __Save(message);
 
@@ -840,20 +843,20 @@ public class ClientData : MonoBehaviour, IClientData
                             switch ((NetworkRelayMessageType)type)
                             {
                                 case NetworkRelayMessageType.Add:
-                                    if (!__friends.IsCreated)
+                                    /*if (!__friends.IsCreated)
                                         __friends = new NativeHashMap<uint, ClientRemotePlayerFlag>(1,
                                             Allocator.Persistent);
 
-                                    __friends.Add(header.userID, message.flag);
+                                    __friends.Add(header.userID, message.flag);*/
                                     return type;
                                 case NetworkRelayMessageType.Remove:
-                                    if(__friends.IsCreated)
-                                        __friends.Remove(header.userID);
+                                    //if(__friends.IsCreated)
+                                    //    __friends.Remove(header.userID);
                                     
                                     return type;
                                 default:
-                                    if (__friends.IsCreated && __friends.ContainsKey(header.userID))
-                                        __friends[header.userID] = message.flag;
+                                    //if (__friends.IsCreated && __friends.ContainsKey(header.userID))
+                                    //    __friends[header.userID] = message.flag;
                                     
                                     return (int)ClientMessageType.Status;
                             }
@@ -1087,8 +1090,8 @@ public class ClientData : MonoBehaviour, IClientData
                     break;
                 }
                 case NetworkClientMessageType.Disconnect:
-                    if(__friends.IsCreated)
-                        __friends.Clear();
+                    /*if(__friends.IsCreated)
+                        __friends.Clear();*/
                     
                     if (__remoteHeader.userID != 0)
                     {
@@ -1171,7 +1174,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.ApplyFriend:
             {
                 var temp = __Load<ClientMessageApplyFriendToSend>();
-                if ((!__friends.IsCreated || !__friends.ContainsKey(temp.userID)) &&
+                if (!friends.ContainsKey(temp.userID) &&
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     this.header.Write(
@@ -1190,7 +1193,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.AddFriend:
             {
                 var temp = __Load<ClientMessageAddFriend>();
-                if ((!__friends.IsCreated || !__friends.ContainsKey(temp.userID)) && 
+                if (!friends.ContainsKey(temp.userID) && 
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
@@ -1204,7 +1207,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.RemoveFriend:
             {
                 var temp = __Load<ClientMessageRemoveFriend>();
-                if (__friends.IsCreated && __friends.ContainsKey(temp.userID) && 
+                if (friends.ContainsKey(temp.userID) && 
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
