@@ -52,6 +52,7 @@ public class ReplyMessageChatManager : MonoBehaviour
     [SerializeField]
     internal Style[] _styles;
 
+    private List<ReplyMessageChatStyle> __styles;
     private List<AssetObjectLoader> __loaders;
 
     //[SerializeField]
@@ -148,14 +149,30 @@ public class ReplyMessageChatManager : MonoBehaviour
         
                             _onInput?.Invoke(string.Format(format, LevelPlayerShared<LocalPlayer>.header.name, value));
                         });
+                        
+                        instance.gameObject.SetActive(true);
+                        
+                        if (__styles == null)
+                            __styles = new List<ReplyMessageChatStyle>();
+                        
+                        __styles.Add(instance);
                     }
                 }
-                else if(__loaders != null)
+                else
                 {
-                    foreach (var loader in __loaders)
-                        loader.Dispose();
-                    
-                    __loaders.Clear();
+                    if (__loaders != null)
+                    {
+                        foreach (var loader in __loaders)
+                            loader.Dispose();
+
+                        __loaders.Clear();
+                    }
+
+                    if (__styles != null)
+                    {
+                        foreach (var style in __styles)
+                            Destroy(style.gameObject);
+                    }
                 }
             });
 

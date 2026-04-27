@@ -1497,13 +1497,13 @@ public partial struct EffectSystem : ISystem
             
             bool isVincible = target.invincibleTime < 0.0f;
             if (isFallToDestroy ||
+                isVincible && 
                 (isRemote ||
                  targetHP.value != 0 ||
                  targetHP.shield != 0 ||
                  targetDamage.value != 0 ||
                  targetDamage.valueImmunized != 0 &&
-                 target.immunizedTime < 0.0f) &&
-                isVincible)
+                 target.immunizedTime < 0.0f))
             {
                 var origin = target;
                 var targetInstance = targetInstances[index];
