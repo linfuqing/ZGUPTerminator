@@ -26,6 +26,9 @@ public class ReplyMessageChatManager : MonoBehaviour
     internal float _emojiDestroyTime = 5.0f;
 
     [SerializeField] 
+    internal float _emojiToggleDestroyTime = 1.0f;
+
+    [SerializeField] 
     internal string _emojiPrefix = "emoji#";
     
     [SerializeField] 
@@ -124,6 +127,8 @@ public class ReplyMessageChatManager : MonoBehaviour
 
                             loader = null;
                         }
+                        
+                        instance.onText?.Invoke(value);
 
                         instance.button.onClick.AddListener(() =>
                         {
@@ -163,7 +168,7 @@ public class ReplyMessageChatManager : MonoBehaviour
                     if (__loaders != null)
                     {
                         foreach (var loader in __loaders)
-                            loader.Dispose();
+                            loader.Dispose(_emojiToggleDestroyTime);
 
                         __loaders.Clear();
                     }
@@ -171,7 +176,9 @@ public class ReplyMessageChatManager : MonoBehaviour
                     if (__styles != null)
                     {
                         foreach (var style in __styles)
-                            Destroy(style.gameObject);
+                            Destroy(style.gameObject, _emojiToggleDestroyTime);
+                        
+                        __styles.Clear();
                     }
                 }
             });
