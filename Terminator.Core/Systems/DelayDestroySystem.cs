@@ -118,6 +118,16 @@ public partial struct DelayDestroySystem : ISystem
                 .Build(ref state);
         
         state.RequireForUpdate<FixedFrame>();
+        
+        __elements = new NativeList<Element>(Allocator.Persistent);
+        
+        __entities = new NativeList<Entity>(Allocator.Persistent);
+    }
+
+    [BurstCompile]
+    public void OnDestroy(ref SystemState state)
+    {
+        __entities.Dispose();
     }
     
     [BurstCompile]
