@@ -757,7 +757,7 @@ public partial struct LookAtTransformSystem : ISystem
     {
         var fixedFrame = SystemAPI.GetSingleton<FixedFrame>();
         var timeAhead = (float)(SystemAPI.Time.ElapsedTime - fixedFrame.elapsedTime);
-        if (timeAhead < 0.0f || fixedFrame.deltaTime < math.FLT_MIN_NORMAL)
+        if (timeAhead < math.FLT_MIN_NORMAL || fixedFrame.deltaTime < math.FLT_MIN_NORMAL)
             return;
 
         __fixedLocalToWorld.Update(ref state);

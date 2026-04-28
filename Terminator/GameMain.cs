@@ -338,44 +338,53 @@ public class GameMain : GameUser
                     AssetManager.LoadFrom(Path.Combine(folder, folder));
             }
 
-            string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
+            /*string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
             assetName = assetName.ToLower();
             //TODO: Check MD5
-            if (AssetManager.Get(assetName, out _))
-                return true;
+            if (AssetManager.Get(assetName, out var asset))
+                return true;*/
 
             var text = __assetBundle.LoadAsset(filename) as TextAsset;
-            var bytes = text == null ? null : text.bytes;
-            if (bytes == null)
+            if (text == null)
                 return false;
 
-            DestroyImmediate(text, true);
-
+            var bytes = text.GetData<byte>();
             try
             {
-                AssetManager.CreateDirectory(path);
-
-                File.WriteAllBytes(path, bytes);
-
+                string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
+                assetName = assetName.ToLower();
+                
                 AssetManager.AssetData assetData;
-                assetData.type = AssetManager.AssetType.Uncompressed;
-                assetData.info.version = 0;
-                assetData.info.size = (uint)bytes.LongLength;
-                assetData.info.fileName = filename;
                 using (var md5 = new MD5CryptoServiceProvider())
-                    assetData.info.md5 = md5.ComputeHash(bytes);
+                    assetData.info.md5 = md5.ComputeHash(bytes.ToStream());
 
-                assetData.pack = AssetManager.AssetPack.Default;
-                assetData.dependencies = null;
+                if (!AssetManager.Get(assetName, out var asset) ||
+                    !asset.data.info.md5.AsSpan().SequenceEqual(assetData.info.md5.AsSpan()))
+                {
+                    AssetManager.CreateDirectory(path);
 
-                using (var writer = new AssetManager.Writer(folder, AssetManager))
-                    writer.Write(assetName, assetData);
+                    File.WriteAllBytes(path, bytes.ToArray());
+
+                    assetData.type = AssetManager.AssetType.Uncompressed;
+                    assetData.info.version = 0;
+                    assetData.info.size = (uint)bytes.Length;
+                    assetData.info.fileName = filename;
+                    assetData.pack = AssetManager.AssetPack.Default;
+                    assetData.dependencies = null;
+
+                    using (var writer = new AssetManager.Writer(folder, AssetManager))
+                        writer.Write(assetName, assetData);
+                }
             }
             catch (Exception e)
             {
                 Debug.LogException(e.InnerException ?? e);
 
                 return false;
+            }
+            finally
+            {
+                DestroyImmediate(text, true);
             }
 
             return true;

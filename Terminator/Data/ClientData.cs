@@ -915,15 +915,12 @@ public class ClientData : MonoBehaviour, IClientData
                                     default:
                                         __remoteHeader = header;
 
+                                        uint stageID =
+                                            (uint)(channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus);
                                         if (ReplyMessageShared.isHost)
-                                        {
-                                            uint stageID =
-                                                (uint)(channelFlag >> (int)NetworkRelayChannelFlag.ShiftToStatus);
-                                            if(stageID == 0)
-                                                LoginManager.instance?.SendChapterStageMessage();
-                                            else
-                                                LoginManager.instance?.MoveTo(stageID);
-                                        }
+                                            LoginManager.instance?.SendChapterStageMessage();
+                                        else if(stageID != 0)
+                                            LoginManager.instance?.MoveTo(stageID);
 
                                         break;
                                 }

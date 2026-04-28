@@ -1,3 +1,4 @@
+using System;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
@@ -6,136 +7,181 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using ZG;
 
-[BurstCompile]
+[BurstCompile, 
+ UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), 
+ UpdateAfter(typeof(BeginInitializationEntityCommandBufferSystem))]
 public partial struct DelayDestroySystem : ISystem
 {
+    private struct Element : IComparable<Element>
+    {
+        public double time;
+
+        public Entity entity;
+
+        public int CompareTo(Element other)
+        {
+            return other.time.CompareTo(time);
+        }
+
+        public override int GetHashCode()
+        {
+            return entity.GetHashCode();
+        }
+    }
+    
     private struct Apply
     {
-        public bool isFixedFrameUpdated;
         public double time;
         
         [ReadOnly]
-        public BufferLookup<Child> children;
-
-        [ReadOnly]
         public NativeArray<Entity> entityArray;
+        
+        [ReadOnly]
         public NativeArray<DelayDestroy> delayDestroys;
         
-        //public NativeArray<CopyMatrixToTransformInstanceID> instanceIDs;
-
-        public EntityCommandBuffer.ParallelWriter entityManager;
-
+        public NativeList<Element> elements;
+        
         public void Execute(int index)
         {
-            var delayDestroy = delayDestroys[index];
-            if (delayDestroy.startTime > math.DBL_MIN_NORMAL)
+            Element element;
+            element.entity = entityArray[index];
+            int numElements = elements.Length, elementIndex = -1;
+            for (int i = 0; i < numElements; ++i)
             {
-                if (delayDestroy.time <= time - delayDestroy.startTime && isFixedFrameUpdated)
-                    __Destroy(0, entityArray[index], children, ref entityManager);
-            }
-            else
-            {
-                delayDestroy.startTime = time;
+                if (elements[i].entity == element.entity)
+                {
+                    elementIndex = i;
 
-                delayDestroys[index] = delayDestroy;
+                    break;
+                }
             }
-        }
-        
-        private static void __Destroy(
-            int sortKey, 
-            in Entity entity, 
-            in BufferLookup<Child> children, 
-            ref EntityCommandBuffer.ParallelWriter entityManager)
-        {
-            if (children.TryGetBuffer(entity, out var buffer))
-            {
-                foreach (var child in buffer)
-                    __Destroy(sortKey - 1, child.Value, children, ref entityManager);
-            }
-        
-            entityManager.DestroyEntity(sortKey, entity);
+            
+            var delayDestroy = delayDestroys[index];
+            element.time = delayDestroy.startTime > math.DBL_MIN_NORMAL ? delayDestroy.startTime : time;
+            element.time += delayDestroy.time;
+            if (elementIndex == -1)
+                elements.Add(element);
+            else
+                elements[elementIndex] = element;
         }
     }
 
     [BurstCompile]
     private struct ApplyEx : IJobChunk
     {
-        public bool isFixedFrameUpdated;
         public double time;
-        [ReadOnly]
-        public BufferLookup<Child> children;
+
         [ReadOnly]
         public EntityTypeHandle entityType;
+        
         public ComponentTypeHandle<DelayDestroy> delayDestroyType;
 
-        //public ComponentTypeHandle<CopyMatrixToTransformInstanceID> instanceIDType;
-
-        public EntityCommandBuffer.ParallelWriter entityManager;
+        public NativeList<Element> elements;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
-            apply.isFixedFrameUpdated = isFixedFrameUpdated;
             apply.time = time;
-            apply.children = children;
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
-            //apply.instanceIDs = chunk.GetNativeArray(ref instanceIDType);
-            apply.entityManager = entityManager;
+            apply.elements = elements;
 
             var iterator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
             while (iterator.NextEntityIndex(out int i))
                 apply.Execute(i);
+            
+            chunk.SetComponentEnabledForAll(ref delayDestroyType, false);
         }
     }
 
-    private int __fixedFrameCount;
     private EntityTypeHandle __entityType;
     private BufferLookup<Child> __children;
+    private ComponentLookup<DelayDestroy> __delayDestroys;
     private ComponentTypeHandle<DelayDestroy> __delayDestroyType;
-    //private ComponentTypeHandle<CopyMatrixToTransformInstanceID> __instanceIDType;
-
+    private NativeList<Element> __elements;
+    private NativeList<Entity> __entities;
+    
     private EntityQuery __group;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         __entityType = state.GetEntityTypeHandle();
-        __children = state.GetBufferLookup<Child>();
         __delayDestroyType = state.GetComponentTypeHandle<DelayDestroy>();
-        //__instanceIDType = state.GetComponentTypeHandle<CopyMatrixToTransformInstanceID>();
-
+        __delayDestroys = state.GetComponentLookup<DelayDestroy>(true);
+        __children = state.GetBufferLookup<Child>(true);
+        
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
-                .WithAll<DelayDestroy>()
+                .WithAllRW<DelayDestroy>()
                 .Build(ref state);
         
         state.RequireForUpdate<FixedFrame>();
-        state.RequireForUpdate<BeginInitializationEntityCommandBufferSystem.Singleton>();
     }
     
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        int fixedFrameCount = SystemAPI.GetSingleton<FixedFrame>().count;
+        double time = SystemAPI.GetSingleton<FixedFrame>().elapsedTime;
         
+        __entities.Clear();
         __children.Update(ref state);
+        __delayDestroys.Update(ref state);
+
+        DelayDestroy delayDestroy;
+        int numElements = __elements.Length;
+        for(int i = numElements - 1; i >= 0; --i)
+        {
+            ref var element = ref __elements.ElementAt(i);
+            if (element.time > time)
+            {
+                if(++i < numElements)
+                    __elements.RemoveRange(i, numElements - i);
+                
+                break;
+            }
+
+            if (__delayDestroys.TryGetComponent(element.entity, out delayDestroy))
+            {
+                element.time = delayDestroy.time + delayDestroy.startTime;
+                if (element.time > time)
+                {
+                    if(++i < numElements)
+                        __elements.RemoveRange(i, numElements - i);
+
+                    __elements.Sort();
+                    numElements = __elements.Length;
+                    i = numElements;
+                }
+                else
+                    __Destroy(element.entity, __children, ref __entities);
+            }
+        }
+        
+        state.EntityManager.DestroyEntity(__entities.AsArray());
         
         __entityType.Update(ref state);
         __delayDestroyType.Update(ref state);
-        //__instanceIDType.Update(ref state);
-        
+
         ApplyEx apply;
-        apply.isFixedFrameUpdated = fixedFrameCount != __fixedFrameCount;
-        apply.time = SystemAPI.Time.ElapsedTime;
-        apply.children = __children;
+        apply.time = time;
         apply.entityType = __entityType;
         apply.delayDestroyType = __delayDestroyType;
-        //apply.instanceIDType = __instanceIDType;
-        apply.entityManager = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>()
-            .CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
-        state.Dependency = apply.ScheduleParallelByRef(__group, state.Dependency);
-
-        __fixedFrameCount = fixedFrameCount;
+        apply.elements = __elements;
+        state.Dependency = apply.ScheduleByRef(__group, state.Dependency);
+    }
+    
+    private static void __Destroy(
+        in Entity entity, 
+        in BufferLookup<Child> children, 
+        ref NativeList<Entity> entities)
+    {
+        if (children.TryGetBuffer(entity, out var buffer))
+        {
+            foreach (var child in buffer)
+                __Destroy(child.Value, children, ref entities);
+        }
+        
+        entities.Add(entity);
     }
 }

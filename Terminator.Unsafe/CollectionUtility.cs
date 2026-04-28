@@ -1,10 +1,17 @@
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Threading;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 public static class CollectionUtility
 {
+    public static unsafe UnmanagedMemoryStream ToStream<T>(this NativeArray<T> values) where T : unmanaged
+    {
+        return new UnmanagedMemoryStream((byte*)values.GetUnsafeReadOnlyPtr(), values.Length);
+    }
+    
     public static unsafe void FixedListInterlockedAdd<T, U>(ref U list, in T item) 
         where T : unmanaged
         where U : unmanaged, INativeList<T>
