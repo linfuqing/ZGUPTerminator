@@ -96,12 +96,12 @@ public class ReplyMessageChatManager : MonoBehaviour
             switch (style.mode)
             {
                 case StyleMode.Normal:
-                    if(LevelShared.match == 0)
+                    if(LevelShared.match != 0)
                         continue;
                     
                     break;
                 case StyleMode.Match:
-                    if(LevelShared.match != 0)
+                    if(LevelShared.match == 0)
                         continue;
 
                     break;
@@ -144,7 +144,6 @@ public class ReplyMessageChatManager : MonoBehaviour
 
                         instance.button.onClick.AddListener(() =>
                         {
-                            string format;
                             if (isEmoji)
                             {
                                 var newLoader = new AssetObjectLoader(loader);
@@ -220,9 +219,9 @@ public class ReplyMessageChatManager : MonoBehaviour
         AssetObjectLoader loader;
         if (text.StartsWith(_emojiPrefix))
         {
-            string value = text.Substring(_emojiPrefix.Length);
+            text = text.Substring(_emojiPrefix.Length);
             loader = new AssetObjectLoader(AssetObjectLoader.Space.Local, _emojiAssetBundleFileName,
-                value, this, _outputEmojiParent);
+                text, this, _outputEmojiParent);
             
             loader.onLoadComplete += x =>
             {

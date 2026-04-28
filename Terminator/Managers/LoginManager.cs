@@ -314,6 +314,9 @@ public sealed class LoginManager : MonoBehaviour
     internal UnityEvent _onError;
 
     [SerializeField]
+    internal UnityEvent _onStageMoved;
+
+    [SerializeField]
     internal UnityEvent _onHotEnable;
 
     [SerializeField]
@@ -686,6 +689,9 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
+        if (__targetUserStageID != userStageID)
+            _onStageMoved?.Invoke();
+        
         StartCoroutine(__MoveTo(userStageID));
     }
 
