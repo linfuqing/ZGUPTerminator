@@ -638,6 +638,9 @@ public struct BulletDefinition
             {
                 if (!result)
                     return false;
+
+                if(status.cooldown > math.DBL_MIN_NORMAL)
+                    status.cooldown = time;
             }
             else
             {
@@ -710,24 +713,19 @@ public struct BulletDefinition
                 
             } while (status.cooldown <= time);
 
-            if (!isFire)
+            if (!result || !isFire)
                 return false;
         }
         else
         {
             if (!result || !isFire || status.count > 0)
                 return false;
+            
+            cooldown = time;
 
             status.count = 1;
 
             entityCount = 1;
-        }
-
-        if (!result)
-        {
-            //status.times = 0;
-            
-            return false;
         }
 
         status.version += entityCount;

@@ -90,6 +90,8 @@ public partial struct DelayDestroySystem : ISystem
             while (iterator.NextEntityIndex(out int i))
                 apply.Execute(i);
             
+            elements.Sort();
+            
             chunk.SetComponentEnabledForAll(ref delayDestroyType, false);
         }
     }
