@@ -1060,6 +1060,7 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        in ComponentLookup<DelayDestroy> delayDestroys,
         in ComponentLookup<FollowTargetVelocity> followTargetVelocities,
         in BufferLookup<Message> messages,
         in BufferLookup<MessageParameter> messageParameters,
@@ -1086,6 +1087,7 @@ public struct BulletInstance : IBufferElementData
             characterInterpolations, 
             characterControls, 
             animationCurveDeltas, 
+            delayDestroys, 
             followTargetVelocities, 
             messages, 
             messageParameters, 
@@ -1106,6 +1108,7 @@ public struct BulletInstance : IBufferElementData
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
         in ComponentLookup<ThirdPersonCharacterControl> characterControls,
         in ComponentLookup<AnimationCurveDelta> animationCurveDeltas,
+        in ComponentLookup<DelayDestroy> delayDestroys,
         in ComponentLookup<FollowTargetVelocity> followTargetVelocities,
         in BufferLookup<Message> messages,
         in BufferLookup<MessageParameter> messageParameters,
@@ -1200,6 +1203,12 @@ public struct BulletInstance : IBufferElementData
             characterInterpolation.InterpolationFromTransform =
                 math.RigidTransform(localTransform.Rotation, localTransform.Position);
             entityManager.SetComponent(2, entity, characterInterpolation);
+        }
+
+        if (delayDestroys.TryGetComponent(prefabRoot, out var delayDestroy))
+        {
+            delayDestroy.startTime = time;
+            entityManager.SetComponent(1, entity, delayDestroy);
         }
 
         if (animationCurveDeltas.HasComponent(prefabRoot))

@@ -162,6 +162,9 @@ public partial struct BulletSystem : ISystem
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
 
         [ReadOnly] 
+        public ComponentLookup<DelayDestroy> delayDestroys;
+        
+        [ReadOnly] 
         public ComponentLookup<FollowTargetVelocity> followTargetVelocities;
         
         [ReadOnly] 
@@ -385,6 +388,7 @@ public partial struct BulletSystem : ISystem
                         characterInterpolations, 
                         characterControls,
                         animationCurveDeltas,
+                        delayDestroys, 
                         followTargetVelocities, 
                         messages, 
                         messageParameters, 
@@ -441,6 +445,9 @@ public partial struct BulletSystem : ISystem
 
         [ReadOnly]
         public ComponentLookup<AnimationCurveDelta> animationCurveDeltas;
+
+        [ReadOnly] 
+        public ComponentLookup<DelayDestroy> delayDestroys;
 
         [ReadOnly] 
         public ComponentLookup<FollowTargetVelocity> followTargetVelocities;
@@ -531,6 +538,7 @@ public partial struct BulletSystem : ISystem
             collect.characterControls = characterControls;
             collect.cameraRotations = cameraRotations;
             collect.animationCurveDeltas = animationCurveDeltas;
+            collect.delayDestroys = delayDestroys;
             collect.followTargetVelocities = followTargetVelocities;
             collect.effectDamages = effectDamages;
             collect.effectDamageParents = effectDamageParents;
@@ -654,6 +662,8 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<AnimationCurveDelta> __animationCurveDeltas;
 
+    private ComponentLookup<DelayDestroy> __delayDestroys;
+
     private ComponentLookup<FollowTargetVelocity> __followTargetVelocities;
 
     private ComponentLookup<EffectDamage> __effectDamages;
@@ -726,6 +736,7 @@ public partial struct BulletSystem : ISystem
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
         __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
+        __delayDestroys = state.GetComponentLookup<DelayDestroy>(true);
         __followTargetVelocities = state.GetComponentLookup<FollowTargetVelocity>(true);
         __effectDamages = state.GetComponentLookup<EffectDamage>(true);
         __effectDamageParents = state.GetComponentLookup<EffectDamageParent>(true);
@@ -796,6 +807,7 @@ public partial struct BulletSystem : ISystem
         __characterControls.Update(ref state);
         __cameraRotations.Update(ref state);
         __animationCurveDeltas.Update(ref state);
+        __delayDestroys.Update(ref state);
         __followTargetVelocities.Update(ref state);
         __effectDamages.Update(ref state);
         __effectDamageParents.Update(ref state);
@@ -839,6 +851,7 @@ public partial struct BulletSystem : ISystem
         collect.characterControls = __characterControls;
         collect.cameraRotations = __cameraRotations;
         collect.animationCurveDeltas = __animationCurveDeltas;
+        collect.delayDestroys = __delayDestroys;
         collect.followTargetVelocities = __followTargetVelocities;
         collect.effectDamages = __effectDamages;
         collect.effectDamageParents = __effectDamageParents;

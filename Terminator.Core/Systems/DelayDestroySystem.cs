@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using Unity.Transforms;
 using ZG;
 
@@ -11,7 +12,7 @@ public partial struct DelayDestroySystem : ISystem
     private struct Apply
     {
         public bool isFixedFrameUpdated;
-        public float deltaTime;
+        public double time;
         
         [ReadOnly]
         public BufferLookup<Child> children;
@@ -27,19 +28,16 @@ public partial struct DelayDestroySystem : ISystem
         public void Execute(int index)
         {
             var delayDestroy = delayDestroys[index];
-            delayDestroy.time -= deltaTime;
-            if (delayDestroy.time > 0.0f || !isFixedFrameUpdated)
-                delayDestroys[index] = delayDestroy;
+            if (delayDestroy.startTime > math.DBL_MIN_NORMAL)
+            {
+                if (delayDestroy.time <= time - delayDestroy.startTime && isFixedFrameUpdated)
+                    __Destroy(0, entityArray[index], children, ref entityManager);
+            }
             else
             {
-                /*if (index < instanceIDs.Length)
-                {
-                    var instanceID = instanceIDs[index];
-                    instanceID.isSendMessageOnDestroy = false;
-                    instanceIDs[index] = instanceID;
-                }*/
-                
-                __Destroy(0, entityArray[index], children, ref entityManager);
+                delayDestroy.startTime = time;
+
+                delayDestroys[index] = delayDestroy;
             }
         }
         
@@ -63,7 +61,7 @@ public partial struct DelayDestroySystem : ISystem
     private struct ApplyEx : IJobChunk
     {
         public bool isFixedFrameUpdated;
-        public float deltaTime;
+        public double time;
         [ReadOnly]
         public BufferLookup<Child> children;
         [ReadOnly]
@@ -78,7 +76,7 @@ public partial struct DelayDestroySystem : ISystem
         {
             Apply apply;
             apply.isFixedFrameUpdated = isFixedFrameUpdated;
-            apply.deltaTime = deltaTime;
+            apply.time = time;
             apply.children = children;
             apply.entityArray = chunk.GetNativeArray(entityType);
             apply.delayDestroys = chunk.GetNativeArray(ref delayDestroyType);
@@ -129,7 +127,7 @@ public partial struct DelayDestroySystem : ISystem
         
         ApplyEx apply;
         apply.isFixedFrameUpdated = fixedFrameCount != __fixedFrameCount;
-        apply.deltaTime = SystemAPI.Time.DeltaTime;
+        apply.time = SystemAPI.Time.ElapsedTime;
         apply.children = __children;
         apply.entityType = __entityType;
         apply.delayDestroyType = __delayDestroyType;

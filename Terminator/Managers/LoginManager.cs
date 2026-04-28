@@ -689,7 +689,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public void MoveTo(uint userStageID)
     {
-        if (__targetUserStageID != userStageID)
+        if (__targetUserStageID != userStageID && ReplyMessageShared.isHost)
             _onStageMoved?.Invoke();
         
         StartCoroutine(__MoveTo(userStageID));

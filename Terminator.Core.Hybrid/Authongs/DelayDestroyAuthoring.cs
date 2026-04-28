@@ -11,6 +11,7 @@ public class DelayDestroyAuthoring : MonoBehaviour
             var entity = GetEntity(TransformUsageFlags.None);
 
             DelayDestroy delayDestroy;
+            delayDestroy.startTime = 0.0f;
             delayDestroy.time = authoring._time;
             AddComponent(entity, delayDestroy);
         }

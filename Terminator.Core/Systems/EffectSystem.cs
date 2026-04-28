@@ -1848,6 +1848,7 @@ public partial struct EffectSystem : ISystem
                         Entity entity = entityArray[index];
 
                         DelayDestroy delayDestroy;
+                        delayDestroy.startTime = time;
                         delayDestroy.time = deadTime;
                         if (index < delayDestroys.Length)
                             delayDestroys[index] = delayDestroy;
@@ -1909,7 +1910,7 @@ public partial struct EffectSystem : ISystem
                             if (isFallToDestroy)
                                 entityManager.RemoveComponent<FallToDestroy>(0, entityArray[index]);
                         }
-                        else if (index >= delayDestroys.Length || delayDestroys[index].time > deltaTime)
+                        else if (index >= delayDestroys.Length || delayDestroys[index].GetTime(time) > deltaTime)
                             DestroyEntity(false, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
 

@@ -141,6 +141,7 @@ public partial struct PickableSystem : ISystem
                     if (instance.pickedUpTime > math.FLT_MIN_NORMAL)
                     {
                         DelayDestroy delayDestroy;
+                        delayDestroy.startTime = time;
                         delayDestroy.time = instance.pickedUpTime;
                         if (index < delayDestroys.Length)
                             delayDestroys[index] = delayDestroy;
