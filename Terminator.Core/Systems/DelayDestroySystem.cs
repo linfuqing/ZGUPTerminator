@@ -5,7 +5,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using ZG;
+using Unity.Jobs;
 
 [BurstCompile, 
  UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true), 
@@ -78,6 +78,9 @@ public partial struct DelayDestroySystem : ISystem
 
         public NativeList<Element> elements;
 
+        [NativeDisableParallelForRestriction]
+        public NativeArray<int> didChange;
+
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
         {
             Apply apply;
@@ -90,9 +93,23 @@ public partial struct DelayDestroySystem : ISystem
             while (iterator.NextEntityIndex(out int i))
                 apply.Execute(i);
             
-            elements.Sort();
-            
             chunk.SetComponentEnabledForAll(ref delayDestroyType, false);
+
+            didChange[0] = 1;
+        }
+    }
+
+    [BurstCompile]
+    private struct Sort : IJob
+    {
+        [ReadOnly]
+        public NativeArray<int> didChange;
+        public NativeList<Element> elements;
+
+        public void Execute()
+        {
+            if(didChange[0] != 0)
+                elements.Sort();
         }
     }
 
@@ -103,6 +120,7 @@ public partial struct DelayDestroySystem : ISystem
     private ComponentTypeHandle<DelayDestroy> __delayDestroyType;
     private NativeList<Element> __elements;
     private NativeList<Entity> __entities;
+    private NativeArray<int> __didChange;
     
     private EntityQuery __group;
 
@@ -124,12 +142,16 @@ public partial struct DelayDestroySystem : ISystem
         __elements = new NativeList<Element>(Allocator.Persistent);
         
         __entities = new NativeList<Entity>(Allocator.Persistent);
+
+        __didChange = new NativeArray<int>(1, Allocator.Persistent);
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
+        __elements.Dispose();
         __entities.Dispose();
+        __didChange.Dispose();
     }
     
     [BurstCompile]
@@ -179,12 +201,20 @@ public partial struct DelayDestroySystem : ISystem
             __entityType.Update(ref state);
             __delayDestroyType.Update(ref state);
 
+            __didChange[0] = 0;
+
             ApplyEx apply;
             apply.time = time;
             apply.entityType = __entityType;
             apply.delayDestroyType = __delayDestroyType;
             apply.elements = __elements;
-            state.Dependency = apply.ScheduleByRef(__group, state.Dependency);
+            apply.didChange = __didChange;
+            var jobHandle = apply.ScheduleByRef(__group, state.Dependency);
+
+            Sort sort;
+            sort.didChange = __didChange;
+            sort.elements = __elements;
+            state.Dependency = sort.ScheduleByRef(jobHandle);
         }
     }
     
