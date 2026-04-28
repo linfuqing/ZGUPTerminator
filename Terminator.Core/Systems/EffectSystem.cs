@@ -1914,7 +1914,7 @@ public partial struct EffectSystem : ISystem
                             if (isFallToDestroy)
                                 entityManager.RemoveComponent<FallToDestroy>(0, entityArray[index]);
                         }
-                        else if (index >= delayDestroys.Length || delayDestroys[index].GetTime(time) > deltaTime)
+                        else //if (index >= delayDestroys.Length || delayDestroys[index].GetTime(time) > deltaTime)
                             DestroyEntity(false, entityArray[index], children, ref instanceIDs, ref entityManager);
                     }
 

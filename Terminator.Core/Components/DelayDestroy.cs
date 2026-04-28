@@ -4,13 +4,4 @@ public struct DelayDestroy : IComponentData, IEnableableComponent
 {
     public double startTime;
     public float time;
-
-    public float GetTime(double now)
-    {
-        now -= startTime;
-        if (now > time)
-            return 0.0f;
-
-        return time - (float)now;
-    }
 }
