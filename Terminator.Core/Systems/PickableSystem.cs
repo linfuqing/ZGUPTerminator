@@ -314,6 +314,9 @@ public partial struct PickableSystem : ISystem
                         
                         if(i < pick.messages.Length)
                             chunk.SetComponentEnabled(ref messageType, i, true);
+                        
+                        if(i < pick.delayDestroys.Length)
+                            chunk.SetComponentEnabled(ref delayDestroyType, i, true);
                         break;
                     default:
                         chunk.SetComponentEnabled(ref statusType, i, false);

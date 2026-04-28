@@ -1085,9 +1085,13 @@ public partial struct EffectSystem : ISystem
                             {
                                 delayDestroyTime = damage.delayDestroyTime; // * damageScale;
                                 if (math.abs(delayDestroyTime) > math.FLT_MIN_NORMAL)
+                                {
                                     Math.InterlockedAdd(
-                                        ref this.delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
+                                        ref delayDestroies.GetRefRW(simulationEvent.entity).ValueRW.time,
                                         delayDestroyTime);
+                                    
+                                    delayDestroies.SetComponentEnabled(simulationEvent.entity, true);
+                                }
                             }
                         }
 
@@ -2148,6 +2152,9 @@ public partial struct EffectSystem : ISystem
                     chunk.SetComponentEnabled(ref targetType, i, false);
                 else if ((result & EnabledFlags.Die) == EnabledFlags.Die)
                 {
+                    if(i < apply.delayDestroys.Length)
+                        chunk.SetComponentEnabled(ref delayDestroyType, i, true);
+                    
                     if(isCharacter)
                         chunk.SetComponentEnabled(ref characterBodyType, i, false);
 
