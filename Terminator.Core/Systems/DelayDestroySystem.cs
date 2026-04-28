@@ -94,6 +94,7 @@ public partial struct DelayDestroySystem : ISystem
         }
     }
 
+    private double __time;
     private EntityTypeHandle __entityType;
     private BufferLookup<Child> __children;
     private ComponentLookup<DelayDestroy> __delayDestroys;
@@ -123,52 +124,56 @@ public partial struct DelayDestroySystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         double time = SystemAPI.GetSingleton<FixedFrame>().elapsedTime;
-        
-        __entities.Clear();
-        __children.Update(ref state);
-        __delayDestroys.Update(ref state);
-
-        DelayDestroy delayDestroy;
-        int numElements = __elements.Length;
-        for(int i = numElements - 1; i >= 0; --i)
+        if (time > __time)
         {
-            ref var element = ref __elements.ElementAt(i);
-            if (element.time > time)
-            {
-                if(++i < numElements)
-                    __elements.RemoveRange(i, numElements - i);
-                
-                break;
-            }
+            __time = time;
+            
+            __entities.Clear();
+            __children.Update(ref state);
+            __delayDestroys.Update(ref state);
 
-            if (__delayDestroys.TryGetComponent(element.entity, out delayDestroy))
+            DelayDestroy delayDestroy;
+            int numElements = __elements.Length;
+            for (int i = numElements - 1; i >= 0; --i)
             {
-                element.time = delayDestroy.time + delayDestroy.startTime;
+                ref var element = ref __elements.ElementAt(i);
                 if (element.time > time)
                 {
-                    if(++i < numElements)
+                    if (++i < numElements)
                         __elements.RemoveRange(i, numElements - i);
 
-                    __elements.Sort();
-                    numElements = __elements.Length;
-                    i = numElements;
+                    break;
                 }
-                else
-                    __Destroy(element.entity, __children, ref __entities);
-            }
-        }
-        
-        state.EntityManager.DestroyEntity(__entities.AsArray());
-        
-        __entityType.Update(ref state);
-        __delayDestroyType.Update(ref state);
 
-        ApplyEx apply;
-        apply.time = time;
-        apply.entityType = __entityType;
-        apply.delayDestroyType = __delayDestroyType;
-        apply.elements = __elements;
-        state.Dependency = apply.ScheduleByRef(__group, state.Dependency);
+                if (__delayDestroys.TryGetComponent(element.entity, out delayDestroy))
+                {
+                    element.time = delayDestroy.time + delayDestroy.startTime;
+                    if (element.time > time)
+                    {
+                        if (++i < numElements)
+                            __elements.RemoveRange(i, numElements - i);
+
+                        __elements.Sort();
+                        numElements = __elements.Length;
+                        i = numElements;
+                    }
+                    else
+                        __Destroy(element.entity, __children, ref __entities);
+                }
+            }
+
+            state.EntityManager.DestroyEntity(__entities.AsArray());
+
+            __entityType.Update(ref state);
+            __delayDestroyType.Update(ref state);
+
+            ApplyEx apply;
+            apply.time = time;
+            apply.entityType = __entityType;
+            apply.delayDestroyType = __delayDestroyType;
+            apply.elements = __elements;
+            state.Dependency = apply.ScheduleByRef(__group, state.Dependency);
+        }
     }
     
     private static void __Destroy(
