@@ -2346,7 +2346,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private IEnumerator __MoveTo(uint userStageID)
     {
-        while (Status.Init == status)
+        while (Status.Init == status || __sceneActiveDepth > 0)
             yield return null;
 
         LevelStage levelStage;
@@ -2407,6 +2407,8 @@ public sealed class LoginManager : MonoBehaviour
 
     void OnDestroy()
     {
+        instance = null;
+        
         GameUser.Shared.onLoginStatusChanged -= __OnLoginStatusChanged;
         
         var manager = GameManager.instance;

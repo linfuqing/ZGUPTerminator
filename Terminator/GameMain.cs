@@ -353,17 +353,19 @@ public class GameMain : GameUser
             {
                 string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
                 assetName = assetName.ToLower();
-                
+
                 AssetManager.AssetData assetData;
                 using (var md5 = new MD5CryptoServiceProvider())
-                    assetData.info.md5 = md5.ComputeHash(bytes.ToStream());
+                using (var stream = bytes.ToStream())
+                    assetData.info.md5 = md5.ComputeHash(stream);
 
                 if (!AssetManager.Get(assetName, out var asset) ||
                     !asset.data.info.md5.AsSpan().SequenceEqual(assetData.info.md5.AsSpan()))
                 {
                     AssetManager.CreateDirectory(path);
 
-                    File.WriteAllBytes(path, bytes.ToArray());
+                    using(var file = File.Create(path))
+                        file.Write(bytes.AsReadOnlySpan());
 
                     assetData.type = AssetManager.AssetType.Uncompressed;
                     assetData.info.version = 0;
@@ -381,10 +383,6 @@ public class GameMain : GameUser
                 Debug.LogException(e.InnerException ?? e);
 
                 return false;
-            }
-            finally
-            {
-                DestroyImmediate(text, true);
             }
 
             return true;

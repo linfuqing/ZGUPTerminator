@@ -962,6 +962,9 @@ public class ClientData : MonoBehaviour, IClientData
                                                 sendBuffer.EndWrite(writer);
                                             }
                                         }
+                                        
+                                        if(LevelPlayerShared<RemotePlayer>.channelStatus != 0)
+                                            LoginManager.instance?.MoveTo(0);
                                         break;
                                 }
                             }
