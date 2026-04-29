@@ -207,7 +207,7 @@ public partial class LevelSystemManaged
             __skillIndices.Dispose();
         }
 
-        public void Apply(
+        public void Begin(
             in BlobAssetReference<SkillDefinition> definition, 
             in NetworkClient networkClient, 
             in ReplyMessages clientMessages, 
@@ -233,31 +233,34 @@ public partial class LevelSystemManaged
                 remotePlayerSelectSkills.activeIndexType = __activeIndexType;
 
                 remotePlayerSelectSkills.RunByRef(__removePlayerGroup);
+            }
+        }
 
-                if (!__skillIndices.IsEmpty)
+        public void End(LevelSystemManaged system)
+        {
+            if (!__skillIndices.IsEmpty)
+            {
+                var skillIndices = new NativeList<int>(Allocator.TempJob);
+                var remotePlayers = __skillIndices.GetKeyArray(Allocator.Temp);
+                remotePlayers.Sort();
+
+                int numRemotePlayers = remotePlayers.Unique();
+                Entity remotePlayer;
+                for (int i = 0; i < numRemotePlayers; ++i)
                 {
-                    var skillIndices = new NativeList<int>(Allocator.TempJob);
-                    var remotePlayers = __skillIndices.GetKeyArray(Allocator.Temp);
-                    remotePlayers.Sort();
+                    remotePlayer = remotePlayers[i];
 
-                    int numRemotePlayers = remotePlayers.Unique();
-                    Entity remotePlayer;
-                    for (int i = 0; i < numRemotePlayers; ++i)
-                    {
-                        remotePlayer = remotePlayers[i];
+                    skillIndices.Clear();
+                    foreach (var skillIndex in __skillIndices.GetValuesForKey(remotePlayer))
+                        skillIndices.Add(skillIndex);
 
-                        skillIndices.Clear();
-                        foreach (var skillIndex in __skillIndices.GetValuesForKey(remotePlayer))
-                            skillIndices.Add(skillIndex);
-
-                        system.__DestroyBullets(
-                            remotePlayer,
-                            skillIndices.AsArray());
-                    }
-
-                    skillIndices.Dispose();
-                    remotePlayers.Dispose();
+                    system.__DestroyBullets(
+                        remotePlayer,
+                        skillIndices.AsArray());
                 }
+
+                skillIndices.Dispose();
+                remotePlayers.Dispose();
             }
         }
     }
@@ -318,7 +321,7 @@ public partial class LevelSystemManaged
         }
 
         if(SystemAPI.TryGetSingleton<NetworkClientDriver>(out var networkClientDriver))
-            __skillSelection.remotePlayer.Apply(
+            __skillSelection.remotePlayer.Begin(
                 definition,
                 networkClientDriver.instance,
                 SystemAPI.GetSingleton<ReplyMessages>(), this);
@@ -492,6 +495,8 @@ public partial class LevelSystemManaged
             }
         }
 
+        __skillSelection.remotePlayer.End(this);
+        
         if (manager.isClear && 
             manager.selectedSkillSelectionIndex == -1 && 
             SkillSelectionStatus.Finish == __skillSelection.status)
