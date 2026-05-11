@@ -219,6 +219,37 @@ public struct UserQuest
 
 public struct UserActiveEvent
 {
+    [Serializable]
+    public struct Reward
+    {
+        public int startDay;
+        public int days;
+
+        public UserRewardData[] values;
+
+        public Reward(string text)
+        {
+            var parameters = text.Split(':');
+            int numParameters = parameters.Length;
+            if (numParameters > 1)
+            {
+                days = int.Parse(parameters[numParameters - 2]);
+                startDay = numParameters > 2 ? int.Parse(parameters[numParameters - 3]) : 0;
+            }
+            else
+            {
+                days = 1;
+                startDay = 0;
+            }
+            
+            parameters = parameters[numParameters - 1].Split('+');
+            numParameters = parameters.Length;
+            values = new UserRewardData[numParameters];
+            for(int i = 0; i < numParameters; ++i)
+                values[i] = new UserRewardData(parameters[i]);
+        }
+    }
+    
     public uint id;
     public string name;
         
@@ -229,6 +260,7 @@ public struct UserActiveEvent
 
     public UserActive[] actives;
     public UserQuest[] quests;
+    public Reward[] rewards;
 }
 
 public partial interface IUserData
@@ -285,8 +317,13 @@ public partial interface IUserData
 
     IEnumerator QueryActiveEvents(
         uint userID,
-        Action<IUserData.ActiveEvents> onComplete);
+        Action<ActiveEvents> onComplete);
 
+    IEnumerator CollectActiveEvents(
+        uint userID,
+        uint activeEventID,
+        Action<Memory<UserReward>> onComplete);
+    
     IEnumerator CollectActiveEventActive(uint userID, uint activeEventID, uint activeID,
         Action<Memory<UserReward>> onComplete);
 

@@ -441,6 +441,8 @@ public sealed class LoginManager : MonoBehaviour
     private bool? __levelActivatedFirst;
     private bool? __isLevelActive;
 
+    private const string NAME_SPACE = "LoginManager";
+
     public static uint? userID => GameMain.userID == 0 ? null : GameMain.userID;
 
     public uint selectedUserStageID
@@ -831,7 +833,7 @@ public sealed class LoginManager : MonoBehaviour
 
         __levelStages = new Dictionary<uint, LevelStage>();
         __stageIDs = new Dictionary<(uint, int), uint>();
-        __sceneIndices = new HashSet<(int, int)>();
+        //__sceneIndices = new HashSet<(int, int)>();
         
         numLevels = levelChapters.levels.Length;
         bool canMoveToSinglePlayer = this.canMoveToSinglePlayer, isHot = false, isMoved, isUnlock;
@@ -1288,6 +1290,8 @@ public sealed class LoginManager : MonoBehaviour
                                     if(!sceneUnlocked.ContainsKey(i))
                                         continue;
                                     
+                                    var levelScene = level.scenes[i];
+
                                     var styleScene = style.scenes[i];
 
                                     int currentSceneIndex = i;
@@ -1295,6 +1299,9 @@ public sealed class LoginManager : MonoBehaviour
                                     {
                                         if (x)
                                         {
+                                            string key = $"{NAME_SPACE}{level.name}-{levelScene.name}";
+                                            int times = PlayerPrefs.GetInt(key);
+                                            
                                             temp = false;
                                             //bool isLevelActive = false;
                                             if (__sceneActiveDepth != 0 ||
@@ -1306,7 +1313,8 @@ public sealed class LoginManager : MonoBehaviour
                                                  selectedSceneIndex != currentSceneIndex) || */
                                                 !this.canMoveToSinglePlayer || 
                                                 scrollRect.targetIndex[scrollRect.axis] != userLevelIndex ||
-                                                !__sceneIndices.Add((userLevelIndex, currentSceneIndex)))
+                                                times > 0
+                                                /*!__sceneIndices.Add((userLevelIndex, currentSceneIndex))*/)
                                             {
                                                 if (previousSceneIndex != currentSceneIndex)
                                                 {
@@ -1345,6 +1353,8 @@ public sealed class LoginManager : MonoBehaviour
                                             {
                                                 print($"[LevelActivatedFirst]{__sceneActiveDepth}:{movedLevelIndex}:{this.canMoveToSinglePlayer}");
                                                 //__sceneActiveDepth = -1;
+                                                
+                                                PlayerPrefs.SetInt(key, times + 1);
 
                                                 var progressbar = GameProgressbar.instance;
                                                 bool isProgressing = progressbar != null && progressbar.isProgressing;
@@ -2339,7 +2349,7 @@ public sealed class LoginManager : MonoBehaviour
         
         print($"[Start]Load scene({RemotePlayer.status})");
         var analytics = IAnalytics.instance as IAnalyticsEx;
-        analytics?.StartLevel(sceneName /*_levels[__selectedLevelIndex].name*/);
+        analytics?.StartLevel(levelName /*_levels[__selectedLevelIndex].name*/);
 
         yield return __LoadScene(_startTime, sceneName);
     }

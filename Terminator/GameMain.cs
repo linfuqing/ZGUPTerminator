@@ -288,13 +288,11 @@ public class GameMain : GameUser
             long ticks = DateTime.Now.Ticks;
             while (index < __assetNames.Length)
             {
-                if(!__Load(__assetNames[index]))
-                    continue;
+                if(__Load(__assetNames[index]))
+                    ++index;
                 
                 if ((DateTime.Now.Ticks - ticks) * 1.0 / TimeSpan.TicksPerSecond > maximumDeltaTime)
                     return true;
-
-                ++index;
             }
 
             return false;
@@ -377,6 +375,8 @@ public class GameMain : GameUser
                     using (var writer = new AssetManager.Writer(folder, AssetManager))
                         writer.Write(assetName, assetData);
                 }
+                
+                //DestroyImmediate(text, true);
             }
             catch (Exception e)
             {
@@ -409,7 +409,9 @@ public class GameMain : GameUser
                     int index, count;
                     while (assetIterator.MoveNext())
                     {
-                        yield return null;
+                        yield return Resources.UnloadUnusedAssets();
+                        
+                        GC.Collect();
 
                         if (downloadHandler != null)
                         {

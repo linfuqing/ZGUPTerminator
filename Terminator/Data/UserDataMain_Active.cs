@@ -549,6 +549,8 @@ public partial class UserDataMain
         public string[] activeNames;
 
         public string[] questNames;
+
+        public UserActiveEvent.Reward[] rewards; 
         
 #if UNITY_EDITOR
         [CSVField]
@@ -600,6 +602,26 @@ public partial class UserDataMain
                 questNames = value.Split('/');
             }
         }
+        
+        [CSVField]
+        public string 活跃活动奖励
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    rewards = null;
+
+                    return;
+                }
+
+                string[] parameters = value.Split('/');
+                int numParameters = parameters.Length;
+                rewards = new UserActiveEvent.Reward[numParameters];
+                for(int i = 0; i < numParameters; ++i)
+                    rewards[i] = new UserActiveEvent.Reward(parameters[i]);
+            }
+        }
 #endif
     }
     
@@ -620,16 +642,7 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         IUserData.ActiveEvents activeEvents;
-        int seconds = PlayerPrefs.GetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME);
-        if (seconds == 0)
-        {
-            PlayerPrefs.SetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME, (int)DateTimeUtility.GetSeconds());
-
-            activeEvents.days = 0;
-        }
-        else
-            activeEvents.days =
-                DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
+        activeEvents.days = __GetActiveEventDay();
         
         if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
             __AppendQuest(UserQuest.Type.Login, 1);
@@ -686,6 +699,8 @@ public partial class UserDataMain
                 result.quests[j] = userQuest;
             }
 
+            result.rewards = activeEvent.rewards;
+
             results ??= new List<UserActiveEvent>();
             results.Add(result);
         }
@@ -693,6 +708,60 @@ public partial class UserDataMain
         activeEvents.values = results?.ToArray();
 
         onComplete(activeEvents);
+    }
+
+    public IEnumerator CollectActiveEvents(
+        uint userID,
+        uint activeEventID, 
+        Action<Memory<UserReward>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        var activeEvent = _activeEvents[__ToIndex(activeEventID)];
+        if (activeEvent.rewards == null || activeEvent.rewards.Length == 0)
+        {
+            onComplete(default);
+            
+            yield break;
+        }
+        
+        int days = __GetActiveEventDay();
+        if (activeEvent.startDay > days ||
+            activeEvent.days > 0 && activeEvent.startDay + activeEvent.days <= days)
+        {
+            onComplete(default);
+            
+            yield break;
+        }
+
+        string key;
+        if (activeEvent.questNames != null)
+        {
+            foreach (var questName in activeEvent.questNames)
+            {
+                key = $"{NAME_SPACE_USER_ACTIVES_QUEST}{activeEvent.name}{UserData.SEPARATOR}{_quests[__GetQuestIndex(questName)].name}";
+                if(((UserActive.Flag)PlayerPrefs.GetInt(key) & UserActive.Flag.Collected) != UserActive.Flag.Collected)
+                {
+                    onComplete(default);
+            
+                    yield break;
+                }
+            }
+        }
+
+        int startDay;
+        var results = new List<UserReward>();
+        foreach (var reward in activeEvent.rewards)
+        {
+            startDay = reward.startDay + activeEvent.startDay;
+            if (startDay > days ||
+                reward.days > 0 && startDay + reward.days <= days)
+                continue;
+
+            __ApplyRewards(reward.values, results);
+        }
+        
+        onComplete(results.ToArray());
     }
 
     public IEnumerator CollectActiveEventActive(uint userID, uint activeEventID, uint activeID, Action<Memory<UserReward>> onComplete)
@@ -938,6 +1007,19 @@ public partial class UserDataMain
 
         return __questNameToIndices.TryGetValue(name, out int index) ? index : -1;
     }
+
+    private int __GetActiveEventDay()
+    {
+        int seconds = PlayerPrefs.GetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME);
+        if (seconds == 0)
+        {
+            PlayerPrefs.SetInt(NAME_SPACE_USER_ACTIVE_EVENT_TIME, (int)DateTimeUtility.GetSeconds());
+
+            return 0;
+        }
+        
+        return DateTimeUtility.GetTotalDays((uint)seconds, out _, out _, DateTimeUtility.DataTimeType.UTC);
+    }
 }
 
 public partial class UserData
@@ -997,6 +1079,14 @@ public partial class UserData
         return UserDataMain.instance.QueryActiveEvents(userID, onComplete);
     }
 
+    public IEnumerator CollectActiveEvents(
+        uint userID,
+        uint activeEventID,
+        Action<Memory<UserReward>> onComplete)
+    {
+        return UserDataMain.instance.CollectActiveEvents(userID, activeEventID, onComplete);
+    }
+    
     public IEnumerator CollectActiveEventActive(uint userID, uint activeEventID, uint activeID,
         Action<Memory<UserReward>> onComplete)
     {
