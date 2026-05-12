@@ -32,8 +32,8 @@ public enum PurchaseType
     //钻石，分为0，1，2，3，4，5这6个首充挡位以及6，7，8，9，10，11这6个普通挡位
     Diamond, 
     
-    //买体力
-    //Energy, 
+    //限时礼包，分为0，1两个挡位
+    LimitedTime, 
     
     //活动预留
     Other

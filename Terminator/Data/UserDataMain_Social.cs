@@ -30,7 +30,21 @@ public partial class UserDataMain
             return result;
         }
     }
+
+    public IEnumerator QueryWorldMessages(Action<IUserData.WorldMessage> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        onComplete(default);
+    }
     
+    public IEnumerator SendWorldMessage(uint userID, string value, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        onComplete(true);
+    }
+
     public IEnumerator QueryFriend(uint userID, uint targetUserID, Action<IUserData.Friend> onComplete)
     {
         yield return __CreateEnumerator();
@@ -495,6 +509,16 @@ public partial class UserDataMain
 
 public partial class UserData
 {
+    public IEnumerator QueryWorldMessages(Action<IUserData.WorldMessage> onComplete)
+    {
+        return UserDataMain.instance.QueryWorldMessages(onComplete);
+    }
+    
+    public IEnumerator SendWorldMessage(uint userID, string value, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SendWorldMessage(userID, value, onComplete);
+    }
+
     public IEnumerator QueryFriend(uint userID, uint targetUserID, Action<IUserData.Friend> onComplete)
     {
         return UserDataMain.instance.QueryFriend(userID, targetUserID, onComplete);

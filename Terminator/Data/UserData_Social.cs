@@ -112,6 +112,16 @@ public partial interface IUserData
         }
     }
 
+    public struct WorldMessage
+    {
+        public UserFriend friend;
+        public string value;
+    }
+
+    IEnumerator QueryWorldMessages(Action<IUserData.WorldMessage> onComplete);
+
+    IEnumerator SendWorldMessage(uint userID, string value, Action<bool> onComplete);
+
     /// <summary>
     /// 查询好友信息
     /// </summary>

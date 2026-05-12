@@ -541,6 +541,41 @@ public partial class UserDataMain
     [Serializable]
     internal struct ActiveEvent
     {
+        [Serializable]
+        public struct Reward
+        {
+            public string name;
+            
+            public int startDay;
+            public int days;
+
+            public UserRewardData[] values;
+
+            public Reward(string text)
+            {
+                var parameters = text.Split(':');
+                int numParameters = parameters.Length;
+                if (numParameters > 1)
+                {
+                    name = parameters[0];
+                    days = numParameters > 2 ? int.Parse(parameters[numParameters - 3]) : 0;
+                    startDay = numParameters > 3 ? int.Parse(parameters[numParameters - 4]) : 0;
+                }
+                else
+                {
+                    name = string.Empty;
+                    days = 1;
+                    startDay = 0;
+                }
+            
+                parameters = parameters[numParameters - 1].Split('+');
+                numParameters = parameters.Length;
+                values = new UserRewardData[numParameters];
+                for(int i = 0; i < numParameters; ++i)
+                    values[i] = new UserRewardData(parameters[i]);
+            }
+        }
+
         public string name;
         
         public int startDay;
@@ -550,7 +585,7 @@ public partial class UserDataMain
 
         public string[] questNames;
 
-        public UserActiveEvent.Reward[] rewards; 
+        public Reward[] rewards; 
         
 #if UNITY_EDITOR
         [CSVField]
@@ -617,9 +652,9 @@ public partial class UserDataMain
 
                 string[] parameters = value.Split('/');
                 int numParameters = parameters.Length;
-                rewards = new UserActiveEvent.Reward[numParameters];
+                rewards = new Reward[numParameters];
                 for(int i = 0; i < numParameters; ++i)
-                    rewards[i] = new UserActiveEvent.Reward(parameters[i]);
+                    rewards[i] = new Reward(parameters[i]);
             }
         }
 #endif
@@ -634,6 +669,7 @@ public partial class UserDataMain
 #endif
 
     private const string NAME_SPACE_USER_ACTIVE_EVENT_TIME = "UserActiveEventTime";
+    private const string NAME_SPACE_USER_ACTIVE_REWARD = "UserActiveEventReward";
 
     public IEnumerator QueryActiveEvents(
         uint userID,
@@ -647,11 +683,13 @@ public partial class UserDataMain
         if(__GetQuest(UserQuest.Type.Login, ActiveType.Day) < 1)
             __AppendQuest(UserQuest.Type.Login, 1);
         
-        int i, j, numActives, numQuests, numActiveEvents = _activeEvents.Length;
+        int i, j, numActives, numQuests, numRewards, numActiveEvents = _activeEvents.Length;
         UserActiveEvent result;
         ActiveEvent activeEvent;
         Active active;
         Quest quest;
+        ActiveEvent.Reward reward;
+        UserActiveEvent.Reward userReward;
         UserQuest userQuest;
         UserActive userActive;
         List<UserActiveEvent> results = null;
@@ -699,7 +737,19 @@ public partial class UserDataMain
                 result.quests[j] = userQuest;
             }
 
-            result.rewards = activeEvent.rewards;
+            numRewards = activeEvent.rewards == null ? 0 : activeEvent.rewards.Length;
+            result.rewards = new UserActiveEvent.Reward[numRewards];
+            for (j = 0; j < numQuests; ++j)
+            {
+                reward = activeEvent.rewards[j];
+                userReward.name = reward.name;
+                userReward.flag = (UserActiveEvent.Flag)PlayerPrefs.GetInt(
+                        $"{NAME_SPACE_USER_ACTIVE_REWARD}{activeEvent.name}{UserData.SEPARATOR}{reward.name}");
+                userReward.startDay = reward.startDay;
+                userReward.days = reward.days;
+                userReward.values = reward.values;
+                result.rewards[j] = userReward;
+            }
 
             results ??= new List<UserActiveEvent>();
             results.Add(result);
@@ -758,6 +808,13 @@ public partial class UserDataMain
                 reward.days > 0 && startDay + reward.days <= days)
                 continue;
 
+            key = $"{NAME_SPACE_USER_ACTIVE_REWARD}{activeEvent.name}{UserData.SEPARATOR}{reward.name}";
+            if (((UserActiveEvent.Flag)PlayerPrefs.GetInt(key) & UserActiveEvent.Flag.Collected) ==
+                UserActiveEvent.Flag.Collected)
+                continue;
+            
+            PlayerPrefs.SetInt(key, (int)UserActiveEvent.Flag.Collected);
+            
             __ApplyRewards(reward.values, results);
         }
         

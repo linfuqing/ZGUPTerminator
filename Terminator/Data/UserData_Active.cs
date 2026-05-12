@@ -219,35 +219,29 @@ public struct UserQuest
 
 public struct UserActiveEvent
 {
-    [Serializable]
+    [Flags]
+    public enum Flag
+    {
+        Collected = 0x01
+    }
+    
     public struct Reward
     {
+        public string name;
+
+        public Flag flag;
+        
+        /// <summary>
+        /// 相对于UserActiveEvent.startDay的开始日期
+        /// </summary>
         public int startDay;
+        
+        /// <summary>
+        /// 可以领取的天数（一般填写1）
+        /// </summary>
         public int days;
 
         public UserRewardData[] values;
-
-        public Reward(string text)
-        {
-            var parameters = text.Split(':');
-            int numParameters = parameters.Length;
-            if (numParameters > 1)
-            {
-                days = int.Parse(parameters[numParameters - 2]);
-                startDay = numParameters > 2 ? int.Parse(parameters[numParameters - 3]) : 0;
-            }
-            else
-            {
-                days = 1;
-                startDay = 0;
-            }
-            
-            parameters = parameters[numParameters - 1].Split('+');
-            numParameters = parameters.Length;
-            values = new UserRewardData[numParameters];
-            for(int i = 0; i < numParameters; ++i)
-                values[i] = new UserRewardData(parameters[i]);
-        }
     }
     
     public uint id;
