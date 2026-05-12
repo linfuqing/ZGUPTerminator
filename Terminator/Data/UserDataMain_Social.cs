@@ -31,7 +31,7 @@ public partial class UserDataMain
         }
     }
 
-    public IEnumerator QueryWorldMessages(Action<IUserData.WorldMessage> onComplete)
+    public IEnumerator QueryWorldMessages(Action<Memory<IUserData.WorldMessage>> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -509,7 +509,7 @@ public partial class UserDataMain
 
 public partial class UserData
 {
-    public IEnumerator QueryWorldMessages(Action<IUserData.WorldMessage> onComplete)
+    public IEnumerator QueryWorldMessages(Action<Memory<IUserData.WorldMessage>> onComplete)
     {
         return UserDataMain.instance.QueryWorldMessages(onComplete);
     }

@@ -118,7 +118,7 @@ public partial interface IUserData
         public string value;
     }
 
-    IEnumerator QueryWorldMessages(Action<IUserData.WorldMessage> onComplete);
+    IEnumerator QueryWorldMessages(Action<Memory<WorldMessage>> onComplete);
 
     IEnumerator SendWorldMessage(uint userID, string value, Action<bool> onComplete);
 
@@ -126,6 +126,7 @@ public partial interface IUserData
     /// 查询好友信息
     /// </summary>
     /// <param name="userID"></param>
+    /// <param name="targetUserID"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
     IEnumerator QueryFriend(uint userID, uint targetUserID, Action<Friend> onComplete);

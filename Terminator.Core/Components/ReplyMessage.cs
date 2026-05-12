@@ -24,6 +24,12 @@ public struct ReplyMessages : IComponentData
         Buffer, 
         Clear
     }*/
+    public struct Invite
+    {
+        public uint channelIndex;
+        public uint levelID;
+        public int stage;
+    }
     
     public struct MessageKey : IEquatable<MessageKey>
     {
@@ -88,6 +94,7 @@ public struct ReplyMessages : IComponentData
     }
 
     private NativeList<byte> __buffer;
+    //private NativeQueue<>
     private NativeHashMap<uint, int> __channelFlags;
     private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message> __values;
 
