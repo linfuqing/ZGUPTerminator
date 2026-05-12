@@ -209,12 +209,18 @@ public struct LevelPlayerHeader
         this = bytes.AsArray().GetSubArray(0, 68).Reinterpret<LevelPlayerHeader>(1)[0];
     }
 
-    public void Write(ref DataStreamWriter writer)
+    public FixedBytes80 ToBytes()
     {
         FixedBytes80 bytes = default;
         var blocks = bytes.AsArray().GetSubArray(0, 68).Reinterpret<LevelPlayerHeader>(1);
         blocks[0] = this;
-        bytes.Write(ref writer);
+
+        return bytes;
+    }
+
+    public void Write(ref DataStreamWriter writer)
+    {
+        ToBytes().Write(ref writer);
     }
 }
 

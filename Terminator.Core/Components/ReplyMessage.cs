@@ -11,8 +11,8 @@ public enum ReplyMessageType
     Camera, 
     Move, 
     Damage, 
-    HP, 
-        
+    Invite, 
+    
     SelectSkill, 
     PlayerProperty
 }
@@ -26,9 +26,40 @@ public struct ReplyMessages : IComponentData
     }*/
     public struct Invite
     {
-        public uint channelIndex;
+        public NetworkRelayType type;
+        public uint id;
         public uint levelID;
         public int stage;
+        public int channel;
+        public FixedString512Bytes text;
+        public FixedBytes80 header;
+
+        public Invite(
+            NetworkRelayType type, 
+            uint id, 
+            ref DataStreamReader reader, 
+            in StreamCompressionModel streamCompressionModel)
+        {
+            this.type = type;
+            this.id = id;
+            levelID = reader.ReadPackedUInt(streamCompressionModel);
+            stage = reader.ReadPackedInt(streamCompressionModel);
+            channel = reader.ReadPackedInt(streamCompressionModel);
+            text = reader.ReadFixedString512();
+            
+            header = new FixedBytes80(ref reader);
+        }
+
+        public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
+        {
+            writer.WriteReplyHeader((int)ReplyMessageType.Invite, type);
+            writer.WritePackedUInt(levelID, streamCompressionModel);
+            writer.WritePackedInt(stage, streamCompressionModel);
+            writer.WritePackedInt(channel, streamCompressionModel);
+            writer.WriteFixedString512(text);
+            
+            header.Write(ref writer);
+        }
     }
     
     public struct MessageKey : IEquatable<MessageKey>
@@ -94,7 +125,7 @@ public struct ReplyMessages : IComponentData
     }
 
     private NativeList<byte> __buffer;
-    //private NativeQueue<>
+    private NativeQueue<Invite> __invites;
     private NativeHashMap<uint, int> __channelFlags;
     private NativeParallelMultiHashMap<MessageKey, NetworkClient.Message> __values;
 
@@ -108,6 +139,7 @@ public struct ReplyMessages : IComponentData
     public ReplyMessages(in AllocatorManager.AllocatorHandle allocator)
     {
         __buffer = new NativeList<byte>(allocator);
+        __invites = new NativeQueue<Invite>(allocator);
         __channelFlags = new NativeHashMap<uint, int>(1, allocator);
         __values = new NativeParallelMultiHashMap<MessageKey, NetworkClient.Message>(1, allocator);
     }
@@ -118,6 +150,8 @@ public struct ReplyMessages : IComponentData
         __channelFlags.Dispose();
         __values.Dispose();
     }
+
+    public bool TryDequeueInvite(out Invite invite) => __invites.TryDequeue(out invite);
 
     public Enumerator GetValues(ReplyMessageType type, uint id, in NativeList<byte> clientBuffer)
     {
@@ -365,9 +399,6 @@ public struct ReplyMessages : IComponentData
                                 continue;
 
                             channel = reader.ReadPackedInt(streamCompressionModel);
-                            if(NetworkRelayType.Channel != (NetworkRelayType)channel)
-                                continue;
-
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
 
                             __Log($"[Reply Message]{key.type} {key.id}");
@@ -381,8 +412,16 @@ public struct ReplyMessages : IComponentData
                             switch (key.type)
                             {
                                 case ReplyMessageType.Chat:
+                                    if(NetworkRelayType.Channel != (NetworkRelayType)channel)
+                                        continue;
+
                                     reader = new NetworkClient.MessageElement(value, messages).reader;
                                     ReplyMessageChatShared.output = reader.ReadFixedString512();
+                                    break;
+                                case ReplyMessageType.Invite:
+                                    reader = new NetworkClient.MessageElement(value, messages).reader;
+                                    
+                                    __invites.Enqueue(new Invite((NetworkRelayType)channel, key.id, ref reader, streamCompressionModel));
                                     break;
                                 case ReplyMessageType.PlayerProperty:
                                     reader = new NetworkClient.MessageElement(value, messages).reader;

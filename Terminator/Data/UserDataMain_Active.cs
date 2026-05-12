@@ -558,8 +558,8 @@ public partial class UserDataMain
                 if (numParameters > 1)
                 {
                     name = parameters[0];
-                    days = numParameters > 2 ? int.Parse(parameters[numParameters - 3]) : 0;
-                    startDay = numParameters > 3 ? int.Parse(parameters[numParameters - 4]) : 0;
+                    days = numParameters > 2 ? int.Parse(parameters[numParameters - 2]) : 0;
+                    startDay = numParameters > 3 ? int.Parse(parameters[numParameters - 3]) : 0;
                 }
                 else
                 {

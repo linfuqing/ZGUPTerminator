@@ -101,12 +101,12 @@ public enum ClientMessageType
     /// <summary>
     /// 组队邀请，接收消息为<see cref="ClientMessageSquadInviteToRead"/>，发送消息为<see cref="ClientMessageSquadInviteToSend"/>
     /// </summary>
-    SquadInvite = NetworkRelayMessageType.Query + 1, 
+    SquadInvite = ReplyMessageType.Invite, 
     
     /// <summary>
     /// 申请好友，接收消息为<see cref="ClientMessageApplyFriendToRead"/>，发送消息为<see cref="ClientMessageApplyFriendToSend"/>
     /// </summary>
-    ApplyFriend, 
+    ApplyFriend = NetworkRelayMessageType.Query + 2, 
     
     /// <summary>
     /// 添加好友，先通过<see cref="ApplyFriend"/>接收到好友申请，同意添加时发送添加。添加成功后会收到接收消息。注意：这个消息可能会重复接收到，根据ID判断是不是同一个好友，并以短链接服务器为主。
@@ -147,35 +147,49 @@ public struct ClientHeader : IEquatable<ClientHeader>
     public int power;
     public FixedString32Bytes userName;
     public FixedString32Bytes userAvatar;
-
-    public ClientHeader(ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
+    
+    public ClientHeader(uint userID, ref DataStreamReader reader, StreamCompressionModel streamCompressionModel)
     {
-        userID = reader.ReadPackedUInt(streamCompressionModel);
+        this.userID = userID == 0 ? reader.ReadPackedUInt(streamCompressionModel) : userID;
         var bytes = new FixedBytes80(ref reader);
         var header = new LevelPlayerHeader(bytes);
         power = header.power;
         userName = header.name;
         userAvatar = header.avatar;
     }
-    
-    public void Write(ref DataStreamWriter writer, StreamCompressionModel streamCompressionModel)
+
+    public ClientHeader(uint userID, LevelPlayerHeader header)
     {
-        writer.WritePackedUInt(userID, streamCompressionModel);
+        this.userID = userID;
+        power = header.power;
+        userName = header.name;
+        userAvatar = header.avatar;
+    }
+
+    public LevelPlayerHeader ToLevelPlayerHeader()
+    {
         LevelPlayerHeader header;
         header.power = power;
         header.name = userName;
         header.avatar = userAvatar;
-        header.Write(ref writer);
+
+        return header;
+    }
+    
+    public void Write(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel)
+    {
+        writer.WritePackedUInt(userID, streamCompressionModel);
+        ToLevelPlayerHeader().Write(ref writer);
     }
     
     public void Write(
         ref DataStreamWriter writer, 
-        StreamCompressionModel streamCompressionModel, 
         int messageType, 
         NetworkRelayType relayType)
     {
         writer.WriteReplyHeader(messageType, relayType);
-        Write(ref writer, streamCompressionModel);
+        //Write(ref writer, streamCompressionModel);
+        ToLevelPlayerHeader().Write(ref writer);
     }
 
     public bool Equals(ClientHeader other)
@@ -281,6 +295,29 @@ public struct ClientMessageSquadInviteToRead : IClientMessageToRead
     /// </summary>
     public FixedString512Bytes text;
 
+    public ClientMessageSquadInviteToRead(in ReplyMessages.Invite invite, out ClientHeader header)
+    {
+        header = new ClientHeader(invite.id, new LevelPlayerHeader(invite.header));
+        
+        switch (invite.type)
+        {
+            case NetworkRelayType.All:
+                channel = ClientChannel.Public;
+                break;
+            case NetworkRelayType.Channel:
+                channel = ClientChannel.Squad;
+                break;
+            default:
+                channel = ClientChannel.Private;
+                break;
+        }
+
+        squadInviteID = (uint)invite.channel;
+        levelID = invite.levelID;
+        stage = invite.stage;
+        text = invite.text;
+    }
+
     public override string ToString()
     {
         return $"ClientMessageSquadInviteToRead({squadInviteID}:{levelID}:{stage}:{text})";
@@ -302,6 +339,20 @@ public struct ClientMessageSquadInviteToSend : IClientMessageToSend
     public FixedString512Bytes text;
     
     public ClientMessageType messageType => ClientMessageType.SquadInvite;
+
+    public ReplyMessages.Invite ToInvite(int channel, in ClientHeader header)
+    {
+        ReplyMessages.Invite invite;
+        invite.type = userID == 0 ? NetworkRelayType.All : userID.RelayType();
+        invite.id = header.userID;
+        invite.levelID = levelID;
+        invite.stage = stage;
+        invite.channel = channel;
+        invite.text = text;
+        invite.header = header.ToLevelPlayerHeader().ToBytes();
+
+        return invite;
+    }
 }
 
 public struct ClientMessageMatchToRead : IClientMessageToRead
@@ -894,7 +945,7 @@ public class ClientData : MonoBehaviour, IClientData
                             if (reader.GetBytesRead() < reader.Length)
                             {
                                 reader.Flush();
-                                header = new ClientHeader(ref reader, streamCompressionModel);
+                                header = new ClientHeader(0, ref reader, streamCompressionModel);
                                 
                                 UnityEngine.Assertions.Assert.AreNotEqual(this.header.userID, header.userID);
 
@@ -1009,7 +1060,7 @@ public class ClientData : MonoBehaviour, IClientData
                             
                             switch ((ClientMessageType)type)
                             {
-                                case ClientMessageType.SquadInvite:
+                                /*case ClientMessageType.SquadInvite:
                                 {
                                     //UnityEngine.Assertions.Assert.AreEqual(ClientChannel.Public, channel);
                                     
@@ -1023,10 +1074,10 @@ public class ClientData : MonoBehaviour, IClientData
                                     message.text = reader.ReadFixedString512();
                                     __Save(message);
                                     return (int)ClientMessageType.SquadInvite;
-                                }
+                                }*/
                                 case ClientMessageType.Chat:
                                 {
-                                    header = new ClientHeader(ref reader, streamCompressionModel);
+                                    header = new ClientHeader(id, ref reader, streamCompressionModel);
 
                                     ClientMessageChatToRead message;
                                     message.channel = channel;
@@ -1036,7 +1087,7 @@ public class ClientData : MonoBehaviour, IClientData
                                 }
                                 case ClientMessageType.ApplyFriend:
                                 {
-                                    header = new ClientHeader(ref reader, streamCompressionModel);
+                                    header = new ClientHeader(id, ref reader, streamCompressionModel);
 
                                     ClientMessageApplyFriendToRead message;
                                     message.text = reader.ReadFixedString512();
@@ -1174,7 +1225,8 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
                     writer.WritePackedInt((int)type, streamCompressionModel);
-                    writer.WritePackedInt(new DataStreamReader(__bytes.AsArray()).ReadPackedInt(streamCompressionModel), streamCompressionModel);
+                    writer.WritePackedInt(new DataStreamReader(__bytes.AsArray()).ReadPackedInt(streamCompressionModel),
+                        streamCompressionModel);
 
                     sendBuffer.EndWrite(writer);
                 }
@@ -1187,7 +1239,7 @@ public class ClientData : MonoBehaviour, IClientData
                 {
                     this.header.Write(
                         ref writer,
-                        StreamCompressionModel.Default,
+                        //StreamCompressionModel.Default,
                         (int)ClientMessageType.ApplyFriend, 
                         temp.userID.RelayType());
 
@@ -1304,7 +1356,7 @@ public class ClientData : MonoBehaviour, IClientData
                     var temp = __Load<ClientMessageChatToSend>();
                     this.header.Write(
                         ref writer, 
-                        StreamCompressionModel.Default, 
+                        //StreamCompressionModel.Default, 
                         (int)ClientMessageType.Chat, ClientChannel.Private == temp.channel ? temp.userID.RelayType() : (NetworkRelayType)temp.channel);
 
                     writer.WriteFixedString512(temp.value);
@@ -1378,12 +1430,18 @@ public class ClientData : MonoBehaviour, IClientData
 
     private void __WriteSquadInvite(ref DataStreamWriter writer, in StreamCompressionModel streamCompressionModel, int channel)
     {
-        header.Write(ref writer, streamCompressionModel, (int)ClientMessageType.SquadInvite,
+        var invite = __squadInviteMessage.ToInvite(channel, header);
+        invite.Write(ref writer, streamCompressionModel);
+        
+        /*header.Write(
+            ref writer, 
+            streamCompressionModel, 
+            (int)ClientMessageType.SquadInvite,
             __squadInviteMessage.userID == 0 ? NetworkRelayType.All : __squadInviteMessage.userID.RelayType());
         writer.WritePackedInt(channel, streamCompressionModel);
         writer.WritePackedUInt(__squadInviteMessage.levelID, streamCompressionModel);
         writer.WritePackedInt(__squadInviteMessage.stage, streamCompressionModel);
-        writer.WriteFixedString512(__squadInviteMessage.text);
+        writer.WriteFixedString512(__squadInviteMessage.text);*/
     }
 
     private void __SendStatus()
