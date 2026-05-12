@@ -1614,14 +1614,14 @@ public sealed class LoginManager : MonoBehaviour
                 switch (reward.type)
                 {
                     case UserRewardType.Gold:
-                        gold += reward.count;
+                        //gold += reward.count;
                         break;
-                    case UserRewardType.Energy:
+                    /*case UserRewardType.Energy:
                         energy += reward.count;
                         break;
                     case UserRewardType.EnergyMax:
                         energyMax += reward.count;
-                        break;
+                        break;*/
                     default:
                         isReward = true;
                         break;
