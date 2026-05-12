@@ -313,7 +313,7 @@ public partial interface IUserData
         uint userID,
         Action<ActiveEvents> onComplete);
 
-    IEnumerator CollectActiveEvents(
+    IEnumerator CollectActiveEvent(
         uint userID,
         uint activeEventID,
         Action<Memory<UserReward>> onComplete);

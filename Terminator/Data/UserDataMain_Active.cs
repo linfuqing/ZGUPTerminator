@@ -760,7 +760,7 @@ public partial class UserDataMain
         onComplete(activeEvents);
     }
 
-    public IEnumerator CollectActiveEvents(
+    public IEnumerator CollectActiveEvent(
         uint userID,
         uint activeEventID, 
         Action<Memory<UserReward>> onComplete)
@@ -789,8 +789,8 @@ public partial class UserDataMain
         {
             foreach (var questName in activeEvent.questNames)
             {
-                key = $"{NAME_SPACE_USER_ACTIVES_QUEST}{activeEvent.name}{UserData.SEPARATOR}{_quests[__GetQuestIndex(questName)].name}";
-                if(((UserActive.Flag)PlayerPrefs.GetInt(key) & UserActive.Flag.Collected) != UserActive.Flag.Collected)
+                key = $"{NAME_SPACE_USER_ACTIVES_QUEST}{activeEvent.name}{UserData.SEPARATOR}{questName}";
+                if(((UserQuest.Flag)PlayerPrefs.GetInt(key) & UserQuest.Flag.Collected) != UserQuest.Flag.Collected)
                 {
                     onComplete(default);
             
@@ -1136,12 +1136,12 @@ public partial class UserData
         return UserDataMain.instance.QueryActiveEvents(userID, onComplete);
     }
 
-    public IEnumerator CollectActiveEvents(
+    public IEnumerator CollectActiveEvent(
         uint userID,
         uint activeEventID,
         Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.CollectActiveEvents(userID, activeEventID, onComplete);
+        return UserDataMain.instance.CollectActiveEvent(userID, activeEventID, onComplete);
     }
     
     public IEnumerator CollectActiveEventActive(uint userID, uint activeEventID, uint activeID,
