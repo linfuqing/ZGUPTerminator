@@ -739,7 +739,7 @@ public partial class UserDataMain
 
             numRewards = activeEvent.rewards == null ? 0 : activeEvent.rewards.Length;
             result.rewards = new UserActiveEvent.Reward[numRewards];
-            for (j = 0; j < numQuests; ++j)
+            for (j = 0; j < numRewards; ++j)
             {
                 reward = activeEvent.rewards[j];
                 userReward.name = reward.name;
