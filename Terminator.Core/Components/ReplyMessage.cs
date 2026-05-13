@@ -61,6 +61,22 @@ public struct ReplyMessages : IComponentData
             header.Write(ref writer);
         }
     }
+
+    public struct Wrapper
+    {
+        private NativeHashMap<uint, int> __channelFlags;
+        private NativeQueue<Invite> __invites;
+        
+        public NativeHashMap<uint, int> channelFlags => __channelFlags;
+        
+        public bool TryDequeueInvite(out Invite invite) => __invites.TryDequeue(out invite);
+
+        internal Wrapper(in ReplyMessages replyMessages)
+        {
+            __channelFlags = replyMessages.__channelFlags;
+            __invites = replyMessages.__invites;
+        }
+    }
     
     public struct MessageKey : IEquatable<MessageKey>
     {
@@ -151,7 +167,7 @@ public struct ReplyMessages : IComponentData
         __values.Dispose();
     }
 
-    public bool TryDequeueInvite(out Invite invite) => __invites.TryDequeue(out invite);
+    public Wrapper AsWrapper() => new Wrapper(this);
 
     public Enumerator GetValues(ReplyMessageType type, uint id, in NativeList<byte> clientBuffer)
     {

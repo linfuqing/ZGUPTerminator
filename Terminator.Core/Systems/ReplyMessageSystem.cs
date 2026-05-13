@@ -550,11 +550,11 @@ public partial struct ReplyMessageSystem : ISystem
         private set;
     }
 
-    public static NativeHashMap<uint, int> GetChannelFlags(in WorldUnmanaged world)
+    public static ReplyMessages.Wrapper GetChannelFlags(in WorldUnmanaged world)
     {
         var systemHandle = world.GetExistingUnmanagedSystem<ReplyMessageSystem>();
         var messagesEntity = world.GetUnsafeSystemRef<ReplyMessageSystem>(systemHandle).messagesEntity;
-        return world.EntityManager.GetComponentData<ReplyMessages>(messagesEntity).channelFlags;
+        return world.EntityManager.GetComponentData<ReplyMessages>(messagesEntity).AsWrapper();
     }
 
     [BurstCompile]

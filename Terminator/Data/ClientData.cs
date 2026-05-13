@@ -647,7 +647,7 @@ public class ClientData : MonoBehaviour, IClientData
         }
     }
 
-    public NativeHashMap<uint, int> friends =>
+    public ReplyMessages.Wrapper replyMessages =>
         ReplyMessageSystem.GetChannelFlags(World.DefaultGameObjectInjectionWorld.Unmanaged);
 
     public ClientHeader header
@@ -731,6 +731,7 @@ public class ClientData : MonoBehaviour, IClientData
 
     public int ReadMessageType(out ClientHeader header)
     {
+        var replyMessages = this.replyMessages;
         switch (__initStatus++)
         {
             case InitStatus.None:
@@ -773,7 +774,7 @@ public class ClientData : MonoBehaviour, IClientData
 
                 break;
             default:
-                var friends = this.friends;
+                var friends = replyMessages.channelFlags;
                 int friendIndex = __initStatus - InitStatus.Friends - 1, friendCount = friends.Count;
                 if (friendCount > friendIndex)
                 {
@@ -799,6 +800,13 @@ public class ClientData : MonoBehaviour, IClientData
                     __initStatus = friendCount + InitStatus.Friends;
                 
                 break;
+        }
+
+        if (replyMessages.TryDequeueInvite(out var invite))
+        {
+            __Save(new ClientMessageSquadInviteToRead(invite, out header));
+            
+            return (int)ClientMessageType.SquadInvite;
         }
 
         var driver = this.driver;
@@ -1234,7 +1242,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.ApplyFriend:
             {
                 var temp = __Load<ClientMessageApplyFriendToSend>();
-                if (!friends.ContainsKey(temp.userID) &&
+                if (!replyMessages.channelFlags.ContainsKey(temp.userID) &&
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     this.header.Write(
@@ -1253,7 +1261,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.AddFriend:
             {
                 var temp = __Load<ClientMessageAddFriend>();
-                if (!friends.ContainsKey(temp.userID) && 
+                if (!replyMessages.channelFlags.ContainsKey(temp.userID) && 
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
@@ -1267,7 +1275,7 @@ public class ClientData : MonoBehaviour, IClientData
             case ClientMessageType.RemoveFriend:
             {
                 var temp = __Load<ClientMessageRemoveFriend>();
-                if (friends.ContainsKey(temp.userID) && 
+                if (replyMessages.channelFlags.ContainsKey(temp.userID) && 
                     sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
                     var streamCompressionModel = StreamCompressionModel.Default;
