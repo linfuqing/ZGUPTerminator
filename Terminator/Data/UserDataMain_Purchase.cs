@@ -178,11 +178,8 @@ public partial class UserDataMain
                     {
                         result.deadline = purchaseItem.deadline;
 
-                        if (result.ticks == 0L)
+                        if (result.ticks == 0L && result.exp >= purchaseItem.exp)
                         {
-                            if(result.exp < purchaseItem.exp)
-                                continue;
-                            
                             result.ticks =
                                 DateTimeUtility.GetTicks(
                                     (uint)PlayerPrefs.GetInt(input.ToString(NAME_SPACE_USER_PURCHASE_ITEM_TIME)));
@@ -253,6 +250,7 @@ public partial class UserDataMain
                     switch (type)
                     {
                         case PurchaseType.Level:
+                        case PurchaseType.LimitedTime:
                             if (UserData.chapter < purchaseItem.exp)
                                 break;
                             
