@@ -43,8 +43,11 @@ public partial class UserDataMain
         [Tooltip("（每日）购买上限")]
         public int capacity;
 
-        [Tooltip("存钱罐需要的金币或者钻石&章节礼包需要达到的章节数")]
+        [Tooltip("存钱罐需要的金币&钻石&章节礼包&限时礼包需要达到的章节数")]
         public int exp;
+
+        [Tooltip("持续时间（秒）")]
+        public int deadline;
 
         public UserRewardOptionData[] options;
         
@@ -80,6 +83,12 @@ public partial class UserDataMain
         }
         
         [CSVField]
+        public int 内购项目截止时间
+        {
+            set => deadline = value;
+        }
+
+        [CSVField]
         public string 内购项目奖励
         {
             set
@@ -110,6 +119,7 @@ public partial class UserDataMain
 #endif
     
     private const string NAME_SPACE_USER_PURCHASE_ITEM = "UserPurchaseItem";
+    private const string NAME_SPACE_USER_PURCHASE_ITEM_TIME = "UserPurchaseItemTime";
     
     public IEnumerator QueryPurchaseItems(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseItems>> onComplete)
     {
@@ -140,6 +150,7 @@ public partial class UserDataMain
             switch (input.type)
             {
                 case PurchaseType.Level:
+                case PurchaseType.LimitedTime:
                     result.exp = UserData.chapter;
                     break;
                 case PurchaseType.GoldBank:
@@ -163,6 +174,28 @@ public partial class UserDataMain
                 if (purchaseItem.type == input.type &&
                     purchaseItem.level == input.level)
                 {
+                    if (result.deadline == 0 && purchaseItem.deadline != 0)
+                    {
+                        result.deadline = purchaseItem.deadline;
+
+                        if (result.ticks == 0L)
+                        {
+                            if(result.exp < purchaseItem.exp)
+                                continue;
+                            
+                            result.ticks =
+                                DateTimeUtility.GetTicks(
+                                    (uint)PlayerPrefs.GetInt(input.ToString(NAME_SPACE_USER_PURCHASE_ITEM_TIME)));
+
+                            if (result.ticks == 0L)
+                            {
+                                result.ticks = DateTime.UtcNow.Ticks;
+                                PlayerPrefs.SetInt(input.ToString(NAME_SPACE_USER_PURCHASE_ITEM_TIME),
+                                    (int)DateTimeUtility.GetSeconds(result.ticks));
+                            }
+                        }
+                    }
+
                     result.expMax = purchaseItem.exp;
                     result.capacity = purchaseItem.capacity;
                     result.options = purchaseItem.options;
@@ -200,11 +233,23 @@ public partial class UserDataMain
 
         if (PurchaseData.Exchange(type, level, NAME_SPACE_USER_PURCHASE_ITEM))
         {
+            uint seconds, now = DateTimeUtility.GetSeconds();
+            IPurchaseData.Input input;
             List<UserReward> rewards = null;
             foreach (var purchaseItem in _purchaseItems)
             {
                 if (purchaseItem.type == type && purchaseItem.level == level)
                 {
+                    if (purchaseItem.deadline != 0)
+                    {
+                        input.type = type;
+                        input.level = level;
+                        
+                        seconds = (uint)PlayerPrefs.GetInt(input.ToString(NAME_SPACE_USER_PURCHASE_ITEM_TIME));
+                        if(seconds == 0 || seconds > now || seconds + purchaseItem.deadline < now)
+                            continue;
+                    }
+
                     switch (type)
                     {
                         case PurchaseType.Level:

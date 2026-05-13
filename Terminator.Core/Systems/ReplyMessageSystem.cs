@@ -550,7 +550,7 @@ public partial struct ReplyMessageSystem : ISystem
         private set;
     }
 
-    public static ReplyMessages.Wrapper GetChannelFlags(in WorldUnmanaged world)
+    public static ReplyMessages.Wrapper GetWrapper(in WorldUnmanaged world)
     {
         var systemHandle = world.GetExistingUnmanagedSystem<ReplyMessageSystem>();
         var messagesEntity = world.GetUnsafeSystemRef<ReplyMessageSystem>(systemHandle).messagesEntity;

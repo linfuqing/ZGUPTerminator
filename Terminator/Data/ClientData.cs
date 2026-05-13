@@ -648,7 +648,7 @@ public class ClientData : MonoBehaviour, IClientData
     }
 
     public ReplyMessages.Wrapper replyMessages =>
-        ReplyMessageSystem.GetChannelFlags(World.DefaultGameObjectInjectionWorld.Unmanaged);
+        ReplyMessageSystem.GetWrapper(World.DefaultGameObjectInjectionWorld.Unmanaged);
 
     public ClientHeader header
     {
