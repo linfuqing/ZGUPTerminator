@@ -284,17 +284,22 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
         switch (type)
         {
             case PurchaseType.FirstCharge:
-                input.type = PurchaseType.AdvertisingFreeCard;
-                input.level = 0;
-                output = Query(input);
-                if (output.times < 1)
+                if (level == 0)
                 {
-                    seconds = output.GetDeadline(ticks);
-                    seconds += (int)(TimeSpan.TicksPerDay / TimeSpan.TicksPerSecond);//(int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
-                
-                    PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
+                    input.type = PurchaseType.AdvertisingFreeCard;
+                    input.level = 0;
+                    output = Query(input);
+                    if (output.times < 1)
+                    {
+                        seconds = output.GetDeadline(ticks);
+                        seconds += (int)(TimeSpan.TicksPerDay /
+                                         TimeSpan
+                                             .TicksPerSecond); //(int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
+
+                        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
+                    }
                 }
-                
+
                 seconds = 0;
                 break;
             case PurchaseType.MonthlyCard:

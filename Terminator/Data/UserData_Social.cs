@@ -116,6 +116,10 @@ public partial interface IUserData
     {
         public UserFriend friend;
         public string value;
+        /// <summary>
+        /// 在服务器用time()就行（32位），下发到客户端的时候再在客户端转成ticks
+        /// </summary>
+        public long ticks;
     }
 
     IEnumerator QueryWorldMessages(Action<Memory<WorldMessage>> onComplete);
