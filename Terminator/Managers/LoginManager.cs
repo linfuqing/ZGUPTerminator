@@ -1805,7 +1805,13 @@ public sealed class LoginManager : MonoBehaviour
             header.userName = user.name;
             header.userAvatar = user.avatar;
             
-            clientData.Connect(header, user.replyServerAddress, user.replyServerPort);
+            string replyServerAddress = GameConstantManager.Get("ReplyServerAddress") ?? user.replyServerAddress;
+            string replyServerPortString = GameConstantManager.Get("ReplyServerPort");
+            ushort replyServerPort = string.IsNullOrEmpty(replyServerPortString)
+                ? user.replyServerPort
+                : ushort.Parse(replyServerPortString);
+            
+            clientData.Connect(header, replyServerAddress, replyServerPort);
         }
 
         GameMain.Login(user.id);

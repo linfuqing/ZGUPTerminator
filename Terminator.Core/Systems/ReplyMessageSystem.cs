@@ -554,7 +554,10 @@ public partial struct ReplyMessageSystem : ISystem
     {
         var systemHandle = world.GetExistingUnmanagedSystem<ReplyMessageSystem>();
         var messagesEntity = world.GetUnsafeSystemRef<ReplyMessageSystem>(systemHandle).messagesEntity;
-        return world.EntityManager.GetComponentData<ReplyMessages>(messagesEntity).AsWrapper();
+
+        var entityManager = world.EntityManager;
+        entityManager.CompleteDependencyBeforeRW<ReplyMessages>();
+        return entityManager.GetComponentData<ReplyMessages>(messagesEntity).AsWrapper();
     }
 
     [BurstCompile]

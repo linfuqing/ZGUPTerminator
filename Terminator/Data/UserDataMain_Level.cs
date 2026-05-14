@@ -316,6 +316,9 @@ public partial class UserDataMain
         onComplete(result);
     }
 
+    private const string NAME_SPACE_USER_LEVEL_PREVIOUS_NAME = "UserLevelPreviousName";
+    //private const string NAME_SPACE_USER_LEVEL_PREVIOUS_STAGE = "UserLevelPreviousStage";
+    
     private const string NAME_SPACE_USER_LEVEL_FLAG = "UserLevelFlag";
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
 
@@ -336,6 +339,9 @@ public partial class UserDataMain
         UserData.levelCache = null;
 
         var levelCache = temp.Value;
+        PlayerPrefs.SetString(NAME_SPACE_USER_LEVEL_PREVIOUS_NAME, levelCache.name);
+        //PlayerPrefs.SetInt(NAME_SPACE_USER_LEVEL_PREVIOUS_STAGE, levelCache.stage);
+        
         var level = _levels[__ToIndex(levelCache.id)];
         /*bool isLevelTicket = __GetLevelTicketIndex(level.name, out _, out _);
         if (isLevelTicket && 

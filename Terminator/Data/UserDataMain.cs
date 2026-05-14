@@ -446,17 +446,12 @@ public partial class UserData
     {
         return UserDataMain.instance.QueryUser(channelName, channelUser, (x, y) =>
         {
-            string replyServerAddress = GameConstantManager.Get("ReplyServerAddress") ?? _replyServerAddressOverride;
-            if (!string.IsNullOrEmpty(replyServerAddress))
-                x.replyServerAddress = replyServerAddress;
-
-            string replyServerPortString = GameConstantManager.Get("ReplyServerPort");
-            ushort replyServerPort = string.IsNullOrEmpty(replyServerPortString)
-                ? _replyServerPortOverride
-                : ushort.Parse(replyServerPortString);
-            if (0 != replyServerPort)
-                x.replyServerPort = replyServerPort;
-
+            if(!string.IsNullOrEmpty(_replyServerAddressOverride))
+                x.replyServerAddress = _replyServerAddressOverride;
+            
+            if(0 != _replyServerPortOverride)
+                x.replyServerPort = _replyServerPortOverride;
+            
             onComplete(x, y);
         });
     }

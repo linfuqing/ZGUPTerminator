@@ -124,7 +124,8 @@ public partial class UserDataMain
         result.flag = 0;
         if ((flag & Flag.TalentsUnlock) != 0)
         {
-            if ((flag & Flag.UnlockFirst) == Flag.TalentsUnlockFirst)
+            if ((flag & Flag.UnlockFirst) == Flag.TalentsUnlockFirst && 
+                IsLevelChapter(PlayerPrefs.GetString(NAME_SPACE_USER_LEVEL_PREVIOUS_NAME)))
                 result.flag |= IUserData.Talents.Flag.UnlockFirst;
             else if((flag & Flag.TalentsUnlockFirst) == 0)
                 result.flag |= IUserData.Talents.Flag.Unlock;

@@ -642,6 +642,8 @@ public class ClientData : MonoBehaviour, IClientData
 
                 return driver;
             }
+            
+            entityManager.CompleteDependencyBeforeRW<NetworkClientDriver>();
 
             return entityManager.GetComponentData<NetworkClientDriver>(__entity);
         }
