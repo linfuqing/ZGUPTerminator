@@ -432,7 +432,7 @@ public class GameMain : GameUser
                     assetManager = assetIterator.AssetManager;
                 }
             }
-            
+
 #if ENABLE_CONTENT_DELIVERY
             //string cdnURL = GameConstantManager.Get(GameConstantManager.KEY_CDN_URL);
             //if (string.IsNullOrEmpty(cdnURL))
@@ -867,6 +867,11 @@ public class GameMain : GameUser
 
         string scenePath = GameConstantManager.Get(AssetScenePath);
         assetPaths[1] = new GameAssetManager.AssetPath(scenePath, GameLanguage.overrideLanguage);
+        
+        var assetManager = GameAssetManager.instance;
+        assetManager.onAllAssetsLoaded -= __OnAllAssetsLoaded;
+        assetManager.onAllAssetsLoaded += __OnAllAssetsLoaded;
+        
         yield return GameAssetManager.instance.Init(
             true,//activation != null, 
             defaultSceneName, 
@@ -900,5 +905,10 @@ public class GameMain : GameUser
     private void __OnConfirmCancel()
     {
         Application.Quit();
+    }
+
+    private static void __OnAllAssetsLoaded()
+    {
+        InstanceManager.assetManager = GameAssetManager.instance.dataManager;
     }
 }
