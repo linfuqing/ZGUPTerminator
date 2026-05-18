@@ -60,8 +60,10 @@ public partial class UserDataMain
         uint groupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetCardGroupIndex(groupName));
         
         Card card;
+        CardRank cardRank;
         UserCard userCard;
         UserCard.Group userCardGroup;
+        List<int> cardRankIndices;
         var userCards = new List<UserCard>();
         var userCardGroups = new List<UserCard.Group>();
         int i, j, numCards = _cards.Length, numCardGroups = _cardGroups.Length;
@@ -106,6 +108,27 @@ public partial class UserDataMain
 
             userCard.skillGroupDamage = card.skillGroupDamage;
             
+            cardRankIndices = __GetCardRankIndices(i);
+
+            userCard.rank = __GetCardRank(card.name, out _);
+            if (userCard.rank > 0)
+            {
+                userCard.property = _cardRanks[cardRankIndices[userCard.rank - 1]].property;
+            }
+            else
+                userCard.property = card.property;
+
+            if (userCard.rank < cardRankIndices.Count)
+            {
+                cardRank = _cardRanks[cardRankIndices[userCard.rank]];
+
+                userCard.rankDesc.name = cardRank.name;
+                userCard.rankDesc.count = cardRank.count;
+                userCard.rankDesc.property = cardRank.property;
+            }
+            else
+                userCard.rankDesc = default;
+
             userCards.Add(userCard);
         }
         

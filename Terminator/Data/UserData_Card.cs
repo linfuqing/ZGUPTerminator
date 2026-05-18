@@ -16,10 +16,6 @@ public struct UserCardStyle
         public string name;
 
         /// <summary>
-        /// 升级需要的卡片数量
-        /// </summary>
-        public int count;
-        /// <summary>
         /// 升级需要的金币数量
         /// </summary>
         public int gold;
@@ -39,6 +35,22 @@ public struct UserCardStyle
 
 public struct UserCard
 {
+    [Serializable]
+    public struct Rank
+    {
+        public string name;
+
+        /// <summary>
+        /// 升星需要的卡片数量
+        /// </summary>
+        public int count;
+        
+        /// <summary>
+        /// 升星之后获得的属性
+        /// </summary>
+        public UserPropertyData property;
+    }
+    
     public struct Group
     {
         /// <summary>
@@ -65,6 +77,11 @@ public struct UserCard
     /// 等级
     /// </summary>
     public int level;
+    
+    /// <summary>
+    /// 星级
+    /// </summary>
+    public int rank;
 
     /// <summary>
     /// 卡片数量
@@ -72,6 +89,10 @@ public struct UserCard
     public int count;
 
     public float skillGroupDamage;
+
+    public UserPropertyData property;
+    
+    public Rank rankDesc;
 
     /// <summary>
     /// 技能
@@ -193,6 +214,16 @@ public partial interface IUserData
     /// 升级卡牌
     /// </summary>
     IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete);
+
+    /// <summary>
+    /// 升星
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="cardID"></param>
+    /// <param name="maxTimes"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator UprankCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete);
     
     /// <summary>
     /// 查询卡牌羁绊

@@ -981,15 +981,9 @@ public partial class UserDataMain
                 
                 ref var cardLevel = ref _cardLevels[indices[level - 1]];
                 skill.damage = cardLevel.skillGroupDamage;
-
-                property = cardLevel.property;
             }
             else
-            {
                 skill.damage = card.skillGroupDamage;
-                
-                property = card.property;
-            }
 
             string skillGroupName = __GetSkillGroupName(card.skillName);
 
@@ -1001,6 +995,16 @@ public partial class UserDataMain
             skill.name = skillGroupName;
             skills.Add(skill);
             
+            rank = __GetCardRank(card.name, out _);
+            if (rank > 0)
+            {
+                indices = __GetCardRankIndices(i);
+                            
+                property = _cardRanks[indices[rank - 1]].property;
+            }
+            else
+                property = card.property;
+
             if (property.attributes != null && property.attributes.Length > 0)
             {
                 if (attributeResults == null)
@@ -1447,7 +1451,7 @@ public partial class UserDataMain
             UserPropertyData property;
             IUserData.Skill skill;
             string instanceName = null;
-            int k, level, styleIndex, hpMax = 0, numAttributes = 0;
+            int k, level, rank, styleIndex, hpMax = 0, numAttributes = 0;
             for (i = 0; i < numCacheSkills; ++i)
             {
                 cacheSkill = cacheSkills[i];
@@ -1471,16 +1475,10 @@ public partial class UserDataMain
 
                             ref var cardLevel = ref _cardLevels[indices[level - 1]];
                             skill.damage = cardLevel.skillGroupDamage;
-
-                            property = cardLevel.property;
                         }
                         else
-                        {
                             skill.damage = card.skillGroupDamage;
-
-                            property = card.property;
-                        }
-
+                        
                         skills.Add(skill);
 
                         string skillGroupName = __GetSkillGroupName(card.skillName);
@@ -1488,6 +1486,16 @@ public partial class UserDataMain
                         skill.type = UserSkillType.Group;
                         skill.name = skillGroupName;
                         skills.Add(skill);
+                        
+                        rank = __GetCardRank(card.name, out _);
+                        if (rank > 0)
+                        {
+                            indices = __GetCardRankIndices(skillInfo.index);
+                            
+                            property = _cardRanks[indices[rank - 1]].property;
+                        }
+                        else
+                            property = card.property;
                         
                         if (property.attributes != null && property.attributes.Length > 0)
                         {
@@ -1567,11 +1575,11 @@ public partial class UserDataMain
                             skills.Add(skill);
                         }
 
-                        var roleRankIndices = __GetRoleRankIndices(skillInfo.index);
-                        int rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
+                        indices = __GetRoleRankIndices(skillInfo.index);
+                        rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
                         if (rank > 0)
                         {
-                            property = _roleRanks[roleRankIndices[rank - 1]].property;
+                            property = _roleRanks[indices[rank - 1]].property;
             
                             if (property.attributes != null && property.attributes.Length > 0)
                             {

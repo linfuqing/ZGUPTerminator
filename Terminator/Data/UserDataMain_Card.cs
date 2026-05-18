@@ -90,6 +90,69 @@ public partial class UserDataMain
                 skillGroupDamage = value;
             }
         }
+        
+        [CSVField]
+        public string 卡牌属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserPropertyData.Attribute attribute;
+                property.attributes = new UserPropertyData.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserPropertyData.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌技能
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserPropertyData.Skill skill;
+                property.skills = new UserPropertyData.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserPropertyData.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    property.skills[i] = skill;
+                }
+            }
+        }
 #endif
     }
 
@@ -132,14 +195,14 @@ public partial class UserDataMain
         
         public string styleName;
 
-        public int count;
+        //public int count;
         
         public int gold;
 
         [Tooltip("下一等级技能组伤害")]
         public float skillGroupDamage;
 
-        public UserPropertyData property;
+        //public UserPropertyData property;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -160,14 +223,14 @@ public partial class UserDataMain
             }
         }
         
-        [CSVField]
+        /*[CSVField]
         public int 卡牌等级升级卡数
         {
             set
             {
                 count = value;
             }
-        }
+        }*/
         
         [CSVField]
         public int 卡牌等级升级金币
@@ -187,7 +250,7 @@ public partial class UserDataMain
             }
         }
         
-        [CSVField]
+        /*[CSVField]
         public string 卡牌等级属性
         {
             set
@@ -248,10 +311,114 @@ public partial class UserDataMain
                     property.skills[i] = skill;
                 }
             }
-        }
+        }*/
 #endif
     }
 
+    [Serializable]
+    internal struct CardRank
+    {
+        public string name;
+        
+        public string cardName;
+
+        public int count;
+        
+        public UserPropertyData property;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 卡牌星级名字
+        {
+            set
+            {
+                name = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌星级卡牌名字
+        {
+            set
+            {
+                cardName = value;
+            }
+        }
+
+        [CSVField]
+        public int 卡牌星级升星卡数
+        {
+            set
+            {
+                count = value;
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌星级属性
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.attributes = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] attributeParameters;
+                UserPropertyData.Attribute attribute;
+                property.attributes = new UserPropertyData.Attribute[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    attributeParameters = parameters[i].Split(':');
+                    attribute.type = (UserAttributeType)int.Parse(attributeParameters[0]);
+                    attribute.opcode = (UserPropertyData.Opcode)int.Parse(attributeParameters[1]);
+                    attribute.value = float.Parse(attributeParameters[2]);
+
+                    property.attributes[i] = attribute;
+                }
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌星级技能
+        {
+            set
+            {
+                //skillGroupName = value;
+                if (string.IsNullOrEmpty(value))
+                {
+                    property.skills = null;
+                    
+                    return;
+                }
+
+                var parameters = value.Split('/');
+
+                int numParameters = parameters.Length;
+                string[] skillParameters;
+                UserPropertyData.Skill skill;
+                property.skills = new UserPropertyData.Skill[numParameters];
+                for (int i = 0; i < numParameters; ++i)
+                {
+                    skillParameters = parameters[i].Split(':');
+                    skill.name = skillParameters[0];
+                    skill.type = (UserSkillType)int.Parse(skillParameters[1]);
+                    skill.opcode = (UserPropertyData.Opcode)int.Parse(skillParameters[2]);
+                    skill.damage = float.Parse(skillParameters[3]);
+
+                    property.skills[i] = skill;
+                }
+            }
+        }
+#endif
+    }
+    
     [SerializeField] 
     internal Group[] _cardGroups;
     
@@ -266,8 +433,17 @@ public partial class UserDataMain
     internal string _cardLevelsPath;
 #endif
 
+    [SerializeField] 
+    internal CardRank[] _cardRanks;
+
+#if UNITY_EDITOR
+    [SerializeField, CSV("_cardRanks", guidIndex = -1, nameIndex = 0)] 
+    internal string _cardRanksPath;
+#endif
+
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
+    private const string NAME_SPACE_USER_CARD_RANK = "UserCardRank";
     private const string NAME_SPACE_USER_CARD_GROUP = "UserCardGroup";
     private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
     
@@ -337,7 +513,7 @@ public partial class UserDataMain
                 cardLevel = _cardLevels[cardLevelIndices[j]];
                 
                 userCardStyleLevel.name = cardLevel.name;
-                userCardStyleLevel.count = cardLevel.count;
+                //userCardStyleLevel.count = cardLevel.count;
                 userCardStyleLevel.gold = cardLevel.gold;
                 userCardStyleLevel.skillGroupDamage = cardLevel.skillGroupDamage;
 
@@ -371,8 +547,10 @@ public partial class UserDataMain
         }
 
         Card card;
+        CardRank cardRank;
         UserCard userCard;
         UserCard.Group userCardGroup;
+        List<int> cardRankIndices;
         var userCards = new List<UserCard>();
         var userCardGroups = new List<UserCard.Group>();
         int numCards = _cards.Length;
@@ -393,7 +571,25 @@ public partial class UserDataMain
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
             userCard.skillGroupDamage = card.skillGroupDamage;
+
+            cardRankIndices = __GetCardRankIndices(i);
+            userCard.rank = __GetCardRank(card.name, out _);
+            if (rank > 0)
+                userCard.property = _cardRanks[cardRankIndices[rank - 1]].property;
+            else
+                userCard.property = card.property;
             
+            if (rank < cardRankIndices.Count)
+            {
+                cardRank = _cardRanks[cardRankIndices[rank]];
+
+                userCard.rankDesc.name = cardRank.name;
+                userCard.rankDesc.count = cardRank.count;
+                userCard.rankDesc.property = cardRank.property;
+            }
+            else
+                userCard.rankDesc = default;
+
             userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
             {
@@ -437,9 +633,12 @@ public partial class UserDataMain
         int i, j, numCardGroups = _cardGroups.Length, numCardIDs = cardIDs.Length;
         uint cardID;
         Card card;
+        CardRank cardRank;
         UserCard.Group userCardGroup;
         UserCard result;
+        List<int> cardRankIndices;
         var results = new UserCard[numCardIDs];
+        var userCardGroups = new List<UserCard.Group>();
         for (i = 0; i < numCardIDs; ++i)
         {
             cardID = cardIDs[i];
@@ -457,8 +656,25 @@ public partial class UserDataMain
             result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
             result.skillGroupDamage = card.skillGroupDamage;
+            cardRankIndices = __GetCardRankIndices(i);
+            result.rank = __GetCardRank(card.name, out _);
+            if (rank > 0)
+                result.property = _cardRanks[cardRankIndices[rank - 1]].property;
+            else
+                result.property = card.property;
+            
+            if (rank < cardRankIndices.Count)
+            {
+                cardRank = _cardRanks[cardRankIndices[rank]];
 
-            var userCardGroups = new List<UserCard.Group>();
+                result.rankDesc.name = cardRank.name;
+                result.rankDesc.count = cardRank.count;
+                result.rankDesc.property = cardRank.property;
+            }
+            else
+                result.rankDesc = default;
+
+            userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
             {
                 userCardGroup.position =
@@ -523,12 +739,12 @@ public partial class UserDataMain
             yield break;
         }
         
-        string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
-        int count = PlayerPrefs.GetInt(countKey), 
+        //string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
+        int //count = PlayerPrefs.GetInt(countKey), 
             gold = UserDataMain.gold;
 
         var cardLevel = _cardLevels[levelIndices[level]];
-        if (cardLevel.count > count || cardLevel.gold > gold)
+        if (/*cardLevel.count > count || */cardLevel.gold > gold)
         {
             onComplete(false);
             
@@ -536,7 +752,7 @@ public partial class UserDataMain
         }
 
         PlayerPrefs.SetInt(levelKey, ++level);
-        PlayerPrefs.SetInt(countKey, count - cardLevel.count);
+        //PlayerPrefs.SetInt(countKey, count - cardLevel.count);
 
         UserDataMain.gold = gold - cardLevel.gold;
         
@@ -548,6 +764,45 @@ public partial class UserDataMain
 
         __AppendQuest(UserQuest.Type.CardToUpgrade, 1);
         
+        onComplete(true);
+    }
+
+    public IEnumerator UprankCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        int index = __ToIndex(cardID);
+        var card = _cards[index];
+        var rankIndices = __GetCardRankIndices(index);
+        int rank = __GetCardRank(card.name, out string rankKey);
+        if (rank >= rankIndices.Count)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
+        if (maxTimes < 1)
+            maxTimes = int.MaxValue;
+        
+        string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
+        int count = PlayerPrefs.GetInt(countKey);
+        CardRank cardRank;
+        for (int i = 0; i < maxTimes; ++i)
+        {
+            cardRank = _cardRanks[rankIndices[rank]];
+            if (cardRank.count > count)
+                break;
+            
+            count -= cardRank.count;
+            
+            if (++rank >= rankIndices.Count)
+                break;
+        }
+
+        PlayerPrefs.SetInt(rankKey, rank);
+        PlayerPrefs.SetInt(countKey, count);
+
         onComplete(true);
     }
 
@@ -814,7 +1069,7 @@ public partial class UserDataMain
 
         return __cardNameToIndices[name];
     }
-
+    
     private Dictionary<string, int> __cardStyleNameToIndices;
     
     private int __GetCardStyleIndex(string name)
@@ -860,6 +1115,34 @@ public partial class UserDataMain
         return __cardLevelIndices[index];
     }
 
+    private List<int>[] __cardRankIndices;
+
+    private List<int> __GetCardRankIndices(int index)
+    {
+        if (__cardRankIndices == null)
+        {
+            int numCards = _cards.Length;
+            
+            __cardRankIndices = new List<int>[numCards];
+
+            List<int> cardRankIndices;
+            for (int i = 0; i < numCards; ++i)
+            {
+                cardRankIndices = __cardRankIndices[i];
+                if (cardRankIndices == null)
+                {
+                    cardRankIndices = new List<int>();
+
+                    __cardRankIndices[i] = cardRankIndices;
+                }
+                
+                cardRankIndices.Add(i);
+            }
+        }
+        
+        return __cardRankIndices[index];
+    }
+
     private Dictionary<string, List<int>> __cardBondLevelIndices;
 
     private List<int> __GetCardBondLevelIndices(string name)
@@ -885,6 +1168,12 @@ public partial class UserDataMain
         }
         
         return __cardBondLevelIndices[name];
+    }
+
+    private static int __GetCardRank(string name, out string key)
+    {
+        key = $"{NAME_SPACE_USER_CARD_RANK}{name}";
+        return PlayerPrefs.GetInt(key, -1);
     }
 
     private static int __GetCardLevel(string name, out string key)
@@ -975,6 +1264,11 @@ public partial class UserData
         return UserDataMain.instance.UpgradeCard(userID, cardID, onComplete);
     }
 
+    public IEnumerator UprankCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.UprankCard(userID, cardID, maxTimes, onComplete);
+    }
+    
     public IEnumerator QueryCardBonds(uint userID, Action<Memory<UserCardBond>> onComplete)
     {
         return UserDataMain.instance.QueryCardBonds(userID, onComplete);
