@@ -574,14 +574,14 @@ public partial class UserDataMain
 
             cardRankIndices = __GetCardRankIndices(i);
             userCard.rank = __GetCardRank(card.name, out _);
-            if (rank > 0)
-                userCard.property = _cardRanks[cardRankIndices[rank - 1]].property;
+            if (userCard.rank > 0)
+                userCard.property = _cardRanks[cardRankIndices[userCard.rank - 1]].property;
             else
                 userCard.property = card.property;
             
-            if (rank < cardRankIndices.Count)
+            if (userCard.rank < cardRankIndices.Count)
             {
-                cardRank = _cardRanks[cardRankIndices[rank]];
+                cardRank = _cardRanks[cardRankIndices[userCard.rank]];
 
                 userCard.rankDesc.name = cardRank.name;
                 userCard.rankDesc.count = cardRank.count;
@@ -658,14 +658,14 @@ public partial class UserDataMain
             result.skillGroupDamage = card.skillGroupDamage;
             cardRankIndices = __GetCardRankIndices(i);
             result.rank = __GetCardRank(card.name, out _);
-            if (rank > 0)
-                result.property = _cardRanks[cardRankIndices[rank - 1]].property;
+            if (result.rank > 0)
+                result.property = _cardRanks[cardRankIndices[result.rank - 1]].property;
             else
                 result.property = card.property;
             
-            if (rank < cardRankIndices.Count)
+            if (result.rank < cardRankIndices.Count)
             {
-                cardRank = _cardRanks[cardRankIndices[rank]];
+                cardRank = _cardRanks[cardRankIndices[result.rank]];
 
                 result.rankDesc.name = cardRank.name;
                 result.rankDesc.count = cardRank.count;
