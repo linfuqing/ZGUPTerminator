@@ -1126,14 +1126,16 @@ public partial class UserDataMain
             __cardRankIndices = new List<int>[numCards];
 
             List<int> cardRankIndices;
-            for (int i = 0; i < numCards; ++i)
+            int cardIndex, numCardRanks = _cardRanks.Length;
+            for (int i = 0; i < numCardRanks; ++i)
             {
-                cardRankIndices = __cardRankIndices[i];
+                cardIndex = __GetCardIndex(_cardRanks[i].cardName);
+                cardRankIndices = __cardRankIndices[cardIndex];
                 if (cardRankIndices == null)
                 {
                     cardRankIndices = new List<int>();
 
-                    __cardRankIndices[i] = cardRankIndices;
+                    __cardRankIndices[cardIndex] = cardRankIndices;
                 }
                 
                 cardRankIndices.Add(i);

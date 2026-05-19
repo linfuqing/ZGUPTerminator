@@ -46,8 +46,19 @@ public partial class UserDataMain
                 }
 
                 id = 1;
-                count = 0;//3;
+                //count = 0;//3;
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
+                count = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) + reward.count;
+                if (count > 4)
+                {
+                    var temp = reward;
+                    temp.count -= count - 4;
+                    if (temp.count > 0)
+                        return __ApplyReward(temp, outRewards);
+
+                    return false;
+                }
+
                 break;
             case UserRewardType.Card:
                 __AppendQuest(UserQuest.Type.Cards, reward.count);
