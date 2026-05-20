@@ -725,7 +725,30 @@ public partial class UserDataMain
         onComplete(true);
     }
 
-    public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
+    public IEnumerator ResetCard(uint userID, uint cardID, Action<Memory<UserReward>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        var card = _cards[__ToIndex(cardID)];
+        var levelIndices = __GetCardLevelIndices(__GetCardStyleIndex(card.styleName));
+        int level = __GetCardLevel(card.name, out string levelKey), gold = 0;
+        while (level > 0)
+            gold += _cardLevels[levelIndices[--level]].gold;
+
+        PlayerPrefs.DeleteKey(levelKey);
+        
+        UserDataMain.gold += gold;
+
+        UserReward reward;
+        reward.name = string.Empty;
+        reward.id = 1;
+        reward.type = UserRewardType.Gold;
+        reward.count = gold;
+        
+        onComplete(new [] { reward });
+    }
+
+    public IEnumerator UpgradeCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -739,22 +762,28 @@ public partial class UserDataMain
             yield break;
         }
         
-        //string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
-        int //count = PlayerPrefs.GetInt(countKey), 
-            gold = UserDataMain.gold;
+        int gold = UserDataMain.gold;
 
-        var cardLevel = _cardLevels[levelIndices[level]];
-        if (/*cardLevel.count > count || */cardLevel.gold > gold)
+        if (maxTimes < 1)
+            maxTimes = int.MaxValue;
+
+        CardLevel cardLevel;
+        for (int i = 0; i < maxTimes; ++i)
         {
-            onComplete(false);
+            cardLevel = _cardLevels[levelIndices[level]];
+            if (cardLevel.gold > gold)
+                break;
             
-            yield break;
+            gold -= cardLevel.gold;
+            
+            if (++level >= levelIndices.Count)
+                break;
         }
-
-        PlayerPrefs.SetInt(levelKey, ++level);
+        
+        PlayerPrefs.SetInt(levelKey, level);
         //PlayerPrefs.SetInt(countKey, count - cardLevel.count);
 
-        UserDataMain.gold = gold - cardLevel.gold;
+        UserDataMain.gold = gold;
         
         var flag = UserDataMain.flag;
         flag &= ~Flag.CardsUnlockFirst;
@@ -1181,7 +1210,7 @@ public partial class UserDataMain
     private static int __GetCardLevel(string name, out string key)
     {
         key = $"{NAME_SPACE_USER_CARD_LEVEL}{name}";
-        return PlayerPrefs.GetInt(key, -1);
+        return PlayerPrefs.GetInt(key/*, -1*/);
     }
 
     private static void __SetCard(string cardName, string cardGroupName, int position)
@@ -1261,9 +1290,14 @@ public partial class UserData
         return UserDataMain.instance.SetCard(userID, cardID, groupID, position, onComplete);
     }
 
-    public IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete)
+    public IEnumerator ResetCard(uint userID, uint cardID, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.UpgradeCard(userID, cardID, onComplete);
+        return UserDataMain.instance.ResetCard(userID, cardID, onComplete);
+    }
+    
+    public IEnumerator UpgradeCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.UpgradeCard(userID, cardID, maxTimes, onComplete);
     }
 
     public IEnumerator UprankCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete)

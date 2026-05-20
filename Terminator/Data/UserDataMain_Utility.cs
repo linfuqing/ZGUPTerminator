@@ -80,8 +80,8 @@ public partial class UserDataMain
                 
                 int cardCount = PlayerPrefs.GetInt(key) + reward.count;
 
-                int level = __GetCardLevel(reward.name, out string levelKey);
-                if (level == -1)
+                int rank = __GetCardRank(reward.name, out string rankKey);
+                if (rank == -1)
                 {
                     bool isDirty = false;
                     switch (UserData.chapter)
@@ -125,7 +125,7 @@ public partial class UserDataMain
                         UserDataMain.flag = flag;
                     
                     PlayerPrefs.SetInt(key, cardCount - 1);
-                    PlayerPrefs.SetInt(levelKey, 0);
+                    PlayerPrefs.SetInt(rankKey, 0);
 
                     int cardCapacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY);
                     if (cardCapacity < 4)

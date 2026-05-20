@@ -211,9 +211,14 @@ public partial interface IUserData
     IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete);
 
     /// <summary>
+    /// 重置卡牌等级
+    /// </summary>
+    IEnumerator ResetCard(uint userID, uint cardID, Action<Memory<UserReward>> onComplete);
+    
+    /// <summary>
     /// 升级卡牌
     /// </summary>
-    IEnumerator UpgradeCard(uint userID, uint cardID, Action<bool> onComplete);
+    IEnumerator UpgradeCard(uint userID, uint cardID, int maxTimes, Action<bool> onComplete);
 
     /// <summary>
     /// 升星
