@@ -71,9 +71,29 @@ public partial class UserDataMain
         {
             card = _cards[i];
 
-            userCard.level = __GetCardLevel(card.name, out _);
-            if (userCard.level == -1)
+            userCard.rank = __GetCardRank(card.name, out _);
+            if (userCard.rank == -1)
                 continue;
+            
+            cardRankIndices = __GetCardRankIndices(i);
+
+            if (userCard.rank > 0)
+                userCard.property = _cardRanks[cardRankIndices[userCard.rank - 1]].property;
+            else
+                userCard.property = card.property;
+
+            if (userCard.rank < cardRankIndices.Count)
+            {
+                cardRank = _cardRanks[cardRankIndices[userCard.rank]];
+
+                userCard.rankDesc.name = cardRank.name;
+                userCard.rankDesc.count = cardRank.count;
+                userCard.rankDesc.property = cardRank.property;
+            }
+            else
+                userCard.rankDesc = default;
+
+            userCard.level = __GetCardLevel(card.name, out _);
             
             userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
@@ -108,27 +128,6 @@ public partial class UserDataMain
 
             userCard.skillGroupDamage = card.skillGroupDamage;
             
-            cardRankIndices = __GetCardRankIndices(i);
-
-            userCard.rank = __GetCardRank(card.name, out _);
-            if (userCard.rank > 0)
-            {
-                userCard.property = _cardRanks[cardRankIndices[userCard.rank - 1]].property;
-            }
-            else
-                userCard.property = card.property;
-
-            if (userCard.rank < cardRankIndices.Count)
-            {
-                cardRank = _cardRanks[cardRankIndices[userCard.rank]];
-
-                userCard.rankDesc.name = cardRank.name;
-                userCard.rankDesc.count = cardRank.count;
-                userCard.rankDesc.property = cardRank.property;
-            }
-            else
-                userCard.rankDesc = default;
-
             userCards.Add(userCard);
         }
         

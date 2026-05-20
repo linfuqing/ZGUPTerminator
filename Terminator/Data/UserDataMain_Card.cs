@@ -558,22 +558,11 @@ public partial class UserDataMain
         {
             card = _cards[i];
 
-            userCard.level = __GetCardLevel(card.name, out _);
-            if (userCard.level == -1)
+            userCard.rank = __GetCardRank(card.name, out _);
+            if (userCard.rank == -1)
                 continue;
             
-            userCard.name = card.name;
-            userCard.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
-            
-            userCard.id = __ToID(i);
-            userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
-            
-            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
-
-            userCard.skillGroupDamage = card.skillGroupDamage;
-
             cardRankIndices = __GetCardRankIndices(i);
-            userCard.rank = __GetCardRank(card.name, out _);
             if (userCard.rank > 0)
                 userCard.property = _cardRanks[cardRankIndices[userCard.rank - 1]].property;
             else
@@ -589,6 +578,18 @@ public partial class UserDataMain
             }
             else
                 userCard.rankDesc = default;
+
+            userCard.level = __GetCardLevel(card.name, out _);
+            
+            userCard.name = card.name;
+            userCard.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
+            
+            userCard.id = __ToID(i);
+            userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
+            
+            userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+
+            userCard.skillGroupDamage = card.skillGroupDamage;
 
             userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
@@ -643,21 +644,11 @@ public partial class UserDataMain
         {
             cardID = cardIDs[i];
             card = _cards[__ToIndex(cardID)];
-            result.level = __GetCardLevel(card.name, out _);
-            if (result.level == -1)
-                yield break;
-
-            result.name = card.name;
-            result.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
-
-            result.id = cardID;
-            result.styleID = __ToID(__GetCardStyleIndex(card.styleName));
-
-            result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
-
-            result.skillGroupDamage = card.skillGroupDamage;
-            cardRankIndices = __GetCardRankIndices(i);
             result.rank = __GetCardRank(card.name, out _);
+            if (result.rank == -1)
+                yield break;
+            
+            cardRankIndices = __GetCardRankIndices(i);
             if (result.rank > 0)
                 result.property = _cardRanks[cardRankIndices[result.rank - 1]].property;
             else
@@ -674,6 +665,18 @@ public partial class UserDataMain
             else
                 result.rankDesc = default;
 
+            result.level = __GetCardLevel(card.name, out _);
+
+            result.name = card.name;
+            result.skillNames = __GetSkillGroupSkillNames(__GetSkillGroupName(card.skillName)).ToArray();
+
+            result.id = cardID;
+            result.styleID = __ToID(__GetCardStyleIndex(card.styleName));
+
+            result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+
+            result.skillGroupDamage = card.skillGroupDamage;
+            
             userCardGroups.Clear();
             for (j = 0; j < numCardGroups; ++j)
             {
