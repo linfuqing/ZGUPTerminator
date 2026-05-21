@@ -1015,7 +1015,7 @@ public partial class UserDataMain
             {
                 userCardBondCard.name = cardBond.cardNames[j];
                 
-                userCardBondCard.level = __GetCardLevel(userCardBondCard.name, out _);
+                userCardBondCard.rank = __GetCardRank(userCardBondCard.name, out _);
                 
                 userCardBond.cards[j] = userCardBondCard;
             }

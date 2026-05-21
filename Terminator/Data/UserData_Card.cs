@@ -112,9 +112,9 @@ public struct UserCardBond
         public string name;
 
         /// <summary>
-        /// 卡牌当前等级
+        /// 卡牌当前星级
         /// </summary>
-        public int level;
+        public int rank;
     }
 
     [Serializable]
