@@ -587,6 +587,8 @@ public class ClientData : MonoBehaviour, IClientData
     [SerializeField]
     internal ushort _port = 1386;
     [SerializeField] 
+    internal string _serverName = "socket.chicken.zero3d.cn";
+    [SerializeField] 
     internal NetworkPipelineStage[] _stages = new NetworkPipelineStage[]
     {
         NetworkPipelineStage.Fragmentation,
@@ -637,7 +639,7 @@ public class ClientData : MonoBehaviour, IClientData
                     _receiveQueueCapacity,
                     _sendQueueCapacity);
 
-                var serverName = GameConstantManager.Get("ReplyServerName") ?? string.Empty;
+                var serverName = GameConstantManager.Get("ReplyServerName") ?? _serverName;
                 var caCertificate = GameConstantManager.Get("ReplyServerCACertificate");
                 if(caCertificate == null)
                     settings.WithSecureClientParameters(serverName);
