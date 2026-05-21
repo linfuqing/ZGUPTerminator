@@ -505,6 +505,7 @@ public class GameMain : GameUser
     public static readonly string DefaultLevelSceneName = "DefaultLevelSceneName";
     public static readonly string ContentSet = "ContentSet";
     public static readonly string ContentPackPath = "ContentPackPath";
+    public static readonly string NoticePath = "NoticePath";
     
     public const string NAME_SPACE_USER_GROUP = "GameMainUserGroup";
 
@@ -640,15 +641,6 @@ public class GameMain : GameUser
 
         LevelShared.userGroup = userGroup;
 
-        var manager = GameManager.instance;
-        if (manager != null)
-        {
-            manager.QueryNotices(false);
-
-            while (manager.isLoading || manager.isNoticeShow)
-                yield return null;
-        }
-        
         (IAnalytics.instance as IAnalyticsEx)?.Init();
         
 /*#if ENABLE_CONTENT_DELIVERY
@@ -868,16 +860,13 @@ public class GameMain : GameUser
         string scenePath = GameConstantManager.Get(AssetScenePath);
         assetPaths[1] = new GameAssetManager.AssetPath(scenePath, GameLanguage.overrideLanguage);
         
-        var assetManager = GameAssetManager.instance;
-        assetManager.onAllAssetsLoaded -= __OnAllAssetsLoaded;
-        assetManager.onAllAssetsLoaded += __OnAllAssetsLoaded;
-        
         yield return GameAssetManager.instance.Init(
             true,//activation != null, 
             defaultSceneName, 
             path, 
             GameConstantManager.Get(GameConstantManager.KEY_CDN_URL), 
             factory, 
+            __OnAllAssetsLoaded(), 
             activation, 
             new IGameAssetUnzipper[] {new AssetUnzipper()}, 
             assetPaths);
@@ -907,8 +896,36 @@ public class GameMain : GameUser
         Application.Quit();
     }
 
-    private static void __OnAllAssetsLoaded()
+    private IEnumerator __OnAllAssetsLoaded()
     {
-        InstanceManager.assetManager = GameAssetManager.instance.dataManager;
+        yield return null;
+
+        var assetManager = GameAssetManager.instance.dataManager;
+
+        string noticePath = GameConstantManager.Get(NoticePath);
+        if (!string.IsNullOrEmpty(noticePath))
+        {
+            var assetBundleLoader = new AssetBundleLoader<GameObject>(noticePath.ToLower(), noticePath, assetManager);
+
+            yield return assetBundleLoader;
+
+            var notice = assetBundleLoader.value;
+            if (notice != null)
+            {
+                notice = Instantiate(notice);
+                DontDestroyOnLoad(notice);
+                
+                var manager = notice.GetComponentInChildren<GameManager>(true);
+                if (manager != null)
+                {
+                    manager.QueryNotices(false);
+
+                    while (manager.isLoading || manager.isNoticeShow)
+                        yield return null;
+                }
+            }
+        }
+
+        InstanceManager.assetManager = assetManager;
     }
 }

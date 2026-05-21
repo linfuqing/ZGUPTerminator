@@ -867,11 +867,11 @@ public partial class UserDataMain
         }
         
         [CSVField]
-        public int 卡牌连携等级卡牌总等级
+        public int 卡牌连携等级卡牌总星级
         {
             set
             {
-                this.value.cardLevels = value;
+                this.value.cardRanks = value;
             }
         }
         
@@ -1033,13 +1033,13 @@ public partial class UserDataMain
         var cardBond = _cardBonds[__ToIndex(cardBondID)];
         string key = $"{NAME_SPACE_USER_CARDS_BONDS_LEVEL}{cardBond.name}";
         int level = PlayerPrefs.GetInt(key), 
-            cardLevels = _cardBondLevels[__GetCardBondLevelIndices(cardBond.name)[level]].value.cardLevels, totalCardLevels = 0;
+            cardRanks = _cardBondLevels[__GetCardBondLevelIndices(cardBond.name)[level]].value.cardRanks, totalCardRanks = 0;
 
         bool result = false;
         foreach (var cardName in cardBond.cardNames)
         {
-            totalCardLevels += __GetCardLevel(cardName, out _);
-            if (totalCardLevels >= cardLevels)
+            totalCardRanks += __GetCardRank(cardName, out _);
+            if (totalCardRanks >= cardRanks)
             {
                 result = true;
 

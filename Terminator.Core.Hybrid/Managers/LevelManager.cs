@@ -540,6 +540,8 @@ public partial class LevelManager : MonoBehaviour
 
     private IEnumerator __Quit(float time)
     {
+        ZG.PrefabLoaderSettings.ReleaseAllRightNow();
+        
         yield return new WaitForSecondsRealtime(time);
         
         __ClearTimeScales();

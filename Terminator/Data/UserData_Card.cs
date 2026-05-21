@@ -121,9 +121,9 @@ public struct UserCardBond
     public struct Level
     {
         /// <summary>
-        /// 需要达到卡牌总等级才能升级
+        /// 需要达到卡牌总星级才能升级
         /// </summary>
-        public int cardLevels;
+        public int cardRanks;
 
         public UserPropertyData property;
     }

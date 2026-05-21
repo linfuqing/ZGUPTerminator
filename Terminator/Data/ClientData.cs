@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Networking.Transport;
+using Unity.Networking.Transport.TLS;
 using UnityEngine;
 using ZG;
 using NetworkPipelineStage = ZG.NetworkPipelineStage;
@@ -586,6 +587,8 @@ public class ClientData : MonoBehaviour, IClientData
     [SerializeField]
     internal ushort _port = 1386;
     [SerializeField] 
+    internal string _serverName = "socket.chicken.zero3d.cn";
+    [SerializeField] 
     internal NetworkPipelineStage[] _stages = new NetworkPipelineStage[]
     {
         NetworkPipelineStage.Fragmentation,
@@ -623,17 +626,28 @@ public class ClientData : MonoBehaviour, IClientData
             {
                 __entity = entityManager.CreateSingleton<NetworkClientDriver>();
 
-                var driver = new NetworkClientDriver(
-                    Allocator.Persistent, 
+                var settings = new NetworkSettings(Allocator.Temp);
+                
+                settings.WithNetworkConfigParameters(
                     _connectTimeoutMS,
                     _maxConnectAttempts,
                     _disconnectTimeoutMS,
-                    _heartbeatTimeoutMS, 
+                    _heartbeatTimeoutMS,
                     _reconnectionTimeoutMS,
-                    Mathf.CeilToInt(Time.maximumDeltaTime * 1000), //_maxFrameTimeMS, 
-                    _fixedFrameTimeMS, 
-                    _receiveQueueCapacity, 
+                    Mathf.CeilToInt(Time.maximumDeltaTime * 1000),
+                    _fixedFrameTimeMS,
+                    _receiveQueueCapacity,
                     _sendQueueCapacity);
+
+                var caCertificate = GameConstantManager.Get("ReplyServerCACertificate");
+                if(caCertificate == null)
+                    settings.WithSecureClientParameters(_serverName);
+                else
+                    settings.WithSecureClientParameters(_serverName, caCertificate);
+
+                var driver = new NetworkClientDriver(
+                    settings, 
+                    Allocator.Persistent);
 
                 using (var stages = new NativeArray<NetworkPipelineStage>(_stages, Allocator.Temp))
                     __pipelineIndex = driver.CreatePipeline(stages);
