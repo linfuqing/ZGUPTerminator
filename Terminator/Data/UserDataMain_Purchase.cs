@@ -151,6 +151,7 @@ public partial class UserDataMain
             {
                 case PurchaseType.Level:
                 case PurchaseType.LimitedTime:
+                case PurchaseType.DailyGiftPack:
                     result.exp = UserData.chapter;
                     break;
                 case PurchaseType.GoldBank:
@@ -251,6 +252,7 @@ public partial class UserDataMain
                     {
                         case PurchaseType.Level:
                         case PurchaseType.LimitedTime:
+                        case PurchaseType.DailyGiftPack:
                             if (UserData.chapter < purchaseItem.exp)
                                 break;
                             

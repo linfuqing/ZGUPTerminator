@@ -35,6 +35,11 @@ public enum PurchaseType
     //限时礼包，分为0，1两个挡位
     LimitedTime, 
     
+    /// <summary>
+    /// 每日礼包，0购买全部，1、2、3代表其它3个挡位
+    /// </summary>
+    DailyGiftPack, 
+    
     //活动预留
     Other
 }
@@ -320,6 +325,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
             case PurchaseType.GoldBank:
+            case PurchaseType.DailyGiftPack:
                 seconds = output.GetDeadline(ticks);
                 seconds = (int)(((seconds == 0
                         ? DateTime.Today.ToUniversalTime()

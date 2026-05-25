@@ -66,12 +66,12 @@ public partial interface IUserData
         public Status status;
         
         /// <summary>
-        /// 存钱罐当前的金币或者钻石&章节礼包当前的章节数
+        /// 存钱罐当前的金币或者钻石&章节礼包&每日礼包当前的章节数
         /// </summary>
         public int exp;
 
         /// <summary>
-        /// 存钱罐需要的金币或者钻石&章节礼包需要达到的章节数
+        /// 存钱罐需要的金币或者钻石&章节礼包&每日礼包需要达到的章节数
         /// </summary>
         public int expMax;
 
