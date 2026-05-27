@@ -465,6 +465,10 @@ public class GameMain : GameUser
                 };
 
                 ContentDeliveryGlobalState.PathRemapFunc = remapFunc;
+                
+                #if DEBUG
+                ContentDeliveryGlobalState.LogFunc = Debug.Log;
+                #endif
 
                 var catalogPath = remapFunc(RuntimeContentManager.RelativeCatalogPath);
                 RuntimeContentManager.LoadLocalCatalogData(catalogPath,

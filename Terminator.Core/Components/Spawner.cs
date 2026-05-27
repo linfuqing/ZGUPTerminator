@@ -145,7 +145,7 @@ public struct SpawnerAttribute
         SpawnerAttribute result;
         result.flag = x.flag;
         
-        if (y.level > math.FLT_MIN_NORMAL)
+        if (math.abs(y.level) > math.FLT_MIN_NORMAL)
         {
             result.level = x.level * y.level;
             result.levelMax = x.levelMax * y.level;
@@ -154,11 +154,11 @@ public struct SpawnerAttribute
         else
         {
             result.level = x.level;
-            result.levelMax = x.levelMax;
-            result.levelBuff = x.levelBuff;
+            result.levelMax = 0.0f;
+            result.levelBuff = 0.0f;
         }
 
-        if (y.exp > math.FLT_MIN_NORMAL)
+        if (math.abs(y.exp) > math.FLT_MIN_NORMAL)
         {
             result.exp = x.exp * y.exp;
             result.expMax = x.expMax * y.exp;
@@ -167,11 +167,11 @@ public struct SpawnerAttribute
         else
         {
             result.exp = x.exp;
-            result.expMax = x.expMax;
-            result.expBuff = x.expBuff;
+            result.expMax = 0.0f;
+            result.expBuff = 0.0f;
         }
         
-        if (y.gold > math.FLT_MIN_NORMAL)
+        if (math.abs(y.gold) > math.FLT_MIN_NORMAL)
         {
             result.gold = x.gold * y.gold;
             result.goldMax = x.goldMax * y.gold;
@@ -180,8 +180,8 @@ public struct SpawnerAttribute
         else
         {
             result.gold = x.gold;
-            result.goldMax = x.goldMax;
-            result.goldBuff = x.goldBuff;
+            result.goldMax = 0.0f;//x.goldMax;
+            result.goldBuff = 0.0f;//x.goldBuff;
         }
         
         float hp, damageScale;
@@ -196,7 +196,7 @@ public struct SpawnerAttribute
             damageScale = y.damageScale;
         }
         
-        if (hp > math.FLT_MIN_NORMAL)
+        if (math.abs(hp) > math.FLT_MIN_NORMAL)
         {
             result.hp = x.hp * hp;
             result.hpMax = x.hpMax * hp;
@@ -205,11 +205,11 @@ public struct SpawnerAttribute
         else
         {
             result.hp = x.hp;
-            result.hpMax = x.hpMax;
-            result.hpBuff = x.hpBuff;
+            result.hpMax = 0.0f;
+            result.hpBuff = 0.0f;
         }
 
-        if (damageScale > math.FLT_MIN_NORMAL)
+        if (math.abs(damageScale) > math.FLT_MIN_NORMAL)
         {
             result.damageScale = x.damageScale * damageScale;
             result.damageScaleMax = x.damageScaleMax * damageScale;
@@ -218,11 +218,11 @@ public struct SpawnerAttribute
         else
         {
             result.damageScale = x.damageScale;
-            result.damageScaleMax = x.damageScaleMax;
-            result.damageScaleBuff = x.damageScaleBuff;
+            result.damageScaleMax = 0.0f;
+            result.damageScaleBuff = 0.0f;
         }
         
-        if (y.speedScale > math.FLT_MIN_NORMAL)
+        if (math.abs(y.speedScale) > math.FLT_MIN_NORMAL)
         {
             result.speedScale = x.speedScale * y.speedScale;
             result.speedScaleMax = x.speedScaleMax * y.speedScale;
@@ -231,8 +231,8 @@ public struct SpawnerAttribute
         else
         {
             result.speedScale = x.speedScale;
-            result.speedScaleMax = x.speedScaleMax;
-            result.speedScaleBuff = x.speedScaleBuff;
+            result.speedScaleMax = 0.0f;
+            result.speedScaleBuff = 0.0f;
         }
 
         result.interval = x.interval;
