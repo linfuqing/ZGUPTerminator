@@ -740,7 +740,7 @@ public partial class UserDataMain
 
         PlayerPrefs.DeleteKey(levelKey);
         
-        UserDataMain.gold += gold;
+        goldUnsafe += gold;
 
         UserReward reward;
         reward.name = string.Empty;

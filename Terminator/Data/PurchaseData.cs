@@ -35,9 +35,7 @@ public enum PurchaseType
     //限时礼包，分为0，1两个挡位
     LimitedTime, 
     
-    /// <summary>
-    /// 每日礼包，0购买全部，1、2、3代表其它3个挡位
-    /// </summary>
+    //每日礼包，0购买全部，1、2、3代表其它3个挡位
     DailyGiftPack, 
     
     //活动预留

@@ -90,9 +90,16 @@ public sealed partial class UserDataMain : MonoBehaviour
 
     private const string NAME_SPACE_USER_GOLD = "UserGold";
 
-    public static int gold
+    public static int goldUnsafe
     {
         get => PlayerPrefs.GetInt(NAME_SPACE_USER_GOLD);
+
+        set => PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
+    }
+
+    public static int gold
+    {
+        get => goldUnsafe;
 
         set
         {
@@ -102,10 +109,10 @@ public sealed partial class UserDataMain : MonoBehaviour
             else if(result < 0)
                 __AppendQuest(UserQuest.Type.GoldsToUse, -result);
 
-            PlayerPrefs.SetInt(NAME_SPACE_USER_GOLD, value);
+            goldUnsafe = value;
         }
     }
-
+    
     private const string NAME_SPACE_USER_EXP = "UserExp";
 
     public static int exp
