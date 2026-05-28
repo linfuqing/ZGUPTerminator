@@ -112,6 +112,13 @@ public struct SpawnerAttribute
         public float level;
         public float exp;
         public float gold;
+
+        public bool isVail => math.abs(speedScale) > math.FLT_MIN_NORMAL || 
+                       math.abs(damageScale) > math.FLT_MIN_NORMAL || 
+                       math.abs(hp) > math.FLT_MIN_NORMAL || 
+                       math.abs(level) > math.FLT_MIN_NORMAL || 
+                       math.abs(exp) > math.FLT_MIN_NORMAL || 
+                       math.abs(gold) > math.FLT_MIN_NORMAL;
     }
 
     public Flag flag;
@@ -142,6 +149,9 @@ public struct SpawnerAttribute
 
     public static SpawnerAttribute operator *(in SpawnerAttribute x, in Scale y)
     {
+        if (!y.isVail)
+            return x;
+        
         SpawnerAttribute result;
         result.flag = x.flag;
         
