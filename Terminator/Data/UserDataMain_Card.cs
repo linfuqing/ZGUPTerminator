@@ -770,8 +770,9 @@ public partial class UserDataMain
         if (maxTimes < 1)
             maxTimes = int.MaxValue;
 
+        int i;
         CardLevel cardLevel;
-        for (int i = 0; i < maxTimes; ++i)
+        for (i = 0; i < maxTimes; ++i)
         {
             cardLevel = _cardLevels[levelIndices[level]];
             if (cardLevel.gold > gold)
@@ -783,6 +784,13 @@ public partial class UserDataMain
                 break;
         }
         
+        if(i < 1)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
+
         PlayerPrefs.SetInt(levelKey, level);
         //PlayerPrefs.SetInt(countKey, count - cardLevel.count);
 
@@ -829,8 +837,15 @@ public partial class UserDataMain
             if (++rank >= rankIndices.Count)
                 break;
         }
+        
+        if(i < 1)
+        {
+            onComplete(false);
+            
+            yield break;
+        }
 
-        __AppendQuest(UserQuest.Type.CardToUprank, i + 1);
+        __AppendQuest(UserQuest.Type.CardToUprank, i);
 
         PlayerPrefs.SetInt(rankKey, rank);
         PlayerPrefs.SetInt(countKey, count);
