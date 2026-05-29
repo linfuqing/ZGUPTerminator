@@ -370,7 +370,7 @@ public class GameManager : MonoBehaviour
             destination.onTitle?.Invoke(data.name);
             destination.onDetail?.Invoke(data.text);
             if(data.ticks > DateTime.UtcNow.Ticks)
-                destination.onDealLine?.Invoke(new DateTime(data.ticks).ToLocalTime().ToString(_dealLineFormat));
+                destination.onDealLine?.Invoke(new DateTime(data.ticks, DateTimeKind.Local).ToString(_dealLineFormat));
 
             if (data.rewards != null && data.rewards.Length > 0)
             {
