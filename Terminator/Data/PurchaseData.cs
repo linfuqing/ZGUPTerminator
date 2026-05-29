@@ -316,9 +316,9 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 seconds = output.GetDeadline(ticks);
                 DateTime today = seconds == 0
                     ? DateTime.Today
-                    : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks).ToLocalTime();
+                    : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks);
                 
-                seconds = (int)((today.AddDays(1 - today.Day).Date.AddMonths(1).ToUniversalTime().Ticks - ticks) / TimeSpan.TicksPerSecond);
+                seconds = (int)((today.AddDays(1 - today.Day).Date.AddMonths(1).Ticks - ticks) / TimeSpan.TicksPerSecond);
                 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
@@ -327,7 +327,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                 seconds = output.GetDeadline(ticks);
                 seconds = (int)(((seconds == 0
                         ? DateTime.Today
-                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks)/*.ToLocalTime()*/).AddDays(1).ToUniversalTime()
+                        : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks)/*.ToLocalTime()*/).AddDays(1)
                     /*.ToUniversalTime()*/.Ticks - ticks) / TimeSpan.TicksPerSecond);
 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
