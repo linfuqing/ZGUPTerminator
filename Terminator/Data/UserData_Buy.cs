@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using UnityEngine;
 
 public enum UserCurrencyType
 {
@@ -87,6 +88,36 @@ public partial interface IUserData
     /// <param name="onComplete"></param>
     /// <returns></returns>
     IEnumerator BuyEnergies(uint userID, Action<bool> onComplete);
+
+    public struct Products
+    {
+        [Serializable]
+        public struct Refresh
+        {
+            public string name;
+            
+            /// <summary>
+            /// 对应什么类型商品
+            /// </summary>
+            public UserProduct.Type productType;
+            
+            /// <summary>
+            /// 花什么刷新
+            /// </summary>
+            public UserCurrencyType currencyType;
+
+            /// <summary>
+            /// 价钱
+            /// </summary>
+            public int price;
+        }
+
+        /// <summary>
+        /// 剩余刷新次数
+        /// </summary>
+        public Refresh[] refreshes;
+        public UserProduct[] products;
+    }
     
     /// <summary>
     /// 查询每日商品
@@ -94,7 +125,16 @@ public partial interface IUserData
     /// <param name="userID"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator QueryProducts(uint userID, Action<Memory<UserProduct>> onComplete);
+    IEnumerator QueryProducts(uint userID, Action<Products> onComplete);
+
+    /// <summary>
+    /// 刷新商品
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="type"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator RefreshProducts(uint userID, UserProduct.Type type, Action<Memory<UserProduct>> onComplete);
     
     /// <summary>
     /// 购买每日商品

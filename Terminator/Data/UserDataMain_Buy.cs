@@ -159,7 +159,7 @@ public partial class UserDataMain
             return $"{value}{UserData.SEPARATOR}{bits}";
         }
     }
-    
+
     [SerializeField]
     internal Product[] _products;
     
@@ -168,15 +168,62 @@ public partial class UserDataMain
     internal string _productsPath;
 #endif
 
-    public IEnumerator QueryProducts(uint userID, Action<Memory<UserProduct>> onComplete)
+    [SerializeField] 
+    internal IUserData.Products.Refresh[] _productRefreshes;
+
+    public IEnumerator QueryProducts(uint userID, Action<IUserData.Products> onComplete)
     {
         yield return __CreateEnumerator();
 
+        IUserData.Products result;
+        List<int> refreshCounts = null;
+        List<IUserData.Products.Refresh> refreshes = null;
+        if (_productRefreshes != null)
+        {
+            int i;
+            foreach (var refresh in _productRefreshes)
+            {
+                refreshCounts ??= new List<int>();
+                for (i = refreshCounts.Count; i <= (int)refresh.productType; ++i)
+                    refreshCounts.Add(__GetRefreshProductCount((UserProduct.Type)i, out _));
+
+                i = refreshCounts[(int)refresh.productType];
+                if (i > 0)
+                    refreshCounts[(int)refresh.productType] = i - 1;
+                else
+                {
+                    refreshes ??= new List<IUserData.Products.Refresh>();
+                    refreshes.Add(refresh);
+                }
+            }
+        }
+        
+        result.refreshes = refreshes?.ToArray();
+
+        List<UserProduct> products = null;
+        __CollectProducts(ref products, UserProduct.Type.Normal);
+        __CollectProducts(ref products, UserProduct.Type.Day);
+        __CollectProducts(ref products, UserProduct.Type.Week);
+        __CollectProducts(ref products, UserProduct.Type.Month);
+
+        result.products = products.ToArray();
+        
+        onComplete(result);
+    }
+
+    public IEnumerator RefreshProducts(uint userID, UserProduct.Type type, Action<Memory<UserProduct>> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        if (!__RefreshProductSeed(type))
+        {
+            onComplete(default);
+            
+            yield break;
+        }
+        
         List<UserProduct> results = null;
-        __CollectProducts(ref results, UserProduct.Type.Normal);
-        __CollectProducts(ref results, UserProduct.Type.Day);
-        __CollectProducts(ref results, UserProduct.Type.Week);
-        __CollectProducts(ref results, UserProduct.Type.Month);
+        __CollectProducts(ref results, type);
         
         onComplete(results.ToArray());
     }
@@ -208,32 +255,7 @@ public partial class UserDataMain
 
                 if (index == bitIndex)
                 {
-                    switch (product.currencyType)
-                    {
-                        case UserCurrencyType.Gold:
-                            result = gold >= product.price;
-                            if (result)
-                                gold -= product.price;
-
-                            break;
-                        case UserCurrencyType.Diamond:
-                            result = diamond >= product.price;
-                            if (result)
-                                diamond -= product.price;
-
-                            break;
-                        case UserCurrencyType.Ad:
-                            result = AdvertisementData.Exchange(AdvertisementType.Product, product.name,
-                                NAME_SPACE_USER_PRODUCT_AD);
-                            break;
-                        case UserCurrencyType.Free:
-                            result = true;
-                            break;
-                        default:
-                            result = false;
-                            break;
-                    }
-
+                    result = __ApplyProductType(product.name, product.currencyType, product.price);
                     if (result)
                     {
                         if(UserProduct.Type.Normal != product.productType)
@@ -256,10 +278,44 @@ public partial class UserDataMain
         onComplete(null);
     }
 
-    public const string NAME_SPACE_USER_PRODUCT_SEED = "UserProductSeed";
-    public const string NAME_SPACE_USER_PRODUCT_SEED_DAY = "UserProductSeedDay";
-    public const string NAME_SPACE_USER_PRODUCT_SEED_WEEK = "UserProductSeedWeek";
-    public const string NAME_SPACE_USER_PRODUCT_SEED_MONTH = "UserProductSeedMonth";
+    private bool __ApplyProductType(string name, UserCurrencyType currencyType, int price)
+    {
+        bool result;
+        switch (currencyType)
+        {
+            case UserCurrencyType.Gold:
+                result = gold >= price;
+                if (result)
+                    gold -= price;
+
+                break;
+            case UserCurrencyType.Diamond:
+                result = diamond >= price;
+                if (result)
+                    diamond -= price;
+
+                break;
+            case UserCurrencyType.Ad:
+                result = AdvertisementData.Exchange(AdvertisementType.Product, name,
+                    NAME_SPACE_USER_PRODUCT_AD);
+                break;
+            case UserCurrencyType.Free:
+                result = true;
+                break;
+            default:
+                result = false;
+                break;
+        }
+
+        return result;
+    }
+
+    private const string NAME_SPACE_USER_PRODUCT_SEED = "UserProductSeed";
+
+    private string __GetProductTypeKey(UserProduct.Type type)
+    {
+        return $"{NAME_SPACE_USER_PRODUCT_SEED}{type}";
+    }
 
     private uint __ProductBitIndexToID(UserProduct.Type type, int bitIndex)
     {
@@ -275,36 +331,64 @@ public partial class UserDataMain
 
     private ProductSeed __GetProductSeed(UserProduct.Type type, out string key)
     {
+        key = __GetProductTypeKey(type);
+        
         ProductSeed seed;
         switch (type)
         {
             case UserProduct.Type.Day:
-                key = NAME_SPACE_USER_PRODUCT_SEED_DAY;
-                
                 seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).ToDay();
                 break;
             case  UserProduct.Type.Week:
-                key = NAME_SPACE_USER_PRODUCT_SEED_WEEK;
                 seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).ToWeek();
                 break;
             case  UserProduct.Type.Month:
-                key = NAME_SPACE_USER_PRODUCT_SEED_MONTH;
                 seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).ToMonth();
                 break;
             default:
-                key = NAME_SPACE_USER_PRODUCT_SEED;
                 seed = new Active<ProductSeed>(PlayerPrefs.GetString(key), ProductSeed.Parse).value;
                 break;
         }
         
         if (seed.value == 0)
         {
-            seed.value = DateTimeUtility.GetSeconds();
+            seed.value = (uint)UnityEngine.Random.Range(0, int.MaxValue);
             
             PlayerPrefs.SetString(key, new Active<ProductSeed>(seed).ToString());
         }
 
         return seed;
+    }
+
+    public const string NAME_SPACE_USER_PRODUCT_REFRESH_COUNT = "UserProductRefreshCount";
+
+    private int __GetRefreshProductCount(UserProduct.Type type, out string key)
+    {
+        key = $"{NAME_SPACE_USER_PRODUCT_REFRESH_COUNT}{type}";
+
+        return new Active<int>(PlayerPrefs.GetString(key), __Parse).ToDay();
+    }
+
+    private bool __RefreshProductSeed(UserProduct.Type type)
+    {
+        int count = __GetRefreshProductCount(type, out string key);
+        
+        foreach (var productRefresh in _productRefreshes)
+        {
+            if(productRefresh.productType != type || --count >= 0)
+                continue;
+
+            if (!__ApplyProductType(productRefresh.name, productRefresh.currencyType, productRefresh.price))
+                return false;
+        }
+        
+        ProductSeed seed;
+        seed.value = (uint)UnityEngine.Random.Range(0, int.MaxValue);
+        seed.bits = 0;
+
+        PlayerPrefs.SetString(__GetProductTypeKey(type), new Active<ProductSeed>(seed).ToString());
+
+        return true;
     }
 
     private void __CollectProducts(ref List<UserProduct> results, UserProduct.Type type)
@@ -355,9 +439,14 @@ public partial class UserData
         return UserDataMain.instance.BuyEnergies(userID, onComplete);
     }
     
-    public IEnumerator QueryProducts(uint userID, Action<Memory<UserProduct>> onComplete)
+    public IEnumerator QueryProducts(uint userID, Action<IUserData.Products> onComplete)
     {
         return UserDataMain.instance.QueryProducts(userID, onComplete);
+    }
+
+    public IEnumerator RefreshProducts(uint userID, UserProduct.Type type, Action<Memory<UserProduct>> onComplete)
+    {
+        return UserDataMain.instance.RefreshProducts(userID, type, onComplete);
     }
 
     public IEnumerator BuyProduct(uint userID, uint productID, Action<Memory<UserReward>> onComplete)

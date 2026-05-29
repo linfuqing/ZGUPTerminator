@@ -51,9 +51,9 @@ public struct UserQuest
         Talents = 1, 
         
         /// <summary>
-        /// 升级卡片
+        /// 升星卡片
         /// </summary>
-        CardToUpgrade = 2, 
+        CardToUprank = 2, 
         
         /// <summary>
         /// 获得技能卡数

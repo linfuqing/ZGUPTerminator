@@ -794,8 +794,6 @@ public partial class UserDataMain
 
         UserDataMain.flag = flag;
 
-        __AppendQuest(UserQuest.Type.CardToUpgrade, 1);
-        
         onComplete(true);
     }
 
@@ -818,9 +816,9 @@ public partial class UserDataMain
             maxTimes = int.MaxValue;
         
         string countKey = $"{NAME_SPACE_USER_CARD_COUNT}{card.name}";
-        int count = PlayerPrefs.GetInt(countKey);
+        int i, count = PlayerPrefs.GetInt(countKey);
         CardRank cardRank;
-        for (int i = 0; i < maxTimes; ++i)
+        for (i = 0; i < maxTimes; ++i)
         {
             cardRank = _cardRanks[rankIndices[rank]];
             if (cardRank.count > count)
@@ -831,6 +829,8 @@ public partial class UserDataMain
             if (++rank >= rankIndices.Count)
                 break;
         }
+
+        __AppendQuest(UserQuest.Type.CardToUprank, i + 1);
 
         PlayerPrefs.SetInt(rankKey, rank);
         PlayerPrefs.SetInt(countKey, count);
