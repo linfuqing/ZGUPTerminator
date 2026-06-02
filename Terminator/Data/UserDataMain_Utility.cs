@@ -29,8 +29,8 @@ public partial class UserDataMain
                 if ((_purchasePools[purchasePoolIndex].flag & PurchasePool.Flag.Hide) == PurchasePool.Flag.Hide)
                 {
                     PlayerPrefs.SetInt(key, reward.count);
-                    
-                    return __PurchasePool(purchasePoolIndex, reward.count, out _, outRewards);
+
+                    return __PurchasePool(purchasePoolIndex, reward.count, out _, outRewards, out _);
                 }
 
                 if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)
