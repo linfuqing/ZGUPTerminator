@@ -87,6 +87,9 @@ public partial class UserDataMain
 
         [Tooltip("抽一次可获得多少金币")]
         public int gold;
+
+        [Tooltip("持续时间")]
+        public int duration;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -158,6 +161,15 @@ public partial class UserDataMain
             set
             {
                 gold = value;
+            }
+        }
+        
+        [CSVField]
+        public int 卡池持续时间
+        {
+            set
+            {
+                duration = value;
             }
         }
 #endif
@@ -316,6 +328,7 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_PURCHASE_POOL_KEY = "UserPurchasePoolKey";
     private const string NAME_SPACE_USER_PURCHASE_POOL_GUARANTEED_TIMES = "UserPurchaseGuaranteedTimes";
     private const string NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES = "UserPurchasePoolFreeTimes";
+    private const string NAME_SPACE_USER_PURCHASE_POOL_SECOND = "UserPurchasePoolSecond";
     
     public IEnumerator QueryPurchases(
         uint userID,
@@ -337,13 +350,33 @@ public partial class UserDataMain
         UserPurchasePool userPurchasePool;
         PurchasePool purchasePool;
         Active<int> freeTimes;
-        int numPurchasePools = _purchasePools.Length;
+        string key;
+        int seconds, numPurchasePools = _purchasePools.Length;
         var userPurchasePools = new List<UserPurchasePool>();
         for (int i = 0; i < numPurchasePools; ++i)
         {
             purchasePool = _purchasePools[i];
             if((purchasePool.flag & PurchasePool.Flag.Hide) == PurchasePool.Flag.Hide)
                 continue;
+            
+            userPurchasePool.duration = purchasePool.duration;
+            if (purchasePool.duration > 0)
+            {
+                key = $"{NAME_SPACE_USER_PURCHASE_POOL_SECOND}{purchasePool.name}";
+                seconds = PlayerPrefs.GetInt(key);
+                if (seconds == 0)
+                {
+                    seconds = (int)DateTimeUtility.GetSeconds();
+                    
+                    PlayerPrefs.SetInt(key, seconds);
+                }
+
+                seconds = (int)DateTimeUtility.GetSeconds() - seconds;
+                if(seconds > purchasePool.duration)
+                    continue;
+
+                userPurchasePool.duration -= seconds;
+            }
             
             userPurchasePool.name = purchasePool.name;
             userPurchasePool.id = __ToID(i);

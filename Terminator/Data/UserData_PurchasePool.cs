@@ -18,6 +18,9 @@ public struct UserPurchasePool
     
     //抽一次获得多少金币
     public int gold;
+
+    //剩余时间（秒），0为永久
+    public int duration;
 }
 
 public partial interface IUserData

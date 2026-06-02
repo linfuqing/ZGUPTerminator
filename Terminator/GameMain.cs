@@ -612,9 +612,13 @@ public class GameMain : GameUser
         }
         
         //PlayerSettings.WebGL.threadsSupport
+#if UNITY_WEBGL
+        Application.targetFrameRate = 45;
+#else
         Application.targetFrameRate = 60;
-        Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
+#endif
         //UnityEngine.Rendering.OnDemandRendering.renderFrameInterval = 2;
         
         while(!GameConstantManager.isInit)
