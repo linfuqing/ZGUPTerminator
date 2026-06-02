@@ -427,7 +427,7 @@ public partial class UserDataMain
         
         IUserData.PurchaseResult result;
         var rewards = new List<UserReward>();
-        if (__PurchasePool(__ToIndex(purchasePoolID), times, out result.guaranteedTimes, rewards))
+        if (__PurchasePool(__ToIndex(purchasePoolID), times, out result.guaranteedTimes, rewards, out var purchasePool))
         {
             List<UserItem> results = null;
             UserItem userItem;
@@ -445,7 +445,8 @@ public partial class UserDataMain
             
             flag &= ~Flag.PurchasesUnlockFirst;
 
-            __AppendQuest(UserQuest.Type.Purchase, times);
+            if((purchasePool.flag & PurchasePool.Flag.Hide) != PurchasePool.Flag.Hide)
+                __AppendQuest(UserQuest.Type.Purchase, times);
             
             result.items = results == null ? null : results.ToArray();
         }
@@ -457,9 +458,9 @@ public partial class UserDataMain
     
     private const string NAME_SPACE_USER_PURCHASE_POOL_TIMES = "UserPurchasePoolTimes";
     
-    private bool __PurchasePool(int purchasePoolIndex, int times, out int guaranteedTimes, List<UserReward> outRewards)
+    private bool __PurchasePool(int purchasePoolIndex, int times, out int guaranteedTimes, List<UserReward> outRewards, out PurchasePool purchasePool)
     {
-        var purchasePool = _purchasePools[purchasePoolIndex];
+        purchasePool = _purchasePools[purchasePoolIndex];
         string guaranteedTimesKey = $"{NAME_SPACE_USER_PURCHASE_POOL_GUARANTEED_TIMES}{purchasePool.name}", 
             freeTimeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}";
         var freeTimes = new Active<int>(PlayerPrefs.GetString(freeTimeKey), __Parse);
@@ -591,7 +592,6 @@ public partial class UserDataMain
             }
         }
     }
-
 }
 
 public partial class UserData
