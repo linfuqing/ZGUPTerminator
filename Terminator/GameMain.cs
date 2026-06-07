@@ -610,15 +610,11 @@ public class GameMain : GameUser
             
             PlayerPrefs.SetInt(NAME_SPACE_PLAYER_PREF_VERSION, _playerPrefVersion);
         }
-        
-        //PlayerSettings.WebGL.threadsSupport
-#if UNITY_WEBGL
-        Application.targetFrameRate = 45;
-#else
+
         Application.targetFrameRate = 60;
 
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
-#endif
+        
         //UnityEngine.Rendering.OnDemandRendering.renderFrameInterval = 2;
         
         while(!GameConstantManager.isInit)
