@@ -13,6 +13,8 @@ public interface IAnalyticsEx : IAnalytics
 
     void StartLevel(string name);
 
+    void Rename(string name);
+
     void EnablePlayer();
     
     void DisablePlayer();
@@ -69,6 +71,14 @@ public class Analytics : MonoBehaviour, IAnalyticsEx
         foreach (var instance in instances)
         {
             instance.StartLevel(name);
+        }
+    }
+
+    public void Rename(string name)
+    {
+        foreach (var instance in instances)
+        {
+            instance.Rename(name);
         }
     }
 
@@ -277,6 +287,10 @@ public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
     }
 
     public virtual void StartLevel(string name)
+    {
+    }
+
+    public void Rename(string name)
     {
     }
 
