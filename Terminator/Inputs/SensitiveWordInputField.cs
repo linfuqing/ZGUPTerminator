@@ -10,6 +10,7 @@ public class SensitiveWordInputField : TMP_InputField
     internal UnityEvent _onSensitiveCheckFailed;
     
     private SubmitEvent __submitEvent;
+    private SubmitEvent __originEvent;
     private Coroutine __coroutine;
 
     public SensitiveWordInputField()
@@ -20,12 +21,22 @@ public class SensitiveWordInputField : TMP_InputField
     
     public override void OnSubmit(BaseEventData eventData)
     {
-        var submitEvent = onSubmit;
+        __originEvent = onSubmit;
         onSubmit = __submitEvent;
         base.OnSubmit(eventData);
-        onSubmit = submitEvent;
+        onSubmit = __originEvent;
+        __originEvent = null;
     }
 
+    public override void OnUpdateSelected(BaseEventData eventData)
+    {
+        __originEvent = onSubmit;
+        onSubmit = __submitEvent;
+        base.OnUpdateSelected(eventData);
+        onSubmit = __originEvent;
+        __originEvent = null;
+    }
+    
     protected override void OnDisable()
     {
         base.OnDisable();
@@ -58,6 +69,8 @@ public class SensitiveWordInputField : TMP_InputField
         
         if(string.IsNullOrEmpty(text))
             _onSensitiveCheckFailed?.Invoke();
+        else if(__originEvent != null)
+            __originEvent.Invoke(text);
         else
             onSubmit?.Invoke(text);
     }

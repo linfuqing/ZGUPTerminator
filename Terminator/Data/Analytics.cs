@@ -290,7 +290,7 @@ public abstract class AnalyticsBase : MonoBehaviour, IAnalyticsEx
     {
     }
 
-    public void Rename(string name)
+    public virtual void Rename(string name)
     {
     }
 
