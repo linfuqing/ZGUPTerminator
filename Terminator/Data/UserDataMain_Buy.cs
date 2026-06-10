@@ -366,20 +366,35 @@ public partial class UserDataMain
     {
         key = $"{NAME_SPACE_USER_PRODUCT_REFRESH_COUNT}{type}";
 
-        return new Active<int>(PlayerPrefs.GetString(key), __Parse).ToDay();
+        var result = new Active<int>(PlayerPrefs.GetString(key), __Parse);
+        switch (type)
+        {
+            case UserProduct.Type.Day:
+                return result.ToDay();
+            case UserProduct.Type.Week:
+                return result.ToWeek();
+            case UserProduct.Type.Month:
+                return result.ToMonth();
+        }
+
+        return 0;
     }
 
     private bool __RefreshProductSeed(UserProduct.Type type)
     {
-        int count = __GetRefreshProductCount(type, out string key);
+        int source = __GetRefreshProductCount(type, out string key), destination = source + 1;
         
         foreach (var productRefresh in _productRefreshes)
         {
-            if(productRefresh.productType != type || --count >= 0)
+            if(productRefresh.productType != type || --source >= 0)
                 continue;
 
             if (!__ApplyProductType(productRefresh.name, productRefresh.currencyType, productRefresh.price))
                 return false;
+
+            PlayerPrefs.SetString(key, new Active<int>(destination).ToString());
+            
+            break;
         }
         
         ProductSeed seed;
