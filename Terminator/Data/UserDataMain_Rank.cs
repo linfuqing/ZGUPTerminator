@@ -168,15 +168,6 @@ public partial class UserDataMain
         private set => PlayerPrefs.SetString(NAME_SPACE_USER_RANKED_POINTS, new Active<int>(value).ToString());
     }
 
-    private const string NAME_SPACE_USER_RANKED_PASS = "UserRankPass";
-
-    public static int rankedPass
-    {
-        get => new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_RANKED_PASS), __Parse).ToMonth();
-        
-        private set => PlayerPrefs.SetString(NAME_SPACE_USER_RANKED_PASS, new Active<int>(value).ToString());
-    }
-
     private const string NAME_SPACE_USER_RANKED_LIST_TOP = "UserRankListTop";
 
     private const string NAME_SPACE_USER_RANKED_LIST_POINTS = "UserRankListPoints";

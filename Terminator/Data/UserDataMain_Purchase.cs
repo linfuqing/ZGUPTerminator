@@ -382,6 +382,15 @@ public partial class UserDataMain
             out _);
     }
 
+    private const string NAME_SPACE_USER_PASS = "UserPass";
+
+    /*public static int rankedPass
+    {
+        get => new Active<int>(PlayerPrefs.GetString(NAME_SPACE_USER_PASS), __Parse).ToMonth();
+        
+        private set => PlayerPrefs.SetString(NAME_SPACE_USER_PASS, new Active<int>(value).ToString());
+    }*/
+
     public IEnumerator QueryPurchaseTokens(uint userID, IPurchaseData.Input[] inputs, Action<Memory<IUserData.PurchaseTokens>> onComplete)
     {
         yield return __CreateEnumerator();
@@ -435,10 +444,11 @@ public partial class UserDataMain
 
                     break;
                 case PurchaseType.Pass:
-                    result.exp = rankedPass;
+                    result.exp = __GetPass(input.level);
+                    
                     exp = result.exp;
 
-                    if (input.level == -1 && (output.ticks == 0 ||
+                    if (input.level < 0 && (output.ticks == 0 ||
                                               output.ticks + output.deadline * TimeSpan.TicksPerSecond <
                                               DateTime.UtcNow.Ticks))
                     {
@@ -544,7 +554,7 @@ public partial class UserDataMain
             case PurchaseType.Pass:
                 isWriteTimes = true;
                 
-                exp = rankedPass;
+                exp = __GetPass(level);
                 break;
             default:
                 yield break;
@@ -637,7 +647,7 @@ public partial class UserDataMain
                 exp = __GetChapterStageRewardCount();//UserData.chapter;
                 break;
             case PurchaseType.Pass:
-                exp = rankedPass;
+                exp = 0;//__GetPass(level);
                 break;
             default:
                 yield break;
@@ -649,7 +659,7 @@ public partial class UserDataMain
         foreach (var purchaseToken in _purchaseTokens)
         {
             if (purchaseToken.type == type && 
-                purchaseToken.exp <= exp)
+                PurchaseType.Pass == type ? purchaseToken.exp <= __GetPass(purchaseToken.level) : purchaseToken.exp <= exp)
             {
                 if (purchaseToken.level < 0 && PurchaseData.Exchange(type, purchaseToken.level, NAME_SPACE_USER_PURCHASE_ITEM))
                 {
@@ -695,6 +705,25 @@ public partial class UserDataMain
     {
         return parameters.Span[0];
     }
+
+    private static int __GetPassIndex(int level)
+    {
+        if (level < 0)
+            return -level;
+
+        return level / 2;
+    }
+    
+    private static int __GetPass(int level)
+    {
+        return new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_PASS}{__GetPassIndex(level)}"), __Parse).ToMonth();
+    }
+    
+    private static void __AddPass(int level, int value)
+    {
+        PlayerPrefs.SetString($"{NAME_SPACE_USER_PASS}{__GetPassIndex(level)}", new Active<int>(value + __GetPass(level)).ToString());
+    }
+
 }
 
 public partial class UserData

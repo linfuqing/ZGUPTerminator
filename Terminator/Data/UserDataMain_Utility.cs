@@ -306,18 +306,16 @@ public partial class UserDataMain
                 tip += reward.count;
                 key = null;
                 break;
-            case UserRewardType.RankedPoint:
+            case UserRewardType.Point:
                 id = 1;
                 rankedPoints += reward.count;
                 key = null;
                 break;
-            case UserRewardType.RankedPass:
+            default:
                 id = 1;
-                rankedPass += reward.count;
+                __AddPass(reward.type - UserRewardType.Pass, reward.count);
                 key = null;
                 break;
-            default:
-                return false;
         }
 
         if (!string.IsNullOrEmpty(key))
