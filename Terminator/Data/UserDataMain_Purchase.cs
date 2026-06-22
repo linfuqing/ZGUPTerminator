@@ -719,9 +719,12 @@ public partial class UserDataMain
         return new Active<int>(PlayerPrefs.GetString($"{NAME_SPACE_USER_PASS}{__GetPassIndex(level)}"), __Parse).ToMonth();
     }
     
-    private static void __AddPass(int level, int value)
+    private static void __AddPass(int index, int value)
     {
-        PlayerPrefs.SetString($"{NAME_SPACE_USER_PASS}{__GetPassIndex(level)}", new Active<int>(value + __GetPass(level)).ToString());
+        string key = $"{NAME_SPACE_USER_PASS}{index}";
+        var active = new Active<int>(PlayerPrefs.GetString(key), __Parse);
+        
+        PlayerPrefs.SetString(key, new Active<int>(value + active.ToMonth()).ToString());
     }
 
 }

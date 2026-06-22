@@ -401,7 +401,7 @@ public partial class LevelManager
                             __onSkillSelectionComplete = destination.onDisable == null ? null : destination.onDisable.Invoke;
                         });
 
-                        style.button.interactable = true;
+                        button.interactable = true;
                     }
 
                     if (__skillStyles == null)
