@@ -57,6 +57,7 @@ public partial struct LevelPickableSystem : ISystem
                 result.selection = skill.selection;
                 result.priorityToStyleIndex = skill.priorityToStyleIndex;
                 result.count = count;
+                result.timeScale = skill.timeScale;
                 for (int i = 0; i < count; ++i)
                 {
                     result.index = i;
