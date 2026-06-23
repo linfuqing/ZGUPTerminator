@@ -19,6 +19,7 @@ public class LevelPickableSkillAuthoring : MonoBehaviour
             instance.max = Mathf.Max(authoring._max, 1);
             instance.priorityToStyleIndex = authoring._priorityToStyleIndex;
             instance.selection = authoring._selection;
+            instance.timeScale = authoring._timeScale;
             /*instance.min = 3;
             instance.max = 3;
             instance.prorityToStyleIndex = 2;
@@ -42,5 +43,9 @@ public class LevelPickableSkillAuthoring : MonoBehaviour
     [SerializeField]
     [Tooltip("拾取后打开哪一个面板")]
     internal int _selection = -1;
+
+    [SerializeField]
+    [Tooltip("是否要暂停时间")]
+    internal float _timeScale = 0.0f;
 }
 #endif

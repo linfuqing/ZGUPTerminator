@@ -16,6 +16,7 @@ public partial struct LevelPickableSystem : ISystem
         public int priorityToStyleIndex;
         public int index;
         public int count;
+        public float timeScale;
         public Entity entity;
         public Entity version;
     }
@@ -260,7 +261,7 @@ public partial struct LevelPickableSystem : ISystem
                 if(version.index == 0)
                     ++version.value;
 
-                version.timeScale = 0.0f;
+                version.timeScale = result.timeScale;
                 version.entity = result.version;
 
                 versions[localPlayer] = version;

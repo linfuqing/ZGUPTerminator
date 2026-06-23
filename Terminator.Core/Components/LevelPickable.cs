@@ -7,6 +7,7 @@ public struct LevelPickableSkill : IComponentData, IEnableableComponent
     public int max;
     public int priorityToStyleIndex;
     public int selection;
+    public float timeScale;
 }
 
 public struct LevelPickableItem : IComponentData, IEnableableComponent
