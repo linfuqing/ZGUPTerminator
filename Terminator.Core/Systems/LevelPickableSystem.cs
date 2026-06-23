@@ -162,6 +162,9 @@ public partial struct LevelPickableSystem : ISystem
         public BufferLookup<SkillActiveIndex> skillActiveIndices;
         
         [ReadOnly]
+        public BufferLookup<LevelSkillMask> skillMasks;
+
+        [ReadOnly]
         public BufferLookup<LevelSkillGroup> skillGroups;
 
         [ReadOnly]
@@ -190,15 +193,18 @@ public partial struct LevelPickableSystem : ISystem
             
             skills.Clear();
 
-            //int i, numSkills, skillIndex, skillCount = 0;
+            int i, numSkills;
             var hash = math.aslong(time);
             var random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32));
             LevelSkill skill;
+            var skillOpcodes = this.skillOpcodes.TryGetBuffer(localPlayer, out var skillOpcodeList)
+                ? skillOpcodeList.AsNativeArray()
+                : default;
             var skillGroups = this.skillGroups.TryGetBuffer(localPlayer, out var skillGroupList)
                 ? skillGroupList.AsNativeArray()
                 : default;
-            var skillOpcodes = this.skillOpcodes.TryGetBuffer(localPlayer, out var skillOpcodeList)
-                ? skillOpcodeList.AsNativeArray()
+            var skillMasks = this.skillMasks.TryGetBuffer(localPlayer, out var skillMaskList)
+                ? skillMaskList.AsNativeArray()
                 : default;
             var skillActiveIndices = this.skillActiveIndices[localPlayer];
             while (results.TryDequeue(out Result result))
@@ -215,15 +221,29 @@ public partial struct LevelPickableSystem : ISystem
                     out version.priority, 
                     result.priorityToStyleIndex > 0 ? 1 : 0);
 
-                if (skills.Length < 1 && 
+                numSkills = skills.Length;
+                if (numSkills < 1 && 
                     (result.count == 1 || result.index == 0 || result.version != version.entity))
                     continue;
+
+                if (skillMasks.IsCreated)
+                {
+                    for (i = 0; i < numSkills; ++i)
+                    {
+                        if (!LevelSkillMask.Contains(skills[i].index, skillMasks))
+                            continue;
+
+                        skills[i--] = skills[--numSkills];
+                    }
+
+                    skills.ResizeUninitialized(numSkills);
+                }
 
                 if (result.priorityToStyleIndex > 0)
                 {
                     if (version.priority == 0 && !skills.IsEmpty)
                     {
-                        skill = skills[random.NextInt(skills.Length)];
+                        skill = skills[random.NextInt(numSkills)];
                             
                         skills.ResizeUninitialized(1);
                         skills[0] = skill;
@@ -231,7 +251,7 @@ public partial struct LevelPickableSystem : ISystem
                     
                     version.priority += result.priorityToStyleIndex;
                 }
-                else if (result.priorityToStyleIndex < 0 && version.priority == 0 && skills.Length == 1)
+                else if (result.priorityToStyleIndex < 0 && version.priority == 0 && numSkills == 1)
                     version.priority -= result.priorityToStyleIndex;
 
                 version.selection = result.selection;
@@ -266,6 +286,7 @@ public partial struct LevelPickableSystem : ISystem
 
     private BufferLookup<LevelSkill> __skills;
 
+    private BufferLookup<LevelSkillMask> __skillMasks;
     private BufferLookup<LevelSkillGroup> __skillGroups;
     private BufferLookup<LevelSkillOpcode> __skillOpcodes;
 
@@ -287,6 +308,7 @@ public partial struct LevelPickableSystem : ISystem
         __definitions = state.GetComponentLookup<LevelSkillDefinitionData>(true);
         __items = state.GetBufferLookup<LevelItem>();
         __skills = state.GetBufferLookup<LevelSkill>();
+        __skillMasks = state.GetBufferLookup<LevelSkillMask>(true);
         __skillGroups = state.GetBufferLookup<LevelSkillGroup>(true);
         __skillOpcodes =  state.GetBufferLookup<LevelSkillOpcode>(true);
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>(true);
@@ -336,6 +358,7 @@ public partial struct LevelPickableSystem : ISystem
         __versions.Update(ref state);
         __definitions.Update(ref state);
         __skills.Update(ref state);
+        __skillMasks.Update(ref state);
         __skillGroups.Update(ref state);
         __skillOpcodes.Update(ref state);
         __skillActiveIndices.Update(ref state);
@@ -345,6 +368,7 @@ public partial struct LevelPickableSystem : ISystem
         select.localPlayer = SystemAPI.GetSingleton<ThirdPersonPlayer>().ControlledCharacter;
         select.definitions = __definitions;
         select.skillActiveIndices = __skillActiveIndices;
+        select.skillMasks = __skillMasks;
         select.skillGroups = __skillGroups;
         select.skillOpcodes = __skillOpcodes;
         select.skills = __skills;

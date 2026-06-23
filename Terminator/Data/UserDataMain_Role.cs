@@ -17,6 +17,8 @@ public partial class UserDataMain
         
         [Tooltip("技能")]
         public string[] skillNames;
+
+        public string[] maskSkillNames;
         
 #if UNITY_EDITOR
         [CSVField]
@@ -167,6 +169,8 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_ROLE_COUNT = "UserRoleCount";
     private const string NAME_SPACE_USER_ROLE_RANK = "UserRoleRank";
     private const string NAME_SPACE_USER_ROLE_GROUP = "UserRoleGroup";
+    
+    private const string NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX = "UserRoleMaskSkillIndex";
     
     private const string NAME_SPACE_USER_ROLE_EXP = "UserRoleExp";
 
@@ -514,6 +518,15 @@ public partial class UserDataMain
         onComplete(true);
     }
 
+    public IEnumerator SetRoleMaskSkill(uint userID, uint roleID, int maskSkillIndex, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{_roles[__ToIndex(roleID)].name}", maskSkillIndex);
+
+        onComplete(true);
+    }
+
     public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
@@ -751,6 +764,7 @@ public partial class UserDataMain
         userRole.id = __ToID(roleIndex);
         userRole.name = role.name;
         userRole.rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
+        userRole.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{role.name}");
 
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
         int numRoleRankIndices = roleRankIndices.Count;
@@ -842,6 +856,11 @@ public partial class UserData
         return UserDataMain.instance.SetRoleGroup(userID, groupID, onComplete);
     }
 
+    public IEnumerator SetRoleMaskSkill(uint userID, uint roleID, int maskSkillIndex, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetRoleMaskSkill(userID, roleID, maskSkillIndex, onComplete);
+    }
+    
     public IEnumerator UprankRole(uint userID, uint roleID, Action<UserRole.Rank?> onComplete)
     {
         return UserDataMain.instance.UprankRole(userID, roleID, onComplete);

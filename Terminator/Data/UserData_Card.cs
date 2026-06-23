@@ -88,6 +88,11 @@ public struct UserCard
     /// </summary>
     public int count;
 
+    /// <summary>
+    /// 屏蔽技能索引，用来切流派
+    /// </summary>
+    public int maskSkillIndex;
+
     public float skillGroupDamage;
 
     public UserPropertyData property;
@@ -205,6 +210,16 @@ public partial interface IUserData
     /// </summary>
     IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete);
 
+    /// <summary>
+    /// 替换屏蔽技能，用来切换流派
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="cardID"></param>
+    /// <param name="maskSkillIndex"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator SetCardMaskSkill(uint userID, uint cardID, int maskSkillIndex, Action<bool> onComplete);
+    
     /// <summary>
     /// 装备卡组或卸下卡组(position为-1）
     /// </summary>

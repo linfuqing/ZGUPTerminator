@@ -54,6 +54,8 @@ public partial class UserDataMain
         
         public UserPropertyData property;
 
+        public string[] maskSkillNames;
+
 #if UNITY_EDITOR
         [CSVField]
         public string 卡牌名字
@@ -151,6 +153,15 @@ public partial class UserDataMain
 
                     property.skills[i] = skill;
                 }
+            }
+        }
+        
+        [CSVField]
+        public string 卡牌屏蔽技能
+        {
+            set
+            {
+                maskSkillNames = value.Split("/");
             }
         }
 #endif
@@ -418,7 +429,7 @@ public partial class UserDataMain
         }
 #endif
     }
-    
+
     [SerializeField] 
     internal Group[] _cardGroups;
     
@@ -446,6 +457,7 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_CARD_RANK = "UserCardRank";
     private const string NAME_SPACE_USER_CARD_GROUP = "UserCardGroup";
     private const string NAME_SPACE_USER_CARD_COUNT = "UserCardCount";
+    private const string NAME_SPACE_USER_CARD_MASK_SKILL_INDEX = "UserCardMaskSkillIndex";
     
     public IEnumerator QueryCards(
         uint userID,
@@ -588,6 +600,8 @@ public partial class UserDataMain
             userCard.styleID = __ToID(__GetCardStyleIndex(card.styleName));
             
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
+            
+            userCard.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
 
             userCard.skillGroupDamage = card.skillGroupDamage;
 
@@ -675,6 +689,8 @@ public partial class UserDataMain
 
             result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
+            result.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
+
             result.skillGroupDamage = card.skillGroupDamage;
             
             userCardGroups.Clear();
@@ -706,6 +722,15 @@ public partial class UserDataMain
         yield return __CreateEnumerator();
 
         PlayerPrefs.SetString(NAME_SPACE_USER_CARD_GROUP, _cardGroups[__ToIndex(groupID)].name);
+
+        onComplete(true);
+    }
+
+    public IEnumerator SetCardMaskSkill(uint userID, uint cardID, int maskSkillIndex, Action<bool> onComplete)
+    {
+        yield return __CreateEnumerator();
+
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{_cards[__ToIndex(cardID)].name}", maskSkillIndex);
 
         onComplete(true);
     }
@@ -1297,10 +1322,15 @@ public partial class UserData
     {
         return UserDataMain.instance.QueryCard(userID, cardIDs, onComplete);
     }
-    
+
     public IEnumerator SetCardGroup(uint userID, uint groupID, Action<bool> onComplete)
     {
         return UserDataMain.instance.SetCardGroup(userID, groupID, onComplete);
+    }
+
+    public IEnumerator SetCardMaskSkill(uint userID, uint cardID, int maskSkillIndex, Action<bool> onComplete)
+    {
+        return UserDataMain.instance.SetCardMaskSkill(userID, cardID, maskSkillIndex, onComplete);
     }
 
     public IEnumerator SetCard(uint userID, uint cardID, uint groupID, int position, Action<bool> onComplete)

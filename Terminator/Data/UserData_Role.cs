@@ -89,6 +89,8 @@ public struct UserRole
     /// </summary>
     public int rank;
 
+    public int maskSkillIndex;
+
     public float skillGroupDamage;
     
     public Rank[] ranks;
@@ -183,6 +185,16 @@ public partial interface IUserData
     /// 设置套装
     /// </summary>
     IEnumerator SetRoleGroup(uint userID, uint groupID, Action<bool> onComplete);
+
+    /// <summary>
+    /// 切换屏蔽技能，流派切换
+    /// </summary>
+    /// <param name="userID"></param>
+    /// <param name="roleID"></param>
+    /// <param name="maskSkillIndex"></param>
+    /// <param name="onComplete"></param>
+    /// <returns></returns>
+    IEnumerator SetRoleMaskSkill(uint userID, uint roleID, int maskSkillIndex, Action<bool> onComplete);
     
     /// <summary>
     /// 角色升星

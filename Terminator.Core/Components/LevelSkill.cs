@@ -560,6 +560,22 @@ public struct LevelSkill : IBufferElementData, IEnableableComponent
     }
 }
 
+public struct LevelSkillMask : IBufferElementData
+{
+    public int index;
+
+    public static bool Contains(int index, in NativeArray<LevelSkillMask> masks)
+    {
+        foreach (var mask in masks)
+        {
+            if(mask.index == index)
+                return true;
+        }
+
+        return false;
+    }
+}
+
 public struct LevelSkillGroup : IBufferElementData
 {
     public int value;

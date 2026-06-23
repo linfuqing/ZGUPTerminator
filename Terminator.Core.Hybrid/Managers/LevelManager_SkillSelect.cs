@@ -381,27 +381,35 @@ public partial class LevelManager
                         }
                     }
 
-                    var button = style.button;
-                    if (button != null && source.selectIndex != -1)
+                    if (source.selectIndex != -1)
                     {
-                        result = true;
-
-                        button.onClick.RemoveAllListeners();
-                        button.onClick.AddListener(() =>
+                        var button = style.button;
+                        if (button == null)
                         {
-                            button.interactable = false;
                             
-                            if (__skillSelectionGuideNames == null)
-                                __skillSelectionGuideNames = new HashSet<string>();
+                        }
+                        else
+                        {
+                            result = true;
 
-                            __skillSelectionGuideNames.Add(source.name);
+                            button.onClick.RemoveAllListeners();
+                            button.onClick.AddListener(() =>
+                            {
+                                button.interactable = false;
 
-                            skill = source;
+                                if (__skillSelectionGuideNames == null)
+                                    __skillSelectionGuideNames = new HashSet<string>();
 
-                            __onSkillSelectionComplete = destination.onDisable == null ? null : destination.onDisable.Invoke;
-                        });
+                                __skillSelectionGuideNames.Add(source.name);
 
-                        button.interactable = true;
+                                skill = source;
+
+                                __onSkillSelectionComplete =
+                                    destination.onDisable == null ? null : destination.onDisable.Invoke;
+                            });
+
+                            button.interactable = true;
+                        }
                     }
 
                     if (__skillStyles == null)

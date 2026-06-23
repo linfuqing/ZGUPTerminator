@@ -709,7 +709,7 @@ public partial class UserDataMain
     private static int __GetPassIndex(int level)
     {
         if (level < 0)
-            return -level;
+            level = -level - 1;
 
         return level / 2;
     }
