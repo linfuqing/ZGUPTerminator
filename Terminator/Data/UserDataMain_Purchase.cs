@@ -659,7 +659,7 @@ public partial class UserDataMain
         foreach (var purchaseToken in _purchaseTokens)
         {
             if (purchaseToken.type == type && 
-                PurchaseType.Pass == type ? purchaseToken.exp <= __GetPass(purchaseToken.level) : purchaseToken.exp <= exp)
+                (PurchaseType.Pass == type ? purchaseToken.exp <= __GetPass(purchaseToken.level) : purchaseToken.exp <= exp))
             {
                 if (purchaseToken.level < 0 && PurchaseData.Exchange(type, purchaseToken.level, NAME_SPACE_USER_PURCHASE_ITEM))
                 {
