@@ -144,6 +144,7 @@ public partial interface IUserData
         public string name;
         public int hpMax;
         public LayerMaskAndTagsAuthoring spawnerLayerMaskAndTags;
+        public string[] maskSkillNames;
         public Skill[] skills;
         public UserAttributeData[] attributes;
         
@@ -191,6 +192,10 @@ public partial interface IUserData
 
             playerProperty.instanceName = name;
 
+            playerProperty.maskSkillNames = default;
+            foreach (var maskSkillName in maskSkillNames)
+                playerProperty.maskSkillNames.Add(maskSkillName);
+            
             playerProperty.activeSkills = default;
             playerProperty.skillGroups = default;
             playerProperty.skillOpcodes = default;

@@ -10,6 +10,8 @@ public partial class UserDataMain
     internal struct Role
     {
         public string name;
+        
+        public string mainName;
 
         public int hpMax;
 
@@ -20,6 +22,8 @@ public partial class UserDataMain
 
         public string[] maskSkillNames;
         
+        public string actualName => string.IsNullOrEmpty(mainName) ? name : mainName;
+        
 #if UNITY_EDITOR
         [CSVField]
         public string 角色名称
@@ -27,6 +31,12 @@ public partial class UserDataMain
             set => name = value;
         }
         
+        [CSVField]
+        public string 角色主名称
+        {
+            set => mainName = value;
+        }
+
         [CSVField]
         public int 角色血量最大值
         {
@@ -43,6 +53,12 @@ public partial class UserDataMain
         public string 角色技能
         {
             set => skillNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
+        }
+        
+        [CSVField]
+        public string 角色屏蔽技能
+        {
+            set => maskSkillNames = string.IsNullOrEmpty(value) ? null : value.Split('/');
         }
 #endif
     }
@@ -522,7 +538,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        PlayerPrefs.SetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{_roles[__ToIndex(roleID)].name}", maskSkillIndex);
+        PlayerPrefs.SetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{_roles[__ToIndex(roleID)].actualName}", maskSkillIndex);
 
         onComplete(true);
     }
@@ -548,7 +564,7 @@ public partial class UserDataMain
 
         int roleIndex = __ToIndex(roleID);
         var role = _roles[roleIndex];
-        string rankKey = $"{NAME_SPACE_USER_ROLE_RANK}{role.name}";
+        string rankKey = $"{NAME_SPACE_USER_ROLE_RANK}{role.actualName}";
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
         int numRoleRanks = roleRankIndices == null ? 0 : roleRankIndices.Count, rank = PlayerPrefs.GetInt(rankKey);
         if (numRoleRanks <= rank)
@@ -559,7 +575,7 @@ public partial class UserDataMain
         }
 
         var roleRank = _roleRanks[roleRankIndices[rank]];
-        string countKey = $"{NAME_SPACE_USER_ROLE_COUNT}{role.name}";
+        string countKey = $"{NAME_SPACE_USER_ROLE_COUNT}{role.actualName}";
         int count = PlayerPrefs.GetInt(countKey);
         if(count < roleRank.count)
         {
@@ -654,7 +670,7 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
 
-        string roleName = _roles[__ToIndex(roleID)].name;
+        string roleName = _roles[__ToIndex(roleID)].actualName;
         int numTalents = _talents.Length;
             //roleRank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{roleName}"), 
             //roleCount = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{roleName}");
@@ -752,8 +768,9 @@ public partial class UserDataMain
         ref List<string> skillNames)
     {
         var role = _roles[roleIndex];
-        userRole.flag = (UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.name}");
-        userRole.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{role.name}");
+        var roleName = role.actualName;
+        userRole.flag = (UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{roleName}");
+        userRole.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{roleName}");
         if (userRole.flag == 0 && userRole.count == 0)
         {
             userRole = default;
@@ -763,8 +780,8 @@ public partial class UserDataMain
 
         userRole.id = __ToID(roleIndex);
         userRole.name = role.name;
-        userRole.rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{role.name}");
-        userRole.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{role.name}");
+        userRole.rank = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_RANK}{roleName}");
+        userRole.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{roleName}");
 
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
         int numRoleRankIndices = roleRankIndices.Count;
@@ -788,7 +805,7 @@ public partial class UserDataMain
         else
             userRole.rankDesc = default;*/
             
-        userRole.attributes = __CollectRoleAttributes(role.name, groupName, null, out userRole.skillGroupDamage)?.ToArray();
+        userRole.attributes = __CollectRoleAttributes(roleName, groupName, null, out userRole.skillGroupDamage)?.ToArray();
 
         if(userRoleGroupIDs == null) 
             userRoleGroupIDs = new List<uint>();

@@ -7,41 +7,6 @@ using ZG;
 public partial class UserDataMain
 {
     [Serializable]
-    internal struct Skill
-    {
-        public string name;
-
-        public string group;
-        
-#if UNITY_EDITOR
-        [CSVField]
-        public string 技能名字
-        {
-            set
-            {
-                name = value;
-            }
-        }
-        
-        [CSVField]
-        public string 技能组名字
-        {
-            set
-            {
-                group = value;
-            }
-        }
-#endif
-    }
-
-    [Header("Common")]
-    [SerializeField]
-    internal Skill[] _skills;
-
-    [SerializeField, CSV("_skills", guidIndex = -1, nameIndex = 0)]
-    internal string _skillsPath;
-
-    [Serializable]
     internal struct Card
     {
         public string name;
@@ -1097,21 +1062,6 @@ public partial class UserDataMain
             onComplete(null);
     }
     
-    private Dictionary<string, string> __skillToGroupNames;
-
-    private string __GetSkillGroupName(string skillName)
-    {
-        if (__skillToGroupNames == null)
-        {
-            __skillToGroupNames = new Dictionary<string, string>();
-
-            foreach (var skill in _skills)
-                __skillToGroupNames.Add(skill.name, skill.group);
-        }
-
-        return __skillToGroupNames.TryGetValue(skillName, out string skillGroupName) ? skillGroupName : null;
-    }
-
     private Dictionary<string, int> __cardGroupNameToIndices;
     
     private int __GetCardGroupIndex(string name)

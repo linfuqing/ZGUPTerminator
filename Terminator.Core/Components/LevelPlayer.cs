@@ -110,6 +110,8 @@ public struct LevelPlayerProperty
 
     public FixedString32Bytes instanceName;
 
+    public FixedList128Bytes<FixedString32Bytes> maskSkillNames;
+
     public FixedList4096Bytes<LevelPlayerActiveSkill> activeSkills;
     
     public FixedList4096Bytes<LevelPlayerSkillGroup> skillGroups;
@@ -126,6 +128,11 @@ public struct LevelPlayerProperty
         effectDamageScale = reader.ReadPackedFloat(streamCompressionModel);
         effectTargetRecovery = reader.ReadPackedFloat(streamCompressionModel);
         instanceName = reader.ReadFixedString32();
+
+        maskSkillNames = new FixedList128Bytes<FixedString32Bytes>();
+        int numMaskSkillNames = reader.ReadByte();
+        for (int i = 0; i < numMaskSkillNames; ++i)
+            maskSkillNames.Add(reader.ReadFixedString32());
         
         activeSkills = new FixedList4096Bytes<LevelPlayerActiveSkill>();
         LevelPlayerActiveSkill activeSkill;
@@ -170,6 +177,10 @@ public struct LevelPlayerProperty
         writer.WritePackedFloat(effectTargetRecovery, streamCompressionModel);
         writer.WriteFixedString32(instanceName);
         
+        writer.WriteByte((byte)maskSkillNames.Length);
+        foreach (var maskSkillName in maskSkillNames)
+            writer.WriteFixedString32(maskSkillName);
+
         writer.WriteByte((byte)activeSkills.Length);
         foreach (var activeSkill in activeSkills)
         {
