@@ -147,7 +147,7 @@ public partial class UserDataMain
                     break;
                 }
 
-                prerequisiteName = _skills[__GetSkillNameIndex(skillName)].prerequisiteName;
+                prerequisiteName = _skills[__GetSkillNameIndex(prerequisiteName)].prerequisiteName;
             } while (!string.IsNullOrEmpty(prerequisiteName));
 
             if(isContains)
