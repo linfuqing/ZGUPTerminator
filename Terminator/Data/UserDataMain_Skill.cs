@@ -119,7 +119,7 @@ public partial class UserDataMain
         if (__skillGroupIndices.TryGetValue(skillName, out int index))
             return index;
         
-        ref readonly var skill = ref _skills[__skillNameIndices[skillName]];
+        ref readonly var skill = ref _skills[__GetSkillNameIndex(skillName)];
 
         index = string.IsNullOrEmpty(skill.prerequisiteName) ? 0 : __GetSkillGroupIndex(skill.prerequisiteName) + 1;
         __skillGroupIndices[skillName] = index;
@@ -147,7 +147,7 @@ public partial class UserDataMain
                     break;
                 }
 
-                prerequisiteName = _skills[__skillNameIndices[skillName]].prerequisiteName;
+                prerequisiteName = _skills[__GetSkillNameIndex(skillName)].prerequisiteName;
             } while (!string.IsNullOrEmpty(prerequisiteName));
 
             if(isContains)
