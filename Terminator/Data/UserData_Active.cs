@@ -257,18 +257,22 @@ public struct UserActiveEvent
     public Reward[] rewards;
 }
 
+public struct UserSignIn
+{
+    public string name;
+    
+    public uint id;
+    
+    public int day;
+        
+    public UserActive[] actives;
+}
+
 public partial interface IUserData
 {
-    public struct SignIn
-    {
-        public int day;
-        
-        public UserActive[] actives;
-    }
-    
-    IEnumerator QuerySignIn(uint userID, Action<SignIn> onComplete);
+    IEnumerator QuerySignIn(uint userID, Action<Memory<UserSignIn>> onComplete);
 
-    IEnumerator CollectSignIn(uint userID, Action<Memory<UserReward>> onComplete);
+    IEnumerator CollectSignIn(uint userID, uint signInID, Action<Memory<UserReward>> onComplete);
 
     public struct Actives
     {

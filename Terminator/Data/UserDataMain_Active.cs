@@ -121,18 +121,50 @@ public partial class UserDataMain
     [SerializeField, CSV("_actives", guidIndex = -1, nameIndex = 0)] 
     internal string _activesPath;
 #endif
+
+    [Serializable]
+    internal struct SignIn
+    {
+        public string name;
+        
+        public string[] activeNames;
+        
+#if UNITY_EDITOR
+        [CSVField]
+        public string 签到名称
+        {
+            set => name = value;
+        }
+        
+        [CSVField]
+        public string 签到活跃名
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    activeNames = null;
+
+                    return;
+                }
+
+                activeNames = value.Split('/');
+            }
+        }
+#endif
+    }
     
     [SerializeField] 
-    internal string[] _signInActiveNames;
+    internal SignIn[] _signIns;
     
 #if UNITY_EDITOR
-    [SerializeField, CSV("_signInActiveNames", guidIndex = -1, nameIndex = 0)] 
-    internal string _signInActiveNamesPath;
+    [SerializeField, CSV("_signIns", guidIndex = -1, nameIndex = 0)] 
+    internal string _signInsPath;
 #endif
 
     public const string NAME_SPACE_USER_SIGN_IN_ACTIVE = "UserSignInActive";
     
-    public IEnumerator QuerySignIn(uint userID, Action<IUserData.SignIn> onComplete)
+    public IEnumerator QuerySignIn(uint userID, Action<Memory<UserSignIn>> onComplete)
     {
         yield return __CreateEnumerator();
 
@@ -141,42 +173,62 @@ public partial class UserDataMain
 
         int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), week = __ToWeek(day);
 
-        IUserData.SignIn result;
-        result.day = __ToDay(day);
-
-        int numSignInActives = _signInActiveNames.Length;
-        Active signInActive;
-        UserActive userActive;
-        result.actives = new UserActive[numSignInActives];
-        for (int i = 0; i < numSignInActives; ++i)
+        List<UserSignIn> results = null;
+        if (_signIns != null)
         {
-            signInActive = _actives[__GetActiveIndex(_signInActiveNames[i])];
-            userActive.name = signInActive.name;
-            userActive.id = __ToID(i);
-            userActive.flag =
-                PlayerPrefs.GetInt($"{NAME_SPACE_USER_SIGN_IN_ACTIVE}{signInActive.name}") > week
-                    ? UserActive.Flag.Collected
-                    : 0;
-            userActive.exp = signInActive.exp;
-            userActive.rewards = signInActive.rewards;
-            result.actives[i] = userActive;
+            UserSignIn result;
+            result.day = __ToDay(day);
+
+            Active signInActive;
+            UserActive userActive;
+            SignIn signIn;
+            int i, j, activeIndex, numSignInActives, numSignIns = _signIns == null ? 0 : _signIns.Length;
+            for(i = 0; i < numSignIns; ++i)
+            {
+                signIn = _signIns[i];
+                
+                result.name = signIn.name;
+                result.id = __ToID(i);
+                
+                numSignInActives = signIn.activeNames.Length;
+                result.actives = new UserActive[numSignInActives];
+                for (j = 0; j < numSignInActives; ++j)
+                {
+                    activeIndex = __GetActiveIndex(signIn.activeNames[j]);
+                    signInActive = _actives[activeIndex];
+                    userActive.name = signInActive.name;
+                    userActive.id = __ToID(activeIndex);
+                    userActive.flag =
+                        PlayerPrefs.GetInt($"{NAME_SPACE_USER_SIGN_IN_ACTIVE}{signInActive.name}") > week
+                            ? UserActive.Flag.Collected
+                            : 0;
+                    userActive.exp = signInActive.exp;
+                    userActive.rewards = signInActive.rewards;
+                    result.actives[j] = userActive;
+                }
+
+                results ??= new List<UserSignIn>();
+                results.Add(result);
+            }
         }
-        
-        onComplete(result);
+
+        onComplete(results?.ToArray());
     }
 
-    public IEnumerator CollectSignIn(uint userID, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectSignIn(uint userID, uint signID, Action<Memory<UserReward>> onComplete)
     {
         yield return __CreateEnumerator();
 
         int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), 
             week =__ToWeek(day);
         day = __ToDay(day);
-        
+
+
+        var sigin = _signIns[__ToIndex(signID)];
         string key;
         Active signInActive;
         List<UserRewardData> rewards = null;
-        foreach (var signInActiveName in _signInActiveNames)
+        foreach (var signInActiveName in sigin.activeNames)
         {
             signInActive = _actives[__GetActiveIndex(signInActiveName)];
             if(signInActive.exp > day)
@@ -1081,14 +1133,14 @@ public partial class UserDataMain
 
 public partial class UserData
 {
-    public IEnumerator QuerySignIn(uint userID, Action<IUserData.SignIn> onComplete)
+    public IEnumerator QuerySignIn(uint userID, Action<Memory<UserSignIn>> onComplete)
     {
         return UserDataMain.instance.QuerySignIn(userID, onComplete);
     }
 
-    public IEnumerator CollectSignIn(uint userID, Action<Memory<UserReward>> onComplete)
+    public IEnumerator CollectSignIn(uint userID, uint signInID, Action<Memory<UserReward>> onComplete)
     {
-        return UserDataMain.instance.CollectSignIn(userID, onComplete);
+        return UserDataMain.instance.CollectSignIn(userID, signInID, onComplete);
     }
 
     public IEnumerator QueryActives(uint userID, UserActiveType type, Action<IUserData.Actives> onComplete)

@@ -1147,7 +1147,7 @@ public partial class UserDataMain
 
         result.name = role.instanceName;
         result.hpMax = role.hpMax;
-        result.maskSkillNames = maskSkillNames.ToArray();
+        result.maskSkillNames = maskSkillNames?.ToArray();
         result.skills = skills.ToArray();
         result.attributes = attributes?.ToArray();
 
@@ -1194,10 +1194,10 @@ public partial class UserDataMain
                     {
                         if (PlayerPrefs.GetInt(
                                 $"{cardKeyPrefix}{card.name}",
-                                -1) != rolePosition)
+                                -1) != cardPosition)
                             continue;
 
-                        ++rolePosition;
+                        ++cardPosition;
 
                         maskSkillIndex =
                             PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
