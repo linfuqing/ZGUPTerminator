@@ -38,6 +38,9 @@ public partial struct LevelPlayerSystem : ISystem
         public BufferLookup<LevelSkillGroup> levelSkillGroups;
 
         [NativeDisableParallelForRestriction]
+        public BufferLookup<LevelSkillMask> levelSkillMasks;
+
+        [NativeDisableParallelForRestriction]
         public BufferLookup<SkillActiveIndex> skillActiveIndices;
 
         [NativeDisableParallelForRestriction]
@@ -103,6 +106,37 @@ public partial struct LevelPlayerSystem : ISystem
                 levelSkillNameDefinitions.TryGetComponent(player, out var levelSkillNameDefinition))
             {
                 ref var definition = ref levelSkillNameDefinition.definition.Value;
+                if (property.maskSkillNames.Length > 0 &&
+                    this.levelSkillMasks.TryGetBuffer(player, out var levelSkillMasks))
+                {
+                    LevelSkillMask levelSkillMask;
+                    int numSkills = definition.skills.Length, i;
+                    bool isClear = true;
+                    foreach (var maskSkillName in property.maskSkillNames)
+                    {
+                        for (i = 0; i < numSkills; ++i)
+                        {
+                            if (definition.skills[i] == maskSkillName)
+                                break;
+                        }
+
+                        if (i < numSkills)
+                        {
+                            if (isClear)
+                            {
+                                isClear = false;
+                                
+                                levelSkillMasks.Clear();
+                            }
+                            
+                            levelSkillMask.index = i;
+                            levelSkillMasks.Add(levelSkillMask);
+                        }
+                        else
+                            UnityEngine.Debug.LogError($"Skill {maskSkillName} can not been found!");
+                    }
+                }
+
                 if (property.activeSkills.Length > 0 &&
                     this.skillActiveIndices.TryGetBuffer(player, out var skillActiveIndices))
                 {
@@ -286,6 +320,8 @@ public partial struct LevelPlayerSystem : ISystem
 
     private BufferLookup<LevelSkillOpcode> __levelSkillOpcodes;
 
+    private BufferLookup<LevelSkillMask> __levelSkillMasks;
+
     private BufferLookup<SkillActiveIndex> __skillActiveIndices;
 
     private BufferLookup<MessageParameter> __messageParameters;
@@ -313,6 +349,7 @@ public partial struct LevelPlayerSystem : ISystem
         __instances = state.GetComponentLookup<Instance>();
         __levelSkillGroups = state.GetBufferLookup<LevelSkillGroup>();
         __levelSkillOpcodes = state.GetBufferLookup<LevelSkillOpcode>();
+        __levelSkillMasks = state.GetBufferLookup<LevelSkillMask>();
         __skillActiveIndices = state.GetBufferLookup<SkillActiveIndex>();
         __messageParameters = state.GetBufferLookup<MessageParameter>();
         __remoteIdentities =  state.GetComponentLookup<RemoteIdentity>();
@@ -390,14 +427,18 @@ public partial struct LevelPlayerSystem : ISystem
             
             if(LevelPlayerShared<LocalPlayer>.property.skillOpcodes.Length > 0)
                 entityManager.AddComponent<LevelSkillOpcode>(localPlayers);
+            
+            if(LevelPlayerShared<LocalPlayer>.property.maskSkillNames.Length > 0)
+                entityManager.AddComponent<LevelSkillMask>(localPlayers);
 
             //entityManager.AddComponent<EffectDamage>(players);
         }
         
         __levelSkillNameDefinitions.Update(ref state);
         __instances.Update(ref state);
-        __levelSkillGroups.Update(ref state);
         __levelSkillOpcodes.Update(ref state);
+        __levelSkillGroups.Update(ref state);
+        __levelSkillMasks.Update(ref state);
         __skillActiveIndices.Update(ref state);
         __messageParameters.Update(ref state);
         __remoteIdentities.Update(ref state);
@@ -417,6 +458,7 @@ public partial struct LevelPlayerSystem : ISystem
         apply.instances = __instances;
         apply.levelSkillOpcodes = __levelSkillOpcodes;
         apply.levelSkillGroups = __levelSkillGroups;
+        apply.levelSkillMasks = __levelSkillMasks;
         apply.skillActiveIndices = __skillActiveIndices;
         apply.messageParameters = __messageParameters;
         apply.remoteIdentities = __remoteIdentities;
