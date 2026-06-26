@@ -769,7 +769,7 @@ public partial class UserDataMain
     {
         var role = _roles[roleIndex];
         var roleName = role.actualName;
-        userRole.flag = (UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{roleName}");
+        userRole.flag = (UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.name}");
         userRole.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_COUNT}{roleName}");
         if (userRole.flag == 0 && userRole.count == 0)
         {
