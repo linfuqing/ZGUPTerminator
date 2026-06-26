@@ -117,7 +117,7 @@ public partial class LevelManager
 
     private List<int> __selectedSkillIndices;
 
-    private List<ResultSkillStyle> __resultSkillStyles;
+    private List<SkillStyle> __resultSkillStyles;
     private HashSet<string> __skillSelectionGuideNames;
 
     private Dictionary<string, Queue<Coroutine>> __skillSelectionCoroutines;
@@ -566,8 +566,31 @@ public partial class LevelManager
             if (style != null)
             {
                 style.SetAsset(asset, keyIcons);
-                
+
                 __SetSkillKeyStyles(style.keyStyles, keyNames, null);
+
+                if (style.parent != null && 
+                    !string.IsNullOrEmpty(value.parentName) &&
+                    SkillManager.TryGetAsset(value.parentName, out var parentAsset))
+                {
+                    style.onParent?.Invoke();
+                    
+                    var parentStyle = Instantiate(style.parent, style.parent.transform.parent);
+                    parentStyle.SetAsset(parentAsset);
+                    
+                    if (style.close == null)
+                        Destroy(parentStyle.gameObject, selection.destroyTime);
+                    else
+                    {
+                        var onClick = style.close.onClick;
+                        onClick.RemoveAllListeners();
+                        onClick.AddListener(__CloseSkillSelectionRightNow);
+
+                        __resultSkillStyles ??= new List<SkillStyle>();
+
+                        __resultSkillStyles.Add(parentStyle);
+                    }
+                }
 
                 if (style.close == null)
                     Destroy(style.gameObject, selection.destroyTime);
@@ -577,8 +600,7 @@ public partial class LevelManager
                     onClick.RemoveAllListeners();
                     onClick.AddListener(__CloseSkillSelectionRightNow);
 
-                    if (__resultSkillStyles == null)
-                        __resultSkillStyles = new List<ResultSkillStyle>();
+                    __resultSkillStyles ??= new List<SkillStyle>();
 
                     __resultSkillStyles.Add(style);
                 }
@@ -620,9 +642,16 @@ public partial class LevelManager
 
         if (__resultSkillStyles != null && __resultSkillStyles.Count > 0)
         {
-            foreach (var resultSkillStyle in __resultSkillStyles)
+            ResultSkillStyle resultSkillStyle;
+            foreach (var skillStyle in __resultSkillStyles)
+            {
+                resultSkillStyle = skillStyle as ResultSkillStyle;
+                if(resultSkillStyle == null)
+                    continue;
+                
                 resultSkillStyle.onFinish.Invoke();
-            
+            }
+
             while ((SkillSelectionStatus.Complete & __skillSelectionStatus) != SkillSelectionStatus.Complete)
                 yield return null;
         }

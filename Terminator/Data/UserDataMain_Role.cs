@@ -784,7 +784,7 @@ public partial class UserDataMain
         userRole.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_MASK_SKILL_INDEX}{roleName}");
 
         var roleRankIndices = __GetRoleRankIndices(roleIndex);
-        int numRoleRankIndices = roleRankIndices.Count;
+        int numRoleRankIndices = roleRankIndices == null ? 0 : roleRankIndices.Count;
         userRole.ranks = new UserRole.Rank[numRoleRankIndices];
         for (int i = 0; i < numRoleRankIndices; ++i)
         {

@@ -124,7 +124,9 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
-    { }
+    {
+        __simulationEventResults.Dispose();
+    }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)

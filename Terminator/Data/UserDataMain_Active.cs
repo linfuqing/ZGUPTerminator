@@ -222,8 +222,7 @@ public partial class UserDataMain
         int day = __GetQuest(UserQuest.Type.Login, ActiveType.Achievement), 
             week =__ToWeek(day);
         day = __ToDay(day);
-
-
+        
         var sigin = _signIns[__ToIndex(signID)];
         string key;
         Active signInActive;

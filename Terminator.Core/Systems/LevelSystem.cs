@@ -648,6 +648,7 @@ public partial struct LevelSystem : ISystem
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
+        __remotePositions.Dispose();
         __spawners.Dispose();
     }
 

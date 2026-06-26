@@ -163,6 +163,7 @@ public struct ReplyMessages : IComponentData
     public void Dispose()
     {
         __buffer.Dispose();
+        __invites.Dispose();
         __channelFlags.Dispose();
         __values.Dispose();
     }
