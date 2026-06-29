@@ -95,6 +95,8 @@ public partial class LevelManager
         public float destroyTime;
         
         public LevelSkillStyle style;
+
+        public SkillStyle resultParentStyle;
         
         public UnityEvent onEnable;
         public UnityEvent onDisable;
@@ -242,7 +244,7 @@ public partial class LevelManager
                 if(skill.selectIndex == -1)
                     continue;
                 
-                yield return __SelectSkill(i == endIndex, 0.0f, skill, null);
+                yield return __SelectSkill(i == endIndex, 0.0f, skill, null, null);
 
                 result = true;
             }
@@ -260,7 +262,7 @@ public partial class LevelManager
                     if (skill.selectIndex == -1)
                         continue;
 
-                    yield return __SelectSkill(i == endIndex, destination.destroyTime, skill, destination.name);
+                    yield return __SelectSkill(i == endIndex, destination.destroyTime, skill, destination.resultParentStyle, destination.name);
 
                     result = true;
                 }
@@ -438,7 +440,7 @@ public partial class LevelManager
                     while (skill == null)
                         yield return null;
                     
-                    yield return __SelectSkill(true, destination.destroyTime, skill.Value, destination.name);
+                    yield return __SelectSkill(true, destination.destroyTime, skill.Value, destination.resultParentStyle, destination.name);
 
                     if (__onSkillSelectionComplete != null)
                     {
@@ -503,7 +505,7 @@ public partial class LevelManager
         __skillSelectionStatus &= ~SkillSelectionStatus.Selecting;
     }
 
-    private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value, string selectionName)
+    private IEnumerator __SelectSkill(bool isEnd, float destroyTime, LevelSkillData value, SkillStyle parentStyle, string selectionName)
     {
         if (__skillStyles != null)
         {
@@ -569,13 +571,13 @@ public partial class LevelManager
 
                 __SetSkillKeyStyles(style.keyStyles, keyNames, null);
 
-                if (style.parent != null && 
+                if (parentStyle != null && 
                     !string.IsNullOrEmpty(value.parentName) &&
                     SkillManager.TryGetAsset(value.parentName, out var parentAsset))
                 {
                     style.onParent?.Invoke();
                     
-                    var parentStyle = Instantiate(style.parent, style.parent.transform.parent);
+                    parentStyle = Instantiate(parentStyle, parentStyle.transform.parent);
                     parentStyle.SetAsset(parentAsset);
                     
                     if (style.close == null)

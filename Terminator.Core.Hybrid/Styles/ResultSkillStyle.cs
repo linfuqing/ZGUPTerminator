@@ -7,6 +7,4 @@ public class ResultSkillStyle : SkillStyle
     public UnityEvent onFinish;
 
     public Button close;
-
-    public SkillStyle parent;
 }
