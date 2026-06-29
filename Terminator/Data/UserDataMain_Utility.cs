@@ -1209,6 +1209,8 @@ public partial class UserDataMain
                                 card.maskSkillNames == null || card.maskSkillNames.Length <= maskSkillIndex
                                     ? Array.Empty<string>()
                                     : new [] { card.maskSkillNames[maskSkillIndex] });
+
+                        break;
                     }
 
                     break;
