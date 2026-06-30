@@ -1009,7 +1009,7 @@ public partial class UserDataMain
                     continue;
 
                 ref var card = ref _cards[cardIndex];
-                maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{roleName}");
+                maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
                 if (maskSkillIndex < (card.maskSkillNames == null ? 0 : card.maskSkillNames.Length))
                 {
                     maskSkillNames ??= new List<string>();
