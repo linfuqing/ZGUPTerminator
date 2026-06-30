@@ -33,7 +33,7 @@ public partial class UserDataMain
                     return __PurchasePool(purchasePoolIndex, reward.count, out _, outRewards, out _);
                 }
 
-                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 0)
+                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 2)
                     UserDataMain.flag |= Flag.PurchasesUnlock;
 
                 break;
