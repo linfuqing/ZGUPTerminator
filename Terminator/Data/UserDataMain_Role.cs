@@ -845,23 +845,33 @@ public partial class UserDataMain
             ref var roleGroup = ref _roleGroups[i];
             
             key = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroup.name}";
-            if (PlayerPrefs.GetString(key) != role.name)
-                continue;
+            group.status = PlayerPrefs.GetString(key) == role.name
+                ? UserRole.Group.Status.Set
+                : UserRole.Group.Status.Unset;
+            group.groupID = __ToID(i);
 
             if (string.IsNullOrEmpty(role.mainName))
+            {
+                if(UserRole.Group.Status.Unset == group.status)
+                    continue;
+                
                 group.roleID = userRole.id;
+            }
             else
             {
                 key = PlayerPrefs.GetString(
                     $"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{roleGroup.name}{UserData.SEPARATOR}{role.name}");
 
-                if(string.IsNullOrEmpty(key))
-                    continue;
-
-                group.roleID = __ToID(__GetRoleIndex(key));
+                if (string.IsNullOrEmpty(key))
+                {
+                    if(UserRole.Group.Status.Unset == group.status)
+                        continue;
+                    
+                    group.roleID = userRole.id;
+                }
+                else
+                    group.roleID = __ToID(__GetRoleIndex(key));
             }
-
-            group.groupID = __ToID(i);
 
             userRoleGroups.Add(group);
         }

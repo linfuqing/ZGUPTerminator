@@ -75,6 +75,14 @@ public struct UserRole
 
     public struct Group
     {
+        public enum Status
+        {
+            Set, 
+            Unset
+        }
+        
+        public Status status;
+        
         /// <summary>
         /// 不一定等于UserRole.id，可能是皮肤
         /// </summary>
