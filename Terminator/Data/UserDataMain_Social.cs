@@ -175,15 +175,15 @@ public partial class UserDataMain
         
         int numRoles = _roles.Length;
         UserRole userRole;
-        List<uint> userRoleGroupIDs = null;
+        List<UserRole.Group> userRoleGroups = null;
         List<string> skillNames = null;
         for (i = 0; i < numRoles; ++i)
         {
-            if(!__ToUserRole(groupName, i, out userRole, ref userRoleGroupIDs, ref skillNames) || 
-               userRole.groupIDs == null || Array.IndexOf(userRole.groupIDs, groupID) == -1)
+            if(!__ToUserRole(groupName, i, out userRole, ref userRoleGroups, ref skillNames) || 
+               userRole.groups == null || !userRole.Contains(groupID))
                 continue;
 
-            userRole.groupIDs = new[] { groupID };
+            userRole.groups = new[] { new UserRole.Group { groupID = groupID, roleID = userRole.id } };
             result.role = userRole;
 
             break;

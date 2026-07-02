@@ -72,6 +72,16 @@ public struct UserRole
         /// </summary>
         public UserPropertyData property;
     }
+
+    public struct Group
+    {
+        /// <summary>
+        /// 不一定等于UserRole.id，可能是皮肤
+        /// </summary>
+        public uint roleID;
+        
+        public uint groupID;
+    }
     
     public string name;
     
@@ -106,9 +116,20 @@ public struct UserRole
     public string[] skillNames;
 
     /// <summary>
-    /// 被装备到的套装ID
+    /// 被装备到的套装
     /// </summary>
-    public uint[] groupIDs;
+    public Group[] groups;
+
+    public bool Contains(uint groupID)
+    {
+        foreach (var group in groups)
+        {
+            if (group.groupID == groupID)
+                return true;
+        }
+
+        return false;
+    }
 }
 
 public partial interface IUserData

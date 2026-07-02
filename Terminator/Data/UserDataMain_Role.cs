@@ -292,12 +292,12 @@ public partial class UserDataMain
 
         int numRoles = _roles.Length;
         UserRole userRole;
-        List<uint> userRoleGroupIDs = null;
+        List<UserRole.Group> userRoleGroups = null;
         List<string> skillNames = null;
         var userRoles = new List<UserRole>();
         for (i = 0; i < numRoles; ++i)
         {
-            if(__ToUserRole(groupName, i, out userRole, ref userRoleGroupIDs, ref skillNames))
+            if(__ToUserRole(groupName, i, out userRole, ref userRoleGroups, ref skillNames))
                 userRoles.Add(userRole);
         }
         
@@ -508,13 +508,13 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
-        List<uint> userRoleGroupIDs = null;
+        List<UserRole.Group> userRoleGroups = null;
         List<string> skillNames = null;
         if (__ToUserRole(
                 PlayerPrefs.GetString(NAME_SPACE_USER_ROLE_GROUP), 
                 __ToIndex(roleID), 
                 out var userRole, 
-                ref userRoleGroupIDs, 
+                ref userRoleGroups, 
                 ref skillNames))
         {
             onComplete(userRole);
@@ -546,15 +546,9 @@ public partial class UserDataMain
     public IEnumerator SetRole(uint userID, uint roleID, uint groupID, Action<bool> onComplete)
     {
         yield return __CreateEnumerator();
-        
-        string key =
-                $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[__ToIndex(groupID)].name}",
-            roleName = _roles[__ToIndex(roleID)].name;
-        if (PlayerPrefs.GetString(key) == roleName)
-            PlayerPrefs.DeleteKey(key);
-        else if(((UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{roleName}") & UserRole.Flag.Unlocked) == UserRole.Flag.Unlocked)
-            PlayerPrefs.SetString(key, roleName);
 
+        __SetRole(roleID, groupID);
+        
         onComplete(true);
     }
 
@@ -760,11 +754,42 @@ public partial class UserDataMain
         return __roleRankIndices[index];
     }
 
+    private const string NAME_SPACE_USER_ROLE_GROUP_SKIN = "UserRoleGroupSkin";
+
+    private bool __SetRole(uint roleID, uint groupID)
+    {
+        var role = _roles[__ToIndex(roleID)];
+        string groupName = _roleGroups[__ToIndex(groupID)].name, 
+            key =
+                $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}",
+            roleName = role.name;
+        if (PlayerPrefs.GetString(key) == roleName)
+        {
+            if (string.IsNullOrEmpty(role.mainName) || !__SetRole(__ToID(__GetRoleIndex(role.mainName)), groupID))
+                PlayerPrefs.DeleteKey(key);
+
+            return true;
+        }
+        
+        if (((UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{roleName}") &
+                  UserRole.Flag.Unlocked) == UserRole.Flag.Unlocked)
+        {
+            PlayerPrefs.SetString(key, roleName);
+
+            if (!string.IsNullOrEmpty(role.mainName))
+                PlayerPrefs.SetString($"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{groupName}{UserData.SEPARATOR}{role.mainName}", roleName);
+
+            return true;
+        }
+
+        return false;
+    }
+
     private bool __ToUserRole(
         string groupName, 
         int roleIndex, 
         out UserRole userRole, 
-        ref List<uint> userRoleGroupIDs, 
+        ref List<UserRole.Group> userRoleGroups, 
         ref List<string> skillNames)
     {
         var role = _roles[roleIndex];
@@ -807,23 +832,41 @@ public partial class UserDataMain
             
         userRole.attributes = __CollectRoleAttributes(roleName, groupName, null, out userRole.skillGroupDamage)?.ToArray();
 
-        if(userRoleGroupIDs == null) 
-            userRoleGroupIDs = new List<uint>();
+        if(userRoleGroups == null) 
+            userRoleGroups = new List<UserRole.Group>();
         else
-            userRoleGroupIDs.Clear();
+            userRoleGroups.Clear();
 
         string key;
+        UserRole.Group group;
         int numRoleGroups = _roleGroups.Length;
         for (int i = 0; i < numRoleGroups; ++i)
         {
-            key = $"{NAME_SPACE_USER_ROLE_GROUP}{_roleGroups[i].name}";
+            ref var roleGroup = ref _roleGroups[i];
+            
+            key = $"{NAME_SPACE_USER_ROLE_GROUP}{roleGroup.name}";
             if (PlayerPrefs.GetString(key) != role.name)
                 continue;
 
-            userRoleGroupIDs.Add(__ToID(i));
+            if (string.IsNullOrEmpty(role.mainName))
+                group.roleID = userRole.id;
+            else
+            {
+                key = PlayerPrefs.GetString(
+                    $"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{roleGroup.name}{UserData.SEPARATOR}{role.name}");
+
+                if(string.IsNullOrEmpty(key))
+                    continue;
+
+                group.roleID = __ToID(__GetRoleIndex(key));
+            }
+
+            group.groupID = __ToID(i);
+
+            userRoleGroups.Add(group);
         }
 
-        userRole.groupIDs = userRoleGroupIDs.ToArray();
+        userRole.groups = userRoleGroups.ToArray();
 
         if (skillNames == null)
             skillNames = new List<string>();
