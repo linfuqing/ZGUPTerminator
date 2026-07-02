@@ -850,7 +850,10 @@ public partial class UserDataMain
                 : UserRole.Group.Status.Unset;
             group.groupID = __ToID(i);
 
-            if (string.IsNullOrEmpty(role.mainName))
+            key = PlayerPrefs.GetString(
+                $"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{roleGroup.name}{UserData.SEPARATOR}{role.name}");
+
+            if (string.IsNullOrEmpty(key))
             {
                 if(UserRole.Group.Status.Unset == group.status)
                     continue;
@@ -858,20 +861,7 @@ public partial class UserDataMain
                 group.roleID = userRole.id;
             }
             else
-            {
-                key = PlayerPrefs.GetString(
-                    $"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{roleGroup.name}{UserData.SEPARATOR}{role.name}");
-
-                if (string.IsNullOrEmpty(key))
-                {
-                    if(UserRole.Group.Status.Unset == group.status)
-                        continue;
-                    
-                    group.roleID = userRole.id;
-                }
-                else
-                    group.roleID = __ToID(__GetRoleIndex(key));
-            }
+                group.roleID = __ToID(__GetRoleIndex(key));
 
             userRoleGroups.Add(group);
         }
