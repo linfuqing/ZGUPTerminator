@@ -594,7 +594,7 @@ public partial class LevelManager
                 {
                     Destroy(style.gameObject, selection.destroyTime);
 
-                    yield return selection.destroyTime;
+                    yield return new WaitForSecondsRealtime(selection.destroyTime);
                 }
                 else
                 {
