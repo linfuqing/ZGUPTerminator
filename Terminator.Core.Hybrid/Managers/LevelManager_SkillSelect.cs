@@ -591,7 +591,11 @@ public partial class LevelManager
                 }
 
                 if (style.close == null)
+                {
                     Destroy(style.gameObject, selection.destroyTime);
+
+                    yield return selection.destroyTime;
+                }
                 else
                 {
                     var onClick = style.close.onClick;
