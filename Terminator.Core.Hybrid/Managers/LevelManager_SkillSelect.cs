@@ -245,7 +245,7 @@ public partial class LevelManager
                 if (skill.selectIndex == -1)
                     continue;
 
-                yield return __SelectSkill(i == endIndex, destination.destroyTime, skill, destination.resultParentStyle,
+                yield return __SelectSkill(i == endIndex, 0.0f/*destination.destroyTime*/, skill, destination.resultParentStyle,
                     destination.name);
 
                 if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(skill.name)) &&
