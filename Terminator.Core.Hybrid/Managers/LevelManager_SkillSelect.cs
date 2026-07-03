@@ -233,239 +233,235 @@ public partial class LevelManager
         } while ((SkillSelectionStatus.Start & __skillSelectionStatus) != SkillSelectionStatus.Start);
             
         bool result = false;
-        int numSkills = skills.Length;
-        if (styleIndex == -1)
+        int guideSkillIndex = -1, guideIndex = -1, numSkills = skills.Length;
+        var destination = styleIndex == -1 ? default : _skillSelectionDatas[styleIndex];
+        if (destination.style == null)
         {
             int endIndex = numSkills - 1;
             LevelSkillData skill;
             for (int i = 0; i < numSkills; ++i)
             {
                 skill = skills[i];
-                if(skill.selectIndex == -1)
+                if (skill.selectIndex == -1)
                     continue;
-                
-                yield return __SelectSkill(i == endIndex, 0.0f, skill, null, null);
+
+                yield return __SelectSkill(i == endIndex, destination.destroyTime, skill, destination.resultParentStyle,
+                    destination.name);
+
+                if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(skill.name)) &&
+                    guideSkillIndex == -1)
+                {
+                    guideIndex = SkillSelectionGuide.IndexOf(_skillSelectionGuides, skill.name, true);
+                    if (guideIndex != -1)
+                        guideSkillIndex = i;
+                }
 
                 result = true;
             }
+            
+            if (guideSkillIndex != -1)
+                _onSkillSelectionGuide?.Invoke(guideIndex);
         }
         else
         {
-            var destination = _skillSelectionDatas[styleIndex];
-            if (destination.style == null)
+            destination.onEnable.Invoke();
+
+            bool isRecommend, isGuideRecommend = false;
+            SkillAsset asset;
+            string[] keyNames, oldKeyNames;
+            Sprite[] keyIcons;
+            LevelSkillStyle style;
+            LevelSkillData? skill = null;
+            List<LevelSkillKeyStyle> uprankKeyStyles = null;
+            Dictionary<string, int> uprankKeyCounts = null;
+            //List<int> recommendIndices = null;
+            for (int i = 0; i < numSkills; ++i)
             {
-                int endIndex = numSkills - 1;
-                LevelSkillData skill;
-                for (int i = 0; i < numSkills; ++i)
+                var source = skills[i];
+                if (!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keyIcons))
+                    continue;
+
+                if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
                 {
-                    skill = skills[i];
-                    if (skill.selectIndex == -1)
+                    if (source.selectIndex == -1 && destination.style.child == null)
                         continue;
 
-                    yield return __SelectSkill(i == endIndex, destination.destroyTime, skill, destination.resultParentStyle, destination.name);
-
-                    result = true;
+                    style = Instantiate(destination.style, destination.style.transform.parent);
                 }
-            }
-            else
-            {
-                destination.onEnable.Invoke();
-
-                bool isRecommend, isGuideRecommend = false;
-                int guideSkillIndex = -1, guideIndex = -1;
-                SkillAsset asset;
-                string[] keyNames, oldKeyNames;
-                Sprite[] keyIcons;
-                LevelSkillStyle style;
-                LevelSkillData? skill = null;
-                List<LevelSkillKeyStyle> uprankKeyStyles  = null;
-                Dictionary<string, int> uprankKeyCounts = null;
-                //List<int> recommendIndices = null;
-                for (int i = 0; i < numSkills; ++i)
+                else
                 {
-                    var source = skills[i];
-                    if(!SkillManager.TryGetAsset(source.name, out asset, out keyNames, out keyIcons))
-                        continue;
+                    style = __skillStyles[source.parentName];
+                    style = Instantiate(style.child, style.child.transform.parent);
+                }
 
-                    if (destination.style.child == null || string.IsNullOrEmpty(source.parentName))
+                style.SetAsset(asset, keyIcons);
+
+                if (string.IsNullOrEmpty(source.parentName) ||
+                    !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
+                    oldKeyNames = null;
+
+                if (uprankKeyCounts == null)
+                    uprankKeyCounts = style.uprankKeyStyle == null ? null : new Dictionary<string, int>();
+                else
+                    uprankKeyCounts.Clear();
+
+                isRecommend = __SetSkillKeyStyles(
+                    style.keyStyles,
+                    keyNames,
+                    oldKeyNames,
+                    uprankKeyCounts == null ? null : uprankKeyCounts.Add);
+                if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
+                {
+                    if (!isRecommend)
                     {
-                        if (source.selectIndex == -1 && destination.style.child == null)
-                            continue;
-
-                        style = Instantiate(destination.style, destination.style.transform.parent);
-                    }
-                    else
-                    {
-                        style = __skillStyles[source.parentName];
-                        style = Instantiate(style.child, style.child.transform.parent);
-                    }
-
-                    style.SetAsset(asset, keyIcons);
-
-                    if (string.IsNullOrEmpty(source.parentName) || !SkillManager.TryGetAsset(source.parentName, out _, out oldKeyNames, out _))
-                        oldKeyNames = null;
-
-                    if (uprankKeyCounts == null)
-                        uprankKeyCounts = style.uprankKeyStyle == null ? null : new Dictionary<string, int>();
-                    else
-                        uprankKeyCounts.Clear();
-                    
-                    isRecommend = __SetSkillKeyStyles(
-                        style.keyStyles, 
-                        keyNames, 
-                        oldKeyNames, 
-                        uprankKeyCounts == null ? null : uprankKeyCounts.Add);
-                    if (destination.style.child == null || !string.IsNullOrEmpty(source.parentName))
-                    {
-                        if (!isRecommend)
+                        keyNames = SkillManager.GetChildKeyNames(source.name);
+                        if (keyNames != null)
                         {
-                            keyNames = SkillManager.GetChildKeyNames(source.name);
-                            if (keyNames != null)
+                            int count;
+                            SkillKeyAsset keyAsset;
+                            foreach (var keyName in keyNames)
                             {
-                                int count;
-                                SkillKeyAsset keyAsset;
-                                foreach (var keyName in keyNames)
+                                if (oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
+                                    continue;
+
+                                if (!SkillManager.TryGetAsset(keyName, out keyAsset))
+                                    continue;
+
+                                count = GetSkillActiveKeyCount(keyName);
+                                if (keyAsset.BinarySearch(count) <
+                                    keyAsset.BinarySearch(count + GetSkillChildKeyCount(keyName)))
                                 {
-                                    if (oldKeyNames != null && Array.IndexOf(oldKeyNames, keyName) != -1)
-                                        continue;
-                                    
-                                    if(!SkillManager.TryGetAsset(keyName, out keyAsset))
-                                        continue;
+                                    uprankKeyCounts?.Add(keyName, count);
 
-                                    count = GetSkillActiveKeyCount(keyName);
-                                    if(keyAsset.BinarySearch(count) < keyAsset.BinarySearch(count + GetSkillChildKeyCount(keyName)))
-                                    {
-                                        uprankKeyCounts?.Add(keyName, count);
-                                        
-                                        isRecommend = true;
+                                    isRecommend = true;
 
-                                        //break;
-                                    }
+                                    //break;
                                 }
                             }
                         }
-
-                        if (isRecommend && style.onRecommend != null)
-                            style.onRecommend.Invoke();
-
-                        if (style.uprankKeyStyle != null && uprankKeyCounts != null && uprankKeyCounts.Count > 0)
-                        {
-                            SkillKeyAsset keyAsset;
-                            LevelSkillKeyStyle uprankKeyStyle;
-                            var uprankKeyStyleParent = style.uprankKeyStyle.transform.parent;
-                            foreach (var pair in uprankKeyCounts)
-                            {
-                                if(!SkillManager.TryGetAsset(pair.Key, out keyAsset))
-                                    continue;
-                                
-                                uprankKeyStyle = Instantiate(style.uprankKeyStyle, uprankKeyStyleParent);
-                                uprankKeyStyle.SetAsset(keyAsset, pair.Value);
-                                uprankKeyStyle.gameObject.SetActive(true);
-                                
-                                if(uprankKeyStyles == null)
-                                    uprankKeyStyles = new List<LevelSkillKeyStyle>();
-                                
-                                uprankKeyStyles.Add(uprankKeyStyle);
-                            }
-                        }
                     }
 
-                    if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
-                        guideSkillIndex == -1)
+                    if (isRecommend && style.onRecommend != null)
+                        style.onRecommend.Invoke();
+
+                    if (style.uprankKeyStyle != null && uprankKeyCounts != null && uprankKeyCounts.Count > 0)
                     {
-                        guideIndex = SkillSelectionGuide.IndexOf(_skillSelectionGuides, source.name, isRecommend);
-                        if (guideIndex != -1)
+                        SkillKeyAsset keyAsset;
+                        LevelSkillKeyStyle uprankKeyStyle;
+                        var uprankKeyStyleParent = style.uprankKeyStyle.transform.parent;
+                        foreach (var pair in uprankKeyCounts)
                         {
-                            guideSkillIndex = i;
+                            if (!SkillManager.TryGetAsset(pair.Key, out keyAsset))
+                                continue;
 
-                            isGuideRecommend = (_skillSelectionGuides[guideIndex].flag &
-                                               SkillSelectionGuide.Flag.Recommend) == SkillSelectionGuide.Flag.Recommend;
+                            uprankKeyStyle = Instantiate(style.uprankKeyStyle, uprankKeyStyleParent);
+                            uprankKeyStyle.SetAsset(keyAsset, pair.Value);
+                            uprankKeyStyle.gameObject.SetActive(true);
+
+                            if (uprankKeyStyles == null)
+                                uprankKeyStyles = new List<LevelSkillKeyStyle>();
+
+                            uprankKeyStyles.Add(uprankKeyStyle);
                         }
                     }
-
-                    if (source.selectIndex != -1)
-                    {
-                        var button = style.button;
-                        if (button == null)
-                        {
-                            
-                        }
-                        else
-                        {
-                            result = true;
-
-                            button.onClick.RemoveAllListeners();
-                            button.onClick.AddListener(() =>
-                            {
-                                button.interactable = false;
-
-                                if (__skillSelectionGuideNames == null)
-                                    __skillSelectionGuideNames = new HashSet<string>();
-
-                                __skillSelectionGuideNames.Add(source.name);
-
-                                skill = source;
-
-                                __onSkillSelectionComplete =
-                                    destination.onDisable == null ? null : destination.onDisable.Invoke;
-                            });
-
-                            button.interactable = true;
-                        }
-                    }
-
-                    if (__skillStyles == null)
-                        __skillStyles = new Dictionary<string, LevelSkillStyle>();
-
-                    __skillStyles.Add(source.name, style);
-
-                    if (destination.delayTime > 0.0f)
-                        yield return new WaitForSecondsRealtime(destination.delayTime);
                 }
 
-                if (guideSkillIndex != -1)
+                if ((__skillSelectionGuideNames == null || !__skillSelectionGuideNames.Contains(source.name)) &&
+                    guideSkillIndex == -1)
                 {
-                    var skillName = skills[guideSkillIndex].name;
-                    style = __skillStyles[skillName];
-                    if(isGuideRecommend)
-                        style.onGuideRecommend?.Invoke();
+                    guideIndex = SkillSelectionGuide.IndexOf(_skillSelectionGuides, source.name, isRecommend);
+                    if (guideIndex != -1)
+                    {
+                        guideSkillIndex = i;
+
+                        isGuideRecommend = (_skillSelectionGuides[guideIndex].flag &
+                                            SkillSelectionGuide.Flag.Recommend) == SkillSelectionGuide.Flag.Recommend;
+                    }
+                }
+
+                if (source.selectIndex != -1)
+                {
+                    var button = style.button;
+                    if (button == null)
+                    {
+
+                    }
                     else
-                        style.onGuide?.Invoke();
-
-                    _onSkillSelectionGuide?.Invoke(guideIndex);
-                }
-
-                if (result)
-                {
-                    while (skill == null)
-                        yield return null;
-                    
-                    yield return __SelectSkill(true, destination.destroyTime, skill.Value, destination.resultParentStyle, destination.name);
-
-                    if (__onSkillSelectionComplete != null)
                     {
-                        __onSkillSelectionComplete();
+                        result = true;
 
-                        __onSkillSelectionComplete = null;
+                        button.onClick.RemoveAllListeners();
+                        button.onClick.AddListener(() =>
+                        {
+                            button.interactable = false;
+
+                            if (__skillSelectionGuideNames == null)
+                                __skillSelectionGuideNames = new HashSet<string>();
+
+                            __skillSelectionGuideNames.Add(source.name);
+
+                            skill = source;
+
+                            __onSkillSelectionComplete =
+                                destination.onDisable == null ? null : destination.onDisable.Invoke;
+                        });
+
+                        button.interactable = true;
                     }
-                    //destination.onDisable.Invoke();
                 }
 
-                if (uprankKeyStyles != null)
+                if (__skillStyles == null)
+                    __skillStyles = new Dictionary<string, LevelSkillStyle>();
+
+                __skillStyles.Add(source.name, style);
+
+                if (destination.delayTime > 0.0f)
+                    yield return new WaitForSecondsRealtime(destination.delayTime);
+            }
+
+            if (guideSkillIndex != -1)
+            {
+                var skillName = skills[guideSkillIndex].name;
+                style = __skillStyles[skillName];
+                if (isGuideRecommend)
+                    style.onGuideRecommend?.Invoke();
+                else
+                    style.onGuide?.Invoke();
+
+                _onSkillSelectionGuide?.Invoke(guideIndex);
+            }
+
+            if (result)
+            {
+                while (skill == null)
+                    yield return null;
+
+                yield return __SelectSkill(true, destination.destroyTime, skill.Value, destination.resultParentStyle,
+                    destination.name);
+
+                if (__onSkillSelectionComplete != null)
                 {
-                    foreach (var uprankKeyStyle in uprankKeyStyles)
-                    {
-                        if(uprankKeyStyle == null)
-                            continue;
-                        
-                        if (__gameObjectsToDestroy == null)
-                            __gameObjectsToDestroy = new List<GameObject>();
+                    __onSkillSelectionComplete();
 
-                        __gameObjectsToDestroy.Add(uprankKeyStyle.gameObject);
-                    }
-                    
-                    uprankKeyStyles.Clear();
+                    __onSkillSelectionComplete = null;
                 }
+                //destination.onDisable.Invoke();
+            }
+
+            if (uprankKeyStyles != null)
+            {
+                foreach (var uprankKeyStyle in uprankKeyStyles)
+                {
+                    if (uprankKeyStyle == null)
+                        continue;
+
+                    if (__gameObjectsToDestroy == null)
+                        __gameObjectsToDestroy = new List<GameObject>();
+
+                    __gameObjectsToDestroy.Add(uprankKeyStyle.gameObject);
+                }
+
+                uprankKeyStyles.Clear();
             }
         }
 
