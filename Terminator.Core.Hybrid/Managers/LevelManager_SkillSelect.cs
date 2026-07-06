@@ -531,6 +531,7 @@ public partial class LevelManager
 
         __DestroyGameObjects();
 
+        bool isWaitToEnd = isEnd;
         var selection = selectedSkillSelectionIndex == -1 ? default : _skillSelections[selectedSkillSelectionIndex];
         if (selection.style != null &&
             SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keyIcons))
@@ -555,10 +556,7 @@ public partial class LevelManager
                 {
                     var onClick = style.close.onClick;
                     onClick.RemoveAllListeners();
-                    onClick.AddListener(() =>
-                    {
-                        StartCoroutine(__EndSkillSelection(true, selectionName));
-                    });
+                    onClick.AddListener(__CloseSkillSelectionRightNow);
 
                     __resultSkillStyles ??= new List<SkillStyle>();
 
@@ -572,15 +570,18 @@ public partial class LevelManager
 
                 yield return new WaitForSecondsRealtime(selection.destroyTime);
 
-                yield return __EndSkillSelection(isEnd, selectionName);
+                if(isEnd)
+                    yield return __EndSkillSelection(selectionName);
             }
             else
             {
+                isWaitToEnd = false;
+                
                 var onClick = style.close.onClick;
                 onClick.RemoveAllListeners();
                 onClick.AddListener(() =>
                 {
-                    StartCoroutine(__EndSkillSelection(true, selectionName));
+                    StartCoroutine(__EndSkillSelection(selectionName));
                 });
 
                 __resultSkillStyles ??= new List<SkillStyle>();
@@ -591,35 +592,35 @@ public partial class LevelManager
             //if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
             //    yield return __FinishSkillSelection(selection);
         }
-        else if (isEnd)
-            yield return __EndSkillSelection(true, selectionName);
-            
-            /*if (selectedSkillSelectionIndex == -1)
-            {
-                do
-                {
-                    yield return null;
 
-                }while((__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End);
-
-                yield return null;
-
-                yield return __WaitForSelectionCoroutines(selectionName);
-
-                __CloseSkillSelectionRightNow();
-            }*/
-    }
-
-    private IEnumerator __EndSkillSelection(bool isEnd, string selectionName)
-    {
         if (isEnd)
         {
             UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
                 __skillSelectionStatus & SkillSelectionStatus.End);
 
             __skillSelectionStatus |= SkillSelectionStatus.End;
-        }
 
+            if(isWaitToEnd)
+                yield return __EndSkillSelection(selectionName);
+        }
+        /*if (selectedSkillSelectionIndex == -1)
+        {
+            do
+            {
+                yield return null;
+
+            }while((__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End);
+
+            yield return null;
+
+            yield return __WaitForSelectionCoroutines(selectionName);
+
+            __CloseSkillSelectionRightNow();
+        }*/
+    }
+
+    private IEnumerator __EndSkillSelection(string selectionName)
+    {
         do
         {
             yield return null;
@@ -627,7 +628,7 @@ public partial class LevelManager
         } while ((__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End);
 
         yield return __WaitForSelectionCoroutines(selectionName);
-
+            
         __CloseSkillSelectionRightNow();
     }
 
