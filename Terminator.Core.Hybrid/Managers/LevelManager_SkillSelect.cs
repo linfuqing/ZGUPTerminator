@@ -569,9 +569,6 @@ public partial class LevelManager
                 Destroy(style.gameObject, selection.destroyTime);
 
                 yield return new WaitForSecondsRealtime(selection.destroyTime);
-
-                if(isEnd)
-                    yield return __EndSkillSelection(selectionName);
             }
             else
             {
