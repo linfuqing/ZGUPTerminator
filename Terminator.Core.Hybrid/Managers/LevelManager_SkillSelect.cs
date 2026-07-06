@@ -556,7 +556,7 @@ public partial class LevelManager
                 {
                     var onClick = style.close.onClick;
                     onClick.RemoveAllListeners();
-                    onClick.AddListener(__CloseSkillSelectionRightNow);
+                    onClick.AddListener(() => StartCoroutine(__EndSkillSelection(selectionName)));
 
                     __resultSkillStyles ??= new List<SkillStyle>();
 
@@ -576,10 +576,7 @@ public partial class LevelManager
                 
                 var onClick = style.close.onClick;
                 onClick.RemoveAllListeners();
-                onClick.AddListener(() =>
-                {
-                    StartCoroutine(__EndSkillSelection(selectionName));
-                });
+                onClick.AddListener(() => StartCoroutine(__EndSkillSelection(selectionName)));
 
                 __resultSkillStyles ??= new List<SkillStyle>();
 
@@ -819,8 +816,8 @@ public partial class LevelManager
             
             if(__isQuitting)
                 yield break;
-        }
-        while ((__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start);
+            
+        }while ((__skillSelectionStatus & SkillSelectionStatus.Start) != SkillSelectionStatus.Start);
 
         if (selectedSkillSelectionIndex == -1)
             __CompleteSkillSelection();
@@ -833,14 +830,15 @@ public partial class LevelManager
         //进入队列
         //yield return null;
         
-        UnityEngine.Assertions.Assert.AreEqual((SkillSelectionStatus)0, (SkillSelectionStatus.End & __skillSelectionStatus));
+        UnityEngine.Assertions.Assert.AreEqual(SkillSelectionStatus.Start | SkillSelectionStatus.Complete, __skillSelectionStatus);
 
-        __skillSelectionStatus = 0;
+        __skillSelectionStatus &= ~(SkillSelectionStatus.Start | SkillSelectionStatus.Complete);
     }
 
     private void __CloseSkillSelectionRightNow()
     {
-        __skillSelectionStatus |= SkillSelectionStatus.Complete;
+        if((__skillSelectionStatus & SkillSelectionStatus.Start) == SkillSelectionStatus.Start)
+            __skillSelectionStatus |= SkillSelectionStatus.Complete;
         
         if (__onSkillSelectionComplete != null)
         {
