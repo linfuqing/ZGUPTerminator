@@ -787,12 +787,12 @@ public partial class LevelManager
 
         __skillSelectionStatus |= SkillSelectionStatus.Start;
 
-        while ((__skillSelectionStatus & SkillSelectionStatus.Complete) != SkillSelectionStatus.Complete)
+        do
         {
             if (isRestart)
             {
                 Debug.LogError("[skillSelection]wtf????");
-                
+
                 if (selectionIndex != -1)
                 {
                     var selection = _skillSelections[selectionIndex];
@@ -803,9 +803,9 @@ public partial class LevelManager
 
                 break;
             }
-            
+
             yield return null;
-        }
+        } while ((__skillSelectionStatus & SkillSelectionStatus.Start) == SkillSelectionStatus.Start);
 
         __ClearTimeScales();
     }
