@@ -35,6 +35,12 @@ public partial class LevelManager : MonoBehaviour
         public int count;
         public LevelStageRewardStyle value;
     }
+
+    private struct TimeScaleIndex
+    {
+        public string name;
+        public int value;
+    }
     
     public static LevelManager instance
     {
@@ -137,7 +143,7 @@ public partial class LevelManager : MonoBehaviour
 
     private Queue<CoroutineEnumerator> __coroutineEnumerators;
 
-    private List<int> __timeScaleIndices;
+    private List<TimeScaleIndex> __timeScaleIndices;
 
     private List<GameObject> __gameObjectsToDestroy;
     
@@ -342,13 +348,22 @@ public partial class LevelManager : MonoBehaviour
         __ClearTimeScales();
     }
 
+    public void TimeScale(string name, float value)
+    {
+        TimeScaleIndex timeScaleIndex;
+        timeScaleIndex.name = name;
+        timeScaleIndex.value = TimeScaleUtility.Add(value);
+        
+        if (__timeScaleIndices == null)
+            __timeScaleIndices = new List<TimeScaleIndex>();
+        
+        __timeScaleIndices.Add(timeScaleIndex);
+    }
+    
     [UnityEngine.Scripting.Preserve]
     public void TimeScale(float value)
     {
-        if (__timeScaleIndices == null)
-            __timeScaleIndices = new List<int>();
-        
-        __timeScaleIndices.Add(TimeScaleUtility.Add(value));
+        TimeScale(null, value);
     }
 
     private int __pauseTimeScaleIndex = -1;
@@ -434,8 +449,8 @@ public partial class LevelManager : MonoBehaviour
         if (__timeScaleIndices != null)
         {
             foreach (var timeScaleIndex in __timeScaleIndices)
-                TimeScaleUtility.Remove(timeScaleIndex);
-            
+                TimeScaleUtility.Remove(timeScaleIndex.value);
+
             __timeScaleIndices.Clear();
         }
     }

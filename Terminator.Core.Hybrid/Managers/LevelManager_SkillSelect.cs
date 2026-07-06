@@ -712,7 +712,7 @@ public partial class LevelManager
 
         __skillSelectionStatus |= SkillSelectionStatus.Awake;
         
-        TimeScale(timeScale);
+        TimeScale(nameof(__StartSkillSelection), timeScale);
 
         /////
         int step = 1;
