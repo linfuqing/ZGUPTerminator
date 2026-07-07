@@ -193,9 +193,12 @@ public partial interface IUserData
             playerProperty.instanceName = name;
 
             playerProperty.maskSkillNames = default;
-            foreach (var maskSkillName in maskSkillNames)
-                playerProperty.maskSkillNames.Add(maskSkillName);
-            
+            if (maskSkillNames != null)
+            {
+                foreach (var maskSkillName in maskSkillNames)
+                    playerProperty.maskSkillNames.Add(maskSkillName);
+            }
+
             playerProperty.activeSkills = default;
             playerProperty.skillGroups = default;
             playerProperty.skillOpcodes = default;

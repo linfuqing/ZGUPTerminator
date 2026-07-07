@@ -922,7 +922,7 @@ public partial class UserDataMain
                 int cardCount = 0;
                 foreach (var card in _cards)
                 {
-                    if (__GetCardLevel(card.name, out _) != -1)
+                    if (__GetCardRank(card.name, out _) != -1)
                         ++cardCount;
                 }
                 return cardCount;
@@ -976,8 +976,13 @@ public partial class UserDataMain
                 int numRoles = 0;
                 foreach (var role in _roles)
                 {
-                    if(PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.actualName}") != 0)
-                        ++numRoles;
+                    if(!string.IsNullOrEmpty(role.mainName))
+                        continue;
+                    
+                    if(PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.name}") == 0)
+                        continue;
+                    
+                    ++numRoles;
                 }
                 
                 return numRoles;

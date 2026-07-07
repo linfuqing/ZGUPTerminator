@@ -318,7 +318,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                     ? DateTime.Today
                     : new DateTime(seconds * TimeSpan.TicksPerSecond + ticks);
                 
-                seconds = (int)((today.AddDays(1 - today.Day).Date.AddMonths(1).Ticks - ticks) / TimeSpan.TicksPerSecond);
+                seconds = (int)((today.AddDays(30)/*1 - today.Day).Date.AddMonths(1)*/.Ticks - ticks) / TimeSpan.TicksPerSecond);
                 
                 PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
                 break;
