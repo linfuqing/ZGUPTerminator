@@ -531,12 +531,41 @@ public partial class LevelManager
 
         __DestroyGameObjects();
 
-        bool isWaitToEnd = isEnd;
         var selection = selectedSkillSelectionIndex == -1 ? default : _skillSelections[selectedSkillSelectionIndex];
         if (selection.style != null &&
             SkillManager.TryGetAsset(value.name, out var asset, out var keyNames, out var keyIcons))
         {
             var style = Instantiate(selection.style, selection.style.transform.parent);
+            
+            if (style.close == null)
+            {
+                Destroy(style.gameObject, selection.destroyTime);
+
+                yield return new WaitForSecondsRealtime(selection.destroyTime);
+            }
+            else
+            {
+                if (isEnd)
+                {
+                    isEnd = false;
+                    
+                    UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
+                        __skillSelectionStatus & SkillSelectionStatus.End);
+
+                    __skillSelectionStatus |= SkillSelectionStatus.End;
+
+                    yield return __EndSkillSelection(selectionName);
+                }
+
+                var onClick = style.close.onClick;
+                onClick.RemoveAllListeners();
+                onClick.AddListener(__CloseSkillSelectionRightNow);
+
+                __resultSkillStyles ??= new List<SkillStyle>();
+
+                __resultSkillStyles.Add(style);
+            }
+            
             style.SetAsset(asset, keyIcons);
 
             __SetSkillKeyStyles(style.keyStyles, keyNames, null);
@@ -556,31 +585,12 @@ public partial class LevelManager
                 {
                     var onClick = style.close.onClick;
                     onClick.RemoveAllListeners();
-                    onClick.AddListener(() => StartCoroutine(__EndSkillSelection(selectionName)));
+                    onClick.AddListener(__CloseSkillSelectionRightNow);
 
                     __resultSkillStyles ??= new List<SkillStyle>();
 
                     __resultSkillStyles.Add(parentStyle);
                 }
-            }
-
-            if (style.close == null)
-            {
-                Destroy(style.gameObject, selection.destroyTime);
-
-                yield return new WaitForSecondsRealtime(selection.destroyTime);
-            }
-            else
-            {
-                isWaitToEnd = false;
-                
-                var onClick = style.close.onClick;
-                onClick.RemoveAllListeners();
-                onClick.AddListener(() => StartCoroutine(__EndSkillSelection(selectionName)));
-
-                __resultSkillStyles ??= new List<SkillStyle>();
-
-                __resultSkillStyles.Add(style);
             }
 
             //if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
@@ -594,8 +604,9 @@ public partial class LevelManager
 
             __skillSelectionStatus |= SkillSelectionStatus.End;
 
-            if(isWaitToEnd)
-                yield return __EndSkillSelection(selectionName);
+            yield return __EndSkillSelection(selectionName);
+                
+            __CloseSkillSelectionRightNow();
         }
         /*if (selectedSkillSelectionIndex == -1)
         {
@@ -622,8 +633,6 @@ public partial class LevelManager
         } while ((__skillSelectionStatus & SkillSelectionStatus.End) == SkillSelectionStatus.End);
 
         yield return __WaitForSelectionCoroutines(selectionName);
-            
-        __CloseSkillSelectionRightNow();
     }
 
     private IEnumerator __WaitForSelectionCoroutines(string selectionName)
