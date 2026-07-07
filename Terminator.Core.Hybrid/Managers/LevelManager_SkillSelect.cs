@@ -537,35 +537,6 @@ public partial class LevelManager
         {
             var style = Instantiate(selection.style, selection.style.transform.parent);
             
-            if (style.close == null)
-            {
-                Destroy(style.gameObject, selection.destroyTime);
-
-                yield return new WaitForSecondsRealtime(selection.destroyTime);
-            }
-            else
-            {
-                if (isEnd)
-                {
-                    isEnd = false;
-                    
-                    UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
-                        __skillSelectionStatus & SkillSelectionStatus.End);
-
-                    __skillSelectionStatus |= SkillSelectionStatus.End;
-
-                    yield return __EndSkillSelection(selectionName);
-                }
-
-                var onClick = style.close.onClick;
-                onClick.RemoveAllListeners();
-                onClick.AddListener(__CloseSkillSelectionRightNow);
-
-                __resultSkillStyles ??= new List<SkillStyle>();
-
-                __resultSkillStyles.Add(style);
-            }
-            
             style.SetAsset(asset, keyIcons);
 
             __SetSkillKeyStyles(style.keyStyles, keyNames, null);
@@ -583,27 +554,45 @@ public partial class LevelManager
                     Destroy(parentStyle.gameObject, selection.destroyTime);
                 else
                 {
-                    var onClick = style.close.onClick;
-                    onClick.RemoveAllListeners();
-                    onClick.AddListener(__CloseSkillSelectionRightNow);
-
                     __resultSkillStyles ??= new List<SkillStyle>();
 
                     __resultSkillStyles.Add(parentStyle);
                 }
             }
 
+            if (style.close == null)
+            {
+                Destroy(style.gameObject, selection.destroyTime);
+
+                yield return new WaitForSecondsRealtime(selection.destroyTime);
+            }
+            else
+            {
+                __resultSkillStyles ??= new List<SkillStyle>();
+
+                __resultSkillStyles.Add(style);
+                
+                if (isEnd)
+                {
+                    isEnd = false;
+                    
+                    yield return __EndSkillSelection(selectionName);
+                }
+
+                var onClick = style == null || style.close == null ? null : style.close.onClick;
+                if (onClick != null)
+                {
+                    onClick.RemoveAllListeners();
+                    onClick.AddListener(__CloseSkillSelectionRightNow);
+                }
+            }
+            
             //if((SkillSelectionStatus.Finish & __skillSelectionStatus) == SkillSelectionStatus.Finish)
             //    yield return __FinishSkillSelection(selection);
         }
 
         if (isEnd)
         {
-            UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
-                __skillSelectionStatus & SkillSelectionStatus.End);
-
-            __skillSelectionStatus |= SkillSelectionStatus.End;
-
             yield return __EndSkillSelection(selectionName);
                 
             __CloseSkillSelectionRightNow();
@@ -626,6 +615,11 @@ public partial class LevelManager
 
     private IEnumerator __EndSkillSelection(string selectionName)
     {
+        UnityEngine.Assertions.Assert.AreNotEqual(SkillSelectionStatus.End,
+            __skillSelectionStatus & SkillSelectionStatus.End);
+
+        __skillSelectionStatus |= SkillSelectionStatus.End;
+
         do
         {
             yield return null;
