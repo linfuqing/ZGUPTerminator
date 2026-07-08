@@ -2063,7 +2063,7 @@ public sealed class LoginManager : MonoBehaviour
                         print("[Start:Host]Waiting for play..");
                         do
                         {
-                            if (LevelShared.match == 0)
+                            //if (LevelShared.match == 0)
                             {
                                 destinationVersion = LevelPlayerShared<RemotePlayer>.version;
                                 if (destinationVersion != sourceVersion)

@@ -1143,7 +1143,8 @@ public class ClientData : MonoBehaviour, IClientData
                                     LoginManager.instance?.MoveTo(new ClientMessageChapterStage(ref reader, streamCompressionModel).userStageID);
                                     break;
                                 case ClientMessageType.Play:
-                                    new ClientMessagePlay(ref reader).Apply();
+                                    if(LevelShared.match == 0)
+                                        new ClientMessagePlay(ref reader).Apply();
                                     break;
                                 case ClientMessageType.Cancel:
                                     //RemotePlayer.status = RemotePlayer.Status.Error;
