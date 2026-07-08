@@ -776,7 +776,9 @@ public partial class UserDataMain
         {
             PlayerPrefs.SetString(key, roleName);
 
-            if (!string.IsNullOrEmpty(role.mainName))
+            if (string.IsNullOrEmpty(role.mainName))
+                PlayerPrefs.DeleteKey($"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{groupName}{UserData.SEPARATOR}{role.name}");
+            else
                 PlayerPrefs.SetString($"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{groupName}{UserData.SEPARATOR}{role.mainName}", roleName);
 
             return true;
