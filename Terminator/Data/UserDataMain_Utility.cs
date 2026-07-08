@@ -1317,6 +1317,8 @@ public partial class UserDataMain
                     continue;
 
                 skillGroupName = __GetSkillGroupName(skill.name);
+                if(string.IsNullOrEmpty(skillGroupName))
+                    continue;
 
                 for (j = 0; j < numCacheSkills; ++j)
                 {
