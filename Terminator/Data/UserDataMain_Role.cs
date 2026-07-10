@@ -761,9 +761,8 @@ public partial class UserDataMain
         var role = _roles[__ToIndex(roleID)];
         string groupName = _roleGroups[__ToIndex(groupID)].name, 
             key =
-                $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}",
-            roleName = role.name;
-        if (PlayerPrefs.GetString(key) == roleName)
+                $"{NAME_SPACE_USER_ROLE_GROUP}{groupName}";
+        if (PlayerPrefs.GetString(key) == role.name)
         {
             if (string.IsNullOrEmpty(role.mainName) || !__SetRole(__ToID(__GetRoleIndex(role.mainName)), groupID))
                 PlayerPrefs.DeleteKey(key);
@@ -771,15 +770,15 @@ public partial class UserDataMain
             return true;
         }
         
-        if (((UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{roleName}") &
+        if (((UserRole.Flag)PlayerPrefs.GetInt($"{NAME_SPACE_USER_ROLE_FLAG}{role.name}") &
                   UserRole.Flag.Unlocked) == UserRole.Flag.Unlocked)
         {
-            PlayerPrefs.SetString(key, roleName);
+            PlayerPrefs.SetString(key, role.name);
 
             if (string.IsNullOrEmpty(role.mainName))
                 PlayerPrefs.DeleteKey($"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{groupName}{UserData.SEPARATOR}{role.name}");
             else
-                PlayerPrefs.SetString($"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{groupName}{UserData.SEPARATOR}{role.mainName}", roleName);
+                PlayerPrefs.SetString($"{NAME_SPACE_USER_ROLE_GROUP_SKIN}{groupName}{UserData.SEPARATOR}{role.mainName}", role.name);
 
             return true;
         }

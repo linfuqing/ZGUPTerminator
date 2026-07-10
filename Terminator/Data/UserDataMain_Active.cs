@@ -127,6 +127,9 @@ public partial class UserDataMain
     {
         public string name;
         
+        [Tooltip("最大天数")]
+        public int maxDays;
+
         public string[] activeNames;
         
 #if UNITY_EDITOR
@@ -162,6 +165,7 @@ public partial class UserDataMain
     internal string _signInsPath;
 #endif
 
+    public const string NAME_SPACE_USER_SIGN_IN_DAY_START = "UserSignInDayStart";
     public const string NAME_SPACE_USER_SIGN_IN_ACTIVE = "UserSignInActive";
     
     public IEnumerator QuerySignIn(uint userID, Action<Memory<UserSignIn>> onComplete)
@@ -186,10 +190,14 @@ public partial class UserDataMain
             for(i = 0; i < numSignIns; ++i)
             {
                 signIn = _signIns[i];
+                if (signIn.maxDays > 0 && signIn.maxDays < day)
+                    continue;
                 
                 result.name = signIn.name;
                 result.id = __ToID(i);
-                
+
+                result.daysRemaining = signIn.maxDays - day;
+
                 numSignInActives = signIn.activeNames.Length;
                 result.actives = new UserActive[numSignInActives];
                 for (j = 0; j < numSignInActives; ++j)

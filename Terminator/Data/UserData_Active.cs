@@ -264,6 +264,8 @@ public struct UserSignIn
     public uint id;
     
     public int day;
+
+    public int daysRemaining;
         
     public UserActive[] actives;
 }
