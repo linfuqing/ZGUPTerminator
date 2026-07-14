@@ -250,8 +250,8 @@ public class GameMain : GameUser
 
         public static string ToAssetPath(ref string path)
         {
-            path = Path.Combine(Application.persistentDataPath, path);
-            return Path.Combine(path, Path.GetFileName(path));
+            path = AssetFileUtility.Combine(AssetFileUtility.persistentDataPath, path);
+            return AssetFileUtility.Combine(path, AssetFileUtility.GetFileName(path));
         }
         
         public static string ToAssetPath(string path)
@@ -315,25 +315,25 @@ public class GameMain : GameUser
                 
                 filename = name;
                 
-                path = Path.Combine(__path, name);
+                path = AssetFileUtility.Combine(__path, name);
             }
             else
             {
                 folder = name.Remove(separatorIndex);
 
-                filename = Path.GetFileNameWithoutExtension(name.Substring(separatorIndex + 1));
+                filename = AssetFileUtility.GetFileNameWithoutExtension(name.Substring(separatorIndex + 1));
                 
                 separatorIndex = folder.LastIndexOf('/');
                 if (separatorIndex != -1)
                     folder = folder.Substring(separatorIndex + 1);
 
-                path = Path.Combine(__path, folder, filename);
+                path = AssetFileUtility.Combine(__path, folder, filename);
                 
                 if (__folders == null)
                     __folders = new HashSet<string>();
                 
                 if(__folders.Add(folder))
-                    AssetManager.LoadFrom(Path.Combine(folder, folder));
+                    AssetManager.LoadFrom(AssetFileUtility.Combine(folder, folder));
             }
 
             /*string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
@@ -347,45 +347,48 @@ public class GameMain : GameUser
                 return false;
 
             var bytes = text.GetData<byte>();
-            try
+
+            using (var writer = new AssetManager.Writer(folder, AssetManager))
             {
-                string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
-                assetName = assetName.ToLower();
-
-                AssetManager.AssetData assetData;
-                using (var md5 = new MD5CryptoServiceProvider())
-                using (var stream = bytes.ToStream())
-                    assetData.info.md5 = md5.ComputeHash(stream);
-
-                if (!AssetManager.Get(assetName, out var asset) ||
-                    !asset.data.info.md5.AsSpan().SequenceEqual(assetData.info.md5.AsSpan()))
+                try
                 {
-                    AssetManager.CreateDirectory(path);
+                    string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
+                    assetName = assetName.ToLower();
 
-                    using(var file = File.Create(path))
-                        file.Write(bytes.AsReadOnlySpan());
+                    AssetManager.AssetData assetData;
+                    using (var md5 = new MD5CryptoServiceProvider())
+                    using (var stream = bytes.ToStream())
+                        assetData.info.md5 = md5.ComputeHash(stream);
 
-                    assetData.type = AssetManager.AssetType.Uncompressed;
-                    assetData.info.version = 0;
-                    assetData.info.size = (uint)bytes.Length;
-                    assetData.info.fileName = filename;
-                    assetData.pack = AssetManager.AssetPack.Default;
-                    assetData.dependencies = null;
+                    if (!AssetManager.Get(assetName, out var asset) ||
+                        !asset.data.info.md5.AsSpan().SequenceEqual(assetData.info.md5.AsSpan()))
+                    {
+                        AssetManager.CreateDirectory(path);
 
-                    using (var writer = new AssetManager.Writer(folder, AssetManager))
+                        using (var file = AssetFileUtility.Open(path, FileMode.Create, FileAccess.Write))
+                            file.Write(bytes.AsReadOnlySpan());
+
+                        assetData.type = AssetManager.AssetType.Uncompressed;
+                        assetData.info.version = 0;
+                        assetData.info.size = (uint)bytes.Length;
+                        assetData.info.fileName = filename;
+                        assetData.pack = AssetManager.AssetPack.Default;
+                        assetData.dependencies = null;
+
                         writer.Write(assetName, assetData);
+                    }
+
+                    //DestroyImmediate(text, true);
                 }
-                
-                //DestroyImmediate(text, true);
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e.InnerException ?? e);
+                catch (Exception e)
+                {
+                    Debug.LogException(e.InnerException ?? e);
 
-                return false;
-            }
+                    return false;
+                }
 
-            return true;
+                return true;
+            }
         }
     }
     
@@ -394,6 +397,17 @@ public class GameMain : GameUser
         public static readonly string Filename = GameConstantManager.Get(ContentPackPath);
         
         public string filename => Filename;
+        
+        public static void CreateDirectory(string path)
+        {
+            string folder = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(folder) || Directory.Exists(folder))
+                return;
+
+            CreateDirectory(folder);
+
+            Directory.CreateDirectory(folder);
+        }
 
         public IEnumerator Execute(AssetBundle assetBundle, AssetManager.DownloadHandler downloadHandler)
         {
@@ -432,7 +446,7 @@ public class GameMain : GameUser
                     assetManager = assetIterator.AssetManager;
                 }
             }
-
+            
 #if ENABLE_CONTENT_DELIVERY
             //string cdnURL = GameConstantManager.Get(GameConstantManager.KEY_CDN_URL);
             //if (string.IsNullOrEmpty(cdnURL))
@@ -443,6 +457,8 @@ public class GameMain : GameUser
                     null,
                     null);
 
+                var paths = new Dictionary<string, string>();
+                string directory = Path.Combine(Application.persistentDataPath, Filename);
                 Func<string, string> remapFunc = x =>
                 {
                     int separatorIndex = x.LastIndexOf('/');
@@ -450,18 +466,34 @@ public class GameMain : GameUser
 
                     if (!string.IsNullOrEmpty(folder) && folders.Add(folder))
                     {
-                        string path = Path.Combine(folder, folder).ToLower();
+                        string path = AssetFileUtility.Combine(folder, folder).ToLower();
                         Debug.Log($"Asset manager load from {path}");
                         
                         assetManager.LoadFrom(path);
                     }
 
-                    if (!assetManager.GetAssetPath(x.ToLower(), out _, out ulong fileOffset, out string filePath))
+                    string name = x.ToLower();
+                    if (!assetManager.GetAssetPath(name, out _, out ulong fileOffset, out string filePath))
                         Debug.LogError($"GetFileInfo {x} failed");
 
                     UnityEngine.Assertions.Assert.AreEqual(0, fileOffset);
 
-                    return filePath;
+                    if (string.IsNullOrEmpty(filePath))
+                        return filePath;
+                    
+                    if (!paths.TryGetValue(filePath, out var result))
+                    {
+                        result = Path.Combine(directory, name);
+                        paths[filePath] = result;
+                        
+                        CreateDirectory(result);
+                        
+                        if (!File.Exists(result))
+                            File.WriteAllBytes(result, AssetFileUtility.ReadAllBytes(filePath));
+                    }
+
+                    return result;
+                    //return filePath;
                 };
 
                 ContentDeliveryGlobalState.PathRemapFunc = remapFunc;
