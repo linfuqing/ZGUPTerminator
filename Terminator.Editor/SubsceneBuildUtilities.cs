@@ -128,8 +128,13 @@ static class SubSceneBuildUtilities
         var catalogPath = Path.Combine(buildFolder, RuntimeContentManager.RelativeCatalogPath);
         if (!File.Exists(catalogPath))
         {
-            Debug.LogError($"[SubSceneBuildUtilities] Catalog not found: {catalogPath}");
-            return;
+            catalogPath += ".bytes";
+
+            if (!File.Exists(catalogPath))
+            {
+                Debug.LogError($"[SubSceneBuildUtilities] Catalog not found: {catalogPath}");
+                return;
+            }
         }
 
         if (!BlobAssetReference<CatalogDataMirror>.TryRead(catalogPath, 1, out var catalogBlob))
