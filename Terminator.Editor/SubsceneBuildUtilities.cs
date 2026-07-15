@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Reflection;
 using Unity.Collections;
-using Unity.Entities;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities.Build;
 using Unity.Entities.Content;
 using Unity.Entities.Serialization;
@@ -21,7 +21,9 @@ static class SubSceneBuildUtilities
         var buildFolder = EditorUtility.OpenFolderPanel("Select Build To Publish",
             Path.GetDirectoryName(Application.dataPath), "Builds");
         if (string.IsNullOrEmpty(buildFolder))
+        {
             return;
+        }
 
         var buildTarget = EditorUserBuildSettings.activeBuildTarget;
 
@@ -32,39 +34,8 @@ static class SubSceneBuildUtilities
             throw new Exception("Invalid Player GUID");
         }
 
-        var subSceneGuids = new HashSet<Hash128>();
-        var parentScenes = new List<ParentSceneInfo>();
-
-        foreach (var sceneGUID in Selection.assetGUIDs)
+        if (!TryCollectParentScenes(out var subSceneGuids, out var parentScenes))
         {
-            if (!GUID.TryParse(sceneGUID, out var guid))
-                continue;
-
-            var assetPath = AssetDatabase.GUIDToAssetPath(guid);
-            if (string.IsNullOrEmpty(assetPath))
-                continue;
-
-            var sceneName = Path.GetFileNameWithoutExtension(assetPath);
-            var relatedGuids = new HashSet<Hash128> { new Hash128(guid.ToString()) };
-
-            var ssGuids = EditorEntityScenes.GetSubScenes(guid);
-            foreach (var ss in ssGuids)
-            {
-                relatedGuids.Add(ss);
-                subSceneGuids.Add(ss);
-            }
-
-            parentScenes.Add(new ParentSceneInfo
-            {
-                sceneName = sceneName,
-                sceneGuid = guid.ToString(),
-                relatedContentGuids = relatedGuids
-            });
-        }
-
-        if (parentScenes.Count == 0)
-        {
-            Debug.LogError("[SubSceneBuildUtilities] No scenes selected. Select parent Unity scene assets first.");
             return;
         }
 
@@ -78,45 +49,72 @@ static class SubSceneBuildUtilities
         var buildFolder = EditorUtility.OpenFolderPanel("Select Content Folder",
             Path.GetDirectoryName(Application.dataPath), "Builds");
         if (string.IsNullOrEmpty(buildFolder))
+        {
             return;
-        
-        var subSceneGuids = new HashSet<Hash128>();
-        var parentScenes = new List<ParentSceneInfo>();
+        }
+
+        if (!TryCollectParentScenes(out _, out var parentScenes))
+        {
+            return;
+        }
+
+        WriteSceneArchiveDependencies(buildFolder, parentScenes);
+    }
+
+    static bool TryCollectParentScenes(out HashSet<Hash128> subSceneGuids, out List<ParentSceneInfo> parentScenes)
+    {
+        subSceneGuids = new HashSet<Hash128>();
+        parentScenes = new List<ParentSceneInfo>();
 
         foreach (var sceneGUID in Selection.assetGUIDs)
         {
             if (!GUID.TryParse(sceneGUID, out var guid))
+            {
                 continue;
+            }
 
             var assetPath = AssetDatabase.GUIDToAssetPath(guid);
             if (string.IsNullOrEmpty(assetPath))
+            {
                 continue;
+            }
 
             var sceneName = Path.GetFileNameWithoutExtension(assetPath);
-            var relatedGuids = new HashSet<Hash128> { new Hash128(guid.ToString()) };
+            // String compare avoids Hash128 vs UnityEditor.GUID endian / format mismatches.
+            var relatedGuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                NormalizeGuidString(guid.ToString())
+            };
 
             var ssGuids = EditorEntityScenes.GetSubScenes(guid);
-            foreach (var ss in ssGuids)
+            if (ssGuids != null)
             {
-                relatedGuids.Add(ss);
-                subSceneGuids.Add(ss);
+                foreach (var ss in ssGuids)
+                {
+                    relatedGuids.Add(NormalizeGuidString(ss.ToString()));
+                    subSceneGuids.Add(ss);
+                }
             }
 
             parentScenes.Add(new ParentSceneInfo
             {
                 sceneName = sceneName,
-                sceneGuid = guid.ToString(),
+                sceneGuid = NormalizeGuidString(guid.ToString()),
                 relatedContentGuids = relatedGuids
             });
+
+            Debug.Log(
+                $"[SubSceneBuildUtilities] Parent '{sceneName}' related GUIDs ({relatedGuids.Count}): " +
+                string.Join(", ", relatedGuids));
         }
 
         if (parentScenes.Count == 0)
         {
             Debug.LogError("[SubSceneBuildUtilities] No scenes selected. Select parent Unity scene assets first.");
-            return;
+            return false;
         }
 
-        WriteSceneArchiveDependencies(buildFolder, parentScenes);
+        return true;
     }
 
     /// <summary>
@@ -125,42 +123,39 @@ static class SubSceneBuildUtilities
     /// </summary>
     public static void WriteSceneArchiveDependencies(string buildFolder, List<ParentSceneInfo> parentScenes)
     {
-        var catalogPath = Path.Combine(buildFolder, RuntimeContentManager.RelativeCatalogPath);
-        if (!File.Exists(catalogPath))
+        var catalogPath = ResolveCatalogPath(buildFolder);
+        if (catalogPath == null)
         {
-            catalogPath += ".bytes";
-
-            if (!File.Exists(catalogPath))
-            {
-                Debug.LogError($"[SubSceneBuildUtilities] Catalog not found: {catalogPath}");
-                return;
-            }
+            Debug.LogError(
+                $"[SubSceneBuildUtilities] Catalog not found under '{buildFolder}' " +
+                $"(tried {RuntimeContentManager.RelativeCatalogPath} and .bytes).");
+            return;
         }
 
-        if (!BlobAssetReference<CatalogDataMirror>.TryRead(catalogPath, 1, out var catalogBlob))
+        if (!TryLoadCatalogViaRuntimeApi(catalogPath, out var catalogBoxed, out var catalogType))
         {
-            Debug.LogError($"[SubSceneBuildUtilities] Failed to read catalog: {catalogPath}");
+            Debug.LogError($"[SubSceneBuildUtilities] Failed to load catalog via RuntimeContentCatalog: {catalogPath}");
             return;
         }
 
         try
         {
-            ref var catalog = ref catalogBlob.Value;
-            var entries = new List<SceneArchiveDependencies.SceneEntry>(parentScenes.Count);
+            var sceneToArchives = BuildSceneGuidToArchives(catalogBoxed, catalogType);
+            Debug.Log($"[SubSceneBuildUtilities] Catalog scene GUIDs with archives: {sceneToArchives.Count}");
 
+            var entries = new List<SceneArchiveDependencies.SceneEntry>(parentScenes.Count);
             foreach (var parent in parentScenes)
             {
-                var archives = new HashSet<string>();
-                for (int sceneIndex = 0; sceneIndex < catalog.Scenes.Length; sceneIndex++)
+                var archives = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var related in parent.relatedContentGuids)
                 {
-                    var contentScene = catalog.Scenes[sceneIndex];
-                    if (!parent.relatedContentGuids.Contains(contentScene.SceneId.GlobalId.AssetGUID))
+                    if (sceneToArchives.TryGetValue(related, out var list))
                     {
-                        continue;
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            archives.Add(list[i]);
+                        }
                     }
-
-                    var visitedFiles = new HashSet<int>();
-                    CollectArchiveIds(ref catalog, contentScene.FileIndex, archives, visitedFiles);
                 }
 
                 var archiveList = new List<string>(archives);
@@ -173,9 +168,17 @@ static class SubSceneBuildUtilities
                     archives = archiveList.ToArray()
                 });
 
-                Debug.Log(
-                    $"[SubSceneBuildUtilities] {parent.sceneName}: {archiveList.Count} archives " +
-                    $"({parent.relatedContentGuids.Count} related content GUIDs)");
+                if (archiveList.Count == 0)
+                {
+                    Debug.LogWarning(
+                        $"[SubSceneBuildUtilities] '{parent.sceneName}' matched 0 archives. " +
+                        $"Related={parent.relatedContentGuids.Count}. " +
+                        "Check SubScenes exist and catalog was built from the same Selection.");
+                }
+                else
+                {
+                    Debug.Log($"[SubSceneBuildUtilities] {parent.sceneName}: {archiveList.Count} archives");
+                }
             }
 
             entries.Sort((a, b) => string.CompareOrdinal(a.sceneName, b.sceneName));
@@ -187,55 +190,274 @@ static class SubSceneBuildUtilities
             };
 
             var outDir = Path.GetDirectoryName(catalogPath) ?? buildFolder;
+            // Prefer sidecar next to .bin; if catalog is .bytes keep same folder/name without forcing .bytes on json.
             var outPath = Path.Combine(outDir, SceneArchiveDependencies.FileName);
             System.IO.File.WriteAllText(outPath, JsonUtility.ToJson(dependencyFile, true));
             Debug.Log($"[SubSceneBuildUtilities] Wrote parent-scene archive dependencies ({dependencyFile.scenes.Length} scenes): {outPath}");
         }
         finally
         {
-            catalogBlob.Dispose();
+            if (catalogBoxed is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         }
     }
 
-    static void CollectArchiveIds(
-        ref CatalogDataMirror catalog,
-        int fileIndex,
-        HashSet<string> archives,
-        HashSet<int> visitedFiles)
+    static string ResolveCatalogPath(string buildFolder)
     {
-        if (fileIndex < 0 || fileIndex >= catalog.Files.Length)
+        var catalogPath = Path.Combine(buildFolder, RuntimeContentManager.RelativeCatalogPath);
+        if (File.Exists(catalogPath))
         {
-            return;
+            return catalogPath;
         }
 
-        if (!visitedFiles.Add(fileIndex))
+        var bytesPath = catalogPath + ".bytes";
+        if (File.Exists(bytesPath))
         {
-            return;
+            return bytesPath;
         }
 
-        var file = catalog.Files[fileIndex];
-        if (file.ArchiveIndex >= 0 && file.ArchiveIndex < catalog.Archives.Length)
+        return null;
+    }
+
+    static string NormalizeGuidString(string guid)
+    {
+        if (string.IsNullOrEmpty(guid))
         {
-            var archiveId = catalog.Archives[file.ArchiveIndex].ArchiveId.Value;
-            if (archiveId.IsValid)
+            return string.Empty;
+        }
+
+        return guid.Replace("-", string.Empty).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// RuntimeContentCatalog is internal; use it via reflection (same as Unity.Scenes.Editor tooling).
+    /// </summary>
+    static bool TryLoadCatalogViaRuntimeApi(string catalogPath, out object catalogBoxed, out Type catalogType)
+    {
+        catalogBoxed = null;
+        catalogType = typeof(RuntimeContentManager).Assembly.GetType("Unity.Entities.Content.RuntimeContentCatalog");
+        if (catalogType == null)
+        {
+            Debug.LogError("[SubSceneBuildUtilities] Type RuntimeContentCatalog not found.");
+            return false;
+        }
+
+        catalogBoxed = Activator.CreateInstance(catalogType);
+        var loadMethod = catalogType.GetMethod(
+            "LoadCatalogData",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null,
+            new[] { typeof(string), typeof(Func<string, string>), typeof(Func<string, string>) },
+            null);
+        if (loadMethod == null)
+        {
+            Debug.LogError("[SubSceneBuildUtilities] LoadCatalogData(string, Func, Func) not found.");
+            return false;
+        }
+
+        Func<string, string> identity = s => s;
+        var loaded = loadMethod.Invoke(catalogBoxed, new object[] { catalogPath, identity, identity });
+        return loaded is bool ok && ok;
+    }
+
+    static Dictionary<string, List<string>> BuildSceneGuidToArchives(object catalogBoxed, Type catalogType)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        var getSceneIds = catalogType.GetMethod("GetSceneIds", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var tryGetSceneLocation = FindTryGetSceneLocation(catalogType);
+        var tryGetFileLocation = FindTryGetFileLocation(catalogType);
+
+        if (getSceneIds == null || tryGetSceneLocation == null || tryGetFileLocation == null)
+        {
+            Debug.LogError("[SubSceneBuildUtilities] Missing RuntimeContentCatalog query methods.");
+            return result;
+        }
+
+        var sceneIdsObj = getSceneIds.Invoke(catalogBoxed, new object[] { Allocator.Temp });
+        if (sceneIdsObj == null)
+        {
+            return result;
+        }
+
+        try
+        {
+            var sceneIds = (NativeArray<UntypedWeakReferenceId>)sceneIdsObj;
+            var fileIdType = typeof(RuntimeContentManager).Assembly.GetType("Unity.Entities.Content.ContentFileId");
+            var archiveIdType = typeof(RuntimeContentManager).Assembly.GetType("Unity.Entities.Content.ContentArchiveId");
+            var depsType = typeof(UnsafeList<>).MakeGenericType(fileIdType);
+
+            for (int i = 0; i < sceneIds.Length; i++)
             {
-                var archiveIdStr = archiveId.ToString();
-                if (!archiveIdStr.Contains("000000000000000000"))
+                var sceneId = sceneIds[i];
+                var sceneGuid = NormalizeGuidString(sceneId.GlobalId.AssetGUID.ToString());
+                if (string.IsNullOrEmpty(sceneGuid))
+                {
+                    continue;
+                }
+
+                var sceneArgs = new object[] { sceneId, null, null };
+                var sceneOk = tryGetSceneLocation.Invoke(catalogBoxed, sceneArgs);
+                if (!(sceneOk is bool sceneFound) || !sceneFound)
+                {
+                    continue;
+                }
+
+                var fileId = sceneArgs[1];
+                var archiveIds = new HashSet<string>(StringComparer.Ordinal);
+                CollectArchiveIdsReflect(catalogBoxed, tryGetFileLocation, fileId, fileIdType, archiveIdType, depsType, archiveIds, new HashSet<object>());
+
+                if (!result.TryGetValue(sceneGuid, out var list))
+                {
+                    list = new List<string>();
+                    result[sceneGuid] = list;
+                }
+
+                foreach (var archiveId in archiveIds)
+                {
+                    if (!list.Contains(archiveId))
+                    {
+                        list.Add(archiveId);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (sceneIdsObj is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+
+        return result;
+    }
+
+    static MethodInfo FindTryGetSceneLocation(Type catalogType)
+    {
+        foreach (var method in catalogType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (method.Name != "TryGetSceneLocation")
+            {
+                continue;
+            }
+
+            var parameters = method.GetParameters();
+            if (parameters.Length == 3 &&
+                parameters[0].ParameterType == typeof(UntypedWeakReferenceId) &&
+                parameters[2].ParameterType == typeof(string).MakeByRefType())
+            {
+                return method;
+            }
+        }
+
+        return null;
+    }
+
+    static MethodInfo FindTryGetFileLocation(Type catalogType)
+    {
+        foreach (var method in catalogType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (method.Name != "TryGetFileLocation")
+            {
+                continue;
+            }
+
+            var parameters = method.GetParameters();
+            // TryGetFileLocation(ContentFileId, out string, out UnsafeList<ContentFileId>, out ContentArchiveId, out int)
+            if (parameters.Length == 5 &&
+                parameters[1].ParameterType == typeof(string).MakeByRefType() &&
+                parameters[4].ParameterType == typeof(int).MakeByRefType())
+            {
+                return method;
+            }
+        }
+
+        return null;
+    }
+
+    static void CollectArchiveIdsReflect(
+        object catalogBoxed,
+        MethodInfo tryGetFileLocation,
+        object fileId,
+        Type fileIdType,
+        Type archiveIdType,
+        Type depsType,
+        HashSet<string> archives,
+        HashSet<object> visitedFiles)
+    {
+        if (fileId == null)
+        {
+            return;
+        }
+
+        // ContentFileId is a struct; use string key for visit set.
+        var fileKey = fileId.ToString();
+        if (!visitedFiles.Add(fileKey))
+        {
+            return;
+        }
+
+        var args = new object[] { fileId, null, Activator.CreateInstance(depsType), Activator.CreateInstance(archiveIdType), 0 };
+        var ok = tryGetFileLocation.Invoke(catalogBoxed, args);
+        if (!(ok is bool found) || !found)
+        {
+            return;
+        }
+
+        var archiveId = args[3];
+        if (archiveId != null)
+        {
+            var isValidProp = archiveIdType.GetProperty("IsValid");
+            var isValid = isValidProp == null || (bool)isValidProp.GetValue(archiveId);
+            if (isValid)
+            {
+                var valueField = archiveIdType.GetField("Value");
+                var archiveIdStr = valueField != null
+                    ? valueField.GetValue(archiveId)?.ToString()
+                    : archiveId.ToString();
+                if (!string.IsNullOrEmpty(archiveIdStr) && !archiveIdStr.Contains("000000000000000000"))
                 {
                     archives.Add(archiveIdStr);
                 }
             }
         }
 
-        if (file.DependencyIndex < 0 || file.DependencyIndex >= catalog.Dependencies.Length)
+        var deps = args[2];
+        if (deps == null)
         {
             return;
         }
 
-        ref var deps = ref catalog.Dependencies[file.DependencyIndex];
-        for (int i = 0; i < deps.Length; i++)
+        int length;
+        var lengthProperty = depsType.GetProperty("Length");
+        if (lengthProperty != null)
         {
-            CollectArchiveIds(ref catalog, deps[i], archives, visitedFiles);
+            length = (int)lengthProperty.GetValue(deps);
+        }
+        else
+        {
+            var lengthField = depsType.GetField("Length");
+            if (lengthField == null)
+            {
+                return;
+            }
+
+            length = (int)lengthField.GetValue(deps);
+        }
+
+        var indexer = depsType.GetProperty("Item");
+        if (indexer == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+            var depFileId = indexer.GetValue(deps, new object[] { i });
+            CollectArchiveIdsReflect(catalogBoxed, tryGetFileLocation, depFileId, fileIdType, archiveIdType, depsType, archives, visitedFiles);
         }
     }
 
@@ -243,69 +465,6 @@ static class SubSceneBuildUtilities
     {
         public string sceneName;
         public string sceneGuid;
-        public HashSet<Hash128> relatedContentGuids;
-    }
-
-    // Layout must match Unity.Entities.Content.RuntimeContentCatalogData (blob version 1).
-    [StructLayout(LayoutKind.Sequential)]
-    struct CatalogDataMirror
-    {
-        public BlobArray<ArchiveLocationMirror> Archives;
-        public BlobArray<FileLocationMirror> Files;
-        public BlobArray<ObjectLocationMirror> Objects;
-        public BlobArray<SceneLocationMirror> Scenes;
-        public BlobArray<BlobArray<int>> Dependencies;
-        public BlobArray<BlobLocationMirror> Blobs;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct ArchiveIdMirror
-    {
-        public Hash128 Value;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct FileIdMirror
-    {
-        public Hash128 Value;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct ArchiveLocationMirror
-    {
-        public ArchiveIdMirror ArchiveId;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct FileLocationMirror
-    {
-        public FileIdMirror FileId;
-        public int ArchiveIndex;
-        public int DependencyIndex;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct ObjectLocationMirror
-    {
-        public UntypedWeakReferenceId ObjectId;
-        public int FileIndex;
-        public long LocalIdentifierInFile;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct SceneLocationMirror
-    {
-        public UntypedWeakReferenceId SceneId;
-        public int FileIndex;
-        public FixedString128Bytes SceneName;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct BlobLocationMirror
-    {
-        public UntypedWeakReferenceId ObjectId;
-        public int FileIndex;
-        public long Offset;
-        public long Length;
+        public HashSet<string> relatedContentGuids;
     }
 }
