@@ -276,7 +276,9 @@ static class SubSceneBuildUtilities
             return result;
         }
 
-        var sceneIdsObj = getSceneIds.Invoke(catalogBoxed, new object[] { Allocator.Temp });
+        // GetSceneIds takes AllocatorManager.AllocatorHandle (Allocator.Temp boxes as Allocator enum and fails reflection).
+        AllocatorManager.AllocatorHandle alloc = Allocator.Temp;
+        var sceneIdsObj = getSceneIds.Invoke(catalogBoxed, new object[] { alloc });
         if (sceneIdsObj == null)
         {
             return result;
