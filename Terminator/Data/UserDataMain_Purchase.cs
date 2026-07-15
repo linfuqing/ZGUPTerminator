@@ -414,8 +414,8 @@ public partial class UserDataMain
 
             name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
 
-            result.days = name.seconds == 0 ? 1 : Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _,
-                    DateTimeUtility.DataTimeType.UTC));
+            result.days = __GetDays(name.seconds, output.deadline, output.ticks);/*name.seconds == 0 ? 1 : Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _,
+                    DateTimeUtility.DataTimeType.UTC))*/;
 
             maxDays = int.MaxValue;
             switch (input.type)
@@ -561,26 +561,30 @@ public partial class UserDataMain
         }
 
         List<UserReward> rewards = null;
-        
-        int i, days;
+
+        bool isValid;
+        int i, days, times;
         string secondsKey, key;
         Active<string> name;
         DateTime now;
+        IPurchaseData.Output output;
         foreach (var purchaseToken in _purchaseTokens)
         {
             if (purchaseToken.type == type && 
                 purchaseToken.level == level && 
                 purchaseToken.exp <= exp)
             {
-                if (PurchaseData.IsValid(
-                        type, 
-                        purchaseToken.level, 
-                        NAME_SPACE_USER_PURCHASE_ITEM, 
-                        out int times,
-                        out _))
+                secondsKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
+                name = new Active<string>(PlayerPrefs.GetString(secondsKey), __PurchaseParse);
+                isValid = PurchaseData.IsValid(
+                    type,
+                    purchaseToken.level,
+                    NAME_SPACE_USER_PURCHASE_ITEM,
+                    out times,
+                    out output);
+                days = __GetDays(name.seconds, output.deadline, output.ticks);
+                if (isValid || days > 0)
                 {
-                    secondsKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
-                    name = new Active<string>(PlayerPrefs.GetString(secondsKey), __PurchaseParse);
                     if (name.ToDay() == null)
                     {
                         key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
@@ -589,7 +593,7 @@ public partial class UserDataMain
                             if (isWriteTimes)
                                 PlayerPrefs.SetInt(key, times);
 
-                            if (name.seconds == 0)
+                            /*if (name.seconds == 0)
                             {
                                 days = 1;
 
@@ -597,11 +601,12 @@ public partial class UserDataMain
                             }
                             else
                             {
-                                days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now, DateTimeUtility.DataTimeType.UTC));
-                                
-                                name.seconds = DateTimeUtility.GetSeconds(now/*.ToUniversalTime()*/.Ticks);
-                            }
+                                days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now,
+                                    DateTimeUtility.DataTimeType.UTC));
+                            }*/
 
+                            name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
+                            
                             if (expKey != null)
                             {
                                 PlayerPrefs.SetInt(expKey, exp + days);
@@ -704,6 +709,21 @@ public partial class UserDataMain
     private static string __PurchaseParse(Memory<string> parameters)
     {
         return parameters.Span[0];
+    }
+
+    private static int __GetDays(uint seconds, int deadline, long ticks)
+    {
+        if (seconds == 0)
+        {
+            if (deadline == 0)
+                return 1;
+
+            seconds = (uint)((ticks - TimeSpan.TicksPerDay) / TimeSpan.TicksPerSecond);
+        }
+        
+        long now = Math.Min(DateTime.UtcNow.Ticks, deadline * TimeSpan.TicksPerSecond + ticks);
+
+        return Math.Max((int)(now / TimeSpan.TicksPerDay - seconds * TimeSpan.TicksPerSecond / TimeSpan.TicksPerDay), 0);
     }
 
     private static int __GetPassIndex(int level)

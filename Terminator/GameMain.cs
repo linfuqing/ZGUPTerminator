@@ -234,6 +234,7 @@ public class GameMain : GameUser
         private string[] __assetNames;
         private HashSet<string> __folders;
         private AssetBundle __assetBundle;
+        private AssetManager.Writer __writer;
         
         public readonly AssetManager AssetManager;
 
@@ -280,6 +281,9 @@ public class GameMain : GameUser
         public void Dispose()
         {
             __assetBundle.Unload(true);
+            
+            if(__writer.isCreated)
+                __writer.Dispose();
         }
 
         public bool MoveNext()
@@ -294,7 +298,7 @@ public class GameMain : GameUser
                 if ((DateTime.Now.Ticks - ticks) * 1.0 / TimeSpan.TicksPerSecond > maximumDeltaTime)
                     return true;
             }
-
+            
             return false;
         }
 
@@ -312,9 +316,9 @@ public class GameMain : GameUser
             if (separatorIndex == -1)
             {
                 folder = string.Empty;
-                
+
                 filename = name;
-                
+
                 path = AssetFileUtility.Combine(__path, name);
             }
             else
@@ -322,17 +326,17 @@ public class GameMain : GameUser
                 folder = name.Remove(separatorIndex);
 
                 filename = AssetFileUtility.GetFileNameWithoutExtension(name.Substring(separatorIndex + 1));
-                
+
                 separatorIndex = folder.LastIndexOf('/');
                 if (separatorIndex != -1)
                     folder = folder.Substring(separatorIndex + 1);
 
                 path = AssetFileUtility.Combine(__path, folder, filename);
-                
+
                 if (__folders == null)
                     __folders = new HashSet<string>();
-                
-                if(__folders.Add(folder))
+
+                if (__folders.Add(folder))
                     AssetManager.LoadFrom(AssetFileUtility.Combine(folder, folder));
             }
 
@@ -347,48 +351,56 @@ public class GameMain : GameUser
                 return false;
 
             var bytes = text.GetData<byte>();
+            //DestroyImmediate(text, true);
 
-            using (var writer = new AssetManager.Writer(folder, AssetManager))
+            if (__writer.isCreated && __writer.Folder != folder)
             {
-                try
-                {
-                    string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
-                    assetName = assetName.ToLower();
+                __writer.Dispose();
 
-                    AssetManager.AssetData assetData;
-                    using (var md5 = new MD5CryptoServiceProvider())
-                    using (var stream = bytes.ToStream())
-                        assetData.info.md5 = md5.ComputeHash(stream);
-
-                    if (!AssetManager.Get(assetName, out var asset) ||
-                        !asset.data.info.md5.AsSpan().SequenceEqual(assetData.info.md5.AsSpan()))
-                    {
-                        AssetManager.CreateDirectory(path);
-
-                        using (var file = AssetFileUtility.Open(path, FileMode.Create, FileAccess.Write))
-                            file.Write(bytes.AsReadOnlySpan());
-
-                        assetData.type = AssetManager.AssetType.Uncompressed;
-                        assetData.info.version = 0;
-                        assetData.info.size = (uint)bytes.Length;
-                        assetData.info.fileName = filename;
-                        assetData.pack = AssetManager.AssetPack.Default;
-                        assetData.dependencies = null;
-
-                        writer.Write(assetName, assetData);
-                    }
-
-                    //DestroyImmediate(text, true);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e.InnerException ?? e);
-
-                    return false;
-                }
-
-                return true;
+                __writer = default;
             }
+
+            if (!__writer.isCreated)
+                __writer = new AssetManager.Writer(folder, AssetManager);
+
+            try
+            {
+                string assetName = string.IsNullOrEmpty(folder) ? filename : $"{folder}/{filename}";
+                assetName = assetName.ToLower();
+
+                AssetManager.AssetData assetData;
+                using (var md5 = new MD5CryptoServiceProvider())
+                    using (var stream = bytes.ToStream())
+                    assetData.info.md5 = md5.ComputeHash(stream);
+
+                if (!AssetManager.Get(assetName, out var asset) ||
+                    !asset.data.info.md5.AsSpan().SequenceEqual(assetData.info.md5.AsSpan()))
+                {
+                    AssetManager.CreateDirectory(path);
+
+                    using (var file = AssetFileUtility.Open(path, FileMode.Create, FileAccess.Write))
+                        file.Write(bytes.AsReadOnlySpan());
+
+                    assetData.type = AssetManager.AssetType.Uncompressed;
+                    assetData.info.version = 0;
+                    assetData.info.size = (uint)bytes.Length;
+                    assetData.info.fileName = filename;
+                    assetData.pack = AssetManager.AssetPack.Default;
+                    assetData.dependencies = null;
+
+                    __writer.Write(assetName, assetData);
+                }
+
+                //DestroyImmediate(text, true);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e.InnerException ?? e);
+
+                return false;
+            }
+
+            return true;
         }
     }
     
@@ -445,8 +457,11 @@ public class GameMain : GameUser
 
                     assetManager = assetIterator.AssetManager;
                 }
+                
+                while (AssetFileUtility.isPending)
+                    yield return null;
             }
-            
+
 #if ENABLE_CONTENT_DELIVERY
             //string cdnURL = GameConstantManager.Get(GameConstantManager.KEY_CDN_URL);
             //if (string.IsNullOrEmpty(cdnURL))
