@@ -424,9 +424,6 @@ public class GameMain : GameUser
 
                     sceneArchiveAssetManager = assetIterator.AssetManager;
                 }
-                
-                while (AssetFileUtility.isPending)
-                    yield return null;
             }
 
 #if ENABLE_CONTENT_DELIVERY

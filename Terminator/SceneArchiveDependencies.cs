@@ -2,15 +2,19 @@ using System;
 
 /// <summary>
 /// Build-time / runtime shared format: parent Unity scene (Selection in BuildContent)
-/// → Content archive ids needed for MEMFS materialization.
+/// → files to materialize under PathRemap (ContentArchives + EntityScenes).
 /// </summary>
 public static class SceneArchiveDependencies
 {
-    public const string FileName = "scene_archive_dependencies.json";
+    public const string FileName = "scene_archive_dependencies";
+
+    public const string Extension = "json";
+
+    public static string RelativePathWithoutExtension => $"ContentArchives/{FileName}";
 
     /// <summary>Path relative to content pack root (same folder as archive_dependencies.bin).</summary>
-    public static string RelativePath => $"ContentArchives/{FileName}";
-
+    public static string RelativePath => $"{RelativePathWithoutExtension}.{Extension}";
+    
     [Serializable]
     public class File
     {
@@ -27,7 +31,14 @@ public static class SceneArchiveDependencies
         /// <summary>Parent scene asset GUID (optional, for debugging).</summary>
         public string sceneGuid;
 
-        /// <summary>Archive ids under ContentArchives/ to materialize.</summary>
+        /// <summary>Archive ids under ContentArchives/ (Hybrid / WeakObject content).</summary>
         public string[] archives;
+
+        /// <summary>
+        /// Relative paths under content pack as PathRemap sees them
+        /// (e.g. EntityScenes/{guid}.entityheader, EntityScenes/{guid}.0.entities).
+        /// Required for SubScene load even when archives is empty.
+        /// </summary>
+        public string[] entityScenes;
     }
 }

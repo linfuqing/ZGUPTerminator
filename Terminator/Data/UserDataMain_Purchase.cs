@@ -481,23 +481,18 @@ public partial class UserDataMain
                     {
                         if (PlayerPrefs.GetInt($"{NAME_SPACE_USER_PURCHASE_TOKEN}{token.name}") < output.times)
                         {
-                            value.flag = name.ToDay() == null ? 0 : UserPurchaseToken.Flag.Locked;
-                            if (value.flag == 0 && name.seconds != 0)
+                            value.flag = result.days > 0 ? 0 : UserPurchaseToken.Flag.Locked;
+                            if (value.flag == 0)
                             {
                                 numOptions = token.options == null ? 0 : token.options.Length;
                                 if (numOptions > 0)
                                 {
-                                    if (result.days > 0)
-                                    {
-                                        days = Mathf.Min(result.days, maxDays);
+                                    days = Mathf.Min(result.days, maxDays);
 
-                                        Array.Resize(ref value.options, days * numOptions);
+                                    Array.Resize(ref value.options, days * numOptions);
 
-                                        for (k = 0; k < days; ++k)
-                                            Array.Copy(token.options, 0, value.options, k * numOptions, numOptions);
-                                    }
-                                    else
-                                        value.options = null;
+                                    for (k = 0; k < days; ++k)
+                                        Array.Copy(token.options, 0, value.options, k * numOptions, numOptions);
                                 }
                             }
                         }
@@ -562,11 +557,9 @@ public partial class UserDataMain
 
         List<UserReward> rewards = null;
 
-        bool isValid;
         int i, days, times;
         string secondsKey, key;
         Active<string> name;
-        DateTime now;
         IPurchaseData.Output output;
         foreach (var purchaseToken in _purchaseTokens)
         {
@@ -576,63 +569,60 @@ public partial class UserDataMain
             {
                 secondsKey = $"{NAME_SPACE_USER_PURCHASE_TOKEN_SECONDS}{type}{level}";
                 name = new Active<string>(PlayerPrefs.GetString(secondsKey), __PurchaseParse);
-                isValid = PurchaseData.IsValid(
+                PurchaseData.IsValid(
                     type,
                     purchaseToken.level,
                     NAME_SPACE_USER_PURCHASE_ITEM,
                     out times,
                     out output);
                 days = __GetDays(name.seconds, output.deadline, output.ticks);
-                if (isValid || days > 0)
+                if (days > 0)
                 {
-                    if (name.ToDay() == null)
+                    key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
+                    if (PlayerPrefs.GetInt(key) < times)
                     {
-                        key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
-                        if (PlayerPrefs.GetInt(key) < times)
+                        if (isWriteTimes)
+                            PlayerPrefs.SetInt(key, times);
+
+                        /*if (name.seconds == 0)
                         {
-                            if (isWriteTimes)
-                                PlayerPrefs.SetInt(key, times);
-
-                            /*if (name.seconds == 0)
-                            {
-                                days = 1;
-
-                                name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
-                            }
-                            else
-                            {
-                                days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now,
-                                    DateTimeUtility.DataTimeType.UTC));
-                            }*/
+                            days = 1;
 
                             name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
-                            
-                            if (expKey != null)
-                            {
-                                PlayerPrefs.SetInt(expKey, exp + days);
-
-                                if (days > 1)
-                                {
-                                    exp += --days;
-
-                                    name.seconds -= 60u * 60u * 24u * (uint)days;
-                                    
-                                    days = 1;
-                                }
-                            }
-
-                            if (isWriteSeconds)
-                            {
-                                name.value = purchaseToken.name;
-                                PlayerPrefs.SetString(secondsKey, name.ToString());
-                            }
-
-                            if (rewards == null)
-                                rewards = new List<UserReward>();
-
-                            for(i = 0; i < days; ++i)
-                                __ApplyRewards(purchaseToken.options, rewards);
                         }
+                        else
+                        {
+                            days = Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out now,
+                                DateTimeUtility.DataTimeType.UTC));
+                        }*/
+
+                        name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
+
+                        if (expKey != null)
+                        {
+                            PlayerPrefs.SetInt(expKey, exp + days);
+
+                            if (days > 1)
+                            {
+                                exp += --days;
+
+                                name.seconds -= 60u * 60u * 24u * (uint)days;
+
+                                days = 1;
+                            }
+                        }
+
+                        if (isWriteSeconds)
+                        {
+                            name.value = purchaseToken.name;
+                            PlayerPrefs.SetString(secondsKey, name.ToString());
+                        }
+
+                        if (rewards == null)
+                            rewards = new List<UserReward>();
+
+                        for (i = 0; i < days; ++i)
+                            __ApplyRewards(purchaseToken.options, rewards);
                     }
                 }
             }
@@ -713,6 +703,9 @@ public partial class UserDataMain
 
     private static int __GetDays(uint seconds, int deadline, long ticks)
     {
+        if (ticks < 1L)
+            return 0;
+        
         if (seconds == 0)
         {
             if (deadline == 0)

@@ -13,17 +13,6 @@ public class GameSceneActivation : IGameSceneActivation
 
     List<string> __materializedPaths;
 
-    /*public static void CreateDirectory(string path)
-    {
-        string folder = Path.GetDirectoryName(path);
-        if (string.IsNullOrEmpty(folder) || Directory.Exists(folder))
-            return;
-
-        CreateDirectory(folder);
-
-        Directory.CreateDirectory(folder);
-    }*/
-
     public IEnumerator Init(string sceneName)
     {
         __materializedPaths = null;
@@ -33,7 +22,10 @@ public class GameSceneActivation : IGameSceneActivation
                ContentDeliveryGlobalState.ContentUpdateState.ContentReady)
             yield return null;
 
-        MaterializeArchivesForScene(AssetFileUtility.GetFileNameWithoutExtension(sceneName));
+        while (AssetFileUtility.isPending)
+            yield return null;
+        
+        MaterializeForScene(AssetFileUtility.GetFileNameWithoutExtension(sceneName));
 #else
         yield break;
 #endif
@@ -42,24 +34,24 @@ public class GameSceneActivation : IGameSceneActivation
     public void Dispose()
     {
 #if ENABLE_CONTENT_DELIVERY
-        DematerializeArchives();
+        Dematerialize();
 #endif
         __materializedPaths = null;
     }
 
 #if ENABLE_CONTENT_DELIVERY
-    void MaterializeArchivesForScene(string sceneName)
+    void MaterializeForScene(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogWarning("[GameSceneActivation] Init sceneName is empty; skip archive materialization.");
+            Debug.LogWarning("[GameSceneActivation] Init sceneName is empty; skip materialization.");
             return;
         }
 
         if (!TryLoadDependencyFile(out var dependencyFile) || dependencyFile.scenes == null)
         {
             Debug.LogError(
-                $"[GameSceneActivation] Missing {SceneArchiveDependencies.RelativePath}; cannot materialize archives for '{sceneName}'.");
+                $"[GameSceneActivation] Missing {SceneArchiveDependencies.RelativePath}; cannot materialize for '{sceneName}'.");
             return;
         }
 
@@ -75,10 +67,19 @@ public class GameSceneActivation : IGameSceneActivation
             }
         }
 
-        if (entry == null || entry.archives == null || entry.archives.Length == 0)
+        if (entry == null)
         {
             Debug.LogWarning(
-                $"[GameSceneActivation] No archive list for scene '{sceneName}' in {SceneArchiveDependencies.FileName}.");
+                $"[GameSceneActivation] No dependency entry for scene '{sceneName}' in {SceneArchiveDependencies.FileName}.");
+            return;
+        }
+
+        var archiveCount = entry.archives != null ? entry.archives.Length : 0;
+        var entitySceneCount = entry.entityScenes != null ? entry.entityScenes.Length : 0;
+        if (archiveCount == 0 && entitySceneCount == 0)
+        {
+            Debug.LogWarning(
+                $"[GameSceneActivation] Empty archives and EntityScenes for '{sceneName}' in {SceneArchiveDependencies.FileName}.");
             return;
         }
 
@@ -96,58 +97,98 @@ public class GameSceneActivation : IGameSceneActivation
             return;
         }
 
-        __materializedPaths = new List<string>(entry.archives.Length);
+        __materializedPaths = new List<string>(archiveCount + entitySceneCount);
 
-        for (int i = 0; i < entry.archives.Length; i++)
+        for (int i = 0; i < archiveCount; i++)
         {
             var archiveId = entry.archives[i];
             if (string.IsNullOrEmpty(archiveId))
                 continue;
 
-            var relativePath = RuntimeContentManager.DefaultArchivePathFunc(archiveId);
-            var destPath = remap(relativePath);
-            if (string.IsNullOrEmpty(destPath))
-            {
-                Debug.LogError($"[GameSceneActivation] Remap failed for {relativePath}");
-                
-                continue;
-            }
+            MaterializeRelativePath(RuntimeContentManager.DefaultArchivePathFunc(archiveId), remap, assetManager);
+        }
 
-            // Only track files we create so Dispose won't delete archives still needed by another scene.
-            if (File.Exists(destPath))
+        for (int i = 0; i < entitySceneCount; i++)
+        {
+            var relativePath = entry.entityScenes[i];
+            if (string.IsNullOrEmpty(relativePath))
                 continue;
 
-            var assetName = relativePath.ToLowerInvariant();
-            if (!assetManager.GetAssetPath(assetName, out _, out ulong fileOffset, out string sourcePath) ||
-                string.IsNullOrEmpty(sourcePath))
-            {
-                Debug.LogError($"[GameSceneActivation] GetAssetPath failed for {assetName}");
-                continue;
-            }
-
-            if (fileOffset != 0)
-            {
-                Debug.LogError($"[GameSceneActivation] Non-zero fileOffset ({fileOffset}) for {assetName}; cannot Mount.");
-                continue;
-            }
-
-            try
-            {
-                CopyAssetToFile(sourcePath, destPath);
-                __materializedPaths.Add(destPath);
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                Debug.LogError($"[GameSceneActivation] Failed to materialize {sourcePath} -> {destPath}");
-            }
+            MaterializeRelativePath(relativePath.Replace('\\', '/'), remap, assetManager);
         }
 
         Debug.Log(
-            $"[GameSceneActivation] Materialized {__materializedPaths.Count}/{entry.archives.Length} archives for '{sceneName}'.");
+            $"[GameSceneActivation] Materialized {__materializedPaths.Count} files for '{sceneName}' " +
+            $"(archives={archiveCount}, entityScenes={entitySceneCount}).");
     }
 
-    void DematerializeArchives()
+    void MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
+    {
+        var destPath = remap(relativePath);
+        if (string.IsNullOrEmpty(destPath))
+        {
+            Debug.LogError($"[GameSceneActivation] Remap failed for {relativePath}");
+            return;
+        }
+
+        // Only track files we create so Dispose won't delete files still needed by another scene.
+        if (File.Exists(destPath))
+        {
+            return;
+        }
+
+        if (!TryResolveAssetSource(relativePath, assetManager, out var sourcePath, out var fileOffset))
+        {
+            Debug.LogError($"[GameSceneActivation] GetAssetPath failed for {relativePath}");
+            return;
+        }
+
+        if (fileOffset != 0)
+        {
+            Debug.LogError($"[GameSceneActivation] Non-zero fileOffset ({fileOffset}) for {relativePath}; cannot materialize.");
+            return;
+        }
+
+        try
+        {
+            CopyAssetToFile(sourcePath, destPath);
+            __materializedPaths.Add(destPath);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            Debug.LogError($"[GameSceneActivation] Failed to materialize {sourcePath} -> {destPath}");
+        }
+    }
+
+    static bool TryResolveAssetSource(
+        string relativePath,
+        AssetManager assetManager,
+        out string sourcePath,
+        out ulong fileOffset)
+    {
+        sourcePath = null;
+        fileOffset = 0;
+
+        var candidates = new[]
+        {
+            relativePath.ToLowerInvariant(),
+            (relativePath + ".bytes").ToLowerInvariant(),
+        };
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (assetManager.GetAssetPath(candidates[i], out _, out fileOffset, out sourcePath) &&
+                !string.IsNullOrEmpty(sourcePath))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void Dematerialize()
     {
         if (__materializedPaths == null)
         {
@@ -177,16 +218,11 @@ public class GameSceneActivation : IGameSceneActivation
     {
         dependencyFile = null;
 
-        var remap = ContentDeliveryGlobalState.PathRemapFunc;
-        var relativePath = SceneArchiveDependencies.RelativePath;
-        if (remap != null)
-            // Ensure content folder is LoadFrom'd via existing PathRemap side effects.
-            remap(relativePath);
-
         var assetManager = GameMain.sceneArchiveAssetManager;
         if (assetManager == null)
             return false;
 
+        var relativePath = SceneArchiveDependencies.RelativePathWithoutExtension;
         var assetName = relativePath.ToLowerInvariant();
         if (!assetManager.GetAssetPath(assetName, out _, out _, out string sourcePath) ||
             string.IsNullOrEmpty(sourcePath))
@@ -204,7 +240,9 @@ public class GameSceneActivation : IGameSceneActivation
     {
         var folder = Path.GetDirectoryName(destPath);
         if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+        {
             Directory.CreateDirectory(folder);
+        }
 
         using (var src = AssetFileUtility.Open(sourcePath, FileMode.Open, FileAccess.Read))
         using (var dst = File.Open(destPath, FileMode.Create, FileAccess.Write))
