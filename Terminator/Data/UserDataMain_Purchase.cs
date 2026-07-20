@@ -711,12 +711,12 @@ public partial class UserDataMain
             if (deadline == 0)
                 return 1;
 
-            seconds = (uint)((ticks - TimeSpan.TicksPerDay) / TimeSpan.TicksPerSecond);
+            seconds = DateTimeUtility.GetSeconds(ticks) - 24 * 60 * 60;
         }
         
         long now = Math.Min(DateTime.UtcNow.Ticks, deadline * TimeSpan.TicksPerSecond + ticks);
 
-        return Math.Max((int)(new DateTime(now).Subtract(new DateTime(seconds * TimeSpan.TicksPerSecond))).TotalDays, 0);
+        return Math.Max((int)(new DateTime(now).Subtract(new DateTime(DateTimeUtility.GetTicks(seconds)))).TotalDays, 0);
     }
 
     private static int __GetPassIndex(int level)
