@@ -74,14 +74,28 @@ public class GameSceneActivation : IGameSceneActivation
             return;
         }
 
-        var archiveCount = entry.archives != null ? entry.archives.Length : 0;
-        var entitySceneCount = entry.entityScenes != null ? entry.entityScenes.Length : 0;
-        if (archiveCount == 0 && entitySceneCount == 0)
+        var archiveRootCount = entry.archiveIndices != null ? entry.archiveIndices.Length : 0;
+        var entityRootCount = entry.entitySceneIndices != null ? entry.entitySceneIndices.Length : 0;
+        if (archiveRootCount == 0 && entityRootCount == 0)
         {
             Debug.LogWarning(
                 $"[GameSceneActivation] Empty archives and EntityScenes for '{sceneName}' in {SceneArchiveDependencies.FileName}.");
             return;
         }
+
+        var archivePool = dependencyFile.archives;
+        var entityScenePool = dependencyFile.entityScenes;
+        if ((archiveRootCount > 0 && (archivePool == null || archivePool.Length == 0)) ||
+            (entityRootCount > 0 && (entityScenePool == null || entityScenePool.Length == 0)))
+        {
+            Debug.LogError(
+                $"[GameSceneActivation] Scene '{sceneName}' has indices but shared pools are missing in {SceneArchiveDependencies.FileName}.");
+            return;
+        }
+
+        var expandedArchives = new List<int>(64);
+        var expandedEntityScenes = new List<int>(32);
+        SceneArchiveDependencies.ExpandSceneRoots(dependencyFile, entry, expandedArchives, expandedEntityScenes);
 
         var remap = ContentDeliveryGlobalState.PathRemapFunc;
         if (remap == null)
@@ -97,29 +111,50 @@ public class GameSceneActivation : IGameSceneActivation
             return;
         }
 
-        __materializedPaths = new List<string>(archiveCount + entitySceneCount);
+        __materializedPaths = new List<string>(expandedArchives.Count + expandedEntityScenes.Count);
 
-        for (int i = 0; i < archiveCount; i++)
+        for (int i = 0; i < expandedArchives.Count; i++)
         {
-            var archiveId = entry.archives[i];
-            if (string.IsNullOrEmpty(archiveId))
+            var poolIndex = expandedArchives[i];
+            if (poolIndex < 0 || poolIndex >= archivePool.Length)
+            {
+                Debug.LogError(
+                    $"[GameSceneActivation] expanded archive index {poolIndex} out of range (pool={archivePool.Length}) for '{sceneName}'.");
                 continue;
+            }
+
+            var archiveId = archivePool[poolIndex];
+            if (string.IsNullOrEmpty(archiveId))
+            {
+                continue;
+            }
 
             MaterializeRelativePath(RuntimeContentManager.DefaultArchivePathFunc(archiveId), remap, assetManager);
         }
 
-        for (int i = 0; i < entitySceneCount; i++)
+        for (int i = 0; i < expandedEntityScenes.Count; i++)
         {
-            var relativePath = entry.entityScenes[i];
-            if (string.IsNullOrEmpty(relativePath))
+            var poolIndex = expandedEntityScenes[i];
+            if (poolIndex < 0 || poolIndex >= entityScenePool.Length)
+            {
+                Debug.LogError(
+                    $"[GameSceneActivation] expanded entityScene index {poolIndex} out of range (pool={entityScenePool.Length}) for '{sceneName}'.");
                 continue;
+            }
+
+            var relativePath = entityScenePool[poolIndex];
+            if (string.IsNullOrEmpty(relativePath))
+            {
+                continue;
+            }
 
             MaterializeRelativePath(relativePath.Replace('\\', '/'), remap, assetManager);
         }
 
         Debug.Log(
             $"[GameSceneActivation] Materialized {__materializedPaths.Count} files for '{sceneName}' " +
-            $"(archives={archiveCount}, entityScenes={entitySceneCount}).");
+            $"(roots archives={archiveRootCount}, entityScenes={entityRootCount}; " +
+            $"expanded archives={expandedArchives.Count}, entityScenes={expandedEntityScenes.Count}).");
     }
 
     void MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
@@ -231,8 +266,12 @@ public class GameSceneActivation : IGameSceneActivation
         var bytes = AssetFileUtility.ReadAllBytes(sourcePath);
         if (bytes == null || bytes.Length == 0)
             return false;
+        
+        var json = Encoding.UTF8.GetString(bytes);
+        
+        Debug.Log(json);
 
-        dependencyFile = JsonUtility.FromJson<SceneArchiveDependencies.File>(Encoding.UTF8.GetString(bytes));
+        dependencyFile = JsonUtility.FromJson<SceneArchiveDependencies.File>(json);
         return dependencyFile != null;
     }
 

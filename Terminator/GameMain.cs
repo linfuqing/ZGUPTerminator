@@ -427,6 +427,8 @@ public class GameMain : GameUser
             }
 
 #if ENABLE_CONTENT_DELIVERY
+            print("Start Initialize ContentDelivery");
+
             //string cdnURL = GameConstantManager.Get(GameConstantManager.KEY_CDN_URL);
             //if (string.IsNullOrEmpty(cdnURL))
             {
@@ -436,7 +438,7 @@ public class GameMain : GameUser
                     null,
                     null);
 
-                var paths = new Dictionary<string, string>();
+                //var paths = new Dictionary<string, string>();
                 string directory = Path.Combine(Application.persistentDataPath, filename);
                 Func<string, string> remapFunc = x =>
                 {
@@ -452,7 +454,9 @@ public class GameMain : GameUser
                     }
 
                     string name = x.ToLower();
-                    if (!sceneArchiveAssetManager.GetAssetPath(name, out _, out ulong fileOffset, out string filePath))
+                    
+                    return Path.Combine(directory, name);
+                    /*if (!sceneArchiveAssetManager.GetAssetPath(name, out _, out ulong fileOffset, out string filePath))
                         Debug.LogError($"GetFileInfo {x} failed");
 
                     UnityEngine.Assertions.Assert.AreEqual(0, fileOffset);
@@ -464,14 +468,9 @@ public class GameMain : GameUser
                     {
                         result = Path.Combine(directory, name);
                         paths[filePath] = result;
-                        
-                        /*CreateDirectory(result);
-                        
-                        if (!File.Exists(result))
-                            File.WriteAllBytes(result, AssetFileUtility.ReadAllBytes(filePath));*/
                     }
 
-                    return result;
+                    return result;*/
                     //return filePath;
                 };
 
@@ -480,8 +479,18 @@ public class GameMain : GameUser
                 #if DEBUG
                 ContentDeliveryGlobalState.LogFunc = Debug.Log;
                 #endif
-
+                
                 var catalogPath = remapFunc(RuntimeContentManager.RelativeCatalogPath);
+                if (sceneArchiveAssetManager.GetAssetPath(RuntimeContentManager.RelativeCatalogPath.ToLower(), out _,
+                        out _, out string filePath))
+                {
+                    var folder = Path.GetDirectoryName(catalogPath);
+                    if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+                        Directory.CreateDirectory(folder);
+
+                    File.WriteAllBytes(catalogPath, AssetFileUtility.ReadAllBytes(filePath));
+                }
+
                 RuntimeContentManager.LoadLocalCatalogData(catalogPath,
                     RuntimeContentManager.DefaultContentFileNameFunc,
                     p => remapFunc(RuntimeContentManager.DefaultArchivePathFunc(p)));
@@ -491,6 +500,8 @@ public class GameMain : GameUser
                     $"{cdnURL}/{Filename}",
                     Filename,
                     GameConstantManager.Get(ContentSet));*/
+            
+            print("End Initialize ContentDelivery");
 #endif
         }
     }
