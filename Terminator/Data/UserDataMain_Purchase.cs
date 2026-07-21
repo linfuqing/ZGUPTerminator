@@ -414,7 +414,7 @@ public partial class UserDataMain
 
             name = new Active<string>(PlayerPrefs.GetString(key), __PurchaseParse);
 
-            result.days = __GetDays(name.seconds, output.deadline, output.ticks);/*name.seconds == 0 ? 1 : Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _,
+            result.days = __GetDays(name.seconds, output.deadline, output.ticks, out _);/*name.seconds == 0 ? 1 : Mathf.Abs(DateTimeUtility.GetTotalDays(name.seconds, out _, out _,
                     DateTimeUtility.DataTimeType.UTC))*/;
 
             maxDays = int.MaxValue;
@@ -558,6 +558,7 @@ public partial class UserDataMain
         List<UserReward> rewards = null;
 
         int i, days, times;
+        long ticks;
         string secondsKey, key;
         Active<string> name;
         IPurchaseData.Output output;
@@ -575,7 +576,7 @@ public partial class UserDataMain
                     NAME_SPACE_USER_PURCHASE_ITEM,
                     out times,
                     out output);
-                days = __GetDays(name.seconds, output.deadline, output.ticks);
+                days = __GetDays(name.seconds, output.deadline, output.ticks, out ticks);
                 if (days > 0)
                 {
                     key = $"{NAME_SPACE_USER_PURCHASE_TOKEN}{purchaseToken.name}";
@@ -596,7 +597,7 @@ public partial class UserDataMain
                                 DateTimeUtility.DataTimeType.UTC));
                         }*/
 
-                        name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds() : 0;
+                        name.seconds = isWriteSeconds ? DateTimeUtility.GetSeconds(ticks) : 0;
 
                         if (expKey != null)
                         {
@@ -701,8 +702,9 @@ public partial class UserDataMain
         return parameters.Span[0];
     }
 
-    private static int __GetDays(uint seconds, int deadline, long ticks)
+    private static int __GetDays(uint seconds, int deadline, long ticks, out long now)
     {
+        now = DateTime.UtcNow.Ticks;
         if (ticks < 1L)
             return 0;
         
@@ -714,11 +716,11 @@ public partial class UserDataMain
             seconds = DateTimeUtility.GetSeconds(ticks) - 24 * 60 * 60;
         }
         
-        long now = Math.Min(DateTime.UtcNow.Ticks, deadline * TimeSpan.TicksPerSecond + ticks);
+        now = Math.Min(now, deadline * TimeSpan.TicksPerSecond + ticks);
 
         return Math.Max((int)(new DateTime(now).Subtract(new DateTime(DateTimeUtility.GetTicks(seconds)))).TotalDays, 0);
     }
-
+    
     private static int __GetPassIndex(int level)
     {
         if (level < 0)
