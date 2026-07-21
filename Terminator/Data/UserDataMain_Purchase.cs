@@ -718,7 +718,9 @@ public partial class UserDataMain
         
         now = Math.Min(now, deadline * TimeSpan.TicksPerSecond + ticks);
 
-        return Math.Max((int)(new DateTime(now).Subtract(new DateTime(DateTimeUtility.GetTicks(seconds)))).TotalDays, 0);
+        ticks = Math.Max(DateTimeUtility.GetTicks(seconds), ticks - TimeSpan.TicksPerDay);
+
+        return Math.Max((int)(new DateTime(now).Subtract(new DateTime(ticks))).TotalDays, 0);
     }
     
     private static int __GetPassIndex(int level)
