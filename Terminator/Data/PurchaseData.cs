@@ -177,9 +177,11 @@ public interface IPurchaseData
         
         public int GetDeadline(long ticks)
         {
-            int seconds = this.ticks > 0 ? (int)((ticks - this.ticks) / TimeSpan.TicksPerSecond) : 0;
+            /*int seconds = this.ticks > 0 ? (int)((ticks - this.ticks) / TimeSpan.TicksPerSecond) : 0;
 
-            return seconds < deadline ? deadline - seconds : 0;
+            return seconds < deadline ? deadline - seconds : 0;*/
+
+            return (int)(Math.Max(this.ticks + deadline, ticks) - ticks);
         }
     }
 

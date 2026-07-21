@@ -392,9 +392,10 @@ public class GameMain : GameUser
         public IEnumerator Execute(AssetBundle assetBundle, AssetManager.DownloadHandler downloadHandler)
         {
             var folders = new HashSet<string>();
-            
+
+            var origin = new AssetManager(ToAssetPath(filename));
             if(assetBundle == null)
-                sceneArchiveAssetManager = new AssetManager(ToAssetPath(filename));
+                sceneArchiveAssetManager = origin;
             else
             {
                 using (var assetIterator = new AssetIterator(filename, assetBundle, folders))
@@ -423,6 +424,13 @@ public class GameMain : GameUser
                     }
 
                     sceneArchiveAssetManager = assetIterator.AssetManager;
+
+                    /*using(var writer = new AssetManager.Writer())
+                    foreach (var source in origin)
+                    {
+                        if(!sceneArchiveAssetManager.Get(source.Key, out _))
+                            origin.de
+                    }*/
                 }
             }
 

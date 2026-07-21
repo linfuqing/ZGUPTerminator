@@ -652,7 +652,8 @@ public partial struct LookAtTransformSystem : ISystem
             
             var localToWorld = localToWorlds[index];
             localToWorld.Value = math.mul(localToWorld.Value, math.inverse(postTransformMatrix));
-            var rs = math.float3x3(math.mul(math.inverse(localToParent), localToWorld.Value));
+            var localMatrix = math.mul(math.inverse(localToParent), localToWorld.Value);
+            var rs = math.float3x3(localMatrix);
             var s = math.mul(math.inverse(math.float3x3(math.orthonormalize(rs))), rs);
             
             var localTransform = localTransforms[index];
@@ -660,7 +661,7 @@ public partial struct LookAtTransformSystem : ISystem
             var rotation = math.nlerp(
                 origins[index].rotation, localTransform.Rotation, normalizedTimeAhead);
 
-            var matrix = math.float4x4(math.mul(math.float3x3(rotation), s), localToWorld.Position);
+            var matrix = math.float4x4(math.mul(math.float3x3(rotation), s), localMatrix.c3.xyz);
             matrix = math.mul(localToParent, matrix);
             
             matrix = math.mul(matrix, postTransformMatrix);

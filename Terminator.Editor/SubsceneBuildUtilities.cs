@@ -31,13 +31,9 @@ static class SubSceneBuildUtilities
     const string ProgressBarTitle = "Scene Archive Dependencies";
 
     /// <summary>
-    /// Root SubScene = depth 0. Only BFS-enqueue nested EntityScene/EntityPrefab that have
-    /// EntityScenes/{guid}.entityheader on disk, and only while nextDepth ≤ this limit.
-    /// Prevents ProduceArtifact-walking the entire prefab Soft-ref graph.
+    /// Soft UnityObject → owning archives only at root (depth 0) and header-backed nested (depth ≤1).
+    /// EntityScene/EntityPrefab BFS has no depth cap — enqueue whenever header exists and not visited.
     /// </summary>
-    const int MaxWeakAssetBfsDepth = 1;
-
-    /// <summary>Soft UnityObject → owning archives only at root (0) and header-backed nested (≤1).</summary>
     const int MaxSoftUnityObjectDepth = 1;
 
     // Overall progress ranges for WriteSceneArchiveDependencies stages.
@@ -275,7 +271,7 @@ static class SubSceneBuildUtilities
 
     /// <summary>
     /// Full graph: catalog Object: + EntityScenes headers + weakassetrefs ProduceArtifact
-    /// (Soft UnityObject / nested EntityPrefab). Cancelable progress; LookupArtifact + BFS depth caps apply.
+    /// (Soft UnityObject / nested EntityPrefab). Cancelable progress; LookupArtifact + Soft depth cap apply.
     /// </summary>
     public static void WriteSceneArchiveDependencies(string buildFolder, List<ParentSceneInfo> parentScenes)
     {
@@ -318,6 +314,8 @@ static class SubSceneBuildUtilities
         var ensuredEntityLocalEdges = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         // ProduceArtifact is expensive — share weakassetrefs results across all parent scenes / SubScenes.
         var weakAssetRefsCache = new WeakAssetRefsProduceCache();
+        // Entity* BFS expansion memo: one GUID → direct children + Soft GUIDs; reuse across Levels / SubScenes.
+        var entityExpansionMemo = new EntityWeakExpansionMemo();
 
         var sceneRoots = new List<(ParentSceneInfo parent, HashSet<string> archiveRoots, HashSet<string> entityHeaderRoots)>(
             parentScenes.Count);
@@ -405,6 +403,7 @@ static class SubSceneBuildUtilities
                     entitySceneArchiveRoots,
                     ensuredEntityLocalEdges,
                     weakAssetRefsCache,
+                    entityExpansionMemo,
                     subProgressStart,
                     subProgressEnd,
                     out var weakStatus,
@@ -444,6 +443,10 @@ static class SubSceneBuildUtilities
             $"uniqueGuids={weakAssetRefsCache.UniqueGuidCount} " +
             $"hits={weakAssetRefsCache.Hits} misses={weakAssetRefsCache.Misses} " +
             $"lookupHits={weakAssetRefsCache.LookupHits} produceCalls={weakAssetRefsCache.ProduceCalls}");
+        Debug.Log(
+            $"[SubSceneBuildUtilities] Entity* expansion memo: " +
+            $"uniqueGuids={entityExpansionMemo.UniqueGuidCount} " +
+            $"hits={entityExpansionMemo.Hits} misses={entityExpansionMemo.Misses}");
 
         // Pool = closure of all scene roots through global edges / archive Dependency lists.
         if (ReportProgress("Build pools: expand archive / EntityScene closures", ProgressBuildPools))
@@ -550,7 +553,8 @@ static class SubSceneBuildUtilities
         Debug.Log(
             $"[SubSceneBuildUtilities] Wrote {dependencyFile.scenes.Length} scenes → {outPath} " +
             $"(shared archives={archivePool.values.Length}, entityScenes={entityScenePool.values.Length}, " +
-            $"weakProduce cache hits={weakAssetRefsCache.Hits} misses={weakAssetRefsCache.Misses})");
+            $"weakProduce cache hits={weakAssetRefsCache.Hits} misses={weakAssetRefsCache.Misses} | " +
+            $"expandMemo hits={entityExpansionMemo.Hits} misses={entityExpansionMemo.Misses})");
     }
 
     /// <summary>
@@ -1205,10 +1209,56 @@ static class SubSceneBuildUtilities
     }
 
     /// <summary>
+    /// Global memo of EntityScene/EntityPrefab weakassetrefs expansion:
+    /// GUID → direct Entity* children + Soft UnityObject GUIDs.
+    /// After the first full scan, later BFS visits reuse edges and must not ProduceArtifact /
+    /// re-walk the nested closure (avoids O(scenes × closure) when Player etc. appear in many Levels).
+    /// Soft application still respects MaxSoftUnityObjectDepth at the reuse site.
+    /// </summary>
+    sealed class EntityWeakExpansionMemo
+    {
+        public int Hits;
+        public int Misses;
+
+        public struct EntityChild
+        {
+            public string Guid;
+            public Hash128 Hash;
+            public bool HeaderExists;
+        }
+
+        public struct Entry
+        {
+            public List<EntityChild> EntityChildren;
+            public List<string> SoftUnityObjectGuids;
+        }
+
+        readonly Dictionary<string, Entry> _byGuid =
+            new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+
+        public int UniqueGuidCount => _byGuid.Count;
+
+        public bool TryGet(string sceneGuid, out Entry entry)
+        {
+            return _byGuid.TryGetValue(sceneGuid, out entry);
+        }
+
+        public void Set(string sceneGuid, List<EntityChild> entityChildren, List<string> softUnityObjectGuids)
+        {
+            _byGuid[sceneGuid] = new Entry
+            {
+                EntityChildren = entityChildren ?? new List<EntityChild>(),
+                SoftUnityObjectGuids = softUnityObjectGuids ?? new List<string>()
+            };
+        }
+    }
+
+    /// <summary>
     /// Walk weakassetrefs for a SubScene and nested EntityScene/EntityPrefab that have
     /// EntityScenes/{guid}.* on disk:
     /// - UnityObject at depth ≤ MaxSoftUnityObjectDepth → scene archive roots (depth 0) or entitySceneArchives
-    /// - EntityScene/EntityPrefab with header → graph edge; BFS only when header exists and depth allows
+    /// - EntityScene/EntityPrefab with header → graph edge; BFS while header exists (no depth cap; visited prevents cycles)
+    /// - EntityWeakExpansionMemo: reuse direct edges for GUIDs already expanded in another scene walk
     /// </summary>
     static void CollectWeakAssetDependencyGraph(
         Hash128 rootSceneGuid,
@@ -1220,6 +1270,7 @@ static class SubSceneBuildUtilities
         Dictionary<string, HashSet<string>> entitySceneArchiveRoots,
         HashSet<string> ensuredEntityLocalEdges,
         WeakAssetRefsProduceCache produceCache,
+        EntityWeakExpansionMemo expansionMemo,
         float progressMin,
         float progressMax,
         out WeakAssetCollectStatus status,
@@ -1291,7 +1342,8 @@ static class SubSceneBuildUtilities
                 if (ReportProgress(
                         $"weakassetrefs BFS '{parentSceneName}': guid={currentKey} | depth={depth} | " +
                         $"queue={pendingEntityScenes.Count} | visited={visitedEntityScenes.Count} | " +
-                        $"produceCache hits={produceCache.Hits} misses={produceCache.Misses}",
+                        $"produceCache hits={produceCache.Hits} misses={produceCache.Misses} | " +
+                        $"expandMemo hits={expansionMemo.Hits} misses={expansionMemo.Misses}",
                         bfsProgress))
                 {
                     status = WeakAssetCollectStatus.Cancelled;
@@ -1303,6 +1355,27 @@ static class SubSceneBuildUtilities
                     EnsureEntitySceneLocalEdgesOnce(
                         buildFolder, currentKey, currentHeader, entitySceneEdges, ensuredEntityLocalEdges);
                 }
+
+                // Global expansion memo: reuse direct Entity* + Soft edges; do not re-scan / re-enqueue closure.
+                if (expansionMemo.TryGet(currentKey, out var memoEntry))
+                {
+                    expansionMemo.Hits++;
+                    ApplyEntityWeakExpansionMemoEntry(
+                        memoEntry,
+                        depth,
+                        isRootSubScene,
+                        currentHeader,
+                        objectGuidToOwningArchives,
+                        sceneArchiveRoots,
+                        entitySceneEdges,
+                        entitySceneArchiveRoots,
+                        seenUnityObjectGuids,
+                        ref unityObjectGuidCount,
+                        ref matchedArchiveObjectCount);
+                    continue;
+                }
+
+                expansionMemo.Misses++;
 
                 if (!TryReadWeakAssetRefs(
                         sceneGuid,
@@ -1320,8 +1393,15 @@ static class SubSceneBuildUtilities
                         return;
                     }
 
+                    expansionMemo.Set(
+                        currentKey,
+                        new List<EntityWeakExpansionMemo.EntityChild>(),
+                        new List<string>());
                     continue;
                 }
+
+                var memoEntityChildren = new List<EntityWeakExpansionMemo.EntityChild>();
+                var memoSoftGuids = new List<string>();
 
                 for (int i = 0; i < weakIds.Count; i++)
                 {
@@ -1342,6 +1422,13 @@ static class SubSceneBuildUtilities
                     {
                         var nestedHeader = ToEntityHeaderRelativePath(guid);
                         var nestedHeaderExists = EntitySceneHeaderExists(buildFolder, guid);
+                        memoEntityChildren.Add(new EntityWeakExpansionMemo.EntityChild
+                        {
+                            Guid = guid,
+                            Hash = id.GlobalId.AssetGUID,
+                            HeaderExists = nestedHeaderExists
+                        });
+
                         if (nestedHeaderExists)
                         {
                             AddEntityEdge(entitySceneEdges, currentHeader, nestedHeader);
@@ -1367,15 +1454,17 @@ static class SubSceneBuildUtilities
                                 buildFolder, guid, nestedHeader, entitySceneEdges, ensuredEntityLocalEdges);
                         }
 
-                        // Do NOT ProduceArtifact-walk prefab Soft graphs without EntityScenes on disk.
-                        var nextDepth = depth + 1;
-                        if (nestedHeaderExists && nextDepth <= MaxWeakAssetBfsDepth)
+                        // Header-backed Entity* only — no depth cap (Soft UnityObject uses MaxSoftUnityObjectDepth).
+                        if (nestedHeaderExists)
                         {
-                            pendingEntityScenes.Enqueue((id.GlobalId.AssetGUID, nextDepth));
+                            pendingEntityScenes.Enqueue((id.GlobalId.AssetGUID, depth + 1));
                         }
 
                         continue;
                     }
+
+                    // Record Soft GUIDs for memo even when depth skips application (reuse may be shallower).
+                    memoSoftGuids.Add(guid);
 
                     // Soft UnityObject only on root SubScene and header-backed nested (depth ≤ max).
                     if (depth > MaxSoftUnityObjectDepth)
@@ -1407,6 +1496,8 @@ static class SubSceneBuildUtilities
                         }
                     }
                 }
+
+                expansionMemo.Set(currentKey, memoEntityChildren, memoSoftGuids);
             }
 
             status = WeakAssetCollectStatus.Ok;
@@ -1416,6 +1507,91 @@ static class SubSceneBuildUtilities
             status = WeakAssetCollectStatus.Failed;
             Debug.LogError(
                 $"[SubSceneBuildUtilities] CollectWeakAssetDependencyGraph('{parentSceneName}', {rootSceneGuid}) failed: {e}");
+        }
+    }
+
+    /// <summary>
+    /// Apply a previously expanded Entity* node's direct edges without re-reading weakassetrefs.
+    /// Does not enqueue Entity* children — their subgraph edges already live in the global edge tables.
+    /// Soft UnityObject archives follow MaxSoftUnityObjectDepth at this visit's depth.
+    /// </summary>
+    static void ApplyEntityWeakExpansionMemoEntry(
+        EntityWeakExpansionMemo.Entry memoEntry,
+        int depth,
+        bool isRootSubScene,
+        string currentHeader,
+        Dictionary<string, HashSet<string>> objectGuidToOwningArchives,
+        HashSet<string> sceneArchiveRoots,
+        Dictionary<string, HashSet<string>> entitySceneEdges,
+        Dictionary<string, HashSet<string>> entitySceneArchiveRoots,
+        HashSet<string> seenUnityObjectGuids,
+        ref int unityObjectGuidCount,
+        ref int matchedArchiveObjectCount)
+    {
+        var entityChildren = memoEntry.EntityChildren;
+        if (entityChildren != null)
+        {
+            for (int i = 0; i < entityChildren.Count; i++)
+            {
+                var child = entityChildren[i];
+                if (string.IsNullOrEmpty(child.Guid))
+                {
+                    continue;
+                }
+
+                var nestedHeader = ToEntityHeaderRelativePath(child.Guid);
+                if (child.HeaderExists)
+                {
+                    AddEntityEdge(entitySceneEdges, currentHeader, nestedHeader);
+                }
+
+                if (objectGuidToOwningArchives.TryGetValue(child.Guid, out var nestedOwning))
+                {
+                    foreach (var archiveId in nestedOwning)
+                    {
+                        AddEntityArchiveRoot(entitySceneArchiveRoots, nestedHeader, archiveId);
+                    }
+                }
+            }
+        }
+
+        if (depth > MaxSoftUnityObjectDepth)
+        {
+            return;
+        }
+
+        var softGuids = memoEntry.SoftUnityObjectGuids;
+        if (softGuids == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < softGuids.Count; i++)
+        {
+            var guid = softGuids[i];
+            if (string.IsNullOrEmpty(guid) || !seenUnityObjectGuids.Add(guid))
+            {
+                continue;
+            }
+
+            unityObjectGuidCount++;
+            if (!objectGuidToOwningArchives.TryGetValue(guid, out var weakSet) || weakSet.Count == 0)
+            {
+                continue;
+            }
+
+            matchedArchiveObjectCount++;
+            foreach (var archiveId in weakSet)
+            {
+                if (isRootSubScene)
+                {
+                    sceneArchiveRoots.Add(archiveId);
+                }
+                else
+                {
+                    AddEntityArchiveRoot(entitySceneArchiveRoots, currentHeader, archiveId);
+                }
+            }
         }
     }
 
