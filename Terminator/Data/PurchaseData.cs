@@ -181,7 +181,7 @@ public interface IPurchaseData
 
             return seconds < deadline ? deadline - seconds : 0;*/
 
-            return (int)(Math.Max(this.ticks + deadline, ticks) - ticks);
+            return (int)((Math.Max(this.ticks + deadline * TimeSpan.TicksPerSecond, ticks) - ticks) / TimeSpan.TicksPerSecond);
         }
     }
 
