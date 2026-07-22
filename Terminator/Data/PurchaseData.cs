@@ -303,6 +303,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                                              .TicksPerSecond); //(int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
 
                         PlayerPrefs.SetInt(temp.ToString(NAME_SPACE_DEADLINE), seconds);
+                        PlayerPrefs.SetInt(temp.ToString(NAME_SPACE_PAY_TIME), (int)DateTimeUtility.GetSeconds(ticks));
                     }
                 }
 
