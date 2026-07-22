@@ -291,9 +291,10 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
             case PurchaseType.FirstCharge:
                 if (level == 0)
                 {
-                    input.type = PurchaseType.AdvertisingFreeCard;
-                    input.level = 0;
-                    output = Query(input);
+                    IPurchaseData.Input temp;
+                    temp.type = PurchaseType.AdvertisingFreeCard;
+                    temp.level = 0;
+                    output = Query(temp);
                     if (output.times < 1)
                     {
                         seconds = output.GetDeadline(ticks);
@@ -301,7 +302,7 @@ public class PurchaseData : MonoBehaviour, IPurchaseData
                                          TimeSpan
                                              .TicksPerSecond); //(int)(DateTime.Today.AddDays(1).ToUniversalTime().Ticks - ticks);
 
-                        PlayerPrefs.SetInt(input.ToString(NAME_SPACE_DEADLINE), seconds);
+                        PlayerPrefs.SetInt(temp.ToString(NAME_SPACE_DEADLINE), seconds);
                     }
                 }
 
