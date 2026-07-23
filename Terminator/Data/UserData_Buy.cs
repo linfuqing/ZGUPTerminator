@@ -39,6 +39,8 @@ public struct UserProduct
     /// </summary>
     public UserCurrencyType currencyType;
 
+    public int group;
+
     /// <summary>
     /// 价钱
     /// </summary>
@@ -106,6 +108,8 @@ public partial interface IUserData
             /// </summary>
             public UserCurrencyType currencyType;
 
+            public int group;
+
             /// <summary>
             /// 价钱
             /// </summary>
@@ -131,10 +135,11 @@ public partial interface IUserData
     /// 刷新商品
     /// </summary>
     /// <param name="userID"></param>
+    /// <param name="group"></param>
     /// <param name="type"></param>
     /// <param name="onComplete"></param>
     /// <returns></returns>
-    IEnumerator RefreshProducts(uint userID, UserProduct.Type type, Action<Memory<UserProduct>> onComplete);
+    IEnumerator RefreshProducts(uint userID, int group, UserProduct.Type type, Action<Memory<UserProduct>> onComplete);
     
     /// <summary>
     /// 购买每日商品

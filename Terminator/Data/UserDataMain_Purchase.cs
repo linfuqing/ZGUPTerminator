@@ -720,7 +720,7 @@ public partial class UserDataMain
 
         ticks = Math.Max(DateTimeUtility.GetTicks(seconds), ticks - TimeSpan.TicksPerDay);
 
-        return Math.Max((int)(new DateTime(now).Subtract(new DateTime(ticks))).TotalDays, 0);
+        return Math.Max((int)(now / TimeSpan.TicksPerDay - ticks / TimeSpan.TicksPerDay), 0);
     }
     
     private static int __GetPassIndex(int level)

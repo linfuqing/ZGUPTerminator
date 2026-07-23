@@ -9,8 +9,6 @@ using ZG;
 
 public class GameSceneActivation : IGameSceneActivation
 {
-    const int CopyBufferSize = 64 * 1024;
-
     List<string> __materializedPaths;
 
     public IEnumerator Init(string sceneName)
@@ -25,7 +23,7 @@ public class GameSceneActivation : IGameSceneActivation
         while (AssetFileUtility.isPending)
             yield return null;
         
-        MaterializeForScene(AssetFileUtility.GetFileNameWithoutExtension(sceneName));
+        yield return MaterializeForScene(AssetFileUtility.GetFileNameWithoutExtension(sceneName));
 #else
         yield break;
 #endif
@@ -40,19 +38,19 @@ public class GameSceneActivation : IGameSceneActivation
     }
 
 #if ENABLE_CONTENT_DELIVERY
-    void MaterializeForScene(string sceneName)
+    IEnumerator MaterializeForScene(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
             Debug.LogWarning("[GameSceneActivation] Init sceneName is empty; skip materialization.");
-            return;
+            yield break;
         }
 
         if (!TryLoadDependencyFile(out var dependencyFile) || dependencyFile.scenes == null)
         {
             Debug.LogError(
                 $"[GameSceneActivation] Missing {SceneArchiveDependencies.RelativePath}; cannot materialize for '{sceneName}'.");
-            return;
+            yield break;
         }
 
         SceneArchiveDependencies.SceneEntry entry = null;
@@ -71,7 +69,7 @@ public class GameSceneActivation : IGameSceneActivation
         {
             Debug.LogWarning(
                 $"[GameSceneActivation] No dependency entry for scene '{sceneName}' in {SceneArchiveDependencies.FileName}.");
-            return;
+            yield break;
         }
 
         var archiveRootCount = entry.archiveIndices != null ? entry.archiveIndices.Length : 0;
@@ -80,7 +78,7 @@ public class GameSceneActivation : IGameSceneActivation
         {
             Debug.LogWarning(
                 $"[GameSceneActivation] Empty archives and EntityScenes for '{sceneName}' in {SceneArchiveDependencies.FileName}.");
-            return;
+            yield break;
         }
 
         var archivePool = dependencyFile.archives;
@@ -90,7 +88,7 @@ public class GameSceneActivation : IGameSceneActivation
         {
             Debug.LogError(
                 $"[GameSceneActivation] Scene '{sceneName}' has indices but shared pools are missing in {SceneArchiveDependencies.FileName}.");
-            return;
+            yield break;
         }
 
         var expandedArchives = new List<int>(64);
@@ -101,14 +99,14 @@ public class GameSceneActivation : IGameSceneActivation
         if (remap == null)
         {
             Debug.LogError("[GameSceneActivation] PathRemapFunc is null.");
-            return;
+            yield break;
         }
 
         var assetManager = GameMain.sceneArchiveAssetManager;
         if (assetManager == null)
         {
             Debug.LogError("[GameSceneActivation] SceneArchiveAssetManager is null.");
-            return;
+            yield break;
         }
 
         __materializedPaths = new List<string>(expandedArchives.Count + expandedEntityScenes.Count);
@@ -120,16 +118,15 @@ public class GameSceneActivation : IGameSceneActivation
             {
                 Debug.LogError(
                     $"[GameSceneActivation] expanded archive index {poolIndex} out of range (pool={archivePool.Length}) for '{sceneName}'.");
-                continue;
             }
-
-            var archiveId = archivePool[poolIndex];
-            if (string.IsNullOrEmpty(archiveId))
+            else
             {
-                continue;
+                var archiveId = archivePool[poolIndex];
+                if (!string.IsNullOrEmpty(archiveId))
+                    MaterializeRelativePath(RuntimeContentManager.DefaultArchivePathFunc(archiveId), remap, assetManager);
             }
 
-            MaterializeRelativePath(RuntimeContentManager.DefaultArchivePathFunc(archiveId), remap, assetManager);
+            yield return null;
         }
 
         for (int i = 0; i < expandedEntityScenes.Count; i++)
@@ -139,16 +136,15 @@ public class GameSceneActivation : IGameSceneActivation
             {
                 Debug.LogError(
                     $"[GameSceneActivation] expanded entityScene index {poolIndex} out of range (pool={entityScenePool.Length}) for '{sceneName}'.");
-                continue;
             }
-
-            var relativePath = entityScenePool[poolIndex];
-            if (string.IsNullOrEmpty(relativePath))
+            else
             {
-                continue;
+                var relativePath = entityScenePool[poolIndex];
+                if (!string.IsNullOrEmpty(relativePath))
+                    MaterializeRelativePath(relativePath.Replace('\\', '/'), remap, assetManager);
             }
 
-            MaterializeRelativePath(relativePath.Replace('\\', '/'), remap, assetManager);
+            yield return null;
         }
 
         Debug.Log(
@@ -269,7 +265,7 @@ public class GameSceneActivation : IGameSceneActivation
         
         var json = Encoding.UTF8.GetString(bytes);
         
-        Debug.Log(json);
+        //Debug.Log(json);
 
         dependencyFile = JsonUtility.FromJson<SceneArchiveDependencies.File>(json);
         return dependencyFile != null;
@@ -283,16 +279,7 @@ public class GameSceneActivation : IGameSceneActivation
             Directory.CreateDirectory(folder);
         }
 
-        using (var src = AssetFileUtility.Open(sourcePath, FileMode.Open, FileAccess.Read))
-        using (var dst = File.Open(destPath, FileMode.Create, FileAccess.Write))
-        {
-            var buffer = new byte[CopyBufferSize];
-            int read;
-            while ((read = src.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                dst.Write(buffer, 0, read);
-            }
-        }
+        File.WriteAllBytes(destPath, AssetFileUtility.ReadAllBytes(sourcePath));
     }
 #endif
 }

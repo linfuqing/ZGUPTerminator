@@ -68,6 +68,7 @@ public partial class UserDataMain
         public string name;
         public UserProduct.Type productType;
         public UserCurrencyType currencyType;
+        public int group;
         public int price;
         public int minChapter;
         public int maxChapter;
@@ -93,6 +94,12 @@ public partial class UserDataMain
             set => currencyType = (UserCurrencyType)value;
         }
         
+        [CSVField]
+        public int 商品分组
+        {
+            set => group = value;
+        }
+
         [CSVField]
         public int 商品价钱
         {
@@ -185,7 +192,7 @@ public partial class UserDataMain
             {
                 refreshCounts ??= new List<int>();
                 for (i = refreshCounts.Count; i <= (int)refresh.productType; ++i)
-                    refreshCounts.Add(__GetRefreshProductCount((UserProduct.Type)i, out _));
+                    refreshCounts.Add(__GetRefreshProductCount((UserProduct.Type)i, refresh.group, out _));
 
                 i = refreshCounts[(int)refresh.productType];
                 if (i > 0)
@@ -211,11 +218,11 @@ public partial class UserDataMain
         onComplete(result);
     }
 
-    public IEnumerator RefreshProducts(uint userID, UserProduct.Type type, Action<Memory<UserProduct>> onComplete)
+    public IEnumerator RefreshProducts(uint userID, int group, UserProduct.Type type, Action<Memory<UserProduct>> onComplete)
     {
         yield return __CreateEnumerator();
 
-        if (!__RefreshProductSeed(type))
+        if (!__RefreshProductSeed(type, group))
         {
             onComplete(default);
             
@@ -223,7 +230,7 @@ public partial class UserDataMain
         }
         
         List<UserProduct> results = null;
-        __CollectProducts(ref results, type);
+        __CollectProducts(ref results, type, 1 << group);
         
         onComplete(results.ToArray());
     }
@@ -362,9 +369,9 @@ public partial class UserDataMain
 
     public const string NAME_SPACE_USER_PRODUCT_REFRESH_COUNT = "UserProductRefreshCount";
 
-    private int __GetRefreshProductCount(UserProduct.Type type, out string key)
+    private int __GetRefreshProductCount(UserProduct.Type type, int group, out string key)
     {
-        key = $"{NAME_SPACE_USER_PRODUCT_REFRESH_COUNT}{type}";
+        key = $"{NAME_SPACE_USER_PRODUCT_REFRESH_COUNT}{group}{UserData.SEPARATOR}{type}";
 
         var result = new Active<int>(PlayerPrefs.GetString(key), __Parse);
         switch (type)
@@ -380,13 +387,13 @@ public partial class UserDataMain
         return 0;
     }
 
-    private bool __RefreshProductSeed(UserProduct.Type type)
+    private bool __RefreshProductSeed(UserProduct.Type type, int group)
     {
-        int source = __GetRefreshProductCount(type, out string key), destination = source + 1;
+        int source = __GetRefreshProductCount(type, group, out string key), destination = source + 1;
         
         foreach (var productRefresh in _productRefreshes)
         {
-            if(productRefresh.productType != type || --source >= 0)
+            if(productRefresh.productType != type || productRefresh.group != group || --source >= 0)
                 continue;
 
             if (!__ApplyProductType(productRefresh.name, productRefresh.currencyType, productRefresh.price))
@@ -406,7 +413,7 @@ public partial class UserDataMain
         return true;
     }
 
-    private void __CollectProducts(ref List<UserProduct> results, UserProduct.Type type)
+    private void __CollectProducts(ref List<UserProduct> results, UserProduct.Type type, int groupMask = -1)
     {
         UserProduct userProduct;
         Product product;
@@ -418,6 +425,7 @@ public partial class UserDataMain
         {
             product = _products[i];
             if(product.productType != type || 
+               ((1 << product.group) & groupMask) == 0 ||
                product.minChapter > chapter ||
                product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
                !randomSelector.Select(ref random, product.chance))
@@ -428,6 +436,7 @@ public partial class UserDataMain
             userProduct.flag = (seed.bits & (1 << bitIndex)) == 0 ? 0 : UserProduct.Flag.Collected;
             userProduct.productType = product.productType;
             userProduct.currencyType = product.currencyType;
+            userProduct.group = product.group;
             userProduct.price = product.price;
             userProduct.rewards = product.rewards;
             
@@ -459,9 +468,9 @@ public partial class UserData
         return UserDataMain.instance.QueryProducts(userID, onComplete);
     }
 
-    public IEnumerator RefreshProducts(uint userID, UserProduct.Type type, Action<Memory<UserProduct>> onComplete)
+    public IEnumerator RefreshProducts(uint userID, int group, UserProduct.Type type, Action<Memory<UserProduct>> onComplete)
     {
-        return UserDataMain.instance.RefreshProducts(userID, type, onComplete);
+        return UserDataMain.instance.RefreshProducts(userID, group, type, onComplete);
     }
 
     public IEnumerator BuyProduct(uint userID, uint productID, Action<Memory<UserReward>> onComplete)
