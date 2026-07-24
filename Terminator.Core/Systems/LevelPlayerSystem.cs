@@ -375,7 +375,7 @@ public partial struct LevelPlayerSystem : ISystem
 #endif
     public void OnUpdate(ref SystemState state)
     {
-        if (LevelShared.unscaledDeltaTime < math.FLT_MIN_NORMAL)
+        if (PrefabLoaderSettings.isPaused || LevelShared.unscaledDeltaTime < math.FLT_MIN_NORMAL)
             return;
         
         var remotePlayerStatus = RemotePlayer.status;

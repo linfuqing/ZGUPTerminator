@@ -86,8 +86,10 @@ public static class SceneArchiveDependencies
         Full = 0,
 
         /// <summary>
-        /// SubScene roots + same-GUID <c>.entities</c> sections only.
-        /// Skips nested <c>.entityheader</c> edges (e.g. Player → weapons).
+        /// Critical for scene enter: SubScene roots + same-GUID <c>.entities</c>,
+        /// plus <b>one hop</b> of nested <c>.entityheader</c> (e.g. baked
+        /// <c>RequestEntityPrefabLoaded</c> → Player) and those headers' local sections.
+        /// Does not follow Player → weapons (depth ≥ 2 headers).
         /// </summary>
         SubSceneLocal = 1,
     }
@@ -105,8 +107,9 @@ public static class SceneArchiveDependencies
     }
 
     /// <summary>
-    /// Expand only SubScene-local EntityScenes (root headers + same-GUID sections) and their archives.
-    /// Use before <c>isInitialized</c>; follow with <see cref="ExpandSceneRoots"/> for deferred materialize.
+    /// Expand critical EntityScenes for scene enter: SubScene roots, one-hop nested
+    /// EntityPrefab headers (e.g. Player via <c>RequestEntityPrefabLoaded</c>), and same-GUID sections.
+    /// Follow with <see cref="ExpandSceneRoots"/> for deferred Player→weapons closure.
     /// </summary>
     public static void ExpandSceneRootsLocal(
         File file,
@@ -146,15 +149,22 @@ public static class SceneArchiveDependencies
 
         if (entry.entitySceneIndices != null && entityPool != null)
         {
-            var queue = new Queue<int>();
+            // index → nested header hop count from scene roots (0 = root).
+            var queue = new Queue<(int index, int headerDepth)>();
             for (int i = 0; i < entry.entitySceneIndices.Length; i++)
             {
-                EnqueueIndex(entry.entitySceneIndices[i], entityPool.Length, entityVisited, queue);
+                var root = entry.entitySceneIndices[i];
+                if (root < 0 || root >= entityPool.Length || !entityVisited.Add(root))
+                {
+                    continue;
+                }
+
+                queue.Enqueue((root, 0));
             }
 
             while (queue.Count > 0)
             {
-                var index = queue.Dequeue();
+                var (index, headerDepth) = queue.Dequeue();
                 entitySceneIndicesOut.Add(index);
                 ForEachCsrEdge(
                     file.entitySceneArchiveOffsets,
@@ -171,13 +181,38 @@ public static class SceneArchiveDependencies
                     entityPool.Length,
                     dep =>
                     {
-                        if (entityMode == EntitySceneExpandMode.SubSceneLocal &&
-                            !IsSameGuidEntitySectionEdge(fromPath, entityPool[dep]))
+                        var toPath = entityPool[dep];
+                        if (entityMode == EntitySceneExpandMode.SubSceneLocal)
                         {
+                            if (IsSameGuidEntitySectionEdge(fromPath, toPath))
+                            {
+                                if (entityVisited.Add(dep))
+                                {
+                                    // Sections keep the parent's headerDepth.
+                                    queue.Enqueue((dep, headerDepth));
+                                }
+
+                                return;
+                            }
+
+                            // Nested Entity* header: only from roots (depth 0) → depth 1 (Player etc.).
+                            if (!IsEntityHeaderRelativePath(toPath) || headerDepth > 0)
+                            {
+                                return;
+                            }
+
+                            if (entityVisited.Add(dep))
+                            {
+                                queue.Enqueue((dep, 1));
+                            }
+
                             return;
                         }
 
-                        EnqueueIndex(dep, entityPool.Length, entityVisited, queue);
+                        if (entityVisited.Add(dep))
+                        {
+                            queue.Enqueue((dep, 0));
+                        }
                     });
             }
         }
@@ -263,6 +298,22 @@ public static class SceneArchiveDependencies
         }
 
         return path.EndsWith(".entities", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsEntityHeaderRelativePath(string relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return false;
+        }
+
+        var path = relativePath.Replace('\\', '/');
+        if (path.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path.Substring(0, path.Length - ".bytes".Length);
+        }
+
+        return path.EndsWith(".entityheader", StringComparison.OrdinalIgnoreCase);
     }
 
     static void EnqueueIndex(int index, int poolLength, HashSet<int> visited, Queue<int> queue)
