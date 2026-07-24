@@ -207,11 +207,21 @@ public partial class UserDataMain
         
         result.refreshes = refreshes?.ToArray();
 
+        HashSet<int> groups = null;
+        foreach (var product in _products)
+        {
+            groups ??= new HashSet<int>();
+            groups.Add(product.group);
+        }
+
         List<UserProduct> products = null;
-        __CollectProducts(ref products, UserProduct.Type.Normal);
-        __CollectProducts(ref products, UserProduct.Type.Day);
-        __CollectProducts(ref products, UserProduct.Type.Week);
-        __CollectProducts(ref products, UserProduct.Type.Month);
+        foreach (var group in groups)
+        {
+            __CollectProducts(ref products, UserProduct.Type.Normal, group);
+            __CollectProducts(ref products, UserProduct.Type.Day, group);
+            __CollectProducts(ref products, UserProduct.Type.Week, group);
+            __CollectProducts(ref products, UserProduct.Type.Month, group);
+        }
 
         result.products = products.ToArray();
         
@@ -230,7 +240,7 @@ public partial class UserDataMain
         }
         
         List<UserProduct> results = null;
-        __CollectProducts(ref results, type, 1 << group);
+        __CollectProducts(ref results, type, group);
         
         onComplete(results.ToArray());
     }
@@ -241,8 +251,8 @@ public partial class UserDataMain
     {
         yield return __CreateEnumerator();
         
-        int index = __ProductIDToBitIndex(productID, out var type);
-        var seed = __GetProductSeed(type, out string key);
+        int index = __ProductIDToBitIndex(productID, out int group, out var type);
+        var seed = __GetProductSeed(type, group, out string key);
         if ((seed.bits & (1 << index)) == 0)
         {
             Product product;
@@ -319,26 +329,27 @@ public partial class UserDataMain
 
     private const string NAME_SPACE_USER_PRODUCT_SEED = "UserProductSeed";
 
-    private string __GetProductTypeKey(UserProduct.Type type)
+    private string __GetProductTypeKey(UserProduct.Type type, int group)
     {
-        return $"{NAME_SPACE_USER_PRODUCT_SEED}{type}";
+        return $"{NAME_SPACE_USER_PRODUCT_SEED}{type}{UserData.SEPARATOR}{group}";
     }
 
-    private uint __ProductBitIndexToID(UserProduct.Type type, int bitIndex)
+    private uint __ProductBitIndexToID(UserProduct.Type type, int group, int bitIndex)
     {
-        return __ToID(bitIndex) | (uint)type << 30;
+        return __ToID(bitIndex) | (uint)group << 24 | (uint)type << 30;
     }
 
-    private int __ProductIDToBitIndex(uint id, out UserProduct.Type type)
+    private int __ProductIDToBitIndex(uint id, out int group, out UserProduct.Type type)
     {
-        int result = __ToIndex(id & 0x3FFFFFFF);
+        int result = __ToIndex(id & 0xFFFFFFF);
+        group = (int)(id >> 24) & 0x3F;
         type = (UserProduct.Type)(id >> 30);
         return result;
     }
 
-    private ProductSeed __GetProductSeed(UserProduct.Type type, out string key)
+    private ProductSeed __GetProductSeed(UserProduct.Type type, int group, out string key)
     {
-        key = __GetProductTypeKey(type);
+        key = __GetProductTypeKey(type, group);
         
         ProductSeed seed;
         switch (type)
@@ -408,16 +419,16 @@ public partial class UserDataMain
         seed.value = (uint)UnityEngine.Random.Range(0, int.MaxValue);
         seed.bits = 0;
 
-        PlayerPrefs.SetString(__GetProductTypeKey(type), new Active<ProductSeed>(seed).ToString());
+        PlayerPrefs.SetString(__GetProductTypeKey(type, group), new Active<ProductSeed>(seed).ToString());
 
         return true;
     }
 
-    private void __CollectProducts(ref List<UserProduct> results, UserProduct.Type type, int groupMask = -1)
+    private void __CollectProducts(ref List<UserProduct> results, UserProduct.Type type, int group)
     {
         UserProduct userProduct;
         Product product;
-        var seed = __GetProductSeed(type, out _);
+        var seed = __GetProductSeed(type, group, out _);
         var random = new Unity.Mathematics.Random(seed.value);
         var randomSelector = new RandomSelector(ref random);
         int numProducts = _products.Length, bitIndex = 0, chapter = UserData.chapter;
@@ -425,14 +436,14 @@ public partial class UserDataMain
         {
             product = _products[i];
             if(product.productType != type || 
-               ((1 << product.group) & groupMask) == 0 ||
+               product.group == group ||
                product.minChapter > chapter ||
                product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
                !randomSelector.Select(ref random, product.chance))
                 continue;
 
             userProduct.name = product.name;
-            userProduct.id = __ProductBitIndexToID(type, bitIndex);
+            userProduct.id = __ProductBitIndexToID(type, group, bitIndex);
             userProduct.flag = (seed.bits & (1 << bitIndex)) == 0 ? 0 : UserProduct.Flag.Collected;
             userProduct.productType = product.productType;
             userProduct.currencyType = product.currencyType;

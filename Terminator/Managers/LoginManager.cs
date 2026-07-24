@@ -79,13 +79,16 @@ public sealed class LoginManager : MonoBehaviour
 
         public Scene[] scenes;
 
-        public Scene.Stage GetSceneStage(int stageIndex)
+        public Scene.Stage GetSceneStage(string sceneName, int stageIndex)
         {
             if (scenes != null)
             {
                 int index;
                 foreach (var scene in scenes)
                 {
+                    if(scene.name != sceneName)
+                        continue;
+                    
                     index = scene.StageIndexOf(stageIndex);
                     if (index != -1)
                         return scene.stages[index];
@@ -135,7 +138,7 @@ public sealed class LoginManager : MonoBehaviour
                         stage.name = temp2[0].Replace(@"\n", "\n");
                         stage.bossTitle = temp2[1];
                         stage.bossDescription = temp2[2];
-                        stage.index = stageIndex++;
+                        stage.index = temp2.Length < 3 ? stageIndex++ : int.Parse(temp2[3]);
                     }
 
                     scenes[i] = scene;
@@ -436,7 +439,7 @@ public sealed class LoginManager : MonoBehaviour
 
     private int __sceneActiveDepth;
     
-    private int __startLevelIndex;
+    //private int __startLevelIndex;
     private bool __isEnergyActive = true;
     private bool? __levelActivatedFirst;
     private bool? __isLevelActive;
@@ -725,6 +728,10 @@ public sealed class LoginManager : MonoBehaviour
         string levelName, 
         string sceneName)
     {
+        __levelName = levelName;
+
+        __sceneName = sceneName;
+        
         StartCoroutine(__Start(isRestart, userLevelID,  stageIndex, levelName, sceneName));
     }
 
@@ -1650,11 +1657,11 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.stages.Clear();
 
         Scene.Stage sceneStage;
-        var level = __startLevelIndex == -1 ? default : _levels[__startLevelIndex];
+        var level = __levelIndices.TryGetValue(__levelName, out int levelIndex) ? _levels[levelIndex] : default;
         int numLevelStages = property.levelStages.Length;
         for (int i = 0; i < numLevelStages; ++i)
         {
-            sceneStage = level.GetSceneStage(i);
+            sceneStage = level.GetSceneStage(__sceneName, i);
             
             LevelShared.stages.Add(property.levelStages[i].ToShared(
                 sceneStage.name ?? String.Empty, 
@@ -1698,11 +1705,11 @@ public sealed class LoginManager : MonoBehaviour
         LevelShared.stages.Clear();
 
         Scene.Stage sceneStage;
-        var level = __startLevelIndex == -1 ? default : _levels[__startLevelIndex];
+        var level = __levelIndices.TryGetValue(__levelName, out int levelIndex) ? _levels[levelIndex] : default;
         int numLevelStages = property.levelStages.Length;
         for (int i = 0; i < numLevelStages; ++i)
         {
-            sceneStage = level.GetSceneStage(i);
+            sceneStage = level.GetSceneStage(__sceneName, i);
             
             LevelShared.stages.Add(property.levelStages[i].ToShared(
                 sceneStage.name ?? String.Empty, 
@@ -2205,7 +2212,7 @@ public sealed class LoginManager : MonoBehaviour
 
         uint userID = LoginManager.userID.Value;
 
-        __startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : -1;
+        //__startLevelIndex = __levelIndices.TryGetValue(levelName, out int levelIndex) ? levelIndex : -1;
 
         if (hasStage && /*!ReplyMessageShared.isHost && */clientData != null)
         {
