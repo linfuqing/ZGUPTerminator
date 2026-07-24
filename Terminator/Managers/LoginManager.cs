@@ -180,17 +180,11 @@ public sealed class LoginManager : MonoBehaviour
 
         public void Dispose(float destroyTime = 0.0f)
         {
-            if(assetObject != null)
-                Debug.Log($"[Loader]Dispose {assetObject.assetName}");
-            
             assetObject?.Dispose(destroyTime, false);
         }
 
         public void Load(AssetManager assetManager)
         {
-            if(assetObject != null)
-                Debug.Log($"[Loader]Load {assetObject.assetName}");
-            
             assetObject?.Load(assetManager);
         }
         

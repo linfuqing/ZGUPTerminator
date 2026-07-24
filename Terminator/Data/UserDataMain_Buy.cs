@@ -342,7 +342,7 @@ public partial class UserDataMain
 
     private int __ProductIDToBitIndex(uint id, out int group, out UserProduct.Type type)
     {
-        int result = __ToIndex(id & 0xFFFFFFF);
+        int result = __ToIndex(id & 0xFFFFFF);
         group = (int)(id >> 24) & 0x3F;
         type = (UserProduct.Type)(id >> 30);
         return result;
