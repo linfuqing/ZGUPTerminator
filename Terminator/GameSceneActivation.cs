@@ -36,7 +36,7 @@ public class GameSceneActivation : IGameSceneActivation
     public IEnumerator Init(string sceneName)
     {
         __materializedPaths = null;
-
+ 
 #if ENABLE_CONTENT_DELIVERY
         while (ContentDeliveryGlobalState.CurrentContentUpdateState <
                ContentDeliveryGlobalState.ContentUpdateState.ContentReady)

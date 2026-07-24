@@ -463,6 +463,10 @@ public class GameMain : GameUser
 
                     string name = x.ToLower();
                     
+#if DEBUG
+                    name += '_';
+#endif
+                    
                     return Path.Combine(directory, name);
                     /*if (!sceneArchiveAssetManager.GetAssetPath(name, out _, out ulong fileOffset, out string filePath))
                         Debug.LogError($"GetFileInfo {x} failed");
