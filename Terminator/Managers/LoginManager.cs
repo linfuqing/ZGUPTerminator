@@ -138,7 +138,7 @@ public sealed class LoginManager : MonoBehaviour
                         stage.name = temp2[0].Replace(@"\n", "\n");
                         stage.bossTitle = temp2[1];
                         stage.bossDescription = temp2[2];
-                        stage.index = temp2.Length < 3 ? stageIndex++ : int.Parse(temp2[3]);
+                        stage.index = temp2.Length < 4 ? stageIndex++ : int.Parse(temp2[3]);
                     }
 
                     scenes[i] = scene;
