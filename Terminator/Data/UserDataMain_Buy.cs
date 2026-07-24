@@ -436,7 +436,7 @@ public partial class UserDataMain
         {
             product = _products[i];
             if(product.productType != type || 
-               product.group == group ||
+               product.group != group ||
                product.minChapter > chapter ||
                product.minChapter < product.maxChapter && product.maxChapter <= chapter || 
                !randomSelector.Select(ref random, product.chance))

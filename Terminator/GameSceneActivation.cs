@@ -113,9 +113,17 @@ public class GameSceneActivation : IGameSceneActivation
             yield break;
         }
 
-        var expandedArchives = new List<int>(64);
-        var expandedEntityScenes = new List<int>(32);
-        SceneArchiveDependencies.ExpandSceneRoots(dependencyFile, entry, expandedArchives, expandedEntityScenes);
+        // Critical: SubScene root headers + same-GUID .entities + their archives (enter scene safely).
+        // Deferred: full Entity* closure (Player hub etc.) — overlaps scene load / IGameSceneLoader.
+        var criticalArchives = new List<int>(32);
+        var criticalEntityScenes = new List<int>(32);
+        SceneArchiveDependencies.ExpandSceneRootsLocal(
+            dependencyFile, entry, criticalArchives, criticalEntityScenes);
+
+        var fullArchives = new List<int>(64);
+        var fullEntityScenes = new List<int>(64);
+        SceneArchiveDependencies.ExpandSceneRoots(
+            dependencyFile, entry, fullArchives, fullEntityScenes);
 
         var remap = ContentDeliveryGlobalState.PathRemapFunc;
         if (remap == null)
@@ -131,23 +139,120 @@ public class GameSceneActivation : IGameSceneActivation
             yield break;
         }
 
-        __materializedPaths = new List<string>(expandedArchives.Count + expandedEntityScenes.Count);
+        __materializedPaths = new List<string>(fullArchives.Count + fullEntityScenes.Count);
 
-        for (int i = 0; i < expandedEntityScenes.Count; i++)
+        var criticalSteps = Math.Max(1, criticalEntityScenes.Count + criticalArchives.Count);
+        var criticalDone = 0;
+
+        yield return MaterializeEntitySceneIndices(
+            sceneName,
+            criticalEntityScenes,
+            entityScenePool,
+            remap,
+            assetManager,
+            () =>
+            {
+                criticalDone++;
+                initializedProgress = criticalDone * 0.95f / criticalSteps;
+            });
+
+        if (__materializedPaths == null)
         {
-            initializedProgress = i * 1.0f / expandedEntityScenes.Count;
-            
-            var poolIndex = expandedEntityScenes[i];
+            yield break;
+        }
+
+        yield return MaterializeArchiveIndices(
+            sceneName,
+            criticalArchives,
+            archivePool,
+            remap,
+            assetManager,
+            () =>
+            {
+                criticalDone++;
+                initializedProgress = criticalDone * 0.95f / criticalSteps;
+            });
+
+        if (__materializedPaths == null)
+        {
+            yield break;
+        }
+
+        PrefabLoaderSettings.isPaused = true;
+        initializedProgress = 1f;
+        isInitialized = true;
+
+        yield return null;
+
+        var deferredEntityScenes = SubtractSortedIndices(fullEntityScenes, criticalEntityScenes);
+        var deferredArchives = SubtractSortedIndices(fullArchives, criticalArchives);
+
+        yield return MaterializeEntitySceneIndices(
+            sceneName,
+            deferredEntityScenes,
+            entityScenePool,
+            remap,
+            assetManager,
+            null);
+
+        if (__materializedPaths == null)
+        {
+            PrefabLoaderSettings.isPaused = false;
+            yield break;
+        }
+
+        yield return MaterializeArchiveIndices(
+            sceneName,
+            deferredArchives,
+            archivePool,
+            remap,
+            assetManager,
+            null);
+
+        PrefabLoaderSettings.isPaused = false;
+
+        Debug.Log(
+            $"[GameSceneActivation] Materialized {__materializedPaths.Count} files for '{sceneName}' " +
+            $"(roots archives={archiveRootCount}, entityScenes={entityRootCount}; " +
+            $"critical archives={criticalArchives.Count}, entityScenes={criticalEntityScenes.Count}; " +
+            $"deferred archives={deferredArchives.Count}, entityScenes={deferredEntityScenes.Count}; " +
+            $"full archives={fullArchives.Count}, entityScenes={fullEntityScenes.Count}).");
+    }
+
+    IEnumerator MaterializeEntitySceneIndices(
+        string sceneName,
+        List<int> indices,
+        string[] entityScenePool,
+        Func<string, string> remap,
+        AssetManager assetManager,
+        Action onEach)
+    {
+        if (indices == null || indices.Count == 0)
+        {
+            yield break;
+        }
+
+        for (int i = 0; i < indices.Count; i++)
+        {
+            var poolIndex = indices[i];
             if (poolIndex < 0 || poolIndex >= entityScenePool.Length)
             {
                 Debug.LogError(
-                    $"[GameSceneActivation] expanded entityScene index {poolIndex} out of range (pool={entityScenePool.Length}) for '{sceneName}'.");
+                    $"[GameSceneActivation] expanded entityScene index {poolIndex} out of range " +
+                    $"(pool={entityScenePool.Length}) for '{sceneName}'.");
             }
             else
             {
                 var relativePath = entityScenePool[poolIndex];
                 if (!string.IsNullOrEmpty(relativePath))
+                {
                     MaterializeRelativePath(relativePath.Replace('\\', '/'), remap, assetManager);
+                }
+            }
+
+            if (onEach != null)
+            {
+                onEach();
             }
 
             if ((i % __maxEntityScenesPerTime) == 0)
@@ -155,46 +260,98 @@ public class GameSceneActivation : IGameSceneActivation
                 yield return null;
 
                 if (__materializedPaths == null)
+                {
                     yield break;
+                }
             }
         }
+    }
 
-        PrefabLoaderSettings.isPaused = true;
-
-        isInitialized = true;
-        
-        yield return null;
-
-        for (int i = 0; i < expandedArchives.Count; i++)
+    IEnumerator MaterializeArchiveIndices(
+        string sceneName,
+        List<int> indices,
+        string[] archivePool,
+        Func<string, string> remap,
+        AssetManager assetManager,
+        Action onEach)
+    {
+        if (indices == null || indices.Count == 0)
         {
-            var poolIndex = expandedArchives[i];
+            yield break;
+        }
+
+        for (int i = 0; i < indices.Count; i++)
+        {
+            var poolIndex = indices[i];
             if (poolIndex < 0 || poolIndex >= archivePool.Length)
             {
                 Debug.LogError(
-                    $"[GameSceneActivation] expanded archive index {poolIndex} out of range (pool={archivePool.Length}) for '{sceneName}'.");
+                    $"[GameSceneActivation] expanded archive index {poolIndex} out of range " +
+                    $"(pool={archivePool.Length}) for '{sceneName}'.");
             }
             else
             {
                 var archiveId = archivePool[poolIndex];
                 if (!string.IsNullOrEmpty(archiveId))
-                    MaterializeRelativePath(RuntimeContentManager.DefaultArchivePathFunc(archiveId), remap, assetManager);
+                {
+                    MaterializeRelativePath(
+                        RuntimeContentManager.DefaultArchivePathFunc(archiveId),
+                        remap,
+                        assetManager);
+                }
+            }
+
+            if (onEach != null)
+            {
+                onEach();
             }
 
             if ((i % __maxArchivesPerTime) == 0)
             {
                 yield return null;
-                
+
                 if (__materializedPaths == null)
-                    break;
+                {
+                    yield break;
+                }
+            }
+        }
+    }
+
+    /// <summary>Both inputs must be sorted ascending (ExpandSceneRoots sorts).</summary>
+    static List<int> SubtractSortedIndices(List<int> fullSorted, List<int> subtractSorted)
+    {
+        var result = new List<int>(Math.Max(0, fullSorted.Count - subtractSorted.Count));
+        int i = 0;
+        int j = 0;
+        while (i < fullSorted.Count)
+        {
+            if (j >= subtractSorted.Count)
+            {
+                result.Add(fullSorted[i]);
+                i++;
+                continue;
+            }
+
+            var a = fullSorted[i];
+            var b = subtractSorted[j];
+            if (a == b)
+            {
+                i++;
+                j++;
+            }
+            else if (a < b)
+            {
+                result.Add(a);
+                i++;
+            }
+            else
+            {
+                j++;
             }
         }
 
-        PrefabLoaderSettings.isPaused = false;
-
-        Debug.Log(
-            $"[GameSceneActivation] Materialized {__materializedPaths.Count} files for '{sceneName}' " +
-            $"(roots archives={archiveRootCount}, entityScenes={entityRootCount}; " +
-            $"expanded archives={expandedArchives.Count}, entityScenes={expandedEntityScenes.Count}).");
+        return result;
     }
 
     void MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)

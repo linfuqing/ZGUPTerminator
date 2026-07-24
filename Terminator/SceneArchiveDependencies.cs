@@ -78,13 +78,54 @@ public static class SceneArchiveDependencies
     }
 
     /// <summary>
-    /// Expand scene roots through CSR entity/archive dependency edges.
+    /// How far to follow <see cref="File.entitySceneDepIndices"/> from scene roots.
+    /// </summary>
+    public enum EntitySceneExpandMode
+    {
+        /// <summary>Full nested EntityPrefab/EntityScene closure (Player hub included).</summary>
+        Full = 0,
+
+        /// <summary>
+        /// SubScene roots + same-GUID <c>.entities</c> sections only.
+        /// Skips nested <c>.entityheader</c> edges (e.g. Player → weapons).
+        /// </summary>
+        SubSceneLocal = 1,
+    }
+
+    /// <summary>
+    /// Expand scene roots through CSR entity/archive dependency edges (full Entity* closure).
     /// </summary>
     public static void ExpandSceneRoots(
         File file,
         SceneEntry entry,
         List<int> archiveIndicesOut,
         List<int> entitySceneIndicesOut)
+    {
+        ExpandSceneRoots(file, entry, archiveIndicesOut, entitySceneIndicesOut, EntitySceneExpandMode.Full);
+    }
+
+    /// <summary>
+    /// Expand only SubScene-local EntityScenes (root headers + same-GUID sections) and their archives.
+    /// Use before <c>isInitialized</c>; follow with <see cref="ExpandSceneRoots"/> for deferred materialize.
+    /// </summary>
+    public static void ExpandSceneRootsLocal(
+        File file,
+        SceneEntry entry,
+        List<int> archiveIndicesOut,
+        List<int> entitySceneIndicesOut)
+    {
+        ExpandSceneRoots(file, entry, archiveIndicesOut, entitySceneIndicesOut, EntitySceneExpandMode.SubSceneLocal);
+    }
+
+    /// <summary>
+    /// Expand scene roots through CSR entity/archive dependency edges.
+    /// </summary>
+    public static void ExpandSceneRoots(
+        File file,
+        SceneEntry entry,
+        List<int> archiveIndicesOut,
+        List<int> entitySceneIndicesOut,
+        EntitySceneExpandMode entityMode)
     {
         archiveIndicesOut.Clear();
         entitySceneIndicesOut.Clear();
@@ -121,12 +162,23 @@ public static class SceneArchiveDependencies
                     index,
                     archivePool != null ? archivePool.Length : 0,
                     dep => archiveRoots.Add(dep));
+
+                var fromPath = entityPool[index];
                 ForEachCsrEdge(
                     file.entitySceneDepOffsets,
                     file.entitySceneDepIndices,
                     index,
                     entityPool.Length,
-                    dep => EnqueueIndex(dep, entityPool.Length, entityVisited, queue));
+                    dep =>
+                    {
+                        if (entityMode == EntitySceneExpandMode.SubSceneLocal &&
+                            !IsSameGuidEntitySectionEdge(fromPath, entityPool[dep]))
+                        {
+                            return;
+                        }
+
+                        EnqueueIndex(dep, entityPool.Length, entityVisited, queue);
+                    });
             }
         }
 
@@ -150,6 +202,67 @@ public static class SceneArchiveDependencies
             archiveIndicesOut);
         archiveIndicesOut.Sort();
         entitySceneIndicesOut.Sort();
+    }
+
+    /// <summary>
+    /// Local section edge: <c>EntityScenes/{guid}.entityheader</c> → <c>EntityScenes/{guid}.{n}.entities</c>.
+    /// </summary>
+    public static bool IsSameGuidEntitySectionEdge(string fromPath, string toPath)
+    {
+        if (!TryParseEntitySceneGuid(fromPath, out var fromGuid) ||
+            !TryParseEntitySceneGuid(toPath, out var toGuid))
+        {
+            return false;
+        }
+
+        if (!string.Equals(fromGuid, toGuid, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return IsEntitySectionRelativePath(toPath);
+    }
+
+    public static bool TryParseEntitySceneGuid(string relativePath, out string guid)
+    {
+        guid = null;
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return false;
+        }
+
+        var path = relativePath.Replace('\\', '/');
+        var slash = path.LastIndexOf('/');
+        var fileName = slash >= 0 ? path.Substring(slash + 1) : path;
+        if (fileName.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase))
+        {
+            fileName = fileName.Substring(0, fileName.Length - ".bytes".Length);
+        }
+
+        var dot = fileName.IndexOf('.');
+        if (dot <= 0)
+        {
+            return false;
+        }
+
+        guid = fileName.Substring(0, dot);
+        return guid.Length > 0;
+    }
+
+    public static bool IsEntitySectionRelativePath(string relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return false;
+        }
+
+        var path = relativePath.Replace('\\', '/');
+        if (path.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path.Substring(0, path.Length - ".bytes".Length);
+        }
+
+        return path.EndsWith(".entities", StringComparison.OrdinalIgnoreCase);
     }
 
     static void EnqueueIndex(int index, int poolLength, HashSet<int> visited, Queue<int> queue)
