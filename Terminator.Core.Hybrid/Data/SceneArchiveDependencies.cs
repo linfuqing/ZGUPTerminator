@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Entities.Content;
 
 /// <summary>
 /// Build-time / runtime shared format: parent Unity scene → files to materialize.
@@ -56,6 +59,187 @@ public static class SceneArchiveDependencies
         public int[] entitySceneArchiveIndices;
 
         public SceneEntry[] scenes;
+    }
+
+    public struct RuntimeHeaderIndex
+    {
+        public Hash128 guid;
+        public int entitySceneIndex;
+    }
+
+    /// <summary>
+    /// Burst-readable subset of <see cref="File"/> used by on-demand prefab loading.
+    /// Archive ids are converted to runtime-relative paths up front, and EntityScene
+    /// dependency edges contain only same-GUID section edges.
+    /// </summary>
+    public struct RuntimeBlob
+    {
+        public BlobArray<FixedString128Bytes> archivePaths;
+        public BlobArray<FixedString128Bytes> entityScenePaths;
+
+        public BlobArray<int> archiveDepOffsets;
+        public BlobArray<int> archiveDepIndices;
+
+        public BlobArray<int> entityLocalDepOffsets;
+        public BlobArray<int> entityLocalDepIndices;
+
+        public BlobArray<int> entitySceneArchiveOffsets;
+        public BlobArray<int> entitySceneArchiveIndices;
+
+        /// <summary>Sorted by GUID for Burst-compatible binary search.</summary>
+        public BlobArray<RuntimeHeaderIndex> headers;
+    }
+
+    /// <summary>
+    /// Converts the JSON DTO into the immutable graph consumed by
+    /// <c>SceneArchiveDependencySystem</c>'s Burst planning job.
+    /// </summary>
+    public static BlobAssetReference<RuntimeBlob> CreateRuntimeBlob(File file, Allocator allocator)
+    {
+        if (file == null || file.entityScenes == null || file.archives == null)
+        {
+            throw new InvalidOperationException("Missing EntityScene or archive pools.");
+        }
+
+        var entityCount = file.entityScenes.Length;
+        var archiveCount = file.archives.Length;
+        if (!IsValidCsr(
+                file.entitySceneDepOffsets,
+                file.entitySceneDepIndices,
+                entityCount,
+                entityCount) ||
+            !IsValidCsr(
+                file.entitySceneArchiveOffsets,
+                file.entitySceneArchiveIndices,
+                entityCount,
+                archiveCount) ||
+            !IsValidCsr(
+                file.archiveDepOffsets,
+                file.archiveDepIndices,
+                archiveCount,
+                archiveCount))
+        {
+            throw new InvalidOperationException("Invalid dependency graph CSR data.");
+        }
+
+        var localOffsets = new int[entityCount + 1];
+        var localIndices = new List<int>(file.entitySceneDepIndices.Length);
+        var headers = new List<RuntimeHeaderIndex>(entityCount / 2);
+        for (int entityIndex = 0; entityIndex < entityCount; entityIndex++)
+        {
+            var relativePath = file.entityScenes[entityIndex];
+            if (string.IsNullOrEmpty(relativePath))
+            {
+                throw new InvalidOperationException(
+                    $"EntityScene path at index {entityIndex} is empty.");
+            }
+
+            localOffsets[entityIndex] = localIndices.Count;
+            var begin = file.entitySceneDepOffsets[entityIndex];
+            var end = file.entitySceneDepOffsets[entityIndex + 1];
+            for (int edgeIndex = begin; edgeIndex < end; edgeIndex++)
+            {
+                var dependencyIndex = file.entitySceneDepIndices[edgeIndex];
+                if (IsSameGuidEntitySectionEdge(
+                        relativePath,
+                        file.entityScenes[dependencyIndex]))
+                {
+                    localIndices.Add(dependencyIndex);
+                }
+            }
+
+            if (!IsEntityHeaderRelativePath(relativePath))
+            {
+                continue;
+            }
+
+            if (!TryParseEntitySceneGuid(relativePath, out var guidString) ||
+                guidString.Length != 32)
+            {
+                throw new InvalidOperationException(
+                    $"Invalid EntityScene header path '{relativePath}'.");
+            }
+
+            var guid = new Hash128(guidString);
+            if (!guid.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"Invalid EntityScene header GUID '{guidString}'.");
+            }
+
+            headers.Add(new RuntimeHeaderIndex
+            {
+                guid = guid,
+                entitySceneIndex = entityIndex
+            });
+        }
+
+        localOffsets[entityCount] = localIndices.Count;
+        headers.Sort((x, y) => x.guid.CompareTo(y.guid));
+        if (headers.Count == 0)
+        {
+            throw new InvalidOperationException("No EntityScene prefab headers were found.");
+        }
+
+        for (int i = 1; i < headers.Count; i++)
+        {
+            if (headers[i - 1].guid == headers[i].guid)
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate EntityScene header GUID '{headers[i].guid}'.");
+            }
+        }
+
+        var builder = new BlobBuilder(Allocator.Temp);
+        try
+        {
+            ref var root = ref builder.ConstructRoot<RuntimeBlob>();
+
+            var archivePaths = builder.Allocate(ref root.archivePaths, archiveCount);
+            for (int i = 0; i < archiveCount; i++)
+            {
+                var archiveId = file.archives[i];
+                if (string.IsNullOrEmpty(archiveId))
+                {
+                    throw new InvalidOperationException($"Archive id at index {i} is empty.");
+                }
+
+                archivePaths[i] =
+                    new FixedString128Bytes(RuntimeContentManager.DefaultArchivePathFunc(archiveId));
+            }
+
+            var entityScenePaths = builder.Allocate(ref root.entityScenePaths, entityCount);
+            for (int i = 0; i < entityCount; i++)
+            {
+                entityScenePaths[i] =
+                    new FixedString128Bytes(file.entityScenes[i].Replace('\\', '/'));
+            }
+
+            CopyToBlob(ref builder, ref root.archiveDepOffsets, file.archiveDepOffsets);
+            CopyToBlob(ref builder, ref root.archiveDepIndices, file.archiveDepIndices);
+            CopyToBlob(ref builder, ref root.entityLocalDepOffsets, localOffsets);
+            CopyToBlob(ref builder, ref root.entityLocalDepIndices, localIndices);
+            CopyToBlob(
+                ref builder,
+                ref root.entitySceneArchiveOffsets,
+                file.entitySceneArchiveOffsets);
+            CopyToBlob(
+                ref builder,
+                ref root.entitySceneArchiveIndices,
+                file.entitySceneArchiveIndices);
+
+            var headerArray = builder.Allocate(ref root.headers, headers.Count);
+            for (int i = 0; i < headers.Count; i++)
+            {
+                headerArray[i] = headers[i];
+            }
+
+            return builder.CreateBlobAssetReference<RuntimeBlob>(allocator);
+        }
+        finally
+        {
+            builder.Dispose();
+        }
     }
 
     [Serializable]
@@ -424,5 +608,52 @@ public static class SceneArchiveDependencies
 
         offsets[nodeCount] = flat.Count;
         indices = flat.ToArray();
+    }
+
+    static void CopyToBlob(
+        ref BlobBuilder builder,
+        ref BlobArray<int> destination,
+        IReadOnlyList<int> source)
+    {
+        var count = source != null ? source.Count : 0;
+        var result = builder.Allocate(ref destination, count);
+        for (int i = 0; i < count; i++)
+        {
+            result[i] = source[i];
+        }
+    }
+
+    static bool IsValidCsr(int[] offsets, int[] indices, int nodeCount, int targetCount)
+    {
+        if (offsets == null ||
+            indices == null ||
+            offsets.Length != nodeCount + 1 ||
+            offsets[0] != 0 ||
+            offsets[nodeCount] != indices.Length)
+        {
+            return false;
+        }
+
+        var previous = 0;
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            var offset = offsets[i];
+            if (offset < previous || offset > indices.Length)
+            {
+                return false;
+            }
+
+            previous = offset;
+        }
+
+        for (int i = 0; i < indices.Length; i++)
+        {
+            if (indices[i] < 0 || indices[i] >= targetCount)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

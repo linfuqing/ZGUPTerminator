@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Unity.Collections;
+using Unity.Entities;
 using Unity.Entities.Content;
 using UnityEngine;
 using ZG;
@@ -13,6 +15,13 @@ public class GameSceneActivation : IGameSceneActivation
     private int __maxArchivesPerTime;
     
     private List<string> __materializedPaths;
+
+#if ENABLE_CONTENT_DELIVERY
+    private int __dependencySystemGeneration;
+    private SceneArchiveDependencySystem __dependencySystem;
+    private BlobAssetReference<SceneArchiveDependencies.RuntimeBlob> __dependencyBlob;
+    private HashSet<string> __criticalRelativePaths;
+#endif
 
     public bool isInitialized
     {
@@ -35,7 +44,12 @@ public class GameSceneActivation : IGameSceneActivation
 
     public IEnumerator Init(string sceneName)
     {
+        isInitialized = false;
+        initializedProgress = 0f;
         __materializedPaths = null;
+#if ENABLE_CONTENT_DELIVERY
+        __criticalRelativePaths = null;
+#endif
  
 #if ENABLE_CONTENT_DELIVERY
         while (ContentDeliveryGlobalState.CurrentContentUpdateState <
@@ -54,7 +68,21 @@ public class GameSceneActivation : IGameSceneActivation
     public void Dispose()
     {
 #if ENABLE_CONTENT_DELIVERY
+        if (__dependencySystem != null)
+        {
+            __dependencySystem.Uninitialize(__dependencySystemGeneration);
+            __dependencySystem = null;
+            __dependencySystemGeneration = 0;
+        }
+
+        if (__dependencyBlob.IsCreated)
+        {
+            __dependencyBlob.Dispose();
+            __dependencyBlob = default;
+        }
+
         Dematerialize();
+        __criticalRelativePaths = null;
 #endif
         __materializedPaths = null;
     }
@@ -114,16 +142,11 @@ public class GameSceneActivation : IGameSceneActivation
         }
 
         // Critical: SubScene root headers + same-GUID .entities + their archives (enter scene safely).
-        // Deferred: full Entity* closure (Player hub etc.) — overlaps scene load / IGameSceneLoader.
+        // Remaining prefab dependencies are materialized by SceneArchiveDependencySystem on demand.
         var criticalArchives = new List<int>(32);
         var criticalEntityScenes = new List<int>(32);
         SceneArchiveDependencies.ExpandSceneRootsLocal(
             dependencyFile, entry, criticalArchives, criticalEntityScenes);
-
-        var fullArchives = new List<int>(64);
-        var fullEntityScenes = new List<int>(64);
-        SceneArchiveDependencies.ExpandSceneRoots(
-            dependencyFile, entry, fullArchives, fullEntityScenes);
 
         var remap = ContentDeliveryGlobalState.PathRemapFunc;
         if (remap == null)
@@ -139,7 +162,8 @@ public class GameSceneActivation : IGameSceneActivation
             yield break;
         }
 
-        __materializedPaths = new List<string>(fullArchives.Count + fullEntityScenes.Count);
+        __materializedPaths = new List<string>(criticalArchives.Count + criticalEntityScenes.Count);
+        __criticalRelativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var criticalSteps = Math.Max(1, criticalEntityScenes.Count + criticalArchives.Count);
         var criticalDone = 0;
@@ -178,45 +202,66 @@ public class GameSceneActivation : IGameSceneActivation
             yield break;
         }
 
-        PrefabLoaderSettings.isPaused = true;
-        initializedProgress = 1f;
-        isInitialized = true;
-
-        yield return null;
-
-        var deferredEntityScenes = SubtractSortedIndices(fullEntityScenes, criticalEntityScenes);
-        var deferredArchives = SubtractSortedIndices(fullArchives, criticalArchives);
-
-        yield return MaterializeEntitySceneIndices(
-            sceneName,
-            deferredEntityScenes,
-            entityScenePool,
-            remap,
-            assetManager,
-            null);
-
-        if (__materializedPaths == null)
+        var world = World.DefaultGameObjectInjectionWorld;
+        var dependencySystem = world == null
+            ? null
+            : world.GetExistingSystemManaged<SceneArchiveDependencySystem>();
+        if (dependencySystem == null)
         {
-            PrefabLoaderSettings.isPaused = false;
+            Debug.LogError(
+                "[GameSceneActivation] SceneArchiveDependencySystem is unavailable; " +
+                "cannot enable on-demand prefab dependencies.");
             yield break;
         }
 
-        yield return MaterializeArchiveIndices(
-            sceneName,
-            deferredArchives,
-            archivePool,
-            remap,
-            assetManager,
-            null);
+        BlobAssetReference<SceneArchiveDependencies.RuntimeBlob> dependencyBlob;
+        try
+        {
+            dependencyBlob =
+                SceneArchiveDependencies.CreateRuntimeBlob(dependencyFile, Allocator.Persistent);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            Debug.LogError(
+                $"[GameSceneActivation] Failed to build the runtime dependency graph for '{sceneName}'.");
+            yield break;
+        }
 
-        PrefabLoaderSettings.isPaused = false;
+        int generation;
+        try
+        {
+            generation = dependencySystem.Initialize(
+                sceneName,
+                dependencyBlob,
+                relativePath => MaterializeRelativePath(relativePath, remap, assetManager),
+                relativePath => DematerializeRelativePath(relativePath, remap));
+        }
+        catch
+        {
+            dependencyBlob.Dispose();
+            throw;
+        }
+
+        if (generation == 0)
+        {
+            dependencyBlob.Dispose();
+            Debug.LogError(
+                $"[GameSceneActivation] Failed to initialize on-demand dependencies for '{sceneName}'.");
+            yield break;
+        }
+
+        __dependencyBlob = dependencyBlob;
+        __dependencySystem = dependencySystem;
+        __dependencySystemGeneration = generation;
+        initializedProgress = 1f;
+        isInitialized = true;
 
         Debug.Log(
-            $"[GameSceneActivation] Materialized {__materializedPaths.Count} files for '{sceneName}' " +
+            $"[GameSceneActivation] Materialized {__materializedPaths.Count} critical files for '{sceneName}' " +
             $"(roots archives={archiveRootCount}, entityScenes={entityRootCount}; " +
-            $"critical archives={criticalArchives.Count}, entityScenes={criticalEntityScenes.Count}; " +
-            $"deferred archives={deferredArchives.Count}, entityScenes={deferredEntityScenes.Count}; " +
-            $"full archives={fullArchives.Count}, entityScenes={fullEntityScenes.Count}).");
+            $"critical archives={criticalArchives.Count}, entityScenes={criticalEntityScenes.Count}); " +
+            "remaining prefab dependencies will be materialized on demand.");
     }
 
     IEnumerator MaterializeEntitySceneIndices(
@@ -246,7 +291,9 @@ public class GameSceneActivation : IGameSceneActivation
                 var relativePath = entityScenePool[poolIndex];
                 if (!string.IsNullOrEmpty(relativePath))
                 {
-                    MaterializeRelativePath(relativePath.Replace('\\', '/'), remap, assetManager);
+                    relativePath = relativePath.Replace('\\', '/');
+                    __criticalRelativePaths.Add(relativePath);
+                    MaterializeRelativePath(relativePath, remap, assetManager);
                 }
             }
 
@@ -294,10 +341,9 @@ public class GameSceneActivation : IGameSceneActivation
                 var archiveId = archivePool[poolIndex];
                 if (!string.IsNullOrEmpty(archiveId))
                 {
-                    MaterializeRelativePath(
-                        RuntimeContentManager.DefaultArchivePathFunc(archiveId),
-                        remap,
-                        assetManager);
+                    var relativePath = RuntimeContentManager.DefaultArchivePathFunc(archiveId);
+                    __criticalRelativePaths.Add(relativePath);
+                    MaterializeRelativePath(relativePath, remap, assetManager);
                 }
             }
 
@@ -318,67 +364,31 @@ public class GameSceneActivation : IGameSceneActivation
         }
     }
 
-    /// <summary>Both inputs must be sorted ascending (ExpandSceneRoots sorts).</summary>
-    static List<int> SubtractSortedIndices(List<int> fullSorted, List<int> subtractSorted)
-    {
-        var result = new List<int>(Math.Max(0, fullSorted.Count - subtractSorted.Count));
-        int i = 0;
-        int j = 0;
-        while (i < fullSorted.Count)
-        {
-            if (j >= subtractSorted.Count)
-            {
-                result.Add(fullSorted[i]);
-                i++;
-                continue;
-            }
-
-            var a = fullSorted[i];
-            var b = subtractSorted[j];
-            if (a == b)
-            {
-                i++;
-                j++;
-            }
-            else if (a < b)
-            {
-                result.Add(a);
-                i++;
-            }
-            else
-            {
-                j++;
-            }
-        }
-
-        return result;
-    }
-
-    void MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
+    bool MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
     {
         var destPath = remap(relativePath);
         if (string.IsNullOrEmpty(destPath))
         {
             Debug.LogError($"[GameSceneActivation] Remap failed for {relativePath}");
-            return;
+            return false;
         }
 
         // Only track files we create so Dispose won't delete files still needed by another scene.
         if (File.Exists(destPath))
         {
-            return;
+            return true;
         }
 
         if (!TryResolveAssetSource(relativePath, assetManager, out var sourcePath, out var fileOffset))
         {
             Debug.LogError($"[GameSceneActivation] GetAssetPath failed for {relativePath}");
-            return;
+            return false;
         }
 
         if (fileOffset != 0)
         {
             Debug.LogError($"[GameSceneActivation] Non-zero fileOffset ({fileOffset}) for {relativePath}; cannot materialize.");
-            return;
+            return false;
         }
 
         try
@@ -386,11 +396,74 @@ public class GameSceneActivation : IGameSceneActivation
             CopyAssetToFile(sourcePath, destPath);
             
             __materializedPaths.Add(destPath);
+            return true;
         }
         catch (Exception e)
         {
             Debug.LogException(e);
             Debug.LogError($"[GameSceneActivation] Failed to materialize {sourcePath} -> {destPath}");
+            return false;
+        }
+    }
+
+    bool DematerializeRelativePath(string relativePath, Func<string, string> remap)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return true;
+        }
+
+        relativePath = relativePath.Replace('\\', '/');
+        if (__criticalRelativePaths != null &&
+            __criticalRelativePaths.Contains(relativePath))
+        {
+            return true;
+        }
+
+        var destPath = remap(relativePath);
+        if (string.IsNullOrEmpty(destPath))
+        {
+            Debug.LogError($"[GameSceneActivation] Remap failed while releasing {relativePath}");
+            return false;
+        }
+
+        var materializedIndex = -1;
+        if (__materializedPaths != null)
+        {
+            for (int i = 0; i < __materializedPaths.Count; i++)
+            {
+                if (string.Equals(
+                        __materializedPaths[i],
+                        destPath,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    materializedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // Do not delete a file this activation did not create.
+        if (materializedIndex < 0)
+        {
+            return true;
+        }
+
+        try
+        {
+            if (File.Exists(destPath))
+            {
+                File.Delete(destPath);
+            }
+
+            __materializedPaths.RemoveAt(materializedIndex);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning(
+                $"[GameSceneActivation] Failed to release {destPath}: {e.Message}");
+            return false;
         }
     }
 
@@ -403,20 +476,22 @@ public class GameSceneActivation : IGameSceneActivation
         sourcePath = null;
         fileOffset = 0;
 
-        var candidates = new[]
+        var candidate = relativePath.ToLowerInvariant();
+        if (assetManager.GetAssetPath(candidate, out _, out fileOffset, out sourcePath) &&
+            !string.IsNullOrEmpty(sourcePath))
         {
-            relativePath.ToLowerInvariant(),
-            (relativePath + ".bytes").ToLowerInvariant(),
-        };
-
-        for (int i = 0; i < candidates.Length; i++)
-        {
-            if (assetManager.GetAssetPath(candidates[i], out _, out fileOffset, out sourcePath) &&
-                !string.IsNullOrEmpty(sourcePath))
-            {
-                return true;
-            }
+            return true;
         }
+
+        candidate = (relativePath + ".bytes").ToLowerInvariant();
+        if (assetManager.GetAssetPath(candidate, out _, out fileOffset, out sourcePath) &&
+            !string.IsNullOrEmpty(sourcePath))
+        {
+            return true;
+        }
+
+        sourcePath = null;
+        fileOffset = 0;
 
         return false;
     }
