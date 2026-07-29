@@ -716,7 +716,7 @@ public partial class UserDataMain
             seconds = DateTimeUtility.GetSeconds(ticks) - 24 * 60 * 60;
         }
         
-        now = Math.Min(now, deadline * TimeSpan.TicksPerSecond + ticks);
+        now = deadline == 0 ? now : Math.Min(now, deadline * TimeSpan.TicksPerSecond + ticks);
 
         ticks = Math.Max(DateTimeUtility.GetTicks(seconds), ticks - TimeSpan.TicksPerDay);
 

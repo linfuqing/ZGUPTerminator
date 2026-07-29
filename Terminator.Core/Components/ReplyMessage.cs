@@ -418,7 +418,7 @@ public struct ReplyMessages : IComponentData
                             channel = reader.ReadPackedInt(streamCompressionModel);
                             key.id = reader.ReadPackedUInt(streamCompressionModel);
 
-                            __Log($"[Reply Message]{key.type} {key.id}");
+                            //__Log($"[Reply Message]{key.type} {key.id}");
                             
                             size = reader.GetBytesRead();
 
