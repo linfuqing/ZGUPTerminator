@@ -129,7 +129,13 @@ public enum ClientMessageType
     ChapterStage, 
     Play, 
     Cancel, 
-    Error
+    Error,
+
+    /// <summary>
+    /// Matching-only level-entry descriptor. Both matched clients publish the server UserStage ID
+    /// and the exact ApplyStart level/scene tuple; receivers consume it without starting a level.
+    /// </summary>
+    MatchStart
 }
 
 public interface IClientMessageToRead
@@ -510,6 +516,45 @@ public struct ClientMessagePlay
             return;
         
         LoginManager.instance.ApplyStart(isRestart, levelID, stage, levelName.ToString(), sceneName.ToString());
+    }
+}
+
+public struct ClientMessageMatchStart
+{
+    public int matchID;
+    public uint userStageID;
+    public bool isRestart;
+    public uint levelID;
+    public int stage;
+    public FixedString32Bytes levelName;
+    public FixedString32Bytes sceneName;
+
+    public static ClientMessageType messageType => ClientMessageType.MatchStart;
+
+    public static int capacity => UnsafeUtility.SizeOf<ClientMessageMatchStart>();
+
+    public ClientMessageMatchStart(ref DataStreamReader reader)
+    {
+        var streamCompressionModel = StreamCompressionModel.Default;
+        matchID = reader.ReadPackedInt(streamCompressionModel);
+        userStageID = reader.ReadPackedUInt(streamCompressionModel);
+        isRestart = reader.ReadRawBits(1) == 1;
+        levelID = reader.ReadPackedUInt(streamCompressionModel);
+        stage = reader.ReadPackedInt(streamCompressionModel);
+        levelName = reader.ReadFixedString32();
+        sceneName = reader.ReadFixedString32();
+    }
+
+    public void Write(ref DataStreamWriter writer)
+    {
+        var streamCompressionModel = StreamCompressionModel.Default;
+        writer.WritePackedInt(matchID, streamCompressionModel);
+        writer.WritePackedUInt(userStageID, streamCompressionModel);
+        writer.WriteRawBits(isRestart ? 1u : 0, 1);
+        writer.WritePackedUInt(levelID, streamCompressionModel);
+        writer.WritePackedInt(stage, streamCompressionModel);
+        writer.WriteFixedString32(levelName);
+        writer.WriteFixedString32(sceneName);
     }
 }
 
@@ -1145,6 +1190,11 @@ public class ClientData : MonoBehaviour, IClientData
                                 case ClientMessageType.Play:
                                     if(LevelShared.match == 0)
                                         new ClientMessagePlay(ref reader).Apply();
+                                    break;
+                                case ClientMessageType.MatchStart:
+                                    // Bot synchronization metadata. Human clients deliberately
+                                    // consume it without changing their existing ApplyStart flow.
+                                    new ClientMessageMatchStart(ref reader);
                                     break;
                                 case ClientMessageType.Cancel:
                                     //RemotePlayer.status = RemotePlayer.Status.Error;

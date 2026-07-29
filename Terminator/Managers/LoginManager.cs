@@ -725,6 +725,34 @@ public sealed class LoginManager : MonoBehaviour
         __levelName = levelName;
 
         __sceneName = sceneName;
+
+        if (LevelShared.match != 0)
+        {
+            if (__stageIDs.TryGetValue((userLevelID, stageIndex), out uint userStageID))
+            {
+                var clientData = IClientData.instance;
+                if (clientData != null)
+                {
+                    ClientMessageMatchStart matchStart;
+                    matchStart.matchID = LevelShared.match;
+                    matchStart.userStageID = userStageID;
+                    matchStart.isRestart = isRestart;
+                    matchStart.levelID = userLevelID;
+                    matchStart.stage = stageIndex;
+                    matchStart.levelName = levelName;
+                    matchStart.sceneName = sceneName;
+
+                    var writer = clientData.BeginSend(
+                        ClientMessageMatchStart.messageType,
+                        ClientMessageMatchStart.capacity);
+                    matchStart.Write(ref writer);
+                    clientData.EndSend(writer);
+                }
+            }
+            else
+                Debug.LogError(
+                    $"[ApplyStart] MatchStart requires Register result for Level {userLevelID}, Stage {stageIndex}.");
+        }
         
         StartCoroutine(__Start(isRestart, userLevelID,  stageIndex, levelName, sceneName));
     }
@@ -2035,6 +2063,15 @@ public sealed class LoginManager : MonoBehaviour
                         {
                             yield return null;
 
+                            if (stageID == (uint)LevelPlayerShared<RemotePlayer>.channelStatus)
+                            {
+                                RemotePlayer.SetStatus(
+                                    RemotePlayer.Status.Joined,
+                                    1 << (int)RemotePlayer.Status.StandBy);
+                                if (RemotePlayer.Status.Joined == RemotePlayer.status)
+                                    break;
+                            }
+
                             if (RemotePlayer.Status.Canceled == RemotePlayer.status)
                             {
                                 print("[Start:Host]Canceled.");
@@ -2061,10 +2098,12 @@ public sealed class LoginManager : MonoBehaviour
                         play.levelName = levelName;
                         play.sceneName = sceneName;
 
-                        print("[Start:Host]Waiting for play..");
+                        print(LevelShared.match == 0
+                            ? "[Start:Host]Waiting for play.."
+                            : "[Start:Host]Waiting for matched player stage..");
                         do
                         {
-                            //if (LevelShared.match == 0)
+                            if (LevelShared.match == 0)
                             {
                                 destinationVersion = LevelPlayerShared<RemotePlayer>.version;
                                 if (destinationVersion != sourceVersion)

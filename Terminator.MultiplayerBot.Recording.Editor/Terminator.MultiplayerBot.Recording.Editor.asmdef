@@ -1,0 +1,31 @@
+{
+    "name": "Terminator.MultiplayerBot.Recording.Editor",
+    "rootNamespace": "",
+    "references": [
+        "Terminator.MultiplayerBot",
+        "Terminator.MultiplayerBot.Recording",
+        "GUID:734d92eba21c94caba915361bd5ac177",
+        "GUID:e0cd26848372d4e5c891c569017e11f1",
+        "GUID:2665a8d13d1b3f18800f46e256720795",
+        "GUID:8a2eafa29b15f444eb6d74f94a930e1d",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:343deaaf83e0cee4ca978e7df0b80d21",
+        "GUID:2bafac87e7f4b9b418d9448d219b01ab",
+        "GUID:0d2722b335cb0e24e954bd7cfe8f43c0",
+        "GUID:0ff03d167f5200e49aa4569728a0da24",
+        "GUID:a79e10dbf2122d24c9817ebe1219c370",
+        "GUID:94f14b502b90b4b4d9f593d098b4114e",
+        "GUID:f2d49d9fa7e7eb3418e39723a7d3b92f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
