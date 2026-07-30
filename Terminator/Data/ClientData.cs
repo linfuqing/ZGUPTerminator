@@ -139,6 +139,34 @@ public enum ClientMessageType
     MatchStart
 }
 
+public static class ClientMessageRelayWire
+{
+    public static bool IsBodylessChannelMessage(ClientMessageType type)
+    {
+        switch (type)
+        {
+            case ClientMessageType.ApplyMatch:
+            case ClientMessageType.ApplyMatchFail:
+            case ClientMessageType.RejectMatch:
+            case ClientMessageType.Cancel:
+            case ClientMessageType.Error:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public static void WriteChannelMessage(
+        ref DataStreamWriter writer,
+        ClientMessageType type,
+        in NativeArray<byte> payload)
+    {
+        writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
+        if (!IsBodylessChannelMessage(type) && payload.IsCreated && payload.Length > 0)
+            writer.WriteBytes(payload);
+    }
+}
+
 public interface IClientMessageToRead
 {
     
@@ -1458,9 +1486,10 @@ public class ClientData : MonoBehaviour, IClientData
             default:
                 if (sendBuffer.BeginWrite(__pipelineIndex, out writer))
                 {
-                    writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
-                    
-                    writer.WriteBytes(__bytes.AsArray());
+                    ClientMessageRelayWire.WriteChannelMessage(
+                        ref writer,
+                        type,
+                        __bytes.AsArray());
                     
                     sendBuffer.EndWrite(writer);
                 }

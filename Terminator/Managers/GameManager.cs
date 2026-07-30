@@ -168,7 +168,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void QueryNotices(bool isForceShow)
+    public void QueryNotices(bool isShowProgress, bool isForceShow)
     {
         //__flag &= ~Flag.Show;
         
@@ -177,7 +177,7 @@ public class GameManager : MonoBehaviour
         GameProgressbar progressbar;
         if (__queryNoticeCoroutineIndex == -1)
         {
-            progressbar = GameProgressbar.instance;
+            progressbar = isShowProgress ? GameProgressbar.instance : null;
             if (progressbar != null)
             {
                 if (progressbar.isProgressing)

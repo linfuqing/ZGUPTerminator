@@ -377,7 +377,7 @@ public struct LevelStageOption
                             SpawnerEntity spawnerEntity;
                             SpawnerDefinitionData spawnerDefinition;
                             DynamicBuffer<SpawnerPrefab> spawnerPrefabBuffer;
-                            var levelPrefab = levelPrefabs[value];
+                            var levelPrefab = levelPrefabs[math.abs(value)];
                             int i;
                             for (i = 0; i < numKeys; ++i)
                             {
@@ -402,15 +402,26 @@ public struct LevelStageOption
                                 if (spawnerPrefabBuffer[loaderIndex.value].prefab != levelPrefab.reference)
                                     continue;
 
-                                condition.value = (int)Status.Start;
+                                if (value < 0)
+                                {
+                                    if ((Status)condition.value == Status.Start)
+                                        condition.value = (int)Status.Finish;
+                                }
+                                else
+                                    condition.value = (int)Status.Start;
 
                                 break;
                             }
 
                             spawnerEntities.Dispose();
 
-                            if ((Status)condition.value == Status.Start && i == numKeys)
-                                condition.value = (int)Status.Finish;
+                            if (i == numKeys)
+                            {
+                                if (value < 0)
+                                    condition.value = (int)Status.Start;
+                                else if ((Status)condition.value == Status.Start)
+                                    condition.value = (int)Status.Finish;
+                            }
                         }
                     }
 

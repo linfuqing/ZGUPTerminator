@@ -447,9 +447,11 @@ public class GameMain : GameUser
                     null);
 
                 //var paths = new Dictionary<string, string>();
-                UnityEngine.Debug.Log($"Temp Cache Path {Application.temporaryCachePath}");
+                //UnityEngine.Debug.Log($"Temp Cache Path {Application.temporaryCachePath}");
                 string directory = Path.Combine(
-                    #if UNITY_WEBGL
+                    #if UNITY_EDITOR
+                    Path.Combine(Application.persistentDataPath, "tmp"), 
+                    #elif UNITY_WEBGL
                     Application.temporaryCachePath,
                     #else
                     Application.persistentDataPath,
@@ -967,7 +969,7 @@ public class GameMain : GameUser
                 var manager = notice.GetComponentInChildren<GameManager>(true);
                 if (manager != null)
                 {
-                    manager.QueryNotices(false);
+                    manager.QueryNotices(false, false);
 
                     while (manager.isLoading || manager.isNoticeShow)
                         yield return null;

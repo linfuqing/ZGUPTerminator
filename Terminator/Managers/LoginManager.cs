@@ -568,7 +568,7 @@ public sealed class LoginManager : MonoBehaviour
     [Preserve]
     public void ShowNotices()
     {
-        GameManager.instance?.QueryNotices(true);
+        GameManager.instance?.QueryNotices(true, true);
     }
 
     [Preserve]
@@ -2568,7 +2568,7 @@ public sealed class LoginManager : MonoBehaviour
             if(_noticeStyleImportant != null)
                 manager.noticeStyleImportant = _noticeStyleImportant;
             
-            manager.QueryNotices(false);
+            manager.QueryNotices(true, false);
 
             while (manager != null && manager.isLoading)
                 yield return null;

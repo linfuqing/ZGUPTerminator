@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Networking.Transport;
 using ZG;
@@ -9,6 +10,92 @@ using ZG;
 /// </summary>
 public class BotRelayTransportRegressionTests
 {
+    [Test]
+    [Category("Regression")]
+    public void CurrentClientApplyMatch_EmptyStructStorage_RelaysBodylessAndAgentReplies()
+    {
+        using var savedStructBytes = new NativeArray<byte>(
+            UnsafeUtility.SizeOf<ClientMessageApplyMatch>(),
+            Allocator.Temp,
+            NativeArrayOptions.ClearMemory);
+        Assert.AreEqual(1, savedStructBytes.Length,
+            "An empty unmanaged message still occupies one byte; that storage is not protocol payload.");
+
+        using var clientBytes = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
+        var clientWriter = new DataStreamWriter(clientBytes);
+        ClientMessageRelayWire.WriteChannelMessage(
+            ref clientWriter,
+            ClientMessageType.ApplyMatch,
+            in savedStructBytes);
+
+        var model = StreamCompressionModel.Default;
+        var clientReader = new DataStreamReader(
+            clientBytes.GetSubArray(0, clientWriter.Length));
+        int type = clientReader.ReadPackedInt(model);
+        int relayType = clientReader.ReadPackedInt(model);
+        Assert.AreEqual((int)ClientMessageType.ApplyMatch, type);
+        Assert.AreEqual((int)NetworkRelayType.Channel, relayType);
+        Assert.AreEqual(clientReader.Length, clientReader.GetBytesRead(),
+            "ApplyMatch must have no client body after its relay header.");
+
+        using var serverBytes = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
+        var serverWriter = new DataStreamWriter(serverBytes);
+        NetworkRelayServerIdentity.SendRelay(
+            type,
+            relayType,
+            BotRelayFlowTestFixtures.RealPlayerUserId,
+            ref clientReader,
+            ref serverWriter);
+
+        var rawApp = default(BotRelayPacket);
+        rawApp.length = serverWriter.Length;
+        for (int i = 0; i < serverWriter.Length; ++i)
+            rawApp.SetByte(i, serverBytes[i]);
+
+        Assert.IsTrue(BotRelayWireBytes.TryAcceptCurrentInboundApp(
+            in rawApp,
+            out var acceptedApp));
+
+        var farm = BotRelayFlowTestFixtures.CreateFarm();
+        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
+        try
+        {
+            var state = farm.agentStates[0];
+            state.state = BotState.InSquad;
+            farm.agentStates[0] = state;
+
+            var session = farm.sessions[0];
+            session.channel = (int)BotRelayFlowTestFixtures.SquadInviteId;
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+            session.remotePlayerCount = 1;
+            session.remoteOnline = true;
+            farm.sessions[0] = session;
+
+            BotRelaySlotInbox.ParseTransportPayload(
+                in acceptedApp,
+                0,
+                ref farm,
+                BotRelayWireTestFixtures.BuildBotHeader());
+
+            var tickConfig = BotRelayFlowTestFixtures.CreateTickConfig();
+            tickConfig.injectEnabled = 1;
+            tickConfig.injectWriter = injects.AsParallelWriter();
+            BotAgentLogic.Execute(0, ref farm, in tickConfig);
+
+            Assert.IsTrue(injects.TryDequeue(out var applyMatchReply));
+            Assert.IsTrue(BotRelayFlowTestFixtures.TryReadInjectMessageType(
+                in applyMatchReply,
+                out int replyType));
+            Assert.AreEqual((int)ClientMessageType.ApplyMatch, replyType);
+            Assert.AreEqual(0, injects.Count);
+        }
+        finally
+        {
+            injects.Dispose();
+            farm.Dispose();
+        }
+    }
+
     [Test]
     [Category("Regression")]
     public void CurrentBodylessApplyMatch_SendRelayEnvelope_IsAccepted()

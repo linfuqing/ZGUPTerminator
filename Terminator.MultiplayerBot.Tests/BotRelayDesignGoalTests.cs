@@ -2059,6 +2059,7 @@ public class BotRelayDesignGoalTests
     public void SoloMatch_MatchThenTemporarySquadJoin_CommitsWithoutApplyMatch()
     {
         var farm = BotRelayFlowTestFixtures.CreateFarm();
+        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
         try
         {
             var agentState = farm.agentStates[0];
@@ -2096,9 +2097,28 @@ public class BotRelayDesignGoalTests
             Assert.AreEqual(
                 (int)BotRelayFlowTestFixtures.SquadInviteId,
                 farm.sessions[0].channel);
+
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.ApplyMatch,
+                header = new ClientHeader
+                {
+                    userID = BotRelayFlowTestFixtures.RealPlayerUserId
+                }
+            });
+            var postJoinConfig = BotRelayFlowTestFixtures.CreateTickConfig(2f);
+            postJoinConfig.injectEnabled = 1;
+            postJoinConfig.injectWriter = injects.AsParallelWriter();
+            BotAgentLogic.Execute(0, ref farm, in postJoinConfig);
+
+            Assert.AreEqual(0, injects.Count,
+                "A temporary matchmaking squad has no ApplyMatch consent phase.");
+            Assert.AreEqual(BotState.InSquad, farm.agentStates[0].state);
+            Assert.AreEqual(7, farm.sessions[0].matchID);
         }
         finally
         {
+            injects.Dispose();
             farm.Dispose();
         }
     }
