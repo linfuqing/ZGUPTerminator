@@ -84,11 +84,15 @@ internal static class LevelRecordingTiming
         IReadOnlyList<LevelRecordingFrame> frames,
         float wallDurationSeconds)
     {
-        if (TryGetLastFrameTimestamp(frames, out float lastTimestamp) && lastTimestamp > 0f)
+        float duration = math.isfinite(wallDurationSeconds)
+            ? math.max(0f, wallDurationSeconds)
+            : 0f;
+        if (TryGetLastFrameTimestamp(frames, out float lastTimestamp) &&
+            math.isfinite(lastTimestamp))
         {
-            return lastTimestamp;
+            duration = math.max(duration, lastTimestamp);
         }
 
-        return wallDurationSeconds;
+        return duration;
     }
 }

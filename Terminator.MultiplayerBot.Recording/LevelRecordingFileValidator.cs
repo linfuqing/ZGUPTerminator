@@ -28,6 +28,8 @@ internal struct LevelRecordingFileValidationResult
     public int selectSkillValidCount;
     public int selectSkillInvalidCount;
     public int firstInvalidSelectSkillFrameIndex;
+    public int malformedGameplayPayloadCount;
+    public int firstMalformedGameplayFrameIndex;
     public bool hasParseablePlayerProperty;
     public List<LevelRecordingValidationIssue> issues;
 
@@ -62,10 +64,12 @@ internal static class LevelRecordingFileValidator
     private const float MinDurationForGameplayExpectationSeconds = 15f;
     private const float MinExpectedMoveSpanRatio = 0.25f;
     private const float LargeContentGapSeconds = 15f;
+    private const float LargeMoveGapSeconds = 15f;
     private const float CollapsedGameplaySpanSeconds = 0.001f;
     private const int MinFramesForLongSession = 10;
-    // Heuristic only — never call LevelPlayerProperty ctor here (DataStreamReader LogError spam on corrupt bins).
-    private const int MinPlayerPropertyHeuristicBytes = 32;
+    // This is only a cheap preflight. The strict current PlayerProperty parser below remains
+    // authoritative for every frame that is large enough to inspect.
+    private const int MinPlayerPropertyPreflightBytes = 8;
 
     public static IEnumerable<string> EnumerateRecordingFiles(string rootDirectory)
     {
@@ -82,23 +86,50 @@ internal static class LevelRecordingFileValidator
 
     public static LevelRecordingFileValidationResult Validate(string filePath)
     {
-        var result = new LevelRecordingFileValidationResult
-        {
-            filePath = filePath,
-            issues = new List<LevelRecordingValidationIssue>()
-        };
-
         LevelRecordingSession session;
         try
         {
             session = LevelRecordingSerializer.Read(filePath);
-            result.parseOk = true;
         }
         catch (Exception exception)
         {
-            result.parseOk = false;
-            result.parseError = exception.Message;
+            var result = new LevelRecordingFileValidationResult
+            {
+                filePath = filePath,
+                parseOk = false,
+                parseError = exception.Message,
+                issues = new List<LevelRecordingValidationIssue>()
+            };
             __AddIssue(result.issues, LevelRecordingValidationSeverity.Error, "ParseFailed", exception.Message);
+            return result;
+        }
+
+        return ValidateSession(session, filePath);
+    }
+
+    /// <summary>
+    /// Validates an in-memory capture before serialization. This is also the single rule path
+    /// used by file validation, so save-time and deployment-time gates cannot drift.
+    /// </summary>
+    public static LevelRecordingFileValidationResult ValidateSession(
+        LevelRecordingSession session,
+        string sourceName = "<memory>")
+    {
+        var result = new LevelRecordingFileValidationResult
+        {
+            filePath = sourceName,
+            parseOk = session != null,
+            issues = new List<LevelRecordingValidationIssue>()
+        };
+
+        if (session == null)
+        {
+            result.parseError = "Recording session is null.";
+            __AddIssue(
+                result.issues,
+                LevelRecordingValidationSeverity.Error,
+                "ParseFailed",
+                result.parseError);
             return result;
         }
 
@@ -110,7 +141,21 @@ internal static class LevelRecordingFileValidator
             localChannelStatusAtEnd: 0,
             remoteChannelStatusAtEnd: 0);
 
+        if (!string.IsNullOrEmpty(session.captureError))
+        {
+            __AddIssue(
+                result.issues,
+                LevelRecordingValidationSeverity.Error,
+                "EndWriteCaptureFailed",
+                session.captureError);
+        }
+
         __ValidateStructure(session, in result.audit, result.issues);
+        __ValidateGameplayPayloads(
+            session.frames,
+            result.issues,
+            out result.malformedGameplayPayloadCount,
+            out result.firstMalformedGameplayFrameIndex);
         __ValidatePlayerProperty(session.frames, result.issues, out result.hasParseablePlayerProperty);
         __ValidateGameplaySpan(in result.audit, wallDuration, result.issues);
         try
@@ -141,6 +186,17 @@ internal static class LevelRecordingFileValidator
         in LevelRecordingSessionAudit.Report audit,
         List<LevelRecordingValidationIssue> issues)
     {
+        if (float.IsNaN(session.header.duration) ||
+            float.IsInfinity(session.header.duration) ||
+            session.header.duration < 0f)
+        {
+            __AddIssue(
+                issues,
+                LevelRecordingValidationSeverity.Error,
+                "InvalidDuration",
+                $"Header duration is invalid: {session.header.duration}.");
+        }
+
         if (session.frames == null || session.frames.Count == 0)
         {
             __AddIssue(issues, LevelRecordingValidationSeverity.Error, "EmptyRecording", "No frames in file.");
@@ -200,6 +256,17 @@ internal static class LevelRecordingFileValidator
                 $"{audit.emptyFrames} frame(s) have empty payload.");
         }
 
+        if (audit.nonMonotonicTimestampCount > 0)
+        {
+            __AddIssue(
+                issues,
+                LevelRecordingValidationSeverity.Error,
+                "NonMonotonicTimestamps",
+                $"{audit.nonMonotonicTimestampCount} timestamp regression(s); first frameIndex=" +
+                $"{audit.firstNonMonotonicFrameIndex}, largest={audit.largestTimestampRegressionSeconds:F3}s. " +
+                "Replay consumes file order, so regressing timestamps collapse frames into a later tick.");
+        }
+
         if (audit.wallDurationSeconds > 30f && session.frames.Count < MinFramesForLongSession)
         {
             __AddIssue(
@@ -220,6 +287,83 @@ internal static class LevelRecordingFileValidator
         }
     }
 
+    private static void __ValidateGameplayPayloads(
+        IReadOnlyList<LevelRecordingFrame> frames,
+        List<LevelRecordingValidationIssue> issues,
+        out int malformedCount,
+        out int firstMalformedFrameIndex)
+    {
+        malformedCount = 0;
+        firstMalformedFrameIndex = -1;
+        if (frames == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < frames.Count; ++i)
+        {
+            var payload = frames[i].payload;
+            if (payload == null ||
+                payload.Length == 0 ||
+                !LevelRecordingPayloadClassification.TryReadRecordedWireType(payload, out int wireType) ||
+                !__IsInLevelReplayableWireType(wireType))
+            {
+                continue;
+            }
+
+            bool isValid = payload.Length <= BotRelayPacket.MaxPayloadSize;
+            if (isValid)
+            {
+                var packet = default(BotRelayPacket);
+                packet.length = payload.Length;
+                for (int j = 0; j < payload.Length; ++j)
+                {
+                    packet.SetByte(j, payload[j]);
+                }
+
+                isValid =
+                    BotReplayPayloadUtility.TryGetReplyMessageType(in packet, out var messageType) &&
+                    (int)messageType == wireType;
+            }
+
+            if (isValid)
+            {
+                continue;
+            }
+
+            ++malformedCount;
+            if (firstMalformedFrameIndex < 0)
+            {
+                firstMalformedFrameIndex = i;
+            }
+        }
+
+        if (malformedCount > 0)
+        {
+            __AddIssue(
+                issues,
+                LevelRecordingValidationSeverity.Error,
+                "MalformedGameplayPayload",
+                $"{malformedCount} replayable gameplay frame(s) do not match the exact current body layout " +
+                $"(first bad frameIndex={firstMalformedFrameIndex}).");
+        }
+    }
+
+    private static bool __IsInLevelReplayableWireType(int wireType)
+    {
+        switch ((ReplyMessageType)wireType)
+        {
+            case ReplyMessageType.Chat:
+            case ReplyMessageType.Camera:
+            case ReplyMessageType.Move:
+            case ReplyMessageType.Damage:
+            case ReplyMessageType.SelectSkill:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private static void __ValidatePlayerProperty(
         IReadOnlyList<LevelRecordingFrame> frames,
         List<LevelRecordingValidationIssue> issues,
@@ -228,6 +372,7 @@ internal static class LevelRecordingFileValidator
         hasParseablePlayerProperty = false;
         bool sawPlayerProperty = false;
         bool sawUndersizedPlayerProperty = false;
+        bool sawUnparseablePlayerProperty = false;
 
         for (int i = 0; i < frames.Count; ++i)
         {
@@ -244,19 +389,19 @@ internal static class LevelRecordingFileValidator
             }
 
             sawPlayerProperty = true;
-            if (payload.Length < MinPlayerPropertyHeuristicBytes)
+            if (payload.Length < MinPlayerPropertyPreflightBytes)
             {
                 sawUndersizedPlayerProperty = true;
                 continue;
             }
 
-            hasParseablePlayerProperty = true;
-            return;
-        }
+            if (ReplyMessageReplayInjector.TryParsePlayerProperty(payload, out _))
+            {
+                hasParseablePlayerProperty = true;
+                return;
+            }
 
-        if (hasParseablePlayerProperty)
-        {
-            return;
+            sawUnparseablePlayerProperty = true;
         }
 
         if (!sawPlayerProperty)
@@ -266,6 +411,16 @@ internal static class LevelRecordingFileValidator
                 LevelRecordingValidationSeverity.Error,
                 "MissingPlayerProperty",
                 "No PlayerProperty frame — bot cannot join remote with correct stats.");
+            return;
+        }
+
+        if (sawUnparseablePlayerProperty)
+        {
+            __AddIssue(
+                issues,
+                LevelRecordingValidationSeverity.Error,
+                "UnparseablePlayerProperty",
+                "PlayerProperty frame does not match the exact current header/body layout.");
             return;
         }
 
@@ -283,7 +438,7 @@ internal static class LevelRecordingFileValidator
             issues,
             LevelRecordingValidationSeverity.Error,
             "UnparseablePlayerProperty",
-            "PlayerProperty-sized frame present but below heuristic threshold or missing.");
+            "PlayerProperty frame could not be parsed.");
     }
 
     private static bool __TryValidateSelectSkillPayload(byte[] payload)
@@ -306,11 +461,28 @@ internal static class LevelRecordingFileValidator
         float wallDuration,
         List<LevelRecordingValidationIssue> issues)
     {
-        bool hasSameTimestampMoveBatch = audit.maxMoveFramesAtSameTimestamp > 1;
+        if (audit.largestMoveGapSeconds > LargeMoveGapSeconds)
+        {
+            __AddIssue(
+                issues,
+                LevelRecordingValidationSeverity.Warning,
+                "LargeMoveGap",
+                $"Largest gap between Move frames is {audit.largestMoveGapSeconds:F1}s " +
+                $"(threshold {LargeMoveGapSeconds:F0}s); verify that the idle interval is intentional.");
+        }
+
+        bool hasCollapsedSameTimestampMoveBatch =
+            audit.maxMoveFramesAtSameTimestamp >=
+            LevelRecordingSessionAudit.CollapsedSameTimestampMoveThreshold;
+        bool hasCollapsedIdenticalMoveBatch =
+            audit.maxIdenticalMoveFramesAtSameTimestamp >=
+            LevelRecordingSessionAudit.CollapsedSameTimestampMoveThreshold;
         bool hasCollapsedGameplaySpan =
-            audit.moveFrameCount > 1 &&
+            audit.moveFrameCount >= LevelRecordingSessionAudit.CollapsedSameTimestampMoveThreshold &&
             audit.gameplaySpanSeconds < CollapsedGameplaySpanSeconds;
-        if (hasSameTimestampMoveBatch || hasCollapsedGameplaySpan)
+        if (hasCollapsedSameTimestampMoveBatch ||
+            hasCollapsedIdenticalMoveBatch ||
+            hasCollapsedGameplaySpan)
         {
             __AddIssue(
                 issues,
@@ -318,9 +490,23 @@ internal static class LevelRecordingFileValidator
                 "CollapsedMoveTimestamps",
                 $"maxSameTimestampMove={audit.maxMoveFramesAtSameTimestamp} at " +
                 $"{audit.maxMoveBatchTimestamp:F3}s, moveCount={audit.moveFrameCount}, " +
+                $"maxIdenticalSameTimestampMove={audit.maxIdenticalMoveFramesAtSameTimestamp} at " +
+                $"{audit.maxIdenticalMoveBatchTimestamp:F3}s, " +
                 $"gameplaySpan={audit.gameplaySpanSeconds:F3}s " +
-                "(likely EndWrite index reset batch capture; re-record before deployment).");
+                "(collapsed capture backlog; re-record before deployment).");
             return;
+        }
+
+        if (audit.maxIdenticalMoveFramesAtSameTimestamp >=
+            LevelRecordingSessionAudit.DuplicateSameTickMoveThreshold)
+        {
+            __AddIssue(
+                issues,
+                LevelRecordingValidationSeverity.Warning,
+                "DuplicateSameTickMove",
+                $"{audit.maxIdenticalMoveFramesAtSameTimestamp} byte-identical Move frames share timestamp " +
+                $"{audit.maxIdenticalMoveBatchTimestamp:F3}s. This is below the collapsed-batch threshold " +
+                $"({LevelRecordingSessionAudit.CollapsedSameTimestampMoveThreshold}) but should be reviewed.");
         }
 
         if (wallDuration >= MinDurationForGameplayExpectationSeconds && audit.moveFrameCount == 0)
@@ -333,7 +519,7 @@ internal static class LevelRecordingFileValidator
         }
 
         if (wallDuration >= MinDurationForGameplayExpectationSeconds &&
-            audit.moveFrameCount > 1)
+            audit.moveFrameCount >= LevelRecordingSessionAudit.CollapsedSameTimestampMoveThreshold)
         {
             float expectedMinSpan = wallDuration * MinExpectedMoveSpanRatio;
             if (audit.gameplaySpanSeconds < expectedMinSpan)

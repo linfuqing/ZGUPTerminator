@@ -6,10 +6,9 @@ using Unity.Networking.Transport;
 /// pipeline (no pipeline stages).
 ///
 /// Rationale (see Documentation~/MultiplayerBot/联机机器人-架构约束.md):
-/// - server→bot datagrams carry only transport framing, so inbound decode strips one
-///   fixed offset (catalog.inboundAppPayloadOffset) — no per-message byte scanning, and
-///   nothing to re-derive if framing ever changes (re-capture re-measures that single
-///   offset automatically).
+/// - server→bot datagrams carry only transport framing. Capture records the current
+///   app-payload offset once; runtime derives the preceding ushort frame boundary and
+///   walks each length-prefixed app exactly to EOF, without per-message byte scanning.
 /// - there is no ReliableSequenced send window to advance, so the single-driver bot
 ///   (which never emits link-layer ACKs) can no longer stall the server's send queue.
 ///   This removes the NetworkSendQueueFull (-5) flood at its root.

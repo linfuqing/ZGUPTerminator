@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Threading;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -6,12 +7,6 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Networking.Transport;
-
-public enum BotRelayListenInjectClass : byte
-{
-    RelayOutbound = 0,
-    ConnectHandshake = 1,
-}
 
 public struct BotRelayManager
 {
@@ -135,23 +130,13 @@ public struct BotRelayManager
     private ushort m_ListenPort;
     private int m_RefCount;
 
-    internal ushort encoderTapVirtualPort;
-    internal ushort encoderInjectFromPort;
-    internal ushort encoderListenPort;
-    internal byte encoderSuppressSend;
-    internal BotRelayPacket encoderInjectWire;
-    internal byte encoderInjectWirePending;
-
     internal int connectCaptureActive;
     internal int connectCaptureClientCount;
     internal int connectCaptureServerCount;
-    internal NativeArray<ushort> connectCaptureClientPorts;
-    internal NativeArray<ushort> connectCaptureServerPorts;
     internal NativeArray<int> connectCaptureClientLengths;
     internal NativeArray<int> connectCaptureServerLengths;
     internal NativeArray<byte> connectCaptureClientBytes;
     internal NativeArray<byte> connectCaptureServerBytes;
-    internal NativeArray<byte> connectCaptureConnectPayload;
 
     internal int diagRouteSendPeeled;
     internal int diagPeeledAppsDequeued;
@@ -160,23 +145,15 @@ public struct BotRelayManager
     internal int diagRouteSendDropped;
     internal int diagSendJobPackets;
     internal int diagInboundDequeued;
-    internal int diagInboundSkippedEmpty;
     internal int diagDrainPacketsBudget;
     internal int diagDrainBudgetExhausted;
-    internal int diagListenInjectSkippedPopEvents;
     internal int diagInboundUnmapped;
     internal int diagInboundAppsEnqueued;
-    internal int diagLinkAckSwallowed;
-    internal int diagJoinWireInjected;
-    internal int diagMatchWireInjected;
-    internal int diagMismatchWireInjected;
+    internal int diagLinkAckInjected;
     internal int diagLastRouteDestPort;
     internal int diagLastRouteLen;
-    internal BotRelayPacket diagLastJoinListenWire;
-    internal ushort diagLastJoinListenFromPort;
 
     private NativeParallelHashMap<uint, ushort> m_BotVirtualPorts;
-    private NativeParallelHashMap<int, ushort> m_ConnectionIndexVirtualPorts;
     private int m_RegisteredBotPortCount;
     private ushort m_SoleBotVirtualPort;
 
@@ -192,7 +169,6 @@ public struct BotRelayManager
             m_PortChannels = new NativeParallelHashMap<ushort, int>(64, Allocator.Persistent);
 
             m_BotVirtualPorts = new NativeParallelHashMap<uint, ushort>(16, Allocator.Persistent);
-            m_ConnectionIndexVirtualPorts = new NativeParallelHashMap<int, ushort>(16, Allocator.Persistent);
             m_ListenPort = 0;
             m_RegisteredBotPortCount = 0;
             m_SoleBotVirtualPort = 0;
@@ -208,10 +184,8 @@ public struct BotRelayManager
 
     private void __EnsureConnectCaptureBuffers()
     {
-        if (!connectCaptureClientPorts.IsCreated)
+        if (!connectCaptureClientLengths.IsCreated)
         {
-            connectCaptureClientPorts = new NativeArray<ushort>(ConnectCaptureCapacity, Allocator.Persistent);
-            connectCaptureServerPorts = new NativeArray<ushort>(ConnectCaptureCapacity, Allocator.Persistent);
             connectCaptureClientLengths = new NativeArray<int>(ConnectCaptureCapacity, Allocator.Persistent);
             connectCaptureServerLengths = new NativeArray<int>(ConnectCaptureCapacity, Allocator.Persistent);
             connectCaptureClientBytes =
@@ -220,8 +194,6 @@ public struct BotRelayManager
                 new NativeArray<byte>(ConnectCaptureCapacity * BotRelayPacket.MaxPayloadSize, Allocator.Persistent);
         }
 
-        if (!connectCaptureConnectPayload.IsCreated)
-            connectCaptureConnectPayload = new NativeArray<byte>(0, Allocator.Persistent);
     }
 
     public void Release()
@@ -232,34 +204,24 @@ public struct BotRelayManager
 
         CompleteManagerAccess();
         __ResetConnectCaptureState();
-        if (connectCaptureClientPorts.IsCreated)
+        if (connectCaptureClientLengths.IsCreated)
         {
-            connectCaptureClientPorts.Dispose();
-            connectCaptureServerPorts.Dispose();
             connectCaptureClientLengths.Dispose();
             connectCaptureServerLengths.Dispose();
             connectCaptureClientBytes.Dispose();
             connectCaptureServerBytes.Dispose();
         }
 
-        if (connectCaptureConnectPayload.IsCreated)
-            connectCaptureConnectPayload.Dispose();
-
-        connectCaptureClientPorts = default;
-        connectCaptureServerPorts = default;
         connectCaptureClientLengths = default;
         connectCaptureServerLengths = default;
         connectCaptureClientBytes = default;
         connectCaptureServerBytes = default;
-        connectCaptureConnectPayload = default;
         m_Queue.Dispose();
         if (m_PeeledAppQueue.IsCreated)
             m_PeeledAppQueue.Dispose();
 
         if (m_BotVirtualPorts.IsCreated)
             m_BotVirtualPorts.Dispose();
-        if (m_ConnectionIndexVirtualPorts.IsCreated)
-            m_ConnectionIndexVirtualPorts.Dispose();
         m_PortChannels.Dispose();
         m_ListenPort = 0;
         m_RegisteredBotPortCount = 0;
@@ -276,43 +238,13 @@ public struct BotRelayManager
         diagRouteSendDropped = 0;
         diagSendJobPackets = 0;
         diagInboundDequeued = 0;
-        diagInboundSkippedEmpty = 0;
         diagDrainPacketsBudget = 0;
         diagDrainBudgetExhausted = 0;
-        diagListenInjectSkippedPopEvents = 0;
         diagInboundUnmapped = 0;
         diagInboundAppsEnqueued = 0;
-        diagLinkAckSwallowed = 0;
-        diagJoinWireInjected = 0;
-        diagMatchWireInjected = 0;
-        diagMismatchWireInjected = 0;
+        diagLinkAckInjected = 0;
         diagLastRouteDestPort = 0;
         diagLastRouteLen = 0;
-        diagLastJoinListenWire = default;
-        diagLastJoinListenFromPort = 0;
-    }
-
-    [BurstDiscard]
-    internal void RecordJoinListenInjectBurst(ushort fromVirtualPort, in BotRelayPacket wire)
-    {
-        diagLastJoinListenFromPort = fromVirtualPort;
-        diagLastJoinListenWire = wire;
-    }
-
-    [BurstDiscard]
-    public bool TryGetLastJoinListenInject(out BotRelayPacket wire, out ushort fromVirtualPort)
-    {
-        CompleteManagerAccess();
-        return TryPeekLastJoinListenInject(out wire, out fromVirtualPort);
-    }
-
-    /// <summary>Read last Join listen inject without blocking ReceiveJob (PlayMode harness polling).</summary>
-    [BurstDiscard]
-    public bool TryPeekLastJoinListenInject(out BotRelayPacket wire, out ushort fromVirtualPort)
-    {
-        wire = diagLastJoinListenWire;
-        fromVirtualPort = diagLastJoinListenFromPort;
-        return !wire.IsEmpty;
     }
 
     public void Reset()
@@ -332,53 +264,13 @@ public struct BotRelayManager
 
         if (m_BotVirtualPorts.IsCreated)
             m_BotVirtualPorts.Clear();
-        if (m_ConnectionIndexVirtualPorts.IsCreated)
-            m_ConnectionIndexVirtualPorts.Clear();
         m_RegisteredBotPortCount = 0;
         m_SoleBotVirtualPort = 0;
         m_ListenPort = 0;
-        encoderTapVirtualPort = 0;
-        encoderInjectFromPort = 0;
-        encoderListenPort = 0;
-        encoderSuppressSend = 0;
-        encoderInjectWirePending = 0;
-        encoderInjectWire = default;
         connectCaptureActive = 0;
         connectCaptureClientCount = 0;
         connectCaptureServerCount = 0;
         CancelConnectCapture();
-    }
-
-    [BurstDiscard]
-    public void SetEncoderInjectWire(in BotRelayPacket packet)
-    {
-        CompleteManagerAccess();
-        encoderInjectWire = packet;
-        encoderInjectWirePending = 1;
-    }
-
-    [BurstDiscard]
-    public void ClearEncoderInjectWire()
-    {
-        CompleteManagerAccess();
-        encoderInjectWirePending = 0;
-        encoderInjectWire = default;
-    }
-
-    [BurstDiscard]
-    public void SetEncoderTap(ushort tapVirtualPort, ushort injectFromPort, ushort listenPort)
-    {
-        CompleteManagerAccess();
-        encoderTapVirtualPort = tapVirtualPort;
-        encoderInjectFromPort = injectFromPort;
-        encoderListenPort = listenPort;
-    }
-
-    [BurstDiscard]
-    public void SetEncoderSuppressSend(bool suppress)
-    {
-        CompleteManagerAccess();
-        encoderSuppressSend = suppress ? (byte)1 : (byte)0;
     }
 
     public bool HasInboundForBotBurst(ushort virtualPort) =>
@@ -450,67 +342,16 @@ public struct BotRelayManager
 
         m_SoleBotVirtualPort = m_RegisteredBotPortCount == 1 ? virtualPort : (ushort)0;
     }
-    public void SetConnectionVirtualPortBurst(int connectionIndex, ushort virtualPort)
-    {
-        if (connectionIndex < 0 || virtualPort == 0 || !m_ConnectionIndexVirtualPorts.IsCreated)
-            return;
-
-        m_ConnectionIndexVirtualPorts[connectionIndex] = virtualPort;
-    }
-
-    public void EnsureVirtualPortBurst(ushort port) => EnsurePortChannelBurst(port);
-
     public bool IsListenPort(ushort port) => port == m_ListenPort;
 
-    [BurstDiscard]
-    public void EnqueueToListen(ushort fromVirtualPort, NativeArray<byte> payload)
-    {
-        if (!payload.IsCreated || payload.Length == 0 || m_ListenPort == 0)
-            return;
+    internal ushort ListenPort => m_ListenPort;
 
-        CompleteManagerAccess();
-        EnqueueToListenBurst(fromVirtualPort, payload);
-    }
-
-    public void EnqueueToListenBurst(
+    public void EnqueueConnectLinkToListenFromPacketBurst(
         ushort fromVirtualPort,
-        NativeArray<byte> payload,
-        BotRelayListenInjectClass injectClass = BotRelayListenInjectClass.RelayOutbound)
-    {
-        if (!payload.IsCreated || payload.Length == 0 || m_ListenPort == 0)
-            return;
-
-        if (injectClass == BotRelayListenInjectClass.RelayOutbound)
-        {
-            var packet = default(BotRelayPacket);
-            if (packet.TryWriteFrom(payload) &&
-                BotRelayWireBytes.ShouldSkipListenInjectForPopEvents(in packet))
-            {
-                ++diagListenInjectSkippedPopEvents;
-                return;
-            }
-        }
-
-        if (!TryGetChannelByPort(m_ListenPort, out int listenChannel))
-            return;
-
-        EnqueuePacketBurst(listenChannel, fromVirtualPort, payload);
-    }
-
-    public void EnqueueToListenFromPacketBurst(
-        ushort fromVirtualPort,
-        in BotRelayPacket packet,
-        BotRelayListenInjectClass injectClass = BotRelayListenInjectClass.RelayOutbound)
+        in BotRelayPacket packet)
     {
         if (packet.IsEmpty || m_ListenPort == 0)
             return;
-
-        if (injectClass == BotRelayListenInjectClass.RelayOutbound &&
-            BotRelayWireBytes.ShouldSkipListenInjectForPopEvents(in packet))
-        {
-            ++diagListenInjectSkippedPopEvents;
-            return;
-        }
 
         if (!TryGetChannelByPort(m_ListenPort, out int listenChannel))
             return;
@@ -529,21 +370,11 @@ public struct BotRelayManager
             return false;
 
         if (data.length <= 0)
-        {
-            ++diagInboundSkippedEmpty;
             return true;
-        }
 
         ++diagInboundDequeued;
         data.CopyTo(out packet);
         return true;
-    }
-
-    [BurstDiscard]
-    public bool TryDequeueToBot(ushort virtualPort, out BotRelayPacket packet)
-    {
-        CompleteManagerAccess();
-        return TryDequeueToBotBurst(virtualPort, out packet);
     }
 
     public bool HasInboundForListen(NetworkEndpoint listenEndpoint) =>
@@ -626,56 +457,19 @@ public struct BotRelayManager
             in wire,
             ref catalog,
             ref batch,
-            out fullyConsumed,
-            out int peelPath);
+            out fullyConsumed);
 
-        int peeledRelayType = -1;
-        int peeledAppLength = 0;
         if (peelSucceeded && batch.appCount > 0)
         {
             for (int i = 0; i < batch.appCount; ++i)
             {
                 var app = batch.GetApp(i);
-                if (BotRelayInviteDecodeOps.LooksLikeInviteShell(in wire) &&
-                    BotRelayInviteDecodeOps.TryFinalizeInviteAppForRoutePeel(
-                        in app,
-                        in wire,
-                        ref catalog,
-                        out var finalized) &&
-                    !finalized.IsEmpty)
-                {
-                    app = finalized;
-                }
-
                 m_PeeledAppQueue.Enqueue(channel, app);
                 ++diagInboundAppsEnqueued;
                 if (BotRelayWireBytes.TryReadRelayMessageTypeHeader(in app, out int relayType))
-                {
-                    peeledRelayType = relayType;
-                    peeledAppLength = app.length;
                     BotRelayAgentDiagnostics.LogRouteSendPeeled(relayType, wire.length, app.length);
-                }
             }
         }
-
-        if (packetData.length >= 80 && packetData.length <= 160)
-        {
-            BotRelayAgentDiagnostics.LogInviteShellRouteSend(
-                packetData.fromPort,
-                botVirtualPort,
-                packetData.length,
-                catalog.inboundAppPayloadOffset,
-                catalog.inboundMappings.Length,
-                BotRelayRoutePeelOps.DescribePeelPath(peelPath),
-                peelSucceeded,
-                fullyConsumed,
-                peeledRelayType,
-                peeledAppLength,
-                in wire);
-        }
-
-        if (BotRelayInviteDecodeOps.LooksLikeInviteShell(in wire) && botVirtualPort != 0)
-            BotRelayInviteShellCacheStore.Store(in wire, botVirtualPort);
 
         return peelSucceeded && batch.appCount > 0;
     }
@@ -751,7 +545,7 @@ public struct BotRelayManager
             BotRelayAgentDiagnostics.LogRouteSendEnqueued(fromPort, destinationPort, packetData.length);
             if (connectCaptureActive != 0 && packetData.length > 0 && m_ListenPort != 0 &&
                 destinationPort != m_ListenPort)
-                __TryRecordConnectCaptureWire(true, destinationPort, in packetData);
+                __TryRecordConnectCaptureWire(true, in packetData);
             return;
         }
 
@@ -767,9 +561,9 @@ public struct BotRelayManager
         if (connectCaptureActive != 0 && packetData.length > 0 && m_ListenPort != 0)
         {
             if (destinationPort != m_ListenPort)
-                __TryRecordConnectCaptureWire(true, destinationPort, in packetData);
+                __TryRecordConnectCaptureWire(true, in packetData);
             else if (TryGetChannelByPort(m_ListenPort, out int listenChannel) && channel == listenChannel)
-                __TryRecordConnectCaptureWire(false, packetData.fromPort, in packetData);
+                __TryRecordConnectCaptureWire(false, in packetData);
         }
 
         m_Queue.Enqueue(channel, packetData);
@@ -808,21 +602,14 @@ public struct BotRelayManager
         m_PortChannels.TryGetValue(port, out channel);
 
     [BurstDiscard]
-    public string BuildDiagnosticsSnapshot() =>
-        BuildDiagnosticsSnapshotNoSync();
-
-    [BurstDiscard]
     public string BuildDiagnosticsSnapshotNoSync()
     {
         ref var manager = ref Instance;
         return
-            $"routeEnq={manager.diagRouteSendEnqueued}, joinInj={manager.diagJoinWireInjected}, " +
-            $"matchInj={manager.diagMatchWireInjected}, mismatchInj={manager.diagMismatchWireInjected}, " +
-            $"routeZero={manager.diagRouteSendZeroPort}, " +
+            $"routeEnq={manager.diagRouteSendEnqueued}, routeZero={manager.diagRouteSendZeroPort}, " +
             $"routeDrop={manager.diagRouteSendDropped}, sendPkts={manager.diagSendJobPackets}, " +
             $"inDeq={manager.diagInboundDequeued}, inApp={manager.diagInboundAppsEnqueued}, " +
-            $"inUnmapped={manager.diagInboundUnmapped}, linkAck={manager.diagLinkAckSwallowed}, " +
-            $"listenSkip={manager.diagListenInjectSkippedPopEvents}, " +
+            $"inUnmapped={manager.diagInboundUnmapped}, linkAckInjected={manager.diagLinkAckInjected}, " +
             $"lastDest={manager.diagLastRouteDestPort}, lastLen={manager.diagLastRouteLen}, " +
             $"bots={manager.m_RegisteredBotPortCount}, soleVport={manager.m_SoleBotVirtualPort}";
     }
@@ -868,21 +655,6 @@ public struct BotRelayManager
         m_Queue.Enqueue(channel, packetData);
     }
 
-    private unsafe void EnqueuePacketBurst(int channel, ushort fromPort, NativeArray<byte> payload)
-    {
-        if (payload.Length > MaxPacketPayloadSize)
-            return;
-
-        var packetData = new PacketData
-        {
-            fromPort = fromPort,
-            length = payload.Length
-        };
-
-        packetData.WriteFrom(payload);
-        m_Queue.Enqueue(channel, packetData);
-    }
-
     private void __EnqueuePacketData(int channel, in PacketData packetData)
     {
         if (packetData.length > 0 &&
@@ -890,12 +662,12 @@ public struct BotRelayManager
             m_ListenPort != 0 &&
             TryGetChannelByPort(m_ListenPort, out int listenChannel) &&
             channel == listenChannel)
-            __TryRecordConnectCaptureWire(false, packetData.fromPort, in packetData);
+            __TryRecordConnectCaptureWire(false, in packetData);
 
         m_Queue.Enqueue(channel, packetData);
     }
 
-    private unsafe void __TryRecordConnectCaptureWire(bool serverSide, ushort port, in PacketData packetData)
+    private unsafe void __TryRecordConnectCaptureWire(bool serverSide, in PacketData packetData)
     {
         if (connectCaptureActive == 0 || packetData.length <= 0)
             return;
@@ -904,32 +676,26 @@ public struct BotRelayManager
         {
             __TryRecordConnectCaptureWireSide(
                 ref connectCaptureServerCount,
-                connectCaptureServerPorts,
                 connectCaptureServerLengths,
                 connectCaptureServerBytes,
-                port,
                 in packetData);
             return;
         }
 
         __TryRecordConnectCaptureWireSide(
             ref connectCaptureClientCount,
-            connectCaptureClientPorts,
             connectCaptureClientLengths,
             connectCaptureClientBytes,
-            port,
             in packetData);
     }
 
     private unsafe void __TryRecordConnectCaptureWireSide(
         ref int count,
-        NativeArray<ushort> ports,
         NativeArray<int> lengths,
         NativeArray<byte> bytes,
-        ushort port,
         in PacketData packetData)
     {
-        if (!ports.IsCreated || count >= ConnectCaptureCapacity)
+        if (!lengths.IsCreated || !bytes.IsCreated || count >= ConnectCaptureCapacity)
             return;
 
         if (count > 0)
@@ -959,26 +725,14 @@ public struct BotRelayManager
             bytes[writeOffset + i] = packetData.data[i];
 
         lengths[count] = packetData.length;
-        ports[count] = port;
         count++;
     }
 
     [BurstDiscard]
-    internal void BeginConnectCapture(NativeArray<byte> connectPayload)
+    internal void BeginConnectCapture()
     {
         __ResetConnectCaptureState();
         connectCaptureActive = 1;
-
-        if (connectCaptureConnectPayload.IsCreated)
-            connectCaptureConnectPayload.Dispose();
-
-        if (connectPayload.IsCreated && connectPayload.Length > 0)
-        {
-            connectCaptureConnectPayload = new NativeArray<byte>(connectPayload.Length, Allocator.Persistent);
-            NativeArray<byte>.Copy(connectPayload, connectCaptureConnectPayload);
-        }
-        else
-            connectCaptureConnectPayload = new NativeArray<byte>(0, Allocator.Persistent);
     }
 
     [BurstDiscard]
@@ -997,20 +751,8 @@ public struct BotRelayManager
         if (connectCaptureServerCount > 0)
             state.serverPackets = __CopyConnectCaptureSide(true);
 
-        if (connectCaptureConnectPayload.IsCreated && connectCaptureConnectPayload.Length > 0)
-        {
-            state.capturedConnectPayload =
-                new NativeArray<byte>(connectCaptureConnectPayload.Length, Allocator.Persistent);
-            NativeArray<byte>.Copy(connectCaptureConnectPayload, state.capturedConnectPayload);
-        }
-
         connectCaptureClientCount = 0;
         connectCaptureServerCount = 0;
-
-        if (connectCaptureConnectPayload.IsCreated)
-            connectCaptureConnectPayload.Dispose();
-
-        connectCaptureConnectPayload = new NativeArray<byte>(0, Allocator.Persistent);
 
         if (state.IsValid)
         {
@@ -1026,11 +768,6 @@ public struct BotRelayManager
     internal void CancelConnectCapture()
     {
         __ResetConnectCaptureState();
-
-        if (connectCaptureConnectPayload.IsCreated)
-            connectCaptureConnectPayload.Dispose();
-
-        connectCaptureConnectPayload = new NativeArray<byte>(0, Allocator.Persistent);
     }
 
     private void __ResetConnectCaptureState()
@@ -1044,7 +781,6 @@ public struct BotRelayManager
     private NativeList<BotRelayConnectWirePacket> __CopyConnectCaptureSide(bool serverSide)
     {
         int count = serverSide ? connectCaptureServerCount : connectCaptureClientCount;
-        var ports = serverSide ? connectCaptureServerPorts : connectCaptureClientPorts;
         var lengths = serverSide ? connectCaptureServerLengths : connectCaptureClientLengths;
         var bytes = serverSide ? connectCaptureServerBytes : connectCaptureClientBytes;
 
@@ -1067,22 +803,11 @@ public struct BotRelayManager
 
             list.Add(new BotRelayConnectWirePacket
             {
-                fromVirtualPort = ports[i],
                 wire = packet
             });
         }
 
         return list;
-    }
-
-    [BurstDiscard]
-    public void EnqueueServerToBot(ushort botVirtualPort, ushort fromListenPort, NativeArray<byte> payload)
-    {
-        if (!payload.IsCreated || payload.Length == 0 || botVirtualPort == 0)
-            return;
-
-        CompleteManagerAccess();
-        EnqueueServerToBotBurst(botVirtualPort, fromListenPort, payload);
     }
 
     public void EnqueueServerToBotBurst(ushort botVirtualPort, ushort fromListenPort, NativeArray<byte> payload)
@@ -1125,38 +850,40 @@ public struct BotRelayManager
 /// </summary>
 internal static class BotRelayReplayRuntimeGate
 {
-    struct PendingPlayKey { }
+    struct PendingLevelStartKey { }
     struct InLevelKey { }
 
-    static readonly SharedStatic<int> s_PendingPlay =
-        SharedStatic<int>.GetOrCreate<PendingPlayKey>();
+    static readonly SharedStatic<int> s_PendingLevelStart =
+        SharedStatic<int>.GetOrCreate<PendingLevelStartKey>();
 
     static readonly SharedStatic<int> s_InLevel =
         SharedStatic<int>.GetOrCreate<InLevelKey>();
 
-    public static bool HasPendingPlay => s_PendingPlay.Data > 0;
+    public static bool HasPendingLevelStart => s_PendingLevelStart.Data > 0;
 
     public static bool HasInLevel => s_InLevel.Data > 0;
 
-    public static void AddPendingPlay() => ++s_PendingPlay.Data;
+    public static void AddPendingLevelStart() =>
+        Interlocked.Increment(ref s_PendingLevelStart.Data);
 
-    public static void RemovePendingPlay()
+    public static void RemovePendingLevelStart()
     {
-        int value = s_PendingPlay.Data - 1;
-        s_PendingPlay.Data = value < 0 ? 0 : value;
+        if (Interlocked.Decrement(ref s_PendingLevelStart.Data) < 0)
+            Interlocked.Exchange(ref s_PendingLevelStart.Data, 0);
     }
 
-    public static void AddInLevel() => ++s_InLevel.Data;
+    public static void AddInLevel() =>
+        Interlocked.Increment(ref s_InLevel.Data);
 
     public static void RemoveInLevel()
     {
-        int value = s_InLevel.Data - 1;
-        s_InLevel.Data = value < 0 ? 0 : value;
+        if (Interlocked.Decrement(ref s_InLevel.Data) < 0)
+            Interlocked.Exchange(ref s_InLevel.Data, 0);
     }
 
     public static void Reset()
     {
-        s_PendingPlay.Data = 0;
-        s_InLevel.Data = 0;
+        Interlocked.Exchange(ref s_PendingLevelStart.Data, 0);
+        Interlocked.Exchange(ref s_InLevel.Data, 0);
     }
 }

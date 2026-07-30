@@ -24,6 +24,7 @@ public static class LevelRecordingSerializer
 
     public static void Write(string path, in LevelRecordingFileHeader header, IReadOnlyList<LevelRecordingFrame> frames)
     {
+        __ValidateFramesForWrite(in header, frames);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
@@ -47,13 +48,58 @@ public static class LevelRecordingSerializer
         }
     }
 
+    private static void __ValidateFramesForWrite(
+        in LevelRecordingFileHeader header,
+        IReadOnlyList<LevelRecordingFrame> frames)
+    {
+        if (frames == null)
+            throw new ArgumentNullException(nameof(frames));
+
+        if (float.IsNaN(header.duration) ||
+            float.IsInfinity(header.duration) ||
+            header.duration < 0f)
+        {
+            throw new InvalidDataException($"Invalid recording duration: {header.duration}.");
+        }
+
+        float previousTimestamp = 0f;
+        for (int i = 0; i < frames.Count; ++i)
+        {
+            var frame = frames[i];
+            if (float.IsNaN(frame.timestamp) ||
+                float.IsInfinity(frame.timestamp) ||
+                frame.timestamp < 0f)
+            {
+                throw new InvalidDataException(
+                    $"Frame {i}: invalid timestamp {frame.timestamp}.");
+            }
+
+            if (i > 0 && frame.timestamp < previousTimestamp)
+            {
+                throw new InvalidDataException(
+                    $"Frame {i}: timestamp {frame.timestamp:R} regresses from " +
+                    $"{previousTimestamp:R}.");
+            }
+
+            int payloadLength = frame.payload?.Length ?? 0;
+            if (payloadLength > ushort.MaxValue)
+            {
+                throw new InvalidDataException(
+                    $"Frame {i}: payload too large ({payloadLength} bytes).");
+            }
+
+            previousTimestamp = frame.timestamp;
+        }
+    }
+
     public static LevelRecordingFileHeader ReadHeader(string path)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var reader = new BinaryReader(stream, Encoding.UTF8, false);
         __ValidateMagic(reader);
         var version = reader.ReadUInt16();
-        return __ReadHeader(reader, version);
+        __ValidateVersion(version);
+        return __ReadHeader(reader);
     }
 
     public static LevelRecordingSession Read(string path)
@@ -63,14 +109,11 @@ public static class LevelRecordingSerializer
 
         __ValidateMagic(reader);
         var version = reader.ReadUInt16();
-        if (version != LevelRecordingConstants.LegacyVersion && version != LevelRecordingConstants.Version)
-        {
-            throw new InvalidDataException($"Unsupported recording version: {version}");
-        }
+        __ValidateVersion(version);
 
         var session = new LevelRecordingSession
         {
-            header = __ReadHeader(reader, version)
+            header = __ReadHeader(reader)
         };
 
         reader.ReadInt32();
@@ -110,6 +153,12 @@ public static class LevelRecordingSerializer
             throw new InvalidDataException("Header frameCount > 0 but no frames could be read.");
         }
 
+        if (stream.Position != stream.Length)
+        {
+            throw new InvalidDataException(
+                $"Unexpected trailing recording data: {stream.Length - stream.Position} byte(s).");
+        }
+
         return session;
     }
 
@@ -118,6 +167,12 @@ public static class LevelRecordingSerializer
         var magic = reader.ReadBytes(4);
         if (Encoding.ASCII.GetString(magic) != LevelRecordingConstants.Magic)
             throw new InvalidDataException("Invalid recording file magic.");
+    }
+
+    private static void __ValidateVersion(ushort version)
+    {
+        if (version != LevelRecordingConstants.Version)
+            throw new InvalidDataException($"Unsupported recording version: {version}");
     }
 
     private static void __WriteHeader(BinaryWriter writer, in LevelRecordingFileHeader header, int frameCount)
@@ -133,16 +188,14 @@ public static class LevelRecordingSerializer
         writer.Write(0);
     }
 
-    private static LevelRecordingFileHeader __ReadHeader(BinaryReader reader, ushort version)
+    private static LevelRecordingFileHeader __ReadHeader(BinaryReader reader)
     {
         var header = new LevelRecordingFileHeader
         {
             userStageID = reader.ReadUInt32(),
             levelID = reader.ReadUInt32(),
             stageIndex = reader.ReadInt32(),
-            sceneName = version >= LevelRecordingConstants.Version
-                ? __ReadFixedString32(reader)
-                : default,
+            sceneName = __ReadFixedString32(reader),
             duration = reader.ReadSingle(),
             frameCount = reader.ReadInt32()
         };

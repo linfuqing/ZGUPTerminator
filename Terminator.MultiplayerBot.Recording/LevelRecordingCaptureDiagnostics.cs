@@ -11,6 +11,7 @@ internal static class LevelRecordingCaptureDiagnostics
         public int endOfFrameAttempts;
         public int skippedNoClientOrSendBuffer;
         public int framesCaptured;
+        public int captureFaults;
         public bool everHadSendBuffer;
     }
 
@@ -35,8 +36,7 @@ internal static class LevelRecordingCaptureDiagnostics
 
     public static void ReportMissingPlayerProperty(
         LevelRecordingSession session,
-        in CaptureStats stats,
-        int[] slotReadCursors)
+        in CaptureStats stats)
     {
         if (session == null || session.frames == null)
         {
@@ -50,14 +50,17 @@ internal static class LevelRecordingCaptureDiagnostics
         }
 
         var frameSummary = LevelRecordingReplayPropertyOps.DescribeFrameTypes(session);
-        var pendingSummary = __DescribeUncapturedPending(slotReadCursors);
+        var pendingSummary = LevelRecordingSendBufferAccess.DescribeCaptureJournal();
         var coopSummary = __DescribeCoopStateAtEnd();
-        var likelyCause = __InferLikelyCause(in stats, coopSummary);
+        var likelyCause = string.IsNullOrEmpty(session.captureError)
+            ? __InferLikelyCause(in stats, coopSummary)
+            : "EndWrite capture failed: " + session.captureError;
 
         BotReplayLog.Warn(
             "[RecordingDiag] Recording has no PlayerProperty frame. " +
             $"framesCaptured={stats.framesCaptured}, captureAttempts={stats.endOfFrameAttempts}, " +
-            $"skippedNoSendBuffer={stats.skippedNoClientOrSendBuffer}, everHadSendBuffer={stats.everHadSendBuffer}. " +
+            $"skippedNoSendBuffer={stats.skippedNoClientOrSendBuffer}, captureFaults={stats.captureFaults}, " +
+            $"everHadSendBuffer={stats.everHadSendBuffer}. " +
             $"{frameSummary}. {pendingSummary}. {coopSummary}. " +
             $"Likely cause: {likelyCause}");
     }
@@ -68,7 +71,7 @@ internal static class LevelRecordingCaptureDiagnostics
     {
         if (!stats.everHadSendBuffer)
         {
-            return "ClientData.sendBuffer never available during recording — ApplyStage EndWrite could not be captured.";
+            return "ClientData.sendBuffer was never available; no EndWrite journal could be established.";
         }
 
         if (coopSummary.Contains("remoteStatus=Disabled"))
@@ -78,32 +81,20 @@ internal static class LevelRecordingCaptureDiagnostics
 
         if (stats.framesCaptured > 0 && stats.skippedNoClientOrSendBuffer > 0)
         {
-            return "sendBuffer was intermittently unavailable — PlayerProperty EndWrite at ApplyStage may have landed during a skipped LateUpdate window.";
+            return "sendBuffer was replaced or unavailable after journal start; the recording is invalid.";
         }
 
         if (stats.framesCaptured > 0)
         {
             if (coopSummary.Contains("remoteStatus=Disabled"))
             {
-                return "ApplyStage ran but ClientData.__Send did not EndWrite PlayerProperty (Remote was Disabled at __SubmitStage instant, or sendBuffer BeginWrite failed). Handshake recovery may have inserted wire from LocalPlayer.property.";
+                return "ApplyStage ran but ClientData.__Send did not EndWrite PlayerProperty (Remote was Disabled at __SubmitStage instant, or sendBuffer BeginWrite failed).";
             }
 
             return "ClientData.__Send did not EndWrite PlayerProperty despite open coop gate at handshake probe — suspect sendBuffer BeginWrite failure after disconnected capture.";
         }
 
         return "No sendBuffer frames captured at all — recording may have ended before gameplay or capture never ran.";
-    }
-
-    private static string __DescribeUncapturedPending(int[] slotReadCursors)
-    {
-        if (!LevelRecordingSendBufferAccess.TryGetSendBuffer(out var sendBuffer))
-        {
-            return "sendBuffer=unavailable at EndRecording";
-        }
-
-        return LevelRecordingSendBufferAccess.DescribeSlotCursors(slotReadCursors) +
-               $", pendingUncapturedSlots={LevelRecordingSendBufferAccess.CountUncapturedPendingSlots(slotReadCursors)}, " +
-               $"sendBufferSlots={sendBuffer.GetPendingSendSlotCount()}";
     }
 
     private static string __DescribeCoopStateAtEnd()

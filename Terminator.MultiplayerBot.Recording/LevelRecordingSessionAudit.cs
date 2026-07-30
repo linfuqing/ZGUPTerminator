@@ -8,6 +8,57 @@ using ZG;
 /// </summary>
 internal static class LevelRecordingSessionAudit
 {
+    internal const int CollapsedSameTimestampMoveThreshold = 8;
+    internal const int DuplicateSameTickMoveThreshold = 2;
+
+    private sealed class PayloadContentComparer : IEqualityComparer<byte[]>
+    {
+        public static readonly PayloadContentComparer Instance = new PayloadContentComparer();
+
+        public bool Equals(byte[] x, byte[] y)
+        {
+            if (object.ReferenceEquals(x, y))
+            {
+                return true;
+            }
+
+            if (x == null || y == null || x.Length != y.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < x.Length; ++i)
+            {
+                if (x[i] != y[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public int GetHashCode(byte[] payload)
+        {
+            if (payload == null)
+            {
+                return 0;
+            }
+
+            // Stable FNV-1a: deterministic across runtimes and no payload copies/strings.
+            unchecked
+            {
+                uint hash = 2166136261u;
+                for (int i = 0; i < payload.Length; ++i)
+                {
+                    hash = (hash ^ payload[i]) * 16777619u;
+                }
+
+                return (int)hash;
+            }
+        }
+    }
+
     internal struct TypeSpan
     {
         public ReplyMessageType messageType;
@@ -39,9 +90,14 @@ internal static class LevelRecordingSessionAudit
         public float gameplayTimestampBase;
         public float gameplaySpanSeconds;
         public float largestMoveGapSeconds;
+        public int nonMonotonicTimestampCount;
+        public int firstNonMonotonicFrameIndex;
+        public float largestTimestampRegressionSeconds;
         public int moveFrameCount;
         public int maxMoveFramesAtSameTimestamp;
         public float maxMoveBatchTimestamp;
+        public int maxIdenticalMoveFramesAtSameTimestamp;
+        public float maxIdenticalMoveBatchTimestamp;
         public bool replyWriteGateOpenAtEnd;
         public int localChannelStatusAtEnd;
         public int remoteChannelStatusAtEnd;
@@ -63,6 +119,7 @@ internal static class LevelRecordingSessionAudit
             replyWriteGateOpenAtEnd = replyWriteGateOpenAtEnd,
             localChannelStatusAtEnd = localChannelStatusAtEnd,
             remoteChannelStatusAtEnd = remoteChannelStatusAtEnd,
+            firstNonMonotonicFrameIndex = -1,
             typeSpans = new List<TypeSpan>(),
             ancillarySpans = new List<ClassifiedFrameSummary>()
         };
@@ -81,10 +138,26 @@ internal static class LevelRecordingSessionAudit
 
         var spanByType = new Dictionary<ReplyMessageType, TypeSpan>();
         var ancillaryByKey = new Dictionary<(LevelRecordingRecordedPayloadKind kind, int wireType), ClassifiedFrameSummary>();
+        var movePayloadCountsAtTimestamp = new Dictionary<byte[], int>(PayloadContentComparer.Instance);
         float previousMoveTimestamp = -1f;
         int currentMoveTimestampBatch = 0;
         for (int i = 0; i < frames.Count; ++i)
         {
+            if (i > 0 && frames[i].timestamp < frames[i - 1].timestamp)
+            {
+                float regression = frames[i - 1].timestamp - frames[i].timestamp;
+                ++report.nonMonotonicTimestampCount;
+                if (report.firstNonMonotonicFrameIndex < 0)
+                {
+                    report.firstNonMonotonicFrameIndex = i;
+                }
+
+                if (regression > report.largestTimestampRegressionSeconds)
+                {
+                    report.largestTimestampRegressionSeconds = regression;
+                }
+            }
+
             var payload = frames[i].payload;
             if (!LevelRecordingPayloadClassification.TryClassifyRecordedPayload(
                     payload,
@@ -132,6 +205,9 @@ internal static class LevelRecordingSessionAudit
             if (messageType == ReplyMessageType.Move)
             {
                 report.moveFrameCount++;
+                bool isSameTimestampBatch =
+                    previousMoveTimestamp >= 0f &&
+                    frames[i].timestamp == previousMoveTimestamp;
                 if (previousMoveTimestamp >= 0f)
                 {
                     float gap = frames[i].timestamp - previousMoveTimestamp;
@@ -140,7 +216,7 @@ internal static class LevelRecordingSessionAudit
                         report.largestMoveGapSeconds = gap;
                     }
 
-                    currentMoveTimestampBatch = frames[i].timestamp == previousMoveTimestamp
+                    currentMoveTimestampBatch = isSameTimestampBatch
                         ? currentMoveTimestampBatch + 1
                         : 1;
                 }
@@ -149,10 +225,29 @@ internal static class LevelRecordingSessionAudit
                     currentMoveTimestampBatch = 1;
                 }
 
+                if (!isSameTimestampBatch)
+                {
+                    movePayloadCountsAtTimestamp.Clear();
+                }
+
+                int identicalPayloadCount = 1;
+                if (movePayloadCountsAtTimestamp.TryGetValue(payload, out int previousPayloadCount))
+                {
+                    identicalPayloadCount = previousPayloadCount + 1;
+                }
+
+                movePayloadCountsAtTimestamp[payload] = identicalPayloadCount;
+
                 if (currentMoveTimestampBatch > report.maxMoveFramesAtSameTimestamp)
                 {
                     report.maxMoveFramesAtSameTimestamp = currentMoveTimestampBatch;
                     report.maxMoveBatchTimestamp = frames[i].timestamp;
+                }
+
+                if (identicalPayloadCount > report.maxIdenticalMoveFramesAtSameTimestamp)
+                {
+                    report.maxIdenticalMoveFramesAtSameTimestamp = identicalPayloadCount;
+                    report.maxIdenticalMoveBatchTimestamp = frames[i].timestamp;
                 }
 
                 previousMoveTimestamp = frames[i].timestamp;
@@ -172,7 +267,7 @@ internal static class LevelRecordingSessionAudit
 
         report.ancillarySpans.Sort((a, b) => string.CompareOrdinal(a.Label, b.Label));
 
-        if (report.maxMoveFramesAtSameTimestamp > 1)
+        if (report.maxMoveFramesAtSameTimestamp >= CollapsedSameTimestampMoveThreshold)
         {
             BotReplayLog.Diag(
                 $"[RecordingAudit] {report.maxMoveFramesAtSameTimestamp} Move frames share timestamp " +
@@ -217,8 +312,14 @@ internal static class LevelRecordingSessionAudit
         builder.Append(", gameplaySpan=").Append(report.gameplaySpanSeconds.ToString("F3")).Append('s');
         builder.Append(", moveCount=").Append(report.moveFrameCount);
         builder.Append(", largestMoveGap=").Append(report.largestMoveGapSeconds.ToString("F3")).Append('s');
+        builder.Append(", nonMonotonicTs=").Append(report.nonMonotonicTimestampCount);
+        builder.Append(", firstRegressionFrame=").Append(report.firstNonMonotonicFrameIndex);
+        builder.Append(", largestRegression=").Append(report.largestTimestampRegressionSeconds.ToString("F3")).Append('s');
         builder.Append(", maxSameTimestampMove=").Append(report.maxMoveFramesAtSameTimestamp);
         builder.Append('@').Append(report.maxMoveBatchTimestamp.ToString("F3")).Append('s');
+        builder.Append(", maxIdenticalSameTimestampMove=")
+            .Append(report.maxIdenticalMoveFramesAtSameTimestamp);
+        builder.Append('@').Append(report.maxIdenticalMoveBatchTimestamp.ToString("F3")).Append('s');
         builder.Append(", replyGateOpen=").Append(report.replyWriteGateOpenAtEnd);
         builder.Append(", localChannel=").Append(report.localChannelStatusAtEnd);
         builder.Append(", remoteChannel=").Append(report.remoteChannelStatusAtEnd);

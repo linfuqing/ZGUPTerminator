@@ -1,26 +1,24 @@
 using ZG;
 
 /// <summary>
-/// Logs when recording runs but sendBuffer capture goes quiet (pinpoints gate vs idle).
+/// Logs when committed EndWrites remain undrained or the recording journal faults.
 /// </summary>
 internal static class LevelRecordingCaptureIdleProbe
 {
     private static float s_lastFrameTimestamp;
     private static float s_lastProbeWallTime;
     private static bool s_loggedInLevel;
-    private static int[] s_lastSlotReadCursors;
 
     public static void Reset()
     {
         s_lastFrameTimestamp = 0f;
         s_lastProbeWallTime = 0f;
         s_loggedInLevel = false;
-        s_lastSlotReadCursors = null;
     }
 
-    public static void NotifyCaptureCursor(int[] slotReadCursors)
+    public static void NotifyJournalDrained()
     {
-        s_lastSlotReadCursors = slotReadCursors;
+        // The live journal state is queried at probe time; no transport cursor is retained.
     }
 
     public static void NotifyFrameCaptured(float frameTimestamp, float wallDurationSeconds)
@@ -52,8 +50,16 @@ internal static class LevelRecordingCaptureIdleProbe
 
         s_lastProbeWallTime = wallDurationSeconds;
 
-        int pendingUncapturedSlots = LevelRecordingSendBufferAccess.CountUncapturedPendingSlots(s_lastSlotReadCursors);
-        if (pendingUncapturedSlots <= 0)
+        if (!LevelRecordingSendBufferAccess.TryGetSendBuffer(out var sendBuffer))
+        {
+            BotReplayLog.Warn(
+                "[RecordingAudit] captureIdle: ClientData.sendBuffer unavailable while recording.");
+            return;
+        }
+
+        int outstanding = sendBuffer.capturedEndWriteCount;
+        var fault = sendBuffer.endWriteCaptureFault;
+        if (outstanding <= 0 && fault == NetworkClientSendBuffer.EndWriteCaptureFault.None)
         {
             return;
         }
@@ -61,7 +67,7 @@ internal static class LevelRecordingCaptureIdleProbe
         BotReplayLog.Warn(
             "[RecordingAudit] captureIdle " +
             $"wall={wallDurationSeconds:F3}s, sinceLastFrame={sinceLastFrame:F3}s, " +
-            $"pendingUncapturedSlots={pendingUncapturedSlots}, " +
+            $"captureOutstanding={outstanding}, captureFault={fault}, " +
             $"replyGateOpen={LevelRecordingSessionAudit.IsReplyWriteGateOpen()}");
     }
 }

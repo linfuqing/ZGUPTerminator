@@ -165,7 +165,6 @@ internal static class BotRelayPlayModeHarness
             BotMatchGuard.ReleaseMatchingSlot(ref farm, agentIndex);
 
         state.state = BotState.Idle;
-        state.hasPendingInvite = false;
         state.pendingInvite = default;
         state.inviteJoinTime = 0;
         farm.sessions[agentIndex].ResetChannel();
@@ -173,7 +172,6 @@ internal static class BotRelayPlayModeHarness
         // into "match now" once initial Status is ready. Test isolation needs the opposite:
         // keep this agent idle until the next scenario explicitly schedules it.
         farm.nextIdleMatchTime[agentIndex] = double.MaxValue;
-        farm.wireLiveJoinListenShell[agentIndex] = default;
         entityManager.SetComponentData(worldEntity, farm);
 
         // Test isolation must use the production app-layer injection boundary. The old helper
@@ -188,7 +186,6 @@ internal static class BotRelayPlayModeHarness
             botUserId, NetworkRelayMessageType.Status, 0, hasArg: true);
 
         farm = entityManager.GetComponentData<BotRelayFarmNative>(worldEntity);
-        farm.outboundCount[agentIndex] = 0;
         farm.inboundCount[agentIndex] = 0;
         farm.eventCount[agentIndex] = 0;
         farm.nextIdleMatchTime[agentIndex] = double.MaxValue;
@@ -227,21 +224,7 @@ internal static class BotRelayPlayModeHarness
 
     {
 
-        listenPort = 0;
-
-        if (!__TryGetWorldEntity(out var entityManager, out var worldEntity))
-
-            return false;
-
-
-
-        if (!entityManager.HasComponent<BotRelayHubState>(worldEntity))
-
-            return false;
-
-
-
-        listenPort = entityManager.GetComponentData<BotRelayHubState>(worldEntity).listenPort;
+        listenPort = BotRelayManager.Instance.ListenPort;
 
         return listenPort != 0;
 
@@ -344,7 +327,7 @@ internal static class BotRelayPlayModeHarness
         }
 
         return $"state={state.state}, user={state.userID}, vport={transport.virtualPort}, nextIdle={farm.nextIdleMatchTime[agentIndex]:F3}, " +
-               $"initialStatus={farm.inboxSentInitialStatus[agentIndex]}, serverStatus={farm.relayServerStatusInjected[agentIndex]}, " +
+               $"connected={(transport.flags & BotRelayTransportFlags.Connected) != 0}, serverStatus={farm.relayServerStatusInjected[agentIndex]}, " +
                $"matchSlot={matchingSlotOwner}, channel={session.channel}, channelStatus={session.channelStatus}, " +
                $"remoteStatus={session.remoteChannelStatus}, inbox={farm.inboundCount[agentIndex]}, events={farm.eventCount[agentIndex]}, " +
                $"transport={transport.flags}; probe(lastRelay={BotRelayInboundProbe.LastRelayType}, inbound={BotRelayInboundProbe.InboundCount}, " +
@@ -366,7 +349,7 @@ internal static class BotRelayPlayModeHarness
 
         ref readonly var agent = ref farm.agentStates.ElementAt(agentIndex);
 
-        if (!agent.hasPendingInvite)
+        if (!agent.HasPendingInvite)
 
             return false;
 
@@ -528,7 +511,7 @@ public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
 
     /// <summary>Same path as manual Play: server RouteSend → bot vport queue.</summary>
 
-    public static void RouteLiveInvite117ToBot(int agentIndex = 0)
+    public static void RouteCurrentInviteToBot(int agentIndex = 0)
 
     {
 
@@ -544,10 +527,30 @@ public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
 
 
 
+        if (!__TryGetCatalogBlob(out var blob))
+            throw new InvalidOperationException("Bot relay catalog unavailable.");
+
+        if (!BotRelayWireTestFixtures.TryBuildInviteApp(
+                BotRelayWireTestFixtures.RealPlayerUserId,
+                1,
+                0,
+                0,
+                out var inviteApp))
+        {
+            throw new InvalidOperationException("Failed to build current Invite app.");
+        }
+
+        ref var catalog = ref blob.Value;
+        if (!BotRelayWireTestFixtures.TryBuildConnectShapedInboundWire(
+                ref catalog,
+                in inviteApp,
+                out var wire))
+        {
+            throw new InvalidOperationException("Failed to build current measured Invite frame.");
+        }
+
         using var payload = new NativeArray<byte>(
-
-            BotRelayWireTestFixtures.CapturedLiveInviteWire117,
-
+            BotRelayWireTestFixtures.ToBytes(in wire),
             Allocator.Temp);
 
         __SyncEntityJobsOnly();
@@ -559,19 +562,20 @@ public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
 
     /// <summary>
 
-    /// Server→bot Join confirmation (SquadJoin) on the RouteSend path.
+    /// Server→bot self Join echo on the RouteSend path.
 
-    /// PlayMode Server scene has no external host client; this mirrors what ServerRelay emits after accepting Join.
+    /// PlayMode Server scene has no external host client; this mirrors the payload-free echo that
+    /// ServerRelay emits after accepting this bot's Join.
 
     /// </summary>
 
     public static void RouteServerJoinConfirmationToBot(int agentIndex, uint squadInviteId = 1)
     {
-        if (!BotRelayWireTestFixtures.TryBuildInboundJoinApp(
-                squadInviteId,
-                BotRelayWireTestFixtures.RealPlayerUserId,
+        if (!BotRelayWireTestFixtures.TryBuildInboundSelfJoinEchoApp(
+                (int)squadInviteId,
+                (int)ClientRemotePlayerFlag.Online,
                 out var joinApp))
-            throw new InvalidOperationException("Failed to build inbound Join confirm app.");
+            throw new InvalidOperationException("Failed to build inbound self Join echo app.");
 
         if (!__TryGetWorldEntity(out var entityManager, out var worldEntity))
             throw new InvalidOperationException("BotRelay world unavailable for Join confirm.");
@@ -755,108 +759,6 @@ public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
             "Bot did not queue the app-layer Join inject within invite delay window.");
     }
 
-    private static bool __TryBuildServerToBotWireFromApp(
-
-        int agentIndex,
-
-        in BotRelayPacket app,
-
-        out BotRelayPacket wire)
-
-    {
-
-        wire = default;
-
-        if (app.IsEmpty || !TryReadFarmSync(agentIndex, out var farm, out _))
-
-            return false;
-
-
-
-        if (!__TryGetCatalogBlob(out var blobRef))
-
-            return false;
-
-
-
-        ref var catalog = ref blobRef.Value;
-
-        var liveHello = farm.wireLiveServerHello[agentIndex];
-        var joinListenShell = farm.wireLiveJoinListenShell[agentIndex];
-        if (liveHello.IsEmpty || catalog.connectClientWires.Length == 0)
-
-            return false;
-
-
-
-        int shellIndex = BotRelayWireBytes.ResolveJoinOutboundWireIndex(ref catalog);
-        if (shellIndex <= BotRelayWireBytes.EmptyWireIndex)
-            return false;
-
-        ref var shellBlob = ref BotRelayWireBytes.GetWire(ref catalog, shellIndex);
-        if (!BotRelayWireBytes.TryCopyWireToPacket(ref shellBlob, out wire))
-            return false;
-
-        BotRelayWireBytes.TryUpgradeJoinOutboundShell(
-            ref catalog,
-            ref wire,
-            in liveHello);
-
-        int payloadOffset = -1;
-        if (!BotRelayWireBytes.TryResolveJoinEmbedPayloadOffset(ref catalog, in wire, out payloadOffset) ||
-            !BotRelayWireBytes.TryComposePipelineListenUtpWire(ref catalog, ref wire, ref payloadOffset))
-            return false;
-
-        ref var capturedHello = ref BotRelayWireBytes.GetTemplate(ref catalog, BotRelayCatalogPacketSlot.ServerHello);
-        ref var connectTemplate = ref BotRelayWireBytes.GetWire(ref catalog, catalog.connectClientWires[0].wireIndex);
-        if (!BotRelayWireBytes.TryApplySessionPatch(
-                ref wire,
-                ref connectTemplate,
-                ref capturedHello,
-                in liveHello))
-            return false;
-
-        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
-        ref var capturedApp = ref BotRelayWireBytes.GetTemplate(ref catalog, BotRelayCatalogPacketSlot.SquadJoinApp);
-        if (!BotRelayWireBytes.TryEmbedLiveApp(
-                ref wire,
-                payloadOffset,
-                in app,
-                ref capturedApp,
-                scratch,
-                0))
-            return false;
-
-        return true;
-    }
-
-
-
-    /// <summary>Rebuild the Join listen wire FlushOutbound would inject (for PlayMode acceptance asserts).</summary>
-    public static bool TryReconstructJoinListenWire(int agentIndex, uint squadInviteId, out BotRelayPacket wire)
-    {
-        wire = default;
-        if (!BotRelayWireTestFixtures.TryBuildOutboundSquadJoinApp(squadInviteId, out var joinApp))
-            return false;
-
-        return __TryBuildServerToBotWireFromApp(agentIndex, in joinApp, out wire);
-    }
-
-    /// <summary>Expected direct PopEvents listen frame (ushort + Join app), without UTP shell compose.</summary>
-    public static bool TryBuildDirectJoinListenWire(uint squadInviteId, out BotRelayPacket wire)
-    {
-        wire = default;
-        if (!BotRelayWireTestFixtures.TryBuildOutboundSquadJoinApp(squadInviteId, out var joinApp))
-            return false;
-
-        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
-        return BotRelayCodec.TryBuildPopEventsListenPacket(
-            in joinApp,
-            scratch,
-            BotRelayPacket.MaxPayloadSize / 2,
-            out wire);
-    }
-
     public static bool TryGetCatalogBlob(out BlobAssetReference<BotRelayCatalogBlob> blob) =>
         __TryGetCatalogBlob(out blob);
 
@@ -985,11 +887,11 @@ public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
         }
 
         // A virtual port alone only proves that the Farm was spawned. Idle MatchToSend is
-        // deliberately gated until Connect/link has marked the app-layer Status(0) producer
-        // ready; otherwise a test can schedule matching before the server identity exists.
-        if (farm.inboxSentInitialStatus[0] == 0)
+        // deliberately gated until this connection's live server hello marks the transport
+        // Connected; otherwise a test can schedule matching before the server identity exists.
+        if ((farm.transport[0].flags & BotRelayTransportFlags.Connected) == 0)
         {
-            detail = "bot initial Status not queued";
+            detail = "bot transport not connected";
             return false;
         }
 

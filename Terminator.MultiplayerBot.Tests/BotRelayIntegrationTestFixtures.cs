@@ -19,6 +19,9 @@ internal struct BotRelayIntegrationSession : System.IDisposable
     public void Dispose()
     {
         farm.Dispose();
+        if (BotRelayManager.Instance.IsCreated)
+            BotRelayManager.Instance.SetPeelCatalogBlob(default);
+
         if (catalogBlob.IsCreated)
             catalogBlob.Dispose();
 
@@ -57,6 +60,7 @@ internal static class BotRelayIntegrationTestFixtures
         manager.RegisterBotVirtualPortBurst(
             BotRelayWireTestFixtures.BotUserId,
             BotRelayIntegrationSession.BotVirtualPort);
+        manager.SetPeelCatalogBlob(session.catalogBlob);
 
         session.farm = __CreateConnectedFarm(BotRelayIntegrationSession.BotVirtualPort);
         __SeedWireLiveServerHelloFromCatalog(ref session);
@@ -73,7 +77,7 @@ internal static class BotRelayIntegrationTestFixtures
             return;
 
         ref var catalog = ref session.catalogBlob.Value;
-        ref var capturedHello = ref BotRelayWireBytes.GetTemplate(ref catalog, BotRelayCatalogPacketSlot.ServerHello);
+        ref var capturedHello = ref BotRelayWireBytes.GetServerHello(ref catalog);
         if (BotRelayWireBytes.TryCopyWireToPacket(ref capturedHello, out var hello))
             session.farm.wireLiveServerHello[0] = hello;
     }
@@ -84,7 +88,9 @@ internal static class BotRelayIntegrationTestFixtures
             throw new System.ArgumentException("wireBytes empty");
 
         using var payload = new NativeArray<byte>(wireBytes, Allocator.Temp);
-        BotRelayManager.Instance.EnqueueServerToBot(
+        ref var manager = ref BotRelayManager.Instance;
+        BotRelayManager.ManagerAccessHandle.Complete();
+        manager.EnqueueServerToBotBurst(
             BotRelayIntegrationSession.BotVirtualPort,
             BotRelayIntegrationSession.ListenPort,
             payload);
@@ -94,19 +100,6 @@ internal static class BotRelayIntegrationTestFixtures
     {
         RouteNullFramedInviteToBot(ref session);
         DrainInbound(ref session);
-        if (session.farm.inboundCount[0] > 0)
-            return;
-
-        var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.CapturedLiveInviteWire117);
-        if (!BotRelayWireTestFixtures.TryExtractLiveInviteWire(in wire, out var app))
-            throw new System.InvalidOperationException("Live invite app extract failed.");
-
-        BotRelaySlotOps.TryEnqueueInbound(
-            0,
-            session.farm.inbound,
-            session.farm.inboundCount,
-            in app,
-            ref BotRelayManager.Instance);
     }
 
     public static void DrainInbound(ref BotRelayIntegrationSession session)
@@ -116,23 +109,14 @@ internal static class BotRelayIntegrationTestFixtures
         BotRelayBurstWireOps.DrainInbound(0, ref session.farm, ref manager, ref catalog);
     }
 
-    /// <summary>UTP pipeline + framed Play app (same shape as <see cref="BuildDriverShapeInviteWireBytes"/>).</summary>
-    public static byte[] BuildDriverShapePlayWireBytes(uint levelId = 7, int stage = 2, uint senderId = 0)
-    {
-        if (senderId == 0)
-            senderId = BotRelayWireTestFixtures.RealPlayerUserId;
-
-        if (!BotRelayWireTestFixtures.TryBuildInboundPlayApp(levelId, stage, senderId, out var app) || app.IsEmpty)
-            throw new System.InvalidOperationException("Play app build failed.");
-
-        var wire = BotRelayWireTestFixtures.WrapPipelineFramedApp(
-            BotRelayWireTestFixtures.PipelineHeader,
-            in app);
-        return BotRelayWireTestFixtures.ToBytes(wire);
-    }
-
-    /// <summary>UTP pipeline + framed invite app (legacy app from live 117B extract).</summary>
-    public static byte[] BuildDriverShapeInviteWireBytes()
+    /// <summary>
+    /// Null-pipeline server→bot invite wire: the transport prefix ends with a ushort frame
+    /// length, and the real invite app begins at the session's captured
+    /// <c>inboundAppPayloadOffset</c>. This mirrors what the bot receives once its connection
+    /// is routed through the null pipeline (see <see cref="BotRelayPipeline"/>): runtime derives
+    /// that frame boundary once and walks length-prefixed apps exactly, with no byte scanning.
+    /// </summary>
+    public static byte[] BuildNullFramedInviteWireBytes(ref BotRelayIntegrationSession session)
     {
         if (!BotRelayWireTestFixtures.TryBuildInviteApp(
                 BotRelayWireTestFixtures.RealPlayerUserId,
@@ -145,25 +129,6 @@ internal static class BotRelayIntegrationTestFixtures
             throw new System.InvalidOperationException("Canonical invite app build failed.");
         }
 
-        var wire = BotRelayWireTestFixtures.WrapPipelineFramedApp(
-            BotRelayWireTestFixtures.PipelineHeader,
-            in app);
-        return BotRelayWireTestFixtures.ToBytes(wire);
-    }
-
-    /// <summary>
-    /// Null-pipeline server→bot invite wire: a fixed transport prefix of the session's
-    /// captured <c>inboundAppPayloadOffset</c> followed by the real invite app. This mirrors
-    /// what the bot receives once its connection is routed through the null pipeline
-    /// (see <see cref="BotRelayPipeline"/>): the runtime decode strips exactly that offset to
-    /// recover the app — no per-message scanning.
-    /// </summary>
-    public static byte[] BuildNullFramedInviteWireBytes(ref BotRelayIntegrationSession session)
-    {
-        var liveWire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.CapturedLiveInviteWire117);
-        if (!BotRelayWireTestFixtures.TryExtractLiveInviteWire(in liveWire, out var app) || app.IsEmpty)
-            throw new System.InvalidOperationException("Live invite app extract failed.");
-
         if (!session.catalogBlob.IsCreated)
             throw new System.InvalidOperationException("Session catalog required for null-framed invite wire.");
 
@@ -172,7 +137,13 @@ internal static class BotRelayIntegrationTestFixtures
             throw new System.InvalidOperationException(
                 $"Captured inboundAppPayloadOffset invalid ({offset}); null-pipeline capture did not measure the offset.");
 
+        if (offset < sizeof(ushort))
+            throw new System.InvalidOperationException(
+                $"Captured inboundAppPayloadOffset invalid ({offset}); missing ushort frame prefix.");
+
         var bytes = new byte[offset + app.length];
+        bytes[offset - sizeof(ushort)] = (byte)(app.length & 0xFF);
+        bytes[offset - 1] = (byte)((app.length >> 8) & 0xFF);
         for (int i = 0; i < app.length; ++i)
             bytes[offset + i] = app.GetByte(i);
         return bytes;
@@ -192,10 +163,13 @@ internal static class BotRelayIntegrationTestFixtures
             throw new System.InvalidOperationException("Session catalog required for null-framed relay app wire.");
 
         int offset = session.catalogBlob.Value.inboundAppPayloadOffset;
-        if (offset < 0)
-            offset = 0;
+        if (offset < sizeof(ushort))
+            throw new System.InvalidOperationException(
+                $"Captured inboundAppPayloadOffset invalid ({offset}); missing ushort frame prefix.");
 
         var bytes = new byte[offset + app.length];
+        bytes[offset - sizeof(ushort)] = (byte)(app.length & 0xFF);
+        bytes[offset - 1] = (byte)((app.length >> 8) & 0xFF);
         for (int i = 0; i < app.length; ++i)
             bytes[offset + i] = app.GetByte(i);
         return bytes;
@@ -205,9 +179,6 @@ internal static class BotRelayIntegrationTestFixtures
     {
         BotRelaySlotOps.PumpInboundBurst(0, ref session.farm);
     }
-
-    public const double JoinMismatchDeferSeconds = 1.5;
-    public const double JoinMismatchAckFallbackSeconds = 1.0;
 
     /// <summary>Runtime invite after connect: RouteSend → DrainInbound (production Burst path).</summary>
     public static void RouteDeferredInviteAndDrain(ref BotRelayIntegrationSession session)
@@ -222,20 +193,16 @@ internal static class BotRelayIntegrationTestFixtures
         ref var transport = ref farm.transport.ElementAt(0);
         transport.virtualPort = virtualPort;
         transport.flags = BotRelayTransportFlags.Connected;
-        farm.inboxSentInitialStatus[0] = 1;
         return farm;
     }
 
     private static BlobAssetReference<BotRelayCatalogBlob> __CaptureCatalogBlob()
     {
-        var settings = BotRelayWorld.CreateNetworkSettings();
         var header = BotRelayWireTestFixtures.BuildBotHeader();
         BotRelayManager.ManagerAccessHandle.Complete();
         var catalogState = BotRelayWireCatalog.Capture(
-            ref settings,
             BotRelayIntegrationSession.ListenPort,
-            in header,
-            BotRelayFlowTestFixtures.MatchLevel);
+            in header);
 
         if (!catalogState.IsValid)
         {

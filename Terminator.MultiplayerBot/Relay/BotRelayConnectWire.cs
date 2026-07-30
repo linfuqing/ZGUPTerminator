@@ -1,20 +1,17 @@
 using Unity.Collections;
-using Unity.Entities;
 using Unity.Networking.Transport;
 using UnityEngine;
 using ZG;
 
 public struct BotRelayConnectWirePacket
 {
-    public ushort fromVirtualPort;
     public BotRelayPacket wire;
 }
 
-public struct BotRelayConnectWireState : IComponentData, System.IDisposable
+public struct BotRelayConnectWireState : System.IDisposable
 {
     public NativeList<BotRelayConnectWirePacket> clientPackets;
     public NativeList<BotRelayConnectWirePacket> serverPackets;
-    public NativeArray<byte> capturedConnectPayload;
 
     public bool IsValid => clientPackets.IsCreated && clientPackets.Length > 0;
 
@@ -26,8 +23,6 @@ public struct BotRelayConnectWireState : IComponentData, System.IDisposable
         if (serverPackets.IsCreated)
             serverPackets.Dispose();
 
-        if (capturedConnectPayload.IsCreated)
-            capturedConnectPayload.Dispose();
     }
 }
 
@@ -39,7 +34,7 @@ internal static class BotRelayConnectWire
         in ClientHeader header)
     {
         using var connectPayload = BotRelayCodec.BuildConnectPayload(in header);
-        BotRelayConnectCapture.Begin(connectPayload);
+        BotRelayConnectCapture.Begin();
 
         var listenDriver = default(NetworkDriver);
         var clientDriver = default(NetworkDriver);

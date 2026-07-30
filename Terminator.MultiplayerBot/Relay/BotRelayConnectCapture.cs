@@ -1,23 +1,17 @@
 using Unity.Burst;
-using Unity.Collections;
 
 internal static class BotRelayConnectCapture
 {
-    public static bool IsActive => BotRelayManager.Instance.connectCaptureActive != 0;
-
     public static int ClientPacketCount => BotRelayManager.Instance.connectCaptureClientCount;
 
     public static int ServerPacketCount => BotRelayManager.Instance.connectCaptureServerCount;
-
-    public static bool TryCopyClientWire(int index, out BotRelayPacket packet) =>
-        __TryCopyWire(false, index, out packet);
 
     public static bool TryCopyServerWire(int index, out BotRelayPacket packet) =>
         __TryCopyWire(true, index, out packet);
 
     [BurstDiscard]
-    public static void Begin(NativeArray<byte> connectPayload) =>
-        BotRelayManager.Instance.BeginConnectCapture(connectPayload);
+    public static void Begin() =>
+        BotRelayManager.Instance.BeginConnectCapture();
 
     [BurstDiscard]
     public static BotRelayConnectWireState End() =>

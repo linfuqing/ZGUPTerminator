@@ -1,21 +1,11 @@
 using Unity.Burst;
 
-// Uncomment to restore client-driver ConnectBurst / PostReceive fallback path.
-// #define BOT_RELAY_WIRE_FALLBACK
-
 public static class BotRelayDefines
 {
     private struct VerboseTelemetryKey { }
 
     private static readonly SharedStatic<bool> s_verboseTelemetry =
         SharedStatic<bool>.GetOrCreate<VerboseTelemetryKey>();
-
-    public const bool UseWireFallback =
-#if BOT_RELAY_WIRE_FALLBACK
-        true;
-#else
-        false;
-#endif
 
     /// <summary>
     /// Runtime gate for the high-frequency relay diagnostics that flood the console during a normal

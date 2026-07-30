@@ -398,6 +398,37 @@ public sealed class LevelRecordingEditorWindow : EditorWindow
 
         }
 
+        session.header.frameCount = session.frames.Count;
+        var validation = LevelRecordingFileValidator.ValidateSession(
+            session,
+            sourceName: "Level Recording save gate");
+        if (validation.WorstSeverity == LevelRecordingValidationSeverity.Error)
+        {
+            var details = new System.Text.StringBuilder();
+            for (int i = 0; i < validation.issues.Count; ++i)
+            {
+                var issue = validation.issues[i];
+                if (issue.severity != LevelRecordingValidationSeverity.Error)
+                {
+                    continue;
+                }
+
+                if (details.Length > 0)
+                {
+                    details.AppendLine();
+                }
+
+                details.Append(issue.code).Append(": ").Append(issue.message);
+            }
+
+            __status = "Recording validation failed; file was not written.";
+            EditorUtility.DisplayDialog(
+                "Level Recording - Invalid Capture",
+                "The recording contains blocking errors and was not saved.\n\n" + details,
+                "OK");
+            return;
+        }
+
 
 
         var defaultPath = LevelRecordingSerializer.BuildDefaultFilePath(session.header);

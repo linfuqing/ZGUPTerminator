@@ -52,15 +52,58 @@ public sealed class LevelRecordingSessionAuditTests
             remoteChannelStatusAtEnd: 0);
 
         Assert.AreEqual(2, report.maxMoveFramesAtSameTimestamp);
+        Assert.AreEqual(2, report.maxIdenticalMoveFramesAtSameTimestamp);
         Assert.AreEqual(10f, report.maxMoveBatchTimestamp, 0.001f);
+        Assert.AreEqual(10f, report.maxIdenticalMoveBatchTimestamp, 0.001f);
+    }
+
+    [Test]
+    public void Build_ReportsNonMonotonicTimeline()
+    {
+        var frames = new System.Collections.Generic.List<LevelRecordingFrame>
+        {
+            new LevelRecordingFrame { timestamp = 1f, payload = __BuildPayload(ReplyMessageType.Move) },
+            new LevelRecordingFrame { timestamp = 2f, payload = __BuildPayload(ReplyMessageType.Camera) },
+            new LevelRecordingFrame { timestamp = 1.75f, payload = __BuildPayload(ReplyMessageType.Move) }
+        };
+
+        var report = LevelRecordingSessionAudit.Build(
+            frames,
+            wallDurationSeconds: 3f,
+            replyWriteGateOpenAtEnd: false,
+            localChannelStatusAtEnd: 0,
+            remoteChannelStatusAtEnd: 0);
+
+        Assert.AreEqual(1, report.nonMonotonicTimestampCount);
+        Assert.AreEqual(2, report.firstNonMonotonicFrameIndex);
+        Assert.AreEqual(0.25f, report.largestTimestampRegressionSeconds, 0.001f);
+    }
+
+    [Test]
+    public void ResolveHeaderDuration_PreservesLongerWallClockDuration()
+    {
+        var frames = new System.Collections.Generic.List<LevelRecordingFrame>
+        {
+            new LevelRecordingFrame { timestamp = 1f },
+            new LevelRecordingFrame { timestamp = 12.5f }
+        };
+
+        Assert.AreEqual(
+            30f,
+            LevelRecordingTiming.ResolveHeaderDuration(frames, wallDurationSeconds: 30f),
+            0.001f);
+        Assert.AreEqual(
+            12.5f,
+            LevelRecordingTiming.ResolveHeaderDuration(frames, wallDurationSeconds: 5f),
+            0.001f);
     }
 
     private static byte[] __BuildPayload(ReplyMessageType messageType)
     {
         using var bytes = new Unity.Collections.NativeArray<byte>(16, Unity.Collections.Allocator.Temp);
         var writer = new Unity.Collections.DataStreamWriter(bytes);
-        writer.WritePackedInt((int)messageType, Unity.Collections.StreamCompressionModel.Default);
-        writer.WritePackedInt(0, Unity.Collections.StreamCompressionModel.Default);
+        writer.WriteReplyHeader((int)messageType, ZG.NetworkRelayType.Channel);
+        writer.WriteByte(0);
         var copy = new byte[writer.Length];
         bytes.GetSubArray(0, writer.Length).CopyTo(copy);
         return copy;

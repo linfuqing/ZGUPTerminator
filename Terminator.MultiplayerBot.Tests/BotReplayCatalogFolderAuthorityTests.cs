@@ -6,6 +6,34 @@ using Unity.Collections;
 [Category("Regression")]
 public sealed class BotReplayCatalogFolderAuthorityTests
 {
+    [Test]
+    public void RecordingVersion1_ReadAndReadHeader_FailClosed()
+    {
+        var file = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(
+                file,
+                new byte[]
+                {
+                    (byte)'T', (byte)'R', (byte)'B', (byte)'T',
+                    1, 0
+                });
+
+            var headerError = Assert.Throws<InvalidDataException>(
+                () => LevelRecordingSerializer.ReadHeader(file));
+            StringAssert.Contains("Unsupported recording version: 1", headerError.Message);
+
+            var readError = Assert.Throws<InvalidDataException>(
+                () => LevelRecordingSerializer.Read(file));
+            StringAssert.Contains("Unsupported recording version: 1", readError.Message);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     [TestCase("1_0", 1u, 0, true)]
     [TestCase("26_5", 26u, 5, true)]
     [TestCase("0_0", 0u, 0, false)]

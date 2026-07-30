@@ -730,4 +730,13 @@ public partial class LevelManager : MonoBehaviour
             }
         }
     }
+    
+    
+#if UNITY_EDITOR
+    [UnityEditor.MenuItem("Game/Quit")]
+    public static void ForceQuit()
+    {
+        instance?.Quit();
+    }
+#endif
 }

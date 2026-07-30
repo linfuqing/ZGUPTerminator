@@ -6,15 +6,6 @@ using ZG;
 /// </summary>
 internal static class LevelRecordingEditorReplayPayloadUtility
 {
-    public static bool TrySkipRecordedReplyHeader(ref DataStreamReader reader)
-    {
-        var streamCompressionModel = StreamCompressionModel.Default;
-        reader.ReadPackedInt(streamCompressionModel);
-        reader.ReadPackedInt(streamCompressionModel);
-        reader.Flush();
-        return reader.GetBytesRead() < reader.Length;
-    }
-
     /// <summary>
     /// Collect 在 StandBy 下从 NetworkClient 入站缓冲读取：type + channel + id + body。
     /// </summary>

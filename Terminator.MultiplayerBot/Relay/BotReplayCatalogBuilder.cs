@@ -106,9 +106,9 @@ public static class BotReplayCatalogBuilder
             for (int i = 0; i < entries.Length; ++i)
             {
                 ref readonly var entry = ref entries.ElementAt(i);
-                // Equivalent to Path.GetFileName(play.sceneName) ==
+                // Equivalent to Path.GetFileName(levelStart.sceneName) ==
                 // Path.GetFileName($"Recordings/{sceneName}"). Keep both operands
-                // normalized because the client payload may contain a path.
+                // normalized because MatchStart.sceneName may contain a path.
                 var recordingSceneFileName = GetSceneFileName(in entry.sceneName);
                 if (!recordingSceneFileName.IsEmpty && recordingSceneFileName.Equals(sceneFileName))
                     matches.Add(i);

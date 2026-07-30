@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -23,7 +24,14 @@ public static class BotRecordingBlobBuilder
             if (payload == null || payload.Length == 0)
                 continue;
 
-            totalPayloadBytes += Math.Min(payload.Length, BotRelayPacket.MaxPayloadSize);
+            if (payload.Length > BotRelayPacket.MaxPayloadSize)
+            {
+                throw new InvalidDataException(
+                    $"Frame {i} payload is {payload.Length}B; replay capacity is " +
+                    $"{BotRelayPacket.MaxPayloadSize}B.");
+            }
+
+            totalPayloadBytes = checked(totalPayloadBytes + payload.Length);
         }
 
         var builder = new BlobBuilder(Allocator.Temp);
@@ -37,7 +45,7 @@ public static class BotRecordingBlobBuilder
         {
             var frame = session.frames[i];
             var payload = frame.payload ?? Array.Empty<byte>();
-            int length = Math.Min(payload.Length, BotRelayPacket.MaxPayloadSize);
+            int length = payload.Length;
 
             framesArray[i] = new BotReplayFrameMeta
             {

@@ -447,7 +447,14 @@ public class GameMain : GameUser
                     null);
 
                 //var paths = new Dictionary<string, string>();
-                string directory = Path.Combine(Application.persistentDataPath, filename);
+                UnityEngine.Debug.Log($"Temp Cache Path {Application.temporaryCachePath}");
+                string directory = Path.Combine(
+                    #if UNITY_WEBGL
+                    Application.temporaryCachePath,
+                    #else
+                    Application.persistentDataPath,
+                    #endif
+                    filename);
                 Func<string, string> remapFunc = x =>
                 {
                     int separatorIndex = x.LastIndexOf('/');
@@ -457,17 +464,11 @@ public class GameMain : GameUser
                     {
                         string path = AssetFileUtility.Combine(folder, folder).ToLower();
                         Debug.Log($"Asset manager load from {path}");
-                        
+
                         sceneArchiveAssetManager.LoadFrom(path);
                     }
 
-                    string name = x.ToLower();
-                    
-#if DEBUG
-                    name += '_';
-#endif
-                    
-                    return Path.Combine(directory, name);
+                    return Path.Combine(directory, x.ToLower());
                     /*if (!sceneArchiveAssetManager.GetAssetPath(name, out _, out ulong fileOffset, out string filePath))
                         Debug.LogError($"GetFileInfo {x} failed");
 
@@ -500,7 +501,8 @@ public class GameMain : GameUser
                     if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
                         Directory.CreateDirectory(folder);
 
-                    File.WriteAllBytes(catalogPath, AssetFileUtility.ReadAllBytes(filePath));
+                    AssetFileUtility.Materialize(filePath, catalogPath);
+                    //File.WriteAllBytes(catalogPath, AssetFileUtility.ReadAllBytes(filePath));
                 }
 
                 RuntimeContentManager.LoadLocalCatalogData(catalogPath,
@@ -809,20 +811,22 @@ public class GameMain : GameUser
             (x, y) =>
             {
                 userType = x.type;
-                
+
                 (IAnalytics.instance as IAnalyticsEx)?.Login(y);
 
                 if (x.levelID == 0 || x.chapter >= _chapters.Length)
                     defaultSceneName = GameConstantManager.Get(DefaultSceneName);
                 else
                 {
+                    PlayerPrefs.DeleteAll();
+
                     levelID = x.levelID;
                     stage = x.stage;
-                    
+
                     var chapter = _chapters[x.chapter];
 
                     defaultSceneName = chapter.name;
-                    
+
                     LevelShared.stages.Clear();
                     
                     if (chapter.stages != null)

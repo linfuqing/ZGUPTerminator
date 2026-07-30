@@ -34,7 +34,39 @@ internal static class LevelRecordingPayloadClassification
         }
 
         wireType = reader.ReadPackedInt(StreamCompressionModel.Default);
-        return true;
+        return !reader.HasFailedReads;
+    }
+
+    public static bool TryReadRecordedReplyHeader(
+        byte[] payload,
+        out int wireType,
+        out NetworkRelayType relayType,
+        out int bodyOffset)
+    {
+        wireType = 0;
+        relayType = default;
+        bodyOffset = 0;
+        if (payload == null || payload.Length == 0)
+        {
+            return false;
+        }
+
+        using var bytes = new NativeArray<byte>(payload, Allocator.Temp);
+        var reader = new DataStreamReader(bytes);
+        var model = StreamCompressionModel.Default;
+        wireType = reader.ReadPackedInt(model);
+        relayType = (NetworkRelayType)reader.ReadPackedInt(model);
+        reader.Flush();
+        if (reader.HasFailedReads ||
+            (relayType != NetworkRelayType.All &&
+             relayType != NetworkRelayType.Channel &&
+             relayType != NetworkRelayType.Identity))
+        {
+            return false;
+        }
+
+        bodyOffset = reader.GetBytesRead();
+        return bodyOffset <= reader.Length;
     }
 
     public static bool TryClassifyRecordedPayload(
@@ -60,6 +92,12 @@ internal static class LevelRecordingPayloadClassification
 
         if (wireType == (int)ReplyMessageType.Invite)
         {
+            if (!TryReadRecordedReplyHeader(payload, out int headerWireType, out _, out _) ||
+                headerWireType != wireType)
+            {
+                return false;
+            }
+
             kind = LevelRecordingRecordedPayloadKind.Invite;
             return true;
         }
@@ -72,6 +110,18 @@ internal static class LevelRecordingPayloadClassification
 
         if (wireType >= (int)ReplyMessageType.Chat && wireType <= (int)ReplyMessageType.PlayerProperty)
         {
+            if (!TryReadRecordedReplyHeader(
+                    payload,
+                    out int headerWireType,
+                    out var relayType,
+                    out int bodyOffset) ||
+                headerWireType != wireType ||
+                relayType != NetworkRelayType.Channel ||
+                bodyOffset >= payload.Length)
+            {
+                return false;
+            }
+
             kind = LevelRecordingRecordedPayloadKind.GameplayReply;
             gameplayMessageType = (ReplyMessageType)wireType;
             return true;

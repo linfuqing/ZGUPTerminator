@@ -17,14 +17,12 @@ namespace ZG
         private int __inbound;
         private int __lastRelayType;
         private int __lastClientMsg;
-        private int __chapterStage;
-        private int __playSeen;
-        private int __playHandled;
+        private int __levelStartHandled;
         private int __stageWritten;
         private int __wirePackets;
         private int __channelJoin;
         private int __channelLeave;
-        private int __playCleared;
+        private int __levelStartCleared;
         private int __lastClearSite;
         private int __botState;
         private int __appInjected;
@@ -49,14 +47,12 @@ namespace ZG
             int inbound = BotRelayInboundProbe.InboundCount;
             int lastRelayType = BotRelayInboundProbe.LastRelayType;
             int lastClientMsg = BotRelayInboundProbe.LastClientMsgType;
-            int chapterStage = BotRelayInboundProbe.ChapterStageSeen;
-            int playSeen = BotRelayInboundProbe.PlaySeen;
-            int playHandled = BotRelayInboundProbe.PlayHandled;
+            int levelStartHandled = BotRelayInboundProbe.LevelStartHandled;
             int stageWritten = BotRelayInboundProbe.LastStageWritten;
             int wirePackets = BotRelayManager.Instance.diagDrainPacketsBudget;
             int channelJoin = BotRelayInboundProbe.ChannelJoinSeen;
             int channelLeave = BotRelayInboundProbe.ChannelLeaveSeen;
-            int playCleared = BotRelayInboundProbe.PlayCleared;
+            int levelStartCleared = BotRelayInboundProbe.LevelStartCleared;
             int lastClearSite = BotRelayInboundProbe.LastClearSite;
             int botState = BotRelayInboundProbe.BotStateValue;
             int appInjected = BotRelayInboundProbe.AppInjected;
@@ -77,14 +73,12 @@ namespace ZG
                 inbound != __inbound ||
                 lastRelayType != __lastRelayType ||
                 lastClientMsg != __lastClientMsg ||
-                chapterStage != __chapterStage ||
-                playSeen != __playSeen ||
-                playHandled != __playHandled ||
+                levelStartHandled != __levelStartHandled ||
                 stageWritten != __stageWritten ||
                 wirePackets != __wirePackets ||
                 channelJoin != __channelJoin ||
                 channelLeave != __channelLeave ||
-                playCleared != __playCleared ||
+                levelStartCleared != __levelStartCleared ||
                 lastClearSite != __lastClearSite ||
                 botState != __botState ||
                 appInjected != __appInjected ||
@@ -107,14 +101,12 @@ namespace ZG
             __inbound = inbound;
             __lastRelayType = lastRelayType;
             __lastClientMsg = lastClientMsg;
-            __chapterStage = chapterStage;
-            __playSeen = playSeen;
-            __playHandled = playHandled;
+            __levelStartHandled = levelStartHandled;
             __stageWritten = stageWritten;
             __wirePackets = wirePackets;
             __channelJoin = channelJoin;
             __channelLeave = channelLeave;
-            __playCleared = playCleared;
+            __levelStartCleared = levelStartCleared;
             __lastClearSite = lastClearSite;
             __botState = botState;
             __appInjected = appInjected;
@@ -132,9 +124,9 @@ namespace ZG
 
             string line =
                 $"[BotProbe] wirePkts={wirePackets} appParsed={inbound} lastRelayType={lastRelayType} " +
-                $"lastClientMsg={lastClientMsg} chapterStageSeen={chapterStage} playSeen={playSeen} " +
-                $"playHandled={playHandled} stageWritten={stageWritten} " +
-                $"chJoin={channelJoin} chLeave={channelLeave} playCleared={playCleared} clearSite={lastClearSite} " +
+                $"lastClientMsg={lastClientMsg} " +
+                $"levelStartHandled={levelStartHandled} stageWritten={stageWritten} " +
+                $"chJoin={channelJoin} chLeave={channelLeave} levelStartCleared={levelStartCleared} clearSite={lastClearSite} " +
                 $"botState={botState} appInj={appInjected} " +
                 $"replay={replayNextFrame}/{replayFrameCount} " +
                 $"exit={BotRelayInboundProbe.InLevelExitDest}@{BotRelayInboundProbe.InLevelExitTimeMs}ms#{inLevelExitCount} " +

@@ -725,34 +725,6 @@ public sealed class LoginManager : MonoBehaviour
         __levelName = levelName;
 
         __sceneName = sceneName;
-
-        if (LevelShared.match != 0)
-        {
-            if (__stageIDs.TryGetValue((userLevelID, stageIndex), out uint userStageID))
-            {
-                var clientData = IClientData.instance;
-                if (clientData != null)
-                {
-                    ClientMessageMatchStart matchStart;
-                    matchStart.matchID = LevelShared.match;
-                    matchStart.userStageID = userStageID;
-                    matchStart.isRestart = isRestart;
-                    matchStart.levelID = userLevelID;
-                    matchStart.stage = stageIndex;
-                    matchStart.levelName = levelName;
-                    matchStart.sceneName = sceneName;
-
-                    var writer = clientData.BeginSend(
-                        ClientMessageMatchStart.messageType,
-                        ClientMessageMatchStart.capacity);
-                    matchStart.Write(ref writer);
-                    clientData.EndSend(writer);
-                }
-            }
-            else
-                Debug.LogError(
-                    $"[ApplyStart] MatchStart requires Register result for Level {userLevelID}, Stage {stageIndex}.");
-        }
         
         StartCoroutine(__Start(isRestart, userLevelID,  stageIndex, levelName, sceneName));
     }
@@ -1988,6 +1960,45 @@ public sealed class LoginManager : MonoBehaviour
         yield return userData.QueryLevelChapters(userID.Value, __ApplyLevelChapters);
     }
 
+    private static bool __TrySendLevelStartDescriptor(
+        IClientData clientData,
+        int matchID,
+        uint userStageID,
+        bool isRestart,
+        uint levelID,
+        int stageIndex,
+        string levelName,
+        string sceneName)
+    {
+        if (clientData == null ||
+            userStageID == 0 ||
+            levelID == 0 ||
+            stageIndex < 0 ||
+            string.IsNullOrEmpty(sceneName))
+        {
+            return false;
+        }
+
+        ClientMessageMatchStart matchStart;
+        matchStart.matchID = matchID;
+        matchStart.userStageID = userStageID;
+        matchStart.isRestart = isRestart;
+        matchStart.levelID = levelID;
+        matchStart.stage = stageIndex;
+        matchStart.levelName = levelName;
+        matchStart.sceneName = sceneName;
+
+        var writer = clientData.BeginSend(
+            ClientMessageMatchStart.messageType,
+            ClientMessageMatchStart.capacity);
+        matchStart.Write(ref writer);
+        if (writer.HasFailedWrites)
+            return false;
+
+        clientData.EndSend(writer);
+        return true;
+    }
+
     private IEnumerator __Start(
         bool isRestart,
         uint levelID,
@@ -2054,6 +2065,26 @@ public sealed class LoginManager : MonoBehaviour
                         else
                             comparandFlag = -1;
                     } while (!RemotePlayer.SetStatus(RemotePlayer.Status.Waiting, comparandFlag));
+
+                    // Waiting (or an already-completed Joined state) is the synchronization
+                    // boundary. Publishing the Bot descriptor before this point lets the Bot's
+                    // PlayerProperty/Status reply race ahead and then be overwritten by Waiting.
+                    // Ordinary squads use matchID=0; a matched Host publishes the same tuple with
+                    // its non-zero matchID. Human peers consume this metadata without starting.
+                    if (!__TrySendLevelStartDescriptor(
+                            clientData,
+                            LevelShared.match,
+                            stageID,
+                            isRestart,
+                            levelID,
+                            stageIndex,
+                            levelName,
+                            sceneName))
+                    {
+                        Debug.LogError("[Start:Host] Failed to send the level-start descriptor.");
+                        status = Status.None;
+                        yield break;
+                    }
 
                     if(RemotePlayer.Status.Waiting == RemotePlayer.status)
                     {
@@ -2167,6 +2198,26 @@ public sealed class LoginManager : MonoBehaviour
                 else
                 {
                     RemotePlayer.SetStatus(RemotePlayer.Status.Waiting);
+
+                    // Only matchmaking starts on the non-Host as well. Send after entering
+                    // Waiting so the Bot cannot answer before this client's state machine is ready.
+                    if (LevelShared.match != 0)
+                    {
+                        if (!__TrySendLevelStartDescriptor(
+                                clientData,
+                                LevelShared.match,
+                                stageID,
+                                isRestart,
+                                levelID,
+                                stageIndex,
+                                levelName,
+                                sceneName))
+                        {
+                            Debug.LogError("[Start:Client] Failed to send the level-start descriptor.");
+                            status = Status.None;
+                            yield break;
+                        }
+                    }
 
                     if (__levelStages.TryGetValue(stageID, out var levelStage))
                     {
@@ -2604,4 +2655,11 @@ public sealed class LoginManager : MonoBehaviour
         }
     }
     
+#if UNITY_EDITOR
+    [UnityEditor.MenuItem("Game/ApplyStart")]
+    public static void ApplyStart()
+    {
+        instance?.ApplyStart(true);
+    }
+#endif
 }

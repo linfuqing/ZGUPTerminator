@@ -2,7 +2,8 @@ using Unity.Entities;
 using ZG;
 
 /// <summary>
-/// ReplyMessage Move EndWrites happen after <see cref="NetworkClientSystem"/>; capture again once jobs complete.
+/// Drains EndWrites committed by <see cref="ReplyMessageSystem"/> after its producer jobs complete.
+/// This is a latency boundary only; the recording journal is independent from transport Apply/Clear.
 /// </summary>
 [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation)]
 [UpdateInGroup(typeof(PresentationSystemGroup))]

@@ -12,47 +12,7 @@ internal static class LevelRecordingSelectSkillReplayOps
 {
     public static bool TryValidateAndSimulate(byte[] payload, List<int> simulatedActiveSkillValues)
     {
-        if (payload == null || payload.Length < 2 || simulatedActiveSkillValues == null)
-        {
-            return false;
-        }
-
-        if (!LevelRecordingPayloadUtility.TryGetReplyMessageType(payload, out var messageType) ||
-            messageType != ReplyMessageType.SelectSkill)
-        {
-            return true;
-        }
-
-        if (!LevelRecordingPayloadUtility.TryGetRecordedBodySlice(payload, out int bodyOffset, out int bodyLength))
-        {
-            return false;
-        }
-
-        using var body = new NativeArray<byte>(bodyLength, Allocator.Temp);
-        NativeArray<byte>.Copy(payload, bodyOffset, body, 0, bodyLength);
-
-        var reader = new DataStreamReader(body);
-        var model = StreamCompressionModel.Default;
-        int numSkills = reader.ReadPackedInt(model);
-        if (numSkills <= 0)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < numSkills; ++i)
-        {
-            int index = reader.ReadPackedInt(model);
-            int originIndex = reader.ReadPackedInt(model);
-            int activeIndex = reader.ReadPackedInt(model);
-            reader.ReadPackedFloat(model);
-
-            if (!__TrySimulateOne(index, originIndex, activeIndex, simulatedActiveSkillValues))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return __TryValidateAndSimulate(payload, simulatedActiveSkillValues, false);
     }
 
     /// <summary>
@@ -60,51 +20,75 @@ internal static class LevelRecordingSelectSkillReplayOps
     /// </summary>
     public static bool TryValidateAndSimulateWithBootstrap(byte[] payload, List<int> simulatedActiveSkillValues)
     {
-        if (payload == null || payload.Length < 2 || simulatedActiveSkillValues == null)
+        return __TryValidateAndSimulate(payload, simulatedActiveSkillValues, true);
+    }
+
+    private static bool __TryValidateAndSimulate(
+        byte[] payload,
+        List<int> simulatedActiveSkillValues,
+        bool allowBootstrap)
+    {
+        if (payload == null || payload.Length == 0 || simulatedActiveSkillValues == null ||
+            !LevelRecordingPayloadClassification.TryClassifyRecordedPayload(
+                payload,
+                out var kind,
+                out _,
+                out var classifiedMessageType))
         {
             return false;
         }
 
-        if (!LevelRecordingPayloadUtility.TryGetReplyMessageType(payload, out var messageType) ||
-            messageType != ReplyMessageType.SelectSkill)
+        if (kind != LevelRecordingRecordedPayloadKind.GameplayReply ||
+            classifiedMessageType != ReplyMessageType.SelectSkill)
         {
             return true;
         }
 
-        if (!LevelRecordingPayloadUtility.TryGetRecordedBodySlice(payload, out int bodyOffset, out int bodyLength))
+        if (!LevelRecordingPayloadUtility.TryGetRecordedReplyHeader(
+                payload,
+                out var messageType,
+                out var relayType,
+                out int bodyOffset) ||
+            messageType != ReplyMessageType.SelectSkill ||
+            relayType != NetworkRelayType.Channel ||
+            bodyOffset >= payload.Length)
         {
             return false;
         }
 
+        int bodyLength = payload.Length - bodyOffset;
         using var body = new NativeArray<byte>(bodyLength, Allocator.Temp);
         NativeArray<byte>.Copy(payload, bodyOffset, body, 0, bodyLength);
 
         var reader = new DataStreamReader(body);
         var model = StreamCompressionModel.Default;
         int numSkills = reader.ReadPackedInt(model);
-        if (numSkills <= 0)
+        if (reader.HasFailedReads || numSkills <= 0)
         {
             return false;
         }
 
+        var simulated = new List<int>(simulatedActiveSkillValues);
         for (int i = 0; i < numSkills; ++i)
         {
-            int index = reader.ReadPackedInt(model);
-            int originIndex = reader.ReadPackedInt(model);
-            int activeIndex = reader.ReadPackedInt(model);
-            reader.ReadPackedFloat(model);
-
-            if (!__TryBootstrapSlot(originIndex, activeIndex, simulatedActiveSkillValues))
-            {
-                return false;
-            }
-
-            if (!__TrySimulateOne(index, originIndex, activeIndex, simulatedActiveSkillValues))
+            var skill = new LevelSkill(ref reader, model);
+            if (reader.HasFailedReads ||
+                (allowBootstrap && !__TryBootstrapSlot(skill.originIndex, skill.activeIndex, simulated)) ||
+                !__TrySimulateOne(skill.index, skill.originIndex, skill.activeIndex, simulated))
             {
                 return false;
             }
         }
 
+        // GetBytesRead counts the currently consumed partial byte, so writer-owned padding bits
+        // in the final byte remain legal while any complete trailing byte is rejected.
+        if (reader.HasFailedReads || reader.GetBytesRead() != reader.Length)
+        {
+            return false;
+        }
+
+        simulatedActiveSkillValues.Clear();
+        simulatedActiveSkillValues.AddRange(simulated);
         return true;
     }
 

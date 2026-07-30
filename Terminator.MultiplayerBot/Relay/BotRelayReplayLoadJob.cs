@@ -16,15 +16,29 @@ namespace ZG
 
         public void Execute()
         {
-            if (!catalog.IsCreated || catalog.EntryCount == 0)
-                return;
-
             for (int i = 0; i < farm.agentCount; ++i)
             {
-                if ((farm.agentFlags[i] & BotAgentRuntimeFlags.PendingPlay) == 0)
+                if ((farm.agentFlags[i] & BotAgentRuntimeFlags.PendingLevelStart) == 0)
                     continue;
 
-                BotRelayReplayLoadOps.HandlePendingPlay(i, ref farm, in catalog, elapsedTime, ref injectWriter, injectEnabled);
+                if (!catalog.IsCreated || catalog.EntryCount == 0)
+                {
+                    BotRelayReplayRuntimeGate.RemovePendingLevelStart();
+                    farm.agentFlags[i] &= ~BotAgentRuntimeFlags.PendingLevelStart;
+                    Debug.LogWarning(
+                        $"[BotAgent:{farm.agentStates[i].userID}] Replay catalog is unavailable; " +
+                        "keeping Status=0 and failing closed.");
+                    BotAgentLogic.ApplyReplayLoadFailure(i, ref farm, elapsedTime);
+                    continue;
+                }
+
+                BotRelayReplayLoadOps.HandlePendingLevelStart(
+                    i,
+                    ref farm,
+                    in catalog,
+                    elapsedTime,
+                    ref injectWriter,
+                    injectEnabled);
             }
         }
 
@@ -33,7 +47,7 @@ namespace ZG
 
     internal static class BotRelayReplayLoadOps
     {
-        internal static void HandlePendingPlay(
+        internal static void HandlePendingLevelStart(
             int index,
             ref BotRelayFarmNative farm,
             in BotReplayCatalog catalog,
@@ -42,80 +56,87 @@ namespace ZG
             byte injectEnabled)
         {
             ref var state = ref farm.agentStates.ElementAt(index);
-            BotRelayReplayRuntimeGate.RemovePendingPlay();
-            farm.agentFlags[index] &= ~BotAgentRuntimeFlags.PendingPlay;
-            var play = farm.pendingPlayMessage[index];
-            state.playLevelID = play.levelID;
-            state.playStageIndex = play.stage;
+            BotRelayReplayRuntimeGate.RemovePendingLevelStart();
+            farm.agentFlags[index] &= ~BotAgentRuntimeFlags.PendingLevelStart;
 
-            var stageID = BotRelayPlayStageOps.ResolveUserStageIDForPlay(
-                index,
-                ref farm,
-                in play);
-
-            if (stageID == 0)
+            var levelStart = farm.levelStartMessages[index];
+            uint stageID = levelStart.userStageID;
+            if (stageID == 0 ||
+                levelStart.levelID == 0 ||
+                levelStart.stage < 0 ||
+                levelStart.sceneName.IsEmpty)
             {
-                // Ordinary squad ChapterStage may arrive after Play. Matching gets this value from
-                // MatchStart; in either case defer rather than publishing a zero-stage handshake.
-                BotRelayReplayRuntimeGate.AddPendingPlay();
-                farm.agentFlags[index] |= BotAgentRuntimeFlags.PendingPlay;
+                Debug.LogWarning(
+                    $"[BotAgent:{state.userID}] Invalid level-start descriptor; " +
+                    "keeping Status=0 and failing closed.");
+                BotAgentLogic.ApplyReplayLoadFailure(index, ref farm, elapsedTime);
                 return;
             }
 
-            state.targetUserStageID = stageID;
-
             BotRelayInboundProbe.RecordStageWritten((int)stageID);
 
-            var random = Unity.Mathematics.Random.CreateFromIndex(state.userID ^ play.levelID ^ (uint)play.stage);
+            var random = Unity.Mathematics.Random.CreateFromIndex(
+                state.userID ^ levelStart.levelID ^ (uint)levelStart.stage);
             if (!BotReplayCatalogBuilder.TryPickIndex(
                     catalog.entries,
                     stageID,
-                    play.levelID,
-                    play.stage,
-                    play.sceneName,
+                    levelStart.levelID,
+                    levelStart.stage,
+                    levelStart.sceneName,
                     ref random,
                     out var catalogIndex))
             {
                 Debug.LogWarning(
                     $"[BotAgent:{state.userID}] No catalog recording for " +
-                    $"{stageID}/{play.levelID}_{play.stage}/{play.sceneName}. " +
+                    $"{stageID}/{levelStart.levelID}_{levelStart.stage}/{levelStart.sceneName}. " +
                     "Lookup is StageID -> LevelID_stage -> Path.GetFileName(sceneName); no cross-key fallback.");
-                if (state.matchLoginPhase == BotMatchLoginPhase.PendingPlayerProperty)
+                if (state.levelLoginPhase == BotLevelLoginPhase.PendingPlayerProperty)
                 {
-                    state.matchLoginPhase = BotMatchLoginPhase.PlayerPropertyFailed;
                     Debug.LogWarning(
-                        $"[BotAgent:{state.userID}] Match login PlayerProperty unavailable; " +
+                        $"[BotAgent:{state.userID}] Level login PlayerProperty unavailable; " +
                         "keeping Status=0 and failing closed before level entry.");
-                    return;
                 }
-
-                __TryInjectMatchStatusOnly(index, ref farm, stageID, ref injectWriter, injectEnabled);
+                // A live Status without a replay (and therefore without the startup
+                // PlayerProperty) makes the Host believe the Bot entered while the level
+                // handshake can never finish. Keep Status=0, leave the invalid squad, and free
+                // the Bot for a later invitation.
+                BotAgentLogic.ApplyReplayLoadFailure(index, ref farm, elapsedTime);
                 return;
             }
 
             ref readonly var picked = ref catalog.entries.ElementAt(catalogIndex);
             var recording = picked.recording;
 
-            if (state.matchLoginPhase == BotMatchLoginPhase.PendingPlayerProperty)
+            if (state.levelLoginPhase == BotLevelLoginPhase.PendingPlayerProperty)
             {
                 bool sent = BotReplayLoadUtility.TrySendFirstPlayerProperty(
                     ref farm, index, recording, ref injectWriter, injectEnabled);
-                state.matchLoginPhase = sent
-                    ? BotMatchLoginPhase.PlayerPropertySent
-                    : BotMatchLoginPhase.PlayerPropertyFailed;
+                state.levelLoginPhase = sent
+                    ? BotLevelLoginPhase.PlayerPropertySent
+                    : BotLevelLoginPhase.PlayerPropertyFailed;
                 if (sent)
                 {
                     Debug.Log(
-                        $"[BotAgent:{state.userID}] Match login PlayerProperty injected; " +
-                        "Status remains 0 until the next match-entry tick.");
+                        $"[BotAgent:{state.userID}] Level login PlayerProperty injected; " +
+                        "Status remains 0 until the next level-entry tick.");
                 }
                 else
                 {
                     Debug.LogWarning(
-                        $"[BotAgent:{state.userID}] Match login PlayerProperty send failed; " +
+                        $"[BotAgent:{state.userID}] Level login PlayerProperty send failed; " +
                         "Status remains 0 and level entry is fail-closed.");
+                    BotAgentLogic.ApplyReplayLoadFailure(index, ref farm, elapsedTime);
                 }
 
+                return;
+            }
+
+            if (state.levelLoginPhase != BotLevelLoginPhase.PlayerPropertySent)
+            {
+                Debug.LogWarning(
+                    $"[BotAgent:{state.userID}] Level login phase is not armed; " +
+                    "keeping Status=0 and failing closed.");
+                BotAgentLogic.ApplyReplayLoadFailure(index, ref farm, elapsedTime);
                 return;
             }
 
@@ -126,19 +147,28 @@ namespace ZG
 
             if (!BotReplayLoadUtility.TrySendFirstPlayerProperty(ref farm, index, recording, ref injectWriter, injectEnabled))
             {
-                Debug.LogWarning($"[BotAgent:{state.userID}] PlayerProperty send failed.");
+                Debug.LogWarning(
+                    $"[BotAgent:{state.userID}] PlayerProperty send failed; " +
+                    "keeping Status=0 and failing closed before level entry.");
+                BotAgentLogic.ApplyReplayLoadFailure(index, ref farm, elapsedTime);
+                return;
             }
 
             // MatchStart schedules PlayerProperty and then publishes the live stage on a later
             // tick. Do not inject a subsequent Status(0): on the host, ReplyMessages
             // treats a non-zero -> zero transition after Joined as an explicit cancellation.
-            if (stageID != 0)
-            {
-                BotRelaySquadHandshakeOps.TryInjectStatus(
+            if (!BotRelaySquadHandshakeOps.TryInjectStatus(
                     index,
                     ref farm,
                     stageID,
-                    ref injectWriter, injectEnabled);
+                    ref injectWriter,
+                    injectEnabled))
+            {
+                Debug.LogWarning(
+                    $"[BotAgent:{state.userID}] Status({stageID}) injection failed; " +
+                    "failing closed before replay start.");
+                BotAgentLogic.ApplyReplayLoadFailure(index, ref farm, elapsedTime);
+                return;
             }
 
             BotReplayLogic.Begin(ref runtime);
@@ -146,23 +176,5 @@ namespace ZG
             Debug.Log(
                 $"[BotAgent:{state.userID}] InLevel replay catalog={catalogIndex} folder={picked.levelID}_{picked.stageIndex}");
         }
-
-        private static void __TryInjectMatchStatusOnly(
-            int index,
-            ref BotRelayFarmNative farm,
-            uint stageID,
-            ref NativeQueue<BotRelayInject>.ParallelWriter injectWriter,
-            byte injectEnabled)
-        {
-            if (stageID == 0 || injectEnabled == 0)
-                return;
-
-            ref var state = ref farm.agentStates.ElementAt(index);
-            ref var sessionState = ref farm.sessions.ElementAt(index);
-            sessionState.channelStatus = (int)stageID;
-            BotRelayInjectOps.InjectControlMessage(
-                ref injectWriter, state.userID, (int)NetworkRelayMessageType.Status, (int)stageID, true);
-        }
-
     }
 }

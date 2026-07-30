@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-using Unity.Collections;
 using Unity.Entities;
 
 /// <summary>
@@ -7,39 +5,37 @@ using Unity.Entities;
 /// </summary>
 internal static class BotRelayWireCatalogHost
 {
-    private static BotRelayWireCatalogState s_catalog;
     private static BlobAssetReference<BotRelayCatalogBlob> s_catalogBlob;
-
-    public static bool IsReady => s_catalog.IsValid && s_catalogBlob.IsCreated && s_catalogBlob.Value.IsValid;
-
-    public static ref BotRelayWireCatalogState Catalog => ref s_catalog;
 
     public static BlobAssetReference<BotRelayCatalogBlob> CatalogBlob => s_catalogBlob;
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Publish(
-        in BotRelayWireCatalogState catalog,
+        ref BotRelayWireCatalogState catalog,
         BotRelayConnectWireState[] agentConnectWires)
     {
-        if (s_catalog.IsValid)
-            s_catalog.Dispose();
+        BlobAssetReference<BotRelayCatalogBlob> nextBlob;
+        try
+        {
+            nextBlob = BotRelayCatalogBlobBuilder.Create(in catalog, agentConnectWires);
+        }
+        finally
+        {
+            // Capture-only frames (including the synthetic Invite body used to measure
+            // inboundAppPayloadOffset) must not survive publication.
+            catalog.Dispose();
+        }
 
         if (s_catalogBlob.IsCreated)
             s_catalogBlob.Dispose();
 
-        s_catalog = catalog;
-        s_catalogBlob = BotRelayCatalogBlobBuilder.Create(in catalog, agentConnectWires);
+        s_catalogBlob = nextBlob;
     }
 
     public static void Dispose()
     {
-        if (s_catalog.IsValid)
-            s_catalog.Dispose();
-
         if (s_catalogBlob.IsCreated)
             s_catalogBlob.Dispose();
 
-        s_catalog = default;
         s_catalogBlob = default;
     }
 }

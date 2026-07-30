@@ -3,86 +3,15 @@ using Unity.Collections;
 using ZG;
 
 /// <summary>
-/// Regression coverage for the "NetworkSendMessage: -5" (server send-queue overflow) family.
-///
-/// Root cause reproduced here: while the host waits for our RemotePlayer.status==Joined it
-/// re-broadcasts the channel Join/Play bundle every frame, and once the send queue overflows the
-/// server drops+re-adds our connection (Leave then Join). If the bot re-processes Play on every
-/// such churn it re-injects PlayerProperty/Status and restarts replay each frame — an
-/// amplification loop whose outbound volume is what overflows the send queue in the first place.
-///
-/// These tests drive the exact churn at the BotAgentLogic level and assert the bot's app-layer
-/// inject volume stays bounded (does NOT scale with the number of churn frames).
+/// Regression coverage for reliable-send amplification and replay pacing.
+/// Current human Play/ChapterStage packets are consumed without entering the Bot state machine;
+/// MatchStart is the sole immutable entry descriptor, while an already committed InLevel bot
+/// remains stable through squad churn.
 /// </summary>
 public class BotRelayAntiAmplificationTests
 {
-    // 60 frames at ~15 fps ≈ 4s of churn. With the re-handle cooldown only a handful of Plays
-    // are honored; without it every frame re-processes Play and re-injects (~60).
     private const int StormTicks = 60;
     private const double TickDelta = 0.066;
-
-    [Test]
-    [Category("Regression")]
-    public void HostRebroadcastLeaveJoinPlayStorm_DoesNotAmplifyInjects()
-    {
-        var farm = BotRelayFlowTestFixtures.CreateFarm();
-        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
-        try
-        {
-            ref var state = ref farm.agentStates.ElementAt(0);
-            state.state = BotState.InSquad;
-            state.targetUserStageID = 5;
-            ref var session = ref farm.sessions.ElementAt(0);
-            session.channel = 1;
-
-            for (int i = 0; i < StormTicks; ++i)
-            {
-                var config = BotRelayFlowTestFixtures.CreateTickConfig(i * TickDelta);
-                config.injectEnabled = 1;
-                config.injectWriter = injects.AsParallelWriter();
-
-                // Server dropped us (send-queue overflow) → Leave, then re-added → Join,
-                // and the host re-broadcasts ChapterStage + Play every frame.
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.SquadLeave
-                });
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.SquadJoin,
-                    squadJoin = new ClientMessageSquadJoinToRead
-                    {
-                        squadInviteID = BotRelayFlowTestFixtures.SquadInviteId
-                    }
-                });
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.ChapterStage,
-                    chapterStageID = 5
-                });
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.Play,
-                    play = new ClientMessagePlay { levelID = 1, stage = 0 }
-                });
-
-                BotAgentLogic.Execute(0, ref farm, in config);
-            }
-
-            int injectCount = injects.Count;
-            Assert.LessOrEqual(
-                injectCount,
-                8,
-                $"Bot amplified app-layer injects under the host Leave/Join/Play re-broadcast storm " +
-                $"({injectCount} injects over {StormTicks} frames). This is the runaway volume that " +
-                $"overflows the server send queue (NetworkSendMessage: -5).");
-        }
-        finally
-        {
-            injects.Dispose();
-            farm.Dispose();
-        }
-    }
 
     [Test]
     [Category("Regression")]
@@ -95,34 +24,33 @@ public class BotRelayAntiAmplificationTests
             ref var state = ref farm.agentStates.ElementAt(0);
             state.state = BotState.InLevel;
             state.stateEnterTime = 0.0;
-            state.targetUserStageID = 5;
             state.remotePresenceSeen = true;
+            state.levelLoginPhase = BotLevelLoginPhase.PlayerPropertySent;
 
-            var runtime = farm.replayRuntime[0];
+            farm.levelStartMessages[0] = BuildDescriptor(5);
+            farm.agentFlags[0] = BotAgentRuntimeFlags.LevelStartHandled;
+
+            ref var runtime = ref farm.replayRuntime.ElementAt(0);
             runtime.flags = BotReplayRuntimeFlags.Loaded;
-            farm.replayRuntime[0] = runtime;
 
-            var session = farm.sessions[0];
-            session.channel = 1;
+            ref var session = ref farm.sessions.ElementAt(0);
+            session.channel = (int)BotRelayFlowTestFixtures.SquadInviteId;
             session.channelStatus = 5;
             session.remoteChannelStatus = 5;
             session.remoteOnline = true;
-            farm.sessions[0] = session;
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+            session.remotePlayerCount = 1;
             farm.prevRemoteChannelStatus[0] = 5;
 
             var replayDrained = BotRelayFlowTestFixtures.CreateTickConfig(5.0);
             replayDrained.injectEnabled = 1;
             replayDrained.injectWriter = injects.AsParallelWriter();
             BotAgentLogic.Execute(0, ref farm, in replayDrained);
-            Assert.AreEqual(
-                BotState.InLevel,
-                farm.agentStates[0].state,
-                "Replay exhaustion must not make an in-game bot available for another invitation.");
+            Assert.AreEqual(BotState.InLevel, farm.agentStates[0].state,
+                "Replay exhaustion is not a level-exit authority.");
 
-            session = farm.sessions[0];
             session.remoteChannelStatus = 0;
             session.remoteOnline = true;
-            farm.sessions[0] = session;
 
             var firstAbsent = BotRelayFlowTestFixtures.CreateTickConfig(5.1);
             firstAbsent.injectEnabled = 1;
@@ -153,9 +81,12 @@ public class BotRelayAntiAmplificationTests
                 }
             }
 
-            Assert.IsTrue(
-                sawLeave,
-                "Remote stage exit must deliver SquadLeave over the reliable app-layer inject.");
+            Assert.IsTrue(sawLeave);
+            Assert.AreEqual(0u, farm.levelStartMessages[0].userStageID);
+            Assert.AreEqual(
+                BotAgentRuntimeFlags.None,
+                farm.agentFlags[0] &
+                (BotAgentRuntimeFlags.LevelStartHandled | BotAgentRuntimeFlags.PendingLevelStart));
         }
         finally
         {
@@ -166,7 +97,7 @@ public class BotRelayAntiAmplificationTests
 
     [Test]
     [Category("Regression")]
-    public void InLevelBot_IgnoresSquadLeaveJoinChurn_StaysInLevel()
+    public void InLevelBot_IgnoresSquadAndRepeatedMatchStartChurn()
     {
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
@@ -174,22 +105,24 @@ public class BotRelayAntiAmplificationTests
         {
             ref var state = ref farm.agentStates.ElementAt(0);
             state.state = BotState.InLevel;
-            state.targetUserStageID = 5;
             state.pendingInvite = BotRelayFlowTestFixtures.BuildPublicInvite();
+            state.levelLoginPhase = BotLevelLoginPhase.PlayerPropertySent;
 
-            // A committed co-op level: the human peer is present in the stage and online. This is the
-            // real InLevel precondition; the channel-tracker must only end the level on a genuine
-            // remote leave (status 0) / disconnect, not on the squad-event churn this test exercises.
+            var descriptor = BuildDescriptor(5);
+            farm.levelStartMessages[0] = descriptor;
+            farm.agentFlags[0] = BotAgentRuntimeFlags.LevelStartHandled;
+
             ref var session = ref farm.sessions.ElementAt(0);
-            session.channel = 1;
+            session.channel = (int)BotRelayFlowTestFixtures.SquadInviteId;
+            session.channelStatus = 5;
             session.remoteChannelStatus = 5;
             session.remoteOnline = true;
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+            session.remotePlayerCount = 1;
             farm.prevRemoteChannelStatus[0] = 5;
 
-            // A committed level: replay armed (Playing) so the replay-finished exit stays dormant.
             ref var runtime = ref farm.replayRuntime.ElementAt(0);
             runtime.flags = BotReplayRuntimeFlags.Loaded | BotReplayRuntimeFlags.Playing;
-            farm.agentFlags[0] |= BotAgentRuntimeFlags.PlayHandled;
 
             for (int i = 0; i < StormTicks; ++i)
             {
@@ -197,8 +130,6 @@ public class BotRelayAntiAmplificationTests
                 config.injectEnabled = 1;
                 config.injectWriter = injects.AsParallelWriter();
 
-                // Host/server re-broadcast bundle every frame: Invite → Leave (drop) → Join (re-add) →
-                // ChapterStage → Play. A committed in-level bot must ignore all of it.
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.SquadInvite,
@@ -211,38 +142,34 @@ public class BotRelayAntiAmplificationTests
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.SquadJoin,
+                    channelMessageType = NetworkRelayMessageType.Join,
                     squadJoin = new ClientMessageSquadJoinToRead
                     {
-                        squadInviteID = BotRelayFlowTestFixtures.SquadInviteId
+                        squadInviteID = BotRelayFlowTestFixtures.SquadInviteId,
+                        playerStatus = new ClientMessageRemotePlayerStatus
+                        {
+                            flag = ClientRemotePlayerFlag.Online
+                        }
                     }
                 });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
-                    type = BotRelayEventType.ChapterStage,
-                    chapterStageID = 5
-                });
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.Play,
-                    play = new ClientMessagePlay { levelID = 1, stage = 0 }
+                    type = BotRelayEventType.MatchStart,
+                    header = new ClientHeader { userID = BotRelayFlowTestFixtures.RealPlayerUserId },
+                    matchStart = descriptor
                 });
 
                 BotAgentLogic.Execute(0, ref farm, in config);
 
+                Assert.AreEqual(BotState.InLevel, farm.agentStates[0].state);
+                Assert.AreEqual(5u, farm.levelStartMessages[0].userStageID);
                 Assert.AreEqual(
-                    BotState.InLevel,
-                    farm.agentStates[0].state,
-                    $"Bot dropped out of InLevel on churn frame {i}. Each drop makes ReplayTickJob " +
-                    $"stop the replay and the next Play reload dumps the whole recording in one tick " +
-                    $"(NetworkSendMessage: -5) while leaving the bot invisible.");
+                    BotAgentRuntimeFlags.None,
+                    farm.agentFlags[0] & BotAgentRuntimeFlags.PendingLevelStart);
             }
 
-            int injectCount = injects.Count;
-            Assert.LessOrEqual(
-                injectCount,
-                8,
-                $"In-level bot amplified injects under Leave/Join/Play churn ({injectCount} over " +
-                $"{StormTicks} frames); the sticky-InLevel guard is not holding.");
+            Assert.AreEqual(0, injects.Count,
+                "Squad/descriptor rebroadcast churn must not restart the level handshake.");
         }
         finally
         {
@@ -251,62 +178,68 @@ public class BotRelayAntiAmplificationTests
         }
     }
 
-    // Full in-level replay loop under the host re-broadcast churn. This is the self-verifying
-    // reproduction for the live symptoms (NetworkSendMessage -5, repeated SelectSkill, invisible
-    // bot): it enters the level exactly like the load job, then each server tick advances replay
-    // pacing by a fixed delta, drives the replay inject, and feeds the host Leave/Join/ChapterStage/
-    // Play bundle. Regressions in pacing (dump), stickiness (flap) or single-shot frames (repeat)
-    // all fail here without any manual Play.
     [Test]
     [Category("Regression")]
     public void InLevelReplay_UnderHostChurn_PacesFrames_HoldsInLevel_SelectSkillOnce()
     {
-        const float FrameSpacing = 0.1f;      // recording emits a frame every 100 ms
-        const int MoveFrames = 40;            // ~4 s recording
-        const double Dt = 1.0 / 30.0;         // 30 Hz server tick
+        const float FrameSpacing = 0.1f;
+        const int MoveFrames = 40;
+        const double Dt = 1.0 / 30.0;
 
         var recording = BotRelayFlowTestFixtures.CreateInLevelReplayRecording(
             MoveFrames, FrameSpacing, out int whitelistedFrames, out float duration);
-        var catalog = BotRelayFlowTestFixtures.CreateSyntheticCatalog(recording, Allocator.TempJob);
+        var catalogEntries = BotRelayFlowTestFixtures.CreateSyntheticCatalog(recording, Allocator.TempJob);
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
         try
         {
-            farm.agentFlags[0] = BotAgentRuntimeFlags.PendingPlay | BotAgentRuntimeFlags.PlayHandled;
-            farm.pendingPlayMessage[0] = new ClientMessagePlay { levelID = 1, stage = 0 };
-            var seed = farm.agentStates[0];
-            seed.targetUserStageID = 10;
-            // Mirror the real invite->join->play flow: the invite the bot acted on is retained so the
-            // sticky-commit guard can recognise the host's per-frame invite re-broadcast.
-            seed.pendingInvite = BotRelayFlowTestFixtures.BuildPublicInvite();
-            farm.agentStates[0] = seed;
+            BotRelayReplayRuntimeGate.Reset();
+            ref var state = ref farm.agentStates.ElementAt(0);
+            state.state = BotState.InSquad;
+            state.pendingInvite = BotRelayFlowTestFixtures.BuildPublicInvite();
 
-            // Human peer present in-stage and online for the whole co-op level: the channel-tracker
-            // must keep us InLevel through the squad-event churn (it only ends the level on a genuine
-            // remote leave / disconnect, which this test never simulates).
-            var coopSession = farm.sessions[0];
-            coopSession.channel = 1;
-            coopSession.remoteChannelStatus = 10;
-            coopSession.remoteOnline = true;
-            farm.sessions[0] = coopSession;
+            ref var session = ref farm.sessions.ElementAt(0);
+            session.channel = (int)BotRelayFlowTestFixtures.SquadInviteId;
+            session.remoteChannelStatus = 10;
+            session.remoteOnline = true;
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+            session.remotePlayerCount = 1;
+            session.isHost = false;
             farm.prevRemoteChannelStatus[0] = 10;
 
-            Assert.IsTrue(BotRelayFlowTestFixtures.TrySimulateReplayLoad(0, ref farm, catalog, 0.0));
+            var descriptor = BuildDescriptor(10);
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.MatchStart,
+                header = new ClientHeader { userID = BotRelayFlowTestFixtures.RealPlayerUserId },
+                matchStart = descriptor
+            });
+            BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig());
+
+            var catalog = new BotReplayCatalog { entries = catalogEntries };
+            var injectWriter = injects.AsParallelWriter();
+            BotRelayReplayLoadOps.HandlePendingLevelStart(
+                0, ref farm, in catalog, 0.0, ref injectWriter, 1);
+            Assert.AreEqual(BotState.InSquad, farm.agentStates[0].state);
+            Assert.AreEqual(0, farm.sessions[0].channelStatus);
+
+            BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig(0.1));
+            BotRelayReplayLoadOps.HandlePendingLevelStart(
+                0, ref farm, in catalog, 0.1, ref injectWriter, 1);
             Assert.AreEqual(BotState.InLevel, farm.agentStates[0].state);
 
             int drainTicks = 0;
             bool replayDone = false;
-            double elapsed = 0.0;
+            double elapsed = 0.1;
             int totalTicks = (int)(duration / Dt) + 30;
 
-            for (int t = 0; t < totalTicks; ++t)
+            for (int tick = 0; tick < totalTicks; ++tick)
             {
                 elapsed += Dt;
+                BotReplayLogic.Tick(0, ref farm, catalogEntries, Dt, ref injectWriter, 1);
 
-                var injectWriter = injects.AsParallelWriter();
-                BotReplayLogic.Tick(0, ref farm, catalog, Dt, ref injectWriter, 1);
-
-                bool playingBeforeExecute = (farm.replayRuntime[0].flags & BotReplayRuntimeFlags.Playing) != 0;
+                bool playingBeforeExecute =
+                    (farm.replayRuntime[0].flags & BotReplayRuntimeFlags.Playing) != 0;
                 if (!replayDone)
                 {
                     ++drainTicks;
@@ -318,75 +251,70 @@ public class BotRelayAntiAmplificationTests
                 config.injectEnabled = 1;
                 config.injectWriter = injects.AsParallelWriter();
 
-                // The host re-broadcasts the ENTIRE squad bundle every frame while it waits for the
-                // bot's stable Joined presence — invite included. The invite re-broadcast is the path
-                // that used to tear the bot out of the level (InLevel -> PendingInvite every frame).
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.SquadInvite,
                     squadInvite = BotRelayFlowTestFixtures.BuildPublicInvite()
                 });
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent { type = BotRelayEventType.SquadLeave });
+                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+                {
+                    type = BotRelayEventType.SquadLeave
+                });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.SquadJoin,
-                    squadJoin = new ClientMessageSquadJoinToRead { squadInviteID = BotRelayFlowTestFixtures.SquadInviteId }
+                    channelMessageType = NetworkRelayMessageType.Join,
+                    squadJoin = new ClientMessageSquadJoinToRead
+                    {
+                        squadInviteID = BotRelayFlowTestFixtures.SquadInviteId,
+                        playerStatus = new ClientMessageRemotePlayerStatus
+                        {
+                            flag = ClientRemotePlayerFlag.Online
+                        }
+                    }
                 });
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent { type = BotRelayEventType.ChapterStage, chapterStageID = 5 });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
-                    type = BotRelayEventType.Play,
-                    play = new ClientMessagePlay { levelID = 1, stage = 0 }
+                    type = BotRelayEventType.MatchStart,
+                    header = new ClientHeader { userID = BotRelayFlowTestFixtures.RealPlayerUserId },
+                    matchStart = descriptor
                 });
 
                 BotAgentLogic.Execute(0, ref farm, in config);
-
                 if (playingBeforeExecute)
-                    Assert.AreEqual(
-                        BotState.InLevel,
-                        farm.agentStates[0].state,
-                        $"Bot fell out of InLevel at tick {t} while the replay was still playing — " +
-                        $"this is the flap that restarts the replay and hides the bot.");
+                    Assert.AreEqual(BotState.InLevel, farm.agentStates[0].state);
             }
 
             int selectSkillInjects = 0;
             int gameplayInjects = 0;
-            while (injects.TryDequeue(out var inj))
+            while (injects.TryDequeue(out var inject))
             {
-                if (!BotRelayFlowTestFixtures.TryReadInjectMessageType(inj, out int type))
+                if (!BotRelayFlowTestFixtures.TryReadInjectMessageType(in inject, out int type))
                     continue;
-
-                // Count only the recorded gameplay frames the replay emits. Control messages the
-                // agent injects on (re)entry (PlayerProperty/Status) are a separate concern.
-                if (type == (int)ReplyMessageType.Move || type == (int)ReplyMessageType.SelectSkill)
+                if (type == (int)ReplyMessageType.Move ||
+                    type == (int)ReplyMessageType.SelectSkill)
+                {
                     ++gameplayInjects;
+                }
+
                 if (type == (int)ReplyMessageType.SelectSkill)
                     ++selectSkillInjects;
             }
 
-            Assert.AreEqual(
-                1,
-                selectSkillInjects,
-                $"SelectSkill replayed {selectSkillInjects} times; a rare frame must emit exactly once per playthrough (was firing repeatedly on entry).");
-
-            Assert.AreEqual(
-                whitelistedFrames,
-                gameplayInjects,
-                $"Expected each recorded gameplay frame injected exactly once ({whitelistedFrames}); got {gameplayInjects}. " +
-                $"More than one pass means the replay restarted (the flap that re-dumps early frames).");
-
-            int expectedMinDrainTicks = (int)(duration / Dt) - 5;
+            Assert.AreEqual(1, selectSkillInjects);
+            Assert.AreEqual(whitelistedFrames, gameplayInjects,
+                "Each recorded gameplay frame must be injected exactly once.");
             Assert.GreaterOrEqual(
                 drainTicks,
-                expectedMinDrainTicks,
-                $"Replay drained in {drainTicks} ticks (expected ~{(int)(duration / Dt)}). Draining too fast means " +
-                $"pacing is broken and the recording is dumped rather than played over its real duration.");
+                (int)(duration / Dt) - 5,
+                "Replay must advance on its recorded timeline instead of dumping frames early.");
         }
         finally
         {
+            BotRelayReplayRuntimeGate.Reset();
             injects.Dispose();
             farm.Dispose();
-            catalog.Dispose();
+            catalogEntries.Dispose();
             if (recording.IsCreated)
                 recording.Dispose();
         }
@@ -422,15 +350,11 @@ public class BotRelayAntiAmplificationTests
             Assert.AreEqual(
                 LoadedServerDelta,
                 farm.replayRuntime[0].playbackTime,
-                0.0001,
-                "Replay time must follow wall-clock server time. Clamping each tick to 0.1 s " +
-                "permanently slow-motions recordings whenever the Linux server falls below 10 Hz.");
+                0.0001);
             Assert.AreEqual(
                 9,
                 injects.Count,
-                "Frames at 0.125s through 1.125s are all eligible relative to the first gameplay " +
-                "frame. Replay must not carry the three frames above the retired six-message cap " +
-                "into later ticks.");
+                "Every frame eligible at the recorded time must be emitted; runtime no longer caps six per tick.");
         }
         finally
         {
@@ -461,15 +385,9 @@ public class BotRelayAntiAmplificationTests
             var injectWriter = injects.AsParallelWriter();
             BotReplayLogic.Tick(0, ref farm, catalog, 0.0, ref injectWriter, 1);
 
-            Assert.AreEqual(
-                gameplayFrameCount,
-                injects.Count,
-                "A recorded same-timestamp batch is one temporal unit and must be injected in the " +
-                "same server tick. RecordingAudit, not runtime throttling, rejects malformed batches.");
-            Assert.AreEqual(
-                recording.Value.frames.Length,
-                farm.replayRuntime[0].nextFrameIndex,
-                "No eligible frame may be deferred after the recorded timestamp has been reached.");
+            Assert.AreEqual(gameplayFrameCount, injects.Count);
+            Assert.AreEqual(recording.Value.frames.Length, farm.replayRuntime[0].nextFrameIndex,
+                "RecordingAudit rejects malformed batches; runtime must not split a valid timestamp batch.");
         }
         finally
         {
@@ -481,48 +399,14 @@ public class BotRelayAntiAmplificationTests
         }
     }
 
-    [Test]
-    [Category("Regression")]
-    public void HostRebroadcastPlayEveryFrame_HonorsPlayAtMostOncePerCooldown()
-    {
-        var farm = BotRelayFlowTestFixtures.CreateFarm();
-        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
-        try
+    private static ClientMessageMatchStart BuildDescriptor(uint stageId) =>
+        new ClientMessageMatchStart
         {
-            ref var state = ref farm.agentStates.ElementAt(0);
-            state.state = BotState.InSquad;
-            state.targetUserStageID = 5;
-
-            // Simulate the pre-fix defect surface: PlayHandled cleared every frame (as a spurious
-            // Join churn would) followed by a Play. The cooldown must bound honored Plays.
-            for (int i = 0; i < StormTicks; ++i)
-            {
-                var config = BotRelayFlowTestFixtures.CreateTickConfig(i * TickDelta);
-                config.injectEnabled = 1;
-                config.injectWriter = injects.AsParallelWriter();
-
-                farm.agentFlags[0] &= ~BotAgentRuntimeFlags.PlayHandled;
-
-                BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.Play,
-                    play = new ClientMessagePlay { levelID = 1, stage = 0 }
-                });
-
-                BotAgentLogic.Execute(0, ref farm, in config);
-            }
-
-            int injectCount = injects.Count;
-            Assert.LessOrEqual(
-                injectCount,
-                8,
-                $"Play re-processed too often ({injectCount} Status injects over {StormTicks} frames); " +
-                $"the re-handle cooldown is not bounding the amplification.");
-        }
-        finally
-        {
-            injects.Dispose();
-            farm.Dispose();
-        }
-    }
+            matchID = 0,
+            userStageID = stageId,
+            levelID = 1,
+            stage = 0,
+            levelName = new FixedString32Bytes("Level1"),
+            sceneName = new FixedString32Bytes("Scenes/Level1.scene")
+        };
 }

@@ -73,9 +73,8 @@ internal static class BotRelayInjectOps
     }
 
     /// <summary>
-    /// Inject a fully composed app relay packet ([packedInt type][packedInt relayType][body]),
-    /// i.e. the same bytes the codec produces for the outbound wire. Used for PlayerProperty and
-    /// replay reply frames.
+    /// Inject a fully composed current app packet ([packedInt type][packedInt relayType][body]).
+    /// Used for PlayerProperty and replay reply frames; no outbound UTP representation is built.
     /// </summary>
     public static bool InjectAppPacket(
         ref NativeQueue<BotRelayInject>.ParallelWriter writer,

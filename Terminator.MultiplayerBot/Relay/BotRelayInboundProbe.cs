@@ -11,13 +11,11 @@ internal static class BotRelayInboundProbe
     struct LastRelayTypeKey { }
     struct InboundCountKey { }
     struct LastClientMsgTypeKey { }
-    struct ChapterStageSeenKey { }
-    struct PlaySeenKey { }
-    struct PlayHandledKey { }
+    struct LevelStartHandledKey { }
     struct LastStageWrittenKey { }
     struct ChannelJoinSeenKey { }
     struct ChannelLeaveSeenKey { }
-    struct PlayClearedKey { }
+    struct LevelStartClearedKey { }
     struct LastClearSiteKey { }
     struct BotStateKey { }
     struct AppInjectedKey { }
@@ -39,14 +37,8 @@ internal static class BotRelayInboundProbe
     static readonly SharedStatic<int> s_LastClientMsgType =
         SharedStatic<int>.GetOrCreate<LastClientMsgTypeKey>();
 
-    static readonly SharedStatic<int> s_ChapterStageSeen =
-        SharedStatic<int>.GetOrCreate<ChapterStageSeenKey>();
-
-    static readonly SharedStatic<int> s_PlaySeen =
-        SharedStatic<int>.GetOrCreate<PlaySeenKey>();
-
-    static readonly SharedStatic<int> s_PlayHandled =
-        SharedStatic<int>.GetOrCreate<PlayHandledKey>();
+    static readonly SharedStatic<int> s_LevelStartHandled =
+        SharedStatic<int>.GetOrCreate<LevelStartHandledKey>();
 
     static readonly SharedStatic<int> s_LastStageWritten =
         SharedStatic<int>.GetOrCreate<LastStageWrittenKey>();
@@ -57,8 +49,8 @@ internal static class BotRelayInboundProbe
     static readonly SharedStatic<int> s_ChannelLeaveSeen =
         SharedStatic<int>.GetOrCreate<ChannelLeaveSeenKey>();
 
-    static readonly SharedStatic<int> s_PlayCleared =
-        SharedStatic<int>.GetOrCreate<PlayClearedKey>();
+    static readonly SharedStatic<int> s_LevelStartCleared =
+        SharedStatic<int>.GetOrCreate<LevelStartClearedKey>();
 
     static readonly SharedStatic<int> s_LastClearSite =
         SharedStatic<int>.GetOrCreate<LastClearSiteKey>();
@@ -107,13 +99,11 @@ internal static class BotRelayInboundProbe
     public static int LastRelayType => s_LastRelayType.Data;
     public static int InboundCount => s_InboundCount.Data;
     public static int LastClientMsgType => s_LastClientMsgType.Data;
-    public static int ChapterStageSeen => s_ChapterStageSeen.Data;
-    public static int PlaySeen => s_PlaySeen.Data;
-    public static int PlayHandled => s_PlayHandled.Data;
+    public static int LevelStartHandled => s_LevelStartHandled.Data;
     public static int LastStageWritten => s_LastStageWritten.Data;
     public static int ChannelJoinSeen => s_ChannelJoinSeen.Data;
     public static int ChannelLeaveSeen => s_ChannelLeaveSeen.Data;
-    public static int PlayCleared => s_PlayCleared.Data;
+    public static int LevelStartCleared => s_LevelStartCleared.Data;
     public static int LastClearSite => s_LastClearSite.Data;
     public static int BotStateValue => s_BotState.Data;
     public static int AppInjected => s_AppInjected.Data;
@@ -137,19 +127,9 @@ internal static class BotRelayInboundProbe
         s_LastClientMsgType.Data = clientMsgType;
     }
 
-    public static void RecordChapterStage()
+    public static void RecordLevelStartHandled()
     {
-        ++s_ChapterStageSeen.Data;
-    }
-
-    public static void RecordPlaySeen()
-    {
-        ++s_PlaySeen.Data;
-    }
-
-    public static void RecordPlayHandled()
-    {
-        ++s_PlayHandled.Data;
+        ++s_LevelStartHandled.Data;
     }
 
     public static void RecordStageWritten(int stageID)
@@ -168,9 +148,9 @@ internal static class BotRelayInboundProbe
     }
 
     // site: 1 = Leaving state, 2 = OnSquadJoin, 3 = OnSquadLeave
-    public static void RecordPlayCleared(int site)
+    public static void RecordLevelStartCleared(int site)
     {
-        ++s_PlayCleared.Data;
+        ++s_LevelStartCleared.Data;
         s_LastClearSite.Data = site;
     }
 
@@ -217,13 +197,11 @@ internal static class BotRelayInboundProbe
         s_LastRelayType.Data = 0;
         s_InboundCount.Data = 0;
         s_LastClientMsgType.Data = 0;
-        s_ChapterStageSeen.Data = 0;
-        s_PlaySeen.Data = 0;
-        s_PlayHandled.Data = 0;
+        s_LevelStartHandled.Data = 0;
         s_LastStageWritten.Data = -1;
         s_ChannelJoinSeen.Data = 0;
         s_ChannelLeaveSeen.Data = 0;
-        s_PlayCleared.Data = 0;
+        s_LevelStartCleared.Data = 0;
         s_LastClearSite.Data = 0;
         s_BotState.Data = 0;
         s_AppInjected.Data = 0;

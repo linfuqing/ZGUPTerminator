@@ -49,20 +49,6 @@ public class BotConfig : ScriptableObject
     public static int ResolveMatchLevel(in BotProfile profile) =>
         profile.matchLevel >= 0 ? profile.matchLevel : 0;
 
-    public bool IsBotUserID(uint userID)
-    {
-        if (userID == 0 || botProfiles == null)
-            return false;
-
-        for (int i = 0; i < botProfiles.Length; ++i)
-        {
-            if (botProfiles[i].userID == userID)
-                return true;
-        }
-
-        return false;
-    }
-
     public bool TryGetProfile(uint userID, out BotProfile profile)
     {
         if (botProfiles != null)

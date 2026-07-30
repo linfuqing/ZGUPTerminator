@@ -6,37 +6,14 @@ using ZG;
 
 internal static class BotRelayWireTestFixtures
 {
-    /// <summary>8-byte pipeline prefix from live capture (before payload envelope).</summary>
-    public static readonly byte[] PipelineHeader =
+    /// <summary>Synthetic transport prefix used only with an explicitly supplied measured app offset.</summary>
+    public static readonly byte[] SyntheticTransportPrefix =
     {
         0x01, 0xBC, 0x93, 0xD1, 0xC4, 0x3C, 0x00, 0xF7
     };
 
-    /// <summary>Pipeline + PopEvents-framed SendRelay Invite (canonical ZGUP shape via <see cref="BotRelayCodec.TryBuildWorldInviteRelayApp"/>).</summary>
-    public static byte[] BuildPipelineInviteWireBytes(
-        uint senderUserId = RealPlayerUserId,
-        int squadChannel = 1,
-        uint levelId = 0,
-        int stage = 0)
-    {
-        if (!TryBuildInviteApp(senderUserId, squadChannel, levelId, stage, out var app) || app.IsEmpty)
-            throw new InvalidOperationException("Canonical invite app build failed.");
-
-        return ToBytes(WrapPipelineFramedApp(PipelineHeader, in app));
-    }
-
-    /// <summary>Regression alias — built from codec, not static 2026-06 hex.</summary>
-    public static byte[] CapturedLiveInviteWire117 => BuildPipelineInviteWireBytes();
-
-    public static readonly byte[] StatusOutboundWire =
-    {
-        0x01, 0xBC, 0x93, 0xD1, 0xC4, 0x3C, 0x00, 0xF7,
-        0x6B, 0x00, 0x01, 0x00, 0x01
-    };
-
     public const uint RealPlayerUserId = 1656329017u;
     public const uint BotUserId = 999000001u;
-    public const uint LiveHostUserId = 776757715u;
 
     public static BotRelayPacket FromBytes(byte[] bytes)
     {
@@ -106,19 +83,7 @@ internal static class BotRelayWireTestFixtures
             out app);
     }
 
-    public static BotRelayPacket WrapPipelineRawApp(byte[] pipelineHeader, in BotRelayPacket app)
-    {
-        var header = pipelineHeader ?? PipelineHeader;
-        var wire = default(BotRelayPacket);
-        wire.length = header.Length + app.length;
-        for (int i = 0; i < header.Length; ++i)
-            wire.SetByte(i, header[i]);
-        for (int i = 0; i < app.length; ++i)
-            wire.SetByte(header.Length + i, app.GetByte(i));
-        return wire;
-    }
-
-    public static BotRelayPacket WrapPipelineFramedApp(byte[] pipelineHeader, in BotRelayPacket app)
+    public static BotRelayPacket WrapFramedAppAtPrefix(byte[] transportPrefix, in BotRelayPacket app)
     {
         using var appBytes = new NativeArray<byte>(app.length, Allocator.Temp);
         app.TryCopyTo(appBytes);
@@ -126,7 +91,7 @@ internal static class BotRelayWireTestFixtures
         if (!framed.IsCreated)
             return default;
 
-        var header = pipelineHeader ?? PipelineHeader;
+        var header = transportPrefix ?? SyntheticTransportPrefix;
         var wire = default(BotRelayPacket);
         wire.length = header.Length + framed.Length;
         for (int i = 0; i < header.Length; ++i)
@@ -136,400 +101,9 @@ internal static class BotRelayWireTestFixtures
         return wire;
     }
 
-    /// <summary>
-    /// MCP live Play pipeline invite shell: 10-byte pipeline envelope + PopEvents-framed invite (≈104B).
-    /// Prefix bytes mirror a captured session; streamStart scan must still find the ushort-framed payload.
-    /// </summary>
-    public static bool TryBuildLivePlayShapedInviteWire(out BotRelayPacket wire, out int wireLength)
-    {
-        wire = default;
-        wireLength = 0;
-        var text = new FixedString512Bytes(LiveHostUserId.ToString());
-        if (!BotRelayCodec.TryBuildWorldInviteRelayApp(
-                BuildSenderHeader(LiveHostUserId),
-                NetworkRelayType.All,
-                1,
-                0u,
-                0,
-                in text,
-                out var app) ||
-            app.IsEmpty)
-            return false;
-
-        using var appBytes = new NativeArray<byte>(app.length, Allocator.Temp);
-        if (!app.TryCopyTo(appBytes))
-            return false;
-
-        using var framed = BotRelayCodec.FrameForTransport(appBytes);
-        if (!framed.IsCreated)
-            return false;
-
-        byte[] envelope =
-        {
-            0x01, 0x20, 0xAF, 0x7D, 0xB8, 0x27, 0xA0, 0x54, 0x89, 0x00
-        };
-
-        wire.length = envelope.Length + framed.Length;
-        for (int i = 0; i < envelope.Length; ++i)
-            wire.SetByte(i, envelope[i]);
-        for (int i = 0; i < framed.Length; ++i)
-            wire.SetByte(envelope.Length + i, framed[i]);
-
-        wireLength = wire.length;
-        return true;
-    }
-
-    /// <summary>MCP Play 2026-07-11: 104B invite shell envelope (streamStart=10, ushort payload=92B).</summary>
-    public static bool TryBuildMcpSessionInvite104Wire(out BotRelayPacket wire, out int wireLength)
-    {
-        wire = default;
-        wireLength = 0;
-        var text = new FixedString512Bytes(LiveHostUserId.ToString());
-        if (!BotRelayCodec.TryBuildWorldInviteRelayApp(
-                BuildSenderHeader(LiveHostUserId),
-                NetworkRelayType.All,
-                0,
-                0u,
-                0,
-                in text,
-                out var app) ||
-            app.IsEmpty)
-            return false;
-
-        using var appBytes = new NativeArray<byte>(app.length, Allocator.Temp);
-        if (!app.TryCopyTo(appBytes))
-            return false;
-
-        using var framed = BotRelayCodec.FrameForTransport(appBytes);
-        if (!framed.IsCreated)
-            return false;
-
-        byte[] envelope = McpCapturedInvite104PipelinePrefix;
-
-        wire.length = envelope.Length + framed.Length;
-        for (int i = 0; i < envelope.Length; ++i)
-            wire.SetByte(i, envelope[i]);
-        for (int i = 0; i < framed.Length; ++i)
-            wire.SetByte(envelope.Length + i, framed[i]);
-
-        wireLength = wire.length;
-        return wireLength >= 80 && wireLength <= 160;
-    }
-
-    /// <summary>
-    /// Captured from a real host's targeted Invite: the relay writes a fresh SendRelay
-    /// header, then copies the already byte-aligned ReplyMessages.Invite body.
-    /// </summary>
-    public static BotRelayPacket BuildTargetedInviteFlushBoundaryWirePacket()
-    {
-        byte[] envelope =
-        {
-            0x01, 0xDE, 0x67, 0x96, 0x9A, 0x95, 0x53, 0x97, 0x90, 0x00
-        };
-        byte[] appPrefix =
-        {
-            0x0B, 0xEE, 0x78, 0xD0, 0x9F, 0xDD, 0x4F, 0x99, 0x05, 0xA2, 0x04,
-            0x12, 0x00, 0x50, 0x6C, 0x61, 0x79, 0x4D, 0x6F, 0x64, 0x65, 0x48,
-            0x6F, 0x73, 0x74, 0x49, 0x6E, 0x76, 0x69, 0x74, 0x65
-        };
-
-        const int appLength = 111;
-        var wire = default(BotRelayPacket);
-        wire.length = envelope.Length + sizeof(ushort) + appLength;
-        int offset = 0;
-        for (int i = 0; i < envelope.Length; ++i)
-            wire.SetByte(offset++, envelope[i]);
-
-        wire.SetByte(offset++, (byte)appLength);
-        wire.SetByte(offset++, 0);
-        for (int i = 0; i < appLength; ++i)
-            wire.SetByte(offset++, i < appPrefix.Length ? appPrefix[i] : (byte)0);
-
-        return wire;
-    }
-
-
-    /// <summary>Pipeline prefix from MCP Play 2026-07-11 RouteSend log (streamStart=10).</summary>
-    public static readonly byte[] McpCapturedInvite104PipelinePrefix =
-    {
-        0x01, 0xB3, 0xB2, 0xFE, 0xAB, 0x90, 0x81, 0x97, 0x1A, 0x00
-    };
-
-    /// <summary>6B PopEvents payload junk before SendRelay header in live capture.</summary>
-    public static readonly byte[] McpCapturedInvite104PopEventsJunkPrefix =
-    {
-        0x0B, 0x8E, 0x7F, 0x8E, 0xF9, 0xA4
-    };
-
-    /// <summary>SendRelay tail captured from Play 2026-07-11 (after junk prefix).</summary>
-    public static readonly byte[] McpLatestPlayInviteSendRelayTail =
-    {
-        0x04, 0xD5, 0xA2, 0x01, 0x00, 0x00, 0x17, 0x59, 0x00, 0x00, 0x09, 0x00,
-        0x37, 0x37, 0x36, 0x37, 0x35, 0x37, 0x37, 0x31, 0x35
-    };
-
-    /// <summary>Latest Play session pipeline prefix (streamStart=10, payload=92B).</summary>
-    public static readonly byte[] McpLatestPlayInvitePipelinePrefix =
-    {
-        0x01, 0x8A, 0x00, 0xDD, 0xB9, 0x04, 0x32, 0xE9, 0xA3, 0x00
-    };
-
-    /// <summary>Play 2026-07-11 latest session: 104B shell with junk envelope at offset 8 (streamStart=10).</summary>
-    public static readonly byte[] McpLatestPlayInvite104PipelinePrefix =
-    {
-        0x01, 0x77, 0x22, 0xC3, 0x42, 0x9D, 0x4A, 0x06, 0x0D, 0x00
-    };
-
-    /// <summary>Play 2026-07-11 evening session pipeline prefix (streamStart=10, payload=91B).</summary>
-    public static readonly byte[] McpLatestPlayInvite103PipelinePrefix =
-    {
-        0x01, 0xFF, 0x40, 0xEF, 0x8E, 0x65, 0x18, 0xE9, 0x53, 0x00
-    };
-
-    public static BotRelayPacket BuildLatestPlayCaptureInvite104WirePacket()
-    {
-        return BuildLatestPlayCaptureInvite104LiteralWirePacket();
-    }
-
-    /// <summary>Live Play 104B shell SendRelay tail after 6B junk (sender id omitted on wire).</summary>
-    public static readonly byte[] McpLatestPlayInvite104SendRelayTail =
-    {
-        0x04, 0xD5, 0xA2, 0x01, 0x00, 0x00, 0x17, 0x59, 0x00, 0x00, 0x0C, 0x00,
-        0xE6, 0x9D, 0x80, 0xE9, 0xB1, 0xBC, 0xE6, 0xA0, 0xBC, 0xE6, 0xA0, 0xBC,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-
-    public static bool TryBuildMcpCapturedInvite104JunkPayload(out BotRelayPacket payload)
-    {
-        payload = default;
-        payload.length = McpCapturedInvite104PopEventsJunkPrefix.Length + McpLatestPlayInvite104SendRelayTail.Length;
-        int pos = 0;
-        for (int i = 0; i < McpCapturedInvite104PopEventsJunkPrefix.Length; ++i)
-        {
-            payload.SetByte(pos++, McpCapturedInvite104PopEventsJunkPrefix[i]);
-        }
-
-        for (int i = 0; i < McpLatestPlayInvite104SendRelayTail.Length; ++i)
-        {
-            payload.SetByte(pos++, McpLatestPlayInvite104SendRelayTail[i]);
-        }
-
-        const int targetPayloadLength = 92;
-        while (payload.length < targetPayloadLength)
-        {
-            payload.SetByte(payload.length, 0);
-            payload.length++;
-        }
-
-        return payload.length == targetPayloadLength;
-    }
-
-    public static BotRelayPacket BuildLatestPlayCaptureInvite104LiteralWirePacket()
-    {
-        const int streamStart = 10;
-        if (!TryBuildMcpCapturedInvite104JunkPayload(out var payload) || payload.IsEmpty)
-        {
-            throw new InvalidOperationException("Live 104B junk-prefix invite payload build failed.");
-        }
-
-        var wire = default(BotRelayPacket);
-        wire.length = streamStart + sizeof(ushort) + payload.length;
-
-        for (int i = 0; i < McpLatestPlayInvite104PipelinePrefix.Length; ++i)
-        {
-            wire.SetByte(i, McpLatestPlayInvite104PipelinePrefix[i]);
-        }
-
-        wire.SetByte(streamStart, (byte)(payload.length & 0xFF));
-        wire.SetByte(streamStart + 1, (byte)((payload.length >> 8) & 0xFF));
-
-        int pos = streamStart + sizeof(ushort);
-        for (int i = 0; i < payload.length; ++i)
-        {
-            wire.SetByte(pos++, payload.GetByte(i));
-        }
-
-        return wire;
-    }
-
-    public static BotRelayPacket BuildLatestPlayCaptureInvite104SyntheticWirePacket()
-    {
-        return BuildLatestPlayCaptureInviteWirePacket(McpLatestPlayInvitePipelinePrefix);
-    }
-
-    /// <summary>Play 2026-07-11 afternoon session: 103B shell, payload=91B (0x5B).</summary>
-    /// <summary>Live Play 103B shell SendRelay tail after 6B junk (sender id omitted on wire).</summary>
-    /// <summary>Live Play 2026-07-11 evening: host Create on server channel 1 (packed 0x0C at inner+8).</summary>
-    public static readonly byte[] McpLatestPlayInvite103SendRelayTail =
-    {
-        0x04, 0x1E, 0x0C, 0x00, 0x00, 0x17, 0x59, 0x00, 0x00, 0x0C, 0x00,
-        0xE6, 0x9D, 0x80, 0xE9, 0xB1, 0xBC, 0xE6, 0xA0, 0xBC, 0xE6, 0xA0, 0xBC,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-
-    public static bool TryBuildMcpCapturedInvite103JunkPayload(out BotRelayPacket payload)
-    {
-        payload = default;
-        payload.length = McpCapturedInvite104PopEventsJunkPrefix.Length + McpLatestPlayInvite103SendRelayTail.Length;
-        int pos = 0;
-        for (int i = 0; i < McpCapturedInvite104PopEventsJunkPrefix.Length; ++i)
-        {
-            payload.SetByte(pos++, McpCapturedInvite104PopEventsJunkPrefix[i]);
-        }
-
-        for (int i = 0; i < McpLatestPlayInvite103SendRelayTail.Length; ++i)
-        {
-            payload.SetByte(pos++, McpLatestPlayInvite103SendRelayTail[i]);
-        }
-
-        const int targetPayloadLength = 91;
-        while (payload.length < targetPayloadLength)
-        {
-            payload.SetByte(payload.length, 0);
-            payload.length++;
-        }
-
-        return payload.length == targetPayloadLength;
-    }
-
-    public static BotRelayPacket BuildLatestPlayCaptureInvite103WirePacket()
-    {
-        const int streamStart = 10;
-        if (!TryBuildMcpCapturedInvite103JunkPayload(out var payload) || payload.IsEmpty)
-        {
-            throw new InvalidOperationException("Live 103B junk-prefix invite payload build failed.");
-        }
-
-        var wire = default(BotRelayPacket);
-        wire.length = streamStart + sizeof(ushort) + payload.length;
-
-        for (int i = 0; i < McpLatestPlayInvite103PipelinePrefix.Length; ++i)
-        {
-            wire.SetByte(i, McpLatestPlayInvite103PipelinePrefix[i]);
-        }
-
-        wire.SetByte(streamStart, (byte)(payload.length & 0xFF));
-        wire.SetByte(streamStart + 1, (byte)((payload.length >> 8) & 0xFF));
-
-        int pos = streamStart + sizeof(ushort);
-        for (int i = 0; i < payload.length; ++i)
-        {
-            wire.SetByte(pos++, payload.GetByte(i));
-        }
-
-        return wire;
-    }
-
-    public static BotRelayPacket BuildLatestPlayCaptureInviteWirePacket(byte[] pipelinePrefix)
-    {
-        const int streamStart = 10;
-        if (!TryBuildMcpCapturedInviteJunkPayload(out var payload) || payload.IsEmpty)
-        {
-            throw new InvalidOperationException("Live junk-prefix invite payload build failed.");
-        }
-
-        var wire = default(BotRelayPacket);
-        wire.length = streamStart + sizeof(ushort) + payload.length;
-
-        for (int i = 0; i < pipelinePrefix.Length; ++i)
-        {
-            wire.SetByte(i, pipelinePrefix[i]);
-        }
-
-        wire.SetByte(streamStart, (byte)(payload.length & 0xFF));
-        wire.SetByte(streamStart + 1, (byte)((payload.length >> 8) & 0xFF));
-
-        int pos = streamStart + sizeof(ushort);
-        for (int i = 0; i < payload.length; ++i)
-        {
-            wire.SetByte(pos++, payload.GetByte(i));
-        }
-
-        return wire;
-    }
-
-    public static BotRelayPacket BuildMcpCapturedInvite104WirePacket()
-    {
-        if (!TryBuildMcpSessionInvite104Wire(out var wire, out _))
-        {
-            throw new InvalidOperationException("Live MCP invite wire build failed.");
-        }
-
-        return wire;
-    }
-
-    /// <summary>PopEvents payload with live 6B junk prefix before SendRelay header (inner=0 must fail strict decode).</summary>
-    public static bool TryBuildMcpCapturedInviteJunkPayload(out BotRelayPacket payload)
-    {
-        payload = default;
-        var text = new FixedString512Bytes(LiveHostUserId.ToString());
-        if (!BotRelayCodec.TryBuildWorldInviteRelayApp(
-                BuildSenderHeader(LiveHostUserId),
-                NetworkRelayType.All,
-                0,
-                0u,
-                0,
-                in text,
-                out var app) ||
-            app.IsEmpty)
-        {
-            return false;
-        }
-
-        payload.length = McpCapturedInvite104PopEventsJunkPrefix.Length + app.length;
-        int pos = 0;
-        for (int i = 0; i < McpCapturedInvite104PopEventsJunkPrefix.Length; ++i)
-        {
-            payload.SetByte(pos++, McpCapturedInvite104PopEventsJunkPrefix[i]);
-        }
-
-        for (int i = 0; i < app.length; ++i)
-        {
-            payload.SetByte(pos++, app.GetByte(i));
-        }
-
-        return !payload.IsEmpty;
-    }
-
-    /// <summary>Extract 92B PopEvents payload from MCP-captured 104B invite shell (streamStart=10).</summary>
-    public static bool TryGetMcpCapturedInvitePayloadFromWire(in BotRelayPacket wire, out BotRelayPacket payload)
-    {
-        payload = default;
-        const int streamStart = 10;
-        if (wire.length < streamStart + sizeof(ushort) + BotRelayMessageUtility.MinSendRelayInviteAppBytes)
-        {
-            return false;
-        }
-
-        int size = wire.GetByte(streamStart) | (wire.GetByte(streamStart + 1) << 8);
-        int pos = streamStart + sizeof(ushort);
-        if (size < 1 || size > wire.length - pos)
-        {
-            return false;
-        }
-
-        BotRelayWireBytes.CopyAppFromOffset(in wire, pos, size, out payload);
-        return !payload.IsEmpty;
-    }
-
-    public static bool TryGetMcpCapturedInvitePayload(out BotRelayPacket payload)
-    {
-        var wire = BuildMcpCapturedInvite104WirePacket();
-        return TryGetMcpCapturedInvitePayloadFromWire(in wire, out payload);
-    }
-
     public static bool TryBuildStatusApp(out BotRelayPacket app)
     {
-        app = default;
-        using var packets = new NativeArray<BotRelayPacket>(1, Allocator.Temp);
-        using var counts = new NativeArray<int>(1, Allocator.Temp);
-        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
-        var send = BotRelaySlotOps.CreateCaptureSendBuffer(packets, counts, scratch);
-        if (!BotRelayCodec.TryWriteStatus(ref send, 0) || counts[0] <= 0)
-            return false;
-
-        app = packets[0];
-        return !app.IsEmpty;
+        return TryBuildOutboundStatusApp(0, out app);
     }
 
     public static bool TryLocateBuiltInviteAppInWire(
@@ -570,30 +144,6 @@ internal static class BotRelayWireTestFixtures
         return false;
     }
 
-    public static bool TryExtractLiveInviteWire(in BotRelayPacket wire, out BotRelayPacket app)
-    {
-        app = default;
-        if (BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out app) && !app.IsEmpty)
-            return BotRelayCodec.TryParseWorldInviteRelayApp(in app, out _);
-
-        return false;
-    }
-
-    public static bool TryExtract(
-        in BotRelayPacket wire,
-        int inboundAppPayloadOffset,
-        out BotRelayPacket app)
-    {
-        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
-        return BotRelayWireBytes.TryExtractRelayAppPayload(
-            in wire,
-            scratch,
-            0,
-            default,
-            inboundAppPayloadOffset,
-            out app);
-    }
-
     public static int FindInviteTypePackedPrefixLength()
     {
         using var scratch = new NativeArray<byte>(8, Allocator.Temp);
@@ -632,7 +182,29 @@ internal static class BotRelayWireTestFixtures
     }
 
     public static bool TryBuildInboundMismatchApp(out BotRelayPacket app) =>
-        TryBuildOutboundRelayTypeApp(NetworkRelayMessageType.Mismatch, out app);
+        TryBuildInboundMismatchApp(7, 0, out app);
+
+    public static bool TryBuildInboundMismatchApp(
+        int matchId,
+        uint sourceId,
+        out BotRelayPacket app)
+    {
+        app = default;
+        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
+        var writer = new DataStreamWriter(scratch);
+        var model = StreamCompressionModel.Default;
+        writer.WritePackedInt((int)NetworkRelayMessageType.Mismatch, model);
+        writer.WritePackedInt(matchId, model);
+        if (sourceId != 0)
+            writer.WritePackedUInt(sourceId, model);
+        if (writer.Length <= 0)
+            return false;
+
+        app.length = writer.Length;
+        for (int i = 0; i < writer.Length; ++i)
+            app.SetByte(i, scratch[i]);
+        return true;
+    }
 
     public static bool TryBuildOutboundRelayTypeApp(NetworkRelayMessageType relayType, out BotRelayPacket app)
     {
@@ -672,7 +244,8 @@ internal static class BotRelayWireTestFixtures
         using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
         var writer = new DataStreamWriter(scratch);
         var model = StreamCompressionModel.Default;
-        BotRelayMessageUtility.WriteRelayStatus(ref writer, channelStatus, in model);
+        writer.WritePackedInt((int)NetworkRelayMessageType.Status, model);
+        writer.WritePackedInt(channelStatus, model);
         if (writer.Length <= 0)
             return false;
 
@@ -682,13 +255,23 @@ internal static class BotRelayWireTestFixtures
         return true;
     }
 
-    public static bool TryBuildInboundHostCreateEchoApp(int channel, int channelFlag, out BotRelayPacket app)
+    public static bool TryBuildInboundHostCreateEchoApp(int channel, int channelFlag, out BotRelayPacket app) =>
+        __TryBuildInboundChannelEchoApp(NetworkRelayMessageType.Create, channel, channelFlag, out app);
+
+    public static bool TryBuildInboundSelfJoinEchoApp(int channel, int channelFlag, out BotRelayPacket app) =>
+        __TryBuildInboundChannelEchoApp(NetworkRelayMessageType.Join, channel, channelFlag, out app);
+
+    private static bool __TryBuildInboundChannelEchoApp(
+        NetworkRelayMessageType type,
+        int channel,
+        int channelFlag,
+        out BotRelayPacket app)
     {
         app = default;
         using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
         var writer = new DataStreamWriter(scratch);
         var model = StreamCompressionModel.Default;
-        writer.WritePackedInt((int)NetworkRelayMessageType.Create, model);
+        writer.WritePackedInt((int)type, model);
         writer.WritePackedInt(channel, model);
         writer.WritePackedInt(channelFlag, model);
         if (writer.Length <= 0)
@@ -713,6 +296,7 @@ internal static class BotRelayWireTestFixtures
         writer.WritePackedInt((int)NetworkRelayMessageType.Create, model);
         writer.WritePackedInt(channel, model);
         writer.WritePackedInt(channelFlag, model);
+        writer.Flush();
         writer.WritePackedUInt(remoteUserId, model);
         if (writer.Length <= 0)
             return false;
@@ -721,23 +305,6 @@ internal static class BotRelayWireTestFixtures
         for (int i = 0; i < writer.Length; ++i)
             app.SetByte(i, scratch[i]);
         return true;
-    }
-
-    public static bool TryExtractRelayAppFromInboundWire(in BotRelayPacket wire, out BotRelayPacket app)
-    {
-        app = default;
-        if (BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out app) && !app.IsEmpty)
-            return true;
-
-        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
-        return BotRelayWireBytes.TryExtractRelayAppPayload(
-                   in wire,
-                   scratch,
-                   0,
-                   default,
-                   -1,
-                   out app) &&
-               !app.IsEmpty;
     }
 
     public static bool TryBuildOutboundSquadJoinApp(uint squadInviteId, out BotRelayPacket app)
@@ -765,7 +332,10 @@ internal static class BotRelayWireTestFixtures
         var model = StreamCompressionModel.Default;
         writer.WritePackedInt((int)NetworkRelayMessageType.Join, model);
         writer.WritePackedInt((int)squadInviteId, model);
-        writer.WritePackedInt((int)ClientRemotePlayerFlag.Creator, model);
+        writer.WritePackedInt(
+            (int)(ClientRemotePlayerFlag.Online | ClientRemotePlayerFlag.Creator),
+            model);
+        writer.Flush();
         BuildSenderHeader(remoteUserId).Write(ref writer, model);
         if (writer.Length <= 0)
             return false;
@@ -795,6 +365,24 @@ internal static class BotRelayWireTestFixtures
         return true;
     }
 
+    /// <summary>Server JoinFailed: [type][channel].</summary>
+    public static bool TryBuildInboundJoinFailedApp(int channel, out BotRelayPacket app)
+    {
+        app = default;
+        using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
+        var writer = new DataStreamWriter(scratch);
+        var model = StreamCompressionModel.Default;
+        writer.WritePackedInt((int)NetworkRelayMessageType.JoinFailed, model);
+        writer.WritePackedInt(channel, model);
+        if (writer.Length <= 0)
+            return false;
+
+        app.length = writer.Length;
+        for (int i = 0; i < writer.Length; ++i)
+            app.SetByte(i, scratch[i]);
+        return true;
+    }
+
     /// <summary>
     /// Server SendHeader(Query) for another channel member:
     /// [type][channel][channelFlag][connect payload / ClientHeader].
@@ -812,6 +400,7 @@ internal static class BotRelayWireTestFixtures
         writer.WritePackedInt((int)NetworkRelayMessageType.Query, model);
         writer.WritePackedInt(channel, model);
         writer.WritePackedInt(channelFlag, model);
+        writer.Flush();
         BuildSenderHeader(remoteUserId).Write(ref writer, model);
         if (writer.Length <= 0)
             return false;
@@ -822,14 +411,39 @@ internal static class BotRelayWireTestFixtures
         return true;
     }
 
+    /// <summary>Server Connect notification: [type][channelFlag][userID].</summary>
+    public static bool TryBuildInboundRelayConnectApp(
+        int channelFlag,
+        uint senderUserId,
+        out BotRelayPacket app) =>
+        __TryBuildInboundRelayPresenceApp(
+            NetworkRelayMessageType.Connect,
+            channelFlag,
+            senderUserId,
+            out app);
+
     /// <summary>Server __WriteStatus: [type][channelFlag][userID].</summary>
-    public static bool TryBuildInboundRelayStatusApp(int channelFlag, uint senderUserId, out BotRelayPacket app)
+    public static bool TryBuildInboundRelayStatusApp(
+        int channelFlag,
+        uint senderUserId,
+        out BotRelayPacket app) =>
+        __TryBuildInboundRelayPresenceApp(
+            NetworkRelayMessageType.Status,
+            channelFlag,
+            senderUserId,
+            out app);
+
+    private static bool __TryBuildInboundRelayPresenceApp(
+        NetworkRelayMessageType type,
+        int channelFlag,
+        uint senderUserId,
+        out BotRelayPacket app)
     {
         app = default;
         using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
         var writer = new DataStreamWriter(scratch);
         var model = StreamCompressionModel.Default;
-        writer.WritePackedInt((int)NetworkRelayMessageType.Status, model);
+        writer.WritePackedInt((int)type, model);
         writer.WritePackedInt(channelFlag, model);
         writer.WritePackedUInt(senderUserId, model);
         if (writer.Length <= 0)
@@ -869,6 +483,9 @@ internal static class BotRelayWireTestFixtures
         writer.WritePackedInt((int)ReplyMessageType.PlayerProperty, model);
         writer.WritePackedInt((int)NetworkRelayType.Channel, model);
         writer.WritePackedUInt(senderUserId, model);
+        writer.Flush();
+        LevelPlayerProperty property = default;
+        property.Write(ref writer, model);
         if (writer.Length <= 0)
             return false;
 
@@ -901,12 +518,35 @@ internal static class BotRelayWireTestFixtures
     }
 
     public static bool TryBuildInboundPlayApp(uint levelId, int stage, uint senderId, out BotRelayPacket app) =>
-        TryBuildInboundPlayApp(levelId, stage, senderId, default, default, out app);
+        TryBuildInboundPlayApp(
+            levelId,
+            stage,
+            senderId,
+            new FixedString32Bytes("TestLevel"),
+            new FixedString32Bytes("Scenes/Level1-1.scene"),
+            out app);
 
     public static bool TryBuildInboundPlayApp(
         uint levelId,
         int stage,
         uint senderId,
+        FixedString32Bytes levelName,
+        FixedString32Bytes sceneName,
+        out BotRelayPacket app) =>
+        TryBuildInboundPlayApp(
+            levelId,
+            stage,
+            senderId,
+            NetworkRelayType.Channel,
+            levelName,
+            sceneName,
+            out app);
+
+    public static bool TryBuildInboundPlayApp(
+        uint levelId,
+        int stage,
+        uint senderId,
+        NetworkRelayType relayType,
         FixedString32Bytes levelName,
         FixedString32Bytes sceneName,
         out BotRelayPacket app)
@@ -924,7 +564,7 @@ internal static class BotRelayWireTestFixtures
             sceneName = sceneName
         };
         writer.WritePackedInt((int)ClientMessageType.Play, model);
-        writer.WritePackedInt((int)NetworkRelayType.Channel, model);
+        writer.WritePackedInt((int)relayType, model);
         writer.WritePackedUInt(senderId, model);
         // Match NetworkRelayServerIdentity.SendRelay: envelope fields, then raw client body.
         writer.Flush();
@@ -992,7 +632,10 @@ internal static class BotRelayWireTestFixtures
         if (!BotRelayWireBytes.TryCopyWireToPacket(ref shell, out wire))
             return false;
 
-        int streamStart = BotRelayWireBytes.ResolvePopEventsStreamStart(in wire);
+        int streamStart = catalog.inboundAppPayloadOffset - sizeof(ushort);
+        if (streamStart < 0)
+            return false;
+
         int frameLength = sizeof(ushort) + app.length;
         int required = streamStart + frameLength;
         if (required > BotRelayPacket.MaxPayloadSize)
@@ -1035,7 +678,10 @@ internal static class BotRelayWireTestFixtures
         if (!BotRelayWireBytes.TryCopyWireToPacket(ref shell, out wire))
             return false;
 
-        int streamStart = BotRelayWireBytes.ResolvePopEventsStreamStart(in wire);
+        int streamStart = catalog.inboundAppPayloadOffset - sizeof(ushort);
+        if (streamStart < 0)
+            return false;
+
         int pos = streamStart;
         if (!__TryAppendPopEventsFrame(ref wire, ref pos, in app0))
             return false;
@@ -1043,7 +689,7 @@ internal static class BotRelayWireTestFixtures
         if (!__TryAppendPopEventsFrame(ref wire, ref pos, in app1))
             return false;
 
-        wire.length = math.max(wire.length, pos);
+        wire.length = pos;
         return true;
     }
 

@@ -47,7 +47,6 @@ namespace ZG
 
         public void Execute(int index)
         {
-            BotRelayBurstWireOps.MaybeQueueInitialStatus(index, ref farm);
             BotRelaySlotOps.PumpInboundBurst(index, ref farm);
             BotAgentLogic.Execute(index, ref farm, in tickConfig);
         }

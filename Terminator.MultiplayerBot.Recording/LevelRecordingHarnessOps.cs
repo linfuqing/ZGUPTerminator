@@ -150,6 +150,22 @@ internal static class LevelRecordingHarnessOps
         recorder.CaptureEndOfFrame();
     }
 
+    public static void TickRecordingCaptureClock()
+    {
+        if (!RecordingCoopHarness.EcsRecordingActive)
+        {
+            return;
+        }
+
+        var harness = RecordingCoopHarness.Instance;
+        if (harness == null || !harness.IsRecording)
+        {
+            return;
+        }
+
+        harness.Recorder?.AdvanceCaptureClock();
+    }
+
     public static void TickRecordingCaptureAfterReplyWrite()
     {
         if (!RecordingCoopHarness.EcsRecordingActive)

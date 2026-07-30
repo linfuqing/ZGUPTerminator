@@ -9,11 +9,11 @@ using UnityEngine;
 using ZG;
 using EntityHash128 = Unity.Entities.Hash128;
 
-[CreateAfter(typeof(ZG.PrefabLoaderSystem)),
- UpdateInGroup(typeof(Unity.Scenes.SceneSystemGroup)),
- UpdateAfter(typeof(ZG.PrefabLoaderSystem)),
- UpdateAfter(typeof(Unity.Scenes.WeakAssetReferenceLoadingSystem)),
- UpdateAfter(typeof(Unity.Scenes.SceneSectionStreamingSystem))]
+[CreateAfter(typeof(PrefabLoaderSystem)),
+ UpdateInGroup(typeof(SceneSystemGroup)),
+ UpdateAfter(typeof(PrefabLoaderSystem)),
+ UpdateAfter(typeof(WeakAssetReferenceLoadingSystem)),
+ UpdateAfter(typeof(SceneSectionStreamingSystem))]
 public partial class SceneArchiveDependencySystem : SystemBase
 {
     private struct PendingRelease
@@ -69,9 +69,8 @@ public partial class SceneArchiveDependencySystem : SystemBase
             commands.Clear();
 
             ref var graph = ref dependencyBlob.Value;
-            for (int requestIndex = 0; requestIndex < requests.Length; requestIndex++)
+            foreach (var reference in requests)
             {
-                var reference = requests[requestIndex];
                 var guid = reference.AssetGUID;
                 var plan = new RequestPlan
                 {
@@ -219,11 +218,11 @@ public partial class SceneArchiveDependencySystem : SystemBase
     private bool __isReleaseRequested;
     private bool __isReleaseComplete;
     private int __releaseRequestFrame;
+    private uint __prefabReleaseVersion;
 
     private EntityQuery __sceneQuery;
     private EntityQuery __pendingPrefabLoadQuery;
     private EntityQuery __prefabLoaderReferencesQuery;
-    private NativeParallelHashSet<EntityHash128> __releaseGuids;
 
     public bool isReadyForRelease =>
         !__dependencyBlob.IsCreated || (__isDraining && __isReadyForRelease);
@@ -279,15 +278,10 @@ public partial class SceneArchiveDependencySystem : SystemBase
             return;
         }
 
-        __releaseGuids.Clear();
-        using (var guids = __readyGuids.ToNativeArray(Allocator.Temp))
-        {
-            EnsureCapacity(ref __releaseGuids, guids.Length);
-            for (int i = 0; i < guids.Length; i++)
-            {
-                __releaseGuids.Add(guids[i]);
-            }
-        }
+        var referencesEntity = __prefabLoaderReferencesQuery.GetSingletonEntity();
+        var references =
+            EntityManager.GetComponentData<PrefabLoaderReferences>(referencesEntity);
+        __prefabReleaseVersion = references.releaseVersion;
 
         PrefabLoaderSettings.ReleaseAllRightNow();
 
@@ -384,7 +378,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
         __entityQueue = new NativeList<int>(1, Allocator.Persistent);
         __archiveVisited = new NativeParallelHashSet<int>(1, Allocator.Persistent);
         __archiveQueue = new NativeList<int>(1, Allocator.Persistent);
-        __releaseGuids = new NativeParallelHashSet<EntityHash128>(1, Allocator.Persistent);
 
         __sceneQuery = new EntityQueryBuilder(Allocator.Temp)
             .WithAll<SceneReference>()
@@ -422,7 +415,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
         Dispose(ref __entityQueue);
         Dispose(ref __archiveVisited);
         Dispose(ref __archiveQueue);
-        Dispose(ref __releaseGuids);
 
         base.OnDestroy();
     }
@@ -452,7 +444,8 @@ public partial class SceneArchiveDependencySystem : SystemBase
                 __isReleaseComplete =
                     UnityEngine.Time.frameCount > __releaseRequestFrame &&
                     __isReadyForRelease &&
-                    !HasReleasedSceneEntities();
+                    references.releaseVersion != __prefabReleaseVersion &&
+                    references.isReleaseComplete;
             }
 
             // Keep all materialized files alive until GameSceneActivation.Dispose().
@@ -531,9 +524,8 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
     private void ApplyCompletedPlans(ref PrefabLoaderReferences references)
     {
-        for (int planIndex = 0; planIndex < __plans.Length; planIndex++)
+        foreach (var plan in __plans)
         {
-            var plan = __plans[planIndex];
             switch (plan.status)
             {
                 case RequestPlanStatus.Blocked:
@@ -609,9 +601,9 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
     private void ReleaseUnloaded(ref NativeList<EntityPrefabReference> unloaded)
     {
-        for (int i = 0; i < unloaded.Length; i++)
+        foreach (var reference in unloaded)
         {
-            var guid = unloaded[i].AssetGUID;
+            var guid = reference.AssetGUID;
             if (!__readyGuids.Remove(guid))
             {
                 continue;
@@ -733,6 +725,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
         __isReleaseRequested = false;
         __isReleaseComplete = false;
         __releaseRequestFrame = 0;
+        __prefabReleaseVersion = 0;
 
         if (__activeRequests.IsCreated)
         {
@@ -749,7 +742,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
             __entityQueue.Clear();
             __archiveVisited.Clear();
             __archiveQueue.Clear();
-            __releaseGuids.Clear();
         }
     }
 
@@ -793,9 +785,8 @@ public partial class SceneArchiveDependencySystem : SystemBase
         }
 
         using var sceneEntities = __sceneQuery.ToEntityArray(Allocator.Temp);
-        for (int i = 0; i < sceneEntities.Length; i++)
+        foreach (var sceneEntity in sceneEntities)
         {
-            var sceneEntity = sceneEntities[i];
             if (!EntityManager.Exists(sceneEntity))
             {
                 continue;
@@ -842,33 +833,12 @@ public partial class SceneArchiveDependencySystem : SystemBase
         return false;
     }
 
-    private bool HasReleasedSceneEntities()
-    {
-        if (__releaseGuids.Count() == 0)
-        {
-            return false;
-        }
-
-        using var sceneEntities = __sceneQuery.ToEntityArray(Allocator.Temp);
-        using var sceneReferences =
-            __sceneQuery.ToComponentDataArray<SceneReference>(Allocator.Temp);
-        for (int i = 0; i < sceneEntities.Length; i++)
-        {
-            if (EntityManager.Exists(sceneEntities[i]) &&
-                __releaseGuids.Contains(sceneReferences[i].SceneGUID))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private void SwapRequestBuffers()
     {
-        var temporary = __activeRequests;
+        /*var temporary = __activeRequests;
         __activeRequests = __waitingRequests;
-        __waitingRequests = temporary;
+        __waitingRequests = temporary;*/
+        (__activeRequests, __waitingRequests) = (__waitingRequests, __activeRequests);
         __waitingRequests.Clear();
     }
 
@@ -877,13 +847,10 @@ public partial class SceneArchiveDependencySystem : SystemBase
         ref NativeList<EntityPrefabReference> destination)
     {
         EnsureCapacity(ref destination, destination.Length + source.Length);
-        for (int i = 0; i < source.Length; i++)
+        foreach (var reference in source)
         {
-            var reference = source[i];
             if (destination.IndexOf(reference) == -1)
-            {
                 destination.Add(reference);
-            }
         }
     }
 

@@ -15,7 +15,7 @@ namespace ZG
 
         public void OnUpdate(ref SystemState state)
         {
-            if (!BotRelayReplayRuntimeGate.HasPendingPlay)
+            if (!BotRelayReplayRuntimeGate.HasPendingLevelStart)
                 return;
 
             if (!SystemAPI.TryGetSingletonEntity<BotRelayWorldTag>(out var worldEntity))
@@ -25,9 +25,6 @@ namespace ZG
                 return;
 
             var catalog = SystemAPI.GetComponent<BotReplayCatalog>(worldEntity);
-            if (!catalog.IsCreated || catalog.EntryCount == 0)
-                return;
-
             ref var farm = ref SystemAPI.GetComponentRW<BotRelayFarmNative>(worldEntity).ValueRW;
             if (farm.agentCount <= 0)
                 return;

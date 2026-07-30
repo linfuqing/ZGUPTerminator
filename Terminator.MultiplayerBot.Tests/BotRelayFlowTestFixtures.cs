@@ -36,9 +36,9 @@ internal static class BotRelayFlowTestFixtures
         };
         farm.transport[0] = new BotRelayTransportState
         {
-            header = BotRelayWireTestFixtures.BuildBotHeader()
+            header = BotRelayWireTestFixtures.BuildBotHeader(),
+            flags = BotRelayTransportFlags.Connected
         };
-        farm.inboxSentInitialStatus[0] = 1;
         farm.nextIdleMatchTime[0] = 0;
         return farm;
     }
@@ -71,9 +71,9 @@ internal static class BotRelayFlowTestFixtures
         return app;
     }
 
-    public static BotRelayPacket BuildMismatchApp()
+    public static BotRelayPacket BuildMismatchApp(int matchId = 7, uint sourceId = 0)
     {
-        if (!BotRelayWireTestFixtures.TryBuildInboundMismatchApp(out var app))
+        if (!BotRelayWireTestFixtures.TryBuildInboundMismatchApp(matchId, sourceId, out var app))
             throw new InvalidOperationException("Failed to build inbound mismatch app.");
         return app;
     }
@@ -112,19 +112,6 @@ internal static class BotRelayFlowTestFixtures
         return true;
     }
 
-    public static bool TryReadFirstMessageType(in BotRelayPacket packet, out int type)
-    {
-        type = 0;
-        if (packet.IsEmpty)
-            return false;
-
-        using var bytes = new NativeArray<byte>(packet.length, Allocator.Temp);
-        packet.TryCopyTo(bytes);
-        var reader = new DataStreamReader(bytes);
-        type = reader.ReadPackedInt(StreamCompressionModel.Default);
-        return true;
-    }
-
     public static bool TryReadMatchDistance(in BotRelayPacket packet, out int distance)
     {
         distance = 0;
@@ -143,20 +130,11 @@ internal static class BotRelayFlowTestFixtures
         return true;
     }
 
-    public static int GetOutboundCount(ref BotRelayFarmNative farm, int agentIndex) =>
-        farm.outboundCount[agentIndex];
-
-    public static BotRelayPacket GetOutboundPacket(ref BotRelayFarmNative farm, int agentIndex, int index)
-    {
-        int baseIndex = agentIndex * BotRelayFarmNative.MaxOutboundPerAgent;
-        return farm.outbound[baseIndex + index];
-    }
-
     public static BlobAssetReference<BotRecordingBlob> CreateSyntheticRecording(out int damageFrameCount)
     {
         damageFrameCount = 2;
-        var propertyPayload = __BuildRecordedPayload(ReplyMessageType.PlayerProperty, new byte[] { 0x01 });
-        var damagePayload = __BuildRecordedPayload(ReplyMessageType.Damage, new byte[] { 0x02, 0x03 });
+        var propertyPayload = __BuildRecordedPlayerPropertyPayload();
+        var damagePayload = __BuildRecordedGameplayPayload(ReplyMessageType.Damage);
 
         var builder = new BlobBuilder(Allocator.Temp);
         ref var root = ref builder.ConstructRoot<BotRecordingBlob>();
@@ -184,9 +162,9 @@ internal static class BotRelayFlowTestFixtures
         out int whitelistedFrameCount,
         out float duration)
     {
-        var propertyPayload = __BuildRecordedPayload(ReplyMessageType.PlayerProperty, new byte[] { 0x01 });
-        var movePayload = __BuildRecordedPayload(ReplyMessageType.Move, new byte[] { 0x10, 0x11, 0x12, 0x13 });
-        var skillPayload = __BuildRecordedPayload(ReplyMessageType.SelectSkill, new byte[] { 0x20 });
+        var propertyPayload = __BuildRecordedPlayerPropertyPayload();
+        var movePayload = __BuildRecordedGameplayPayload(ReplyMessageType.Move);
+        var skillPayload = __BuildRecordedGameplayPayload(ReplyMessageType.SelectSkill);
 
         int totalFrames = moveFrameCount + 1;
         int skillFrame = 1 + moveFrameCount / 2;
@@ -228,35 +206,17 @@ internal static class BotRelayFlowTestFixtures
         return entries;
     }
 
-    public static bool TrySimulateReplayLoad(
-        int index,
-        ref BotRelayFarmNative farm,
-        in NativeArray<BotReplayCatalogEntry> catalogEntries,
-        double elapsedTime)
-    {
-        if ((farm.agentFlags[index] & BotAgentRuntimeFlags.PendingPlay) == 0)
-            return false;
-
-        var catalog = new BotReplayCatalog { entries = catalogEntries };
-        var injectWriter = default(NativeQueue<BotRelayInject>.ParallelWriter);
-        BotRelayReplayLoadOps.HandlePendingPlay(index, ref farm, in catalog, elapsedTime, ref injectWriter, 0);
-        return (farm.agentFlags[index] & BotAgentRuntimeFlags.PendingPlay) == 0;
-    }
-
-    private static BotRelayPacket __BuildClientHeaderApp(ClientMessageType messageType, uint senderId) =>
-        __BuildRelayAppPacket(writer =>
-        {
-            var model = StreamCompressionModel.Default;
-            writer.WritePackedInt((int)messageType, model);
-            writer.WritePackedInt((int)NetworkRelayType.Channel, model);
-            writer.WritePackedUInt(senderId, model);
-        });
-
-    private static BotRelayPacket __BuildRelayAppPacket(Action<DataStreamWriter> write)
+    private static BotRelayPacket __BuildClientHeaderApp(
+        ClientMessageType messageType,
+        uint senderId)
     {
         using var scratch = new NativeArray<byte>(BotRelayPacket.MaxPayloadSize, Allocator.Temp);
         var writer = new DataStreamWriter(scratch);
-        write(writer);
+        var model = StreamCompressionModel.Default;
+        writer.WritePackedInt((int)messageType, model);
+        writer.WritePackedInt((int)NetworkRelayType.Channel, model);
+        writer.WritePackedUInt(senderId, model);
+        writer.Flush();
 
         if (writer.Length <= 0 || writer.Length > BotRelayPacket.MaxPayloadSize)
             return default;
@@ -268,16 +228,65 @@ internal static class BotRelayFlowTestFixtures
         return packet;
     }
 
-    private static byte[] __BuildRecordedPayload(ReplyMessageType type, byte[] body)
+    private static byte[] __BuildRecordedGameplayPayload(ReplyMessageType type)
     {
-        using var scratch = new NativeArray<byte>(64 + body.Length, Allocator.Temp);
+        using var scratch = new NativeArray<byte>(256, Allocator.Temp);
         var writer = new DataStreamWriter(scratch);
         var model = StreamCompressionModel.Default;
-        writer.WritePackedInt((int)type, model);
-        writer.WritePackedInt((int)NetworkRelayType.Channel, model);
-        writer.WritePackedUInt(BotUserId, model);
-        for (int i = 0; i < body.Length; ++i)
-            writer.WriteByte(body[i]);
+        writer.WriteReplyHeader((int)type, NetworkRelayType.Channel);
+        switch (type)
+        {
+            case ReplyMessageType.Move:
+                writer.WritePackedInt(1, model);
+                new RemotePosition
+                {
+                    type = RemotePosition.Type.Normal,
+                    value = new Unity.Mathematics.float2(1f, 2f)
+                }.Write(ref writer, model);
+                break;
+            case ReplyMessageType.Damage:
+                new RemoteEffectTargetDamage
+                {
+                    hp = 17,
+                    shield = 3,
+                    layerMask = 1,
+                    messageLayerMask = 2
+                }.Write(ref writer, model);
+                break;
+            case ReplyMessageType.SelectSkill:
+                writer.WritePackedInt(1, model);
+                new LevelSkill
+                {
+                    index = 1,
+                    originIndex = -1,
+                    activeIndex = -1,
+                    damageScale = 1f
+                }.Write(ref writer, model);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+
+        if (writer.HasFailedWrites)
+            throw new InvalidOperationException($"Failed to build synthetic {type} replay payload.");
+        var payload = new byte[writer.Length];
+        for (int i = 0; i < writer.Length; ++i)
+            payload[i] = scratch[i];
+        return payload;
+    }
+
+    private static byte[] __BuildRecordedPlayerPropertyPayload()
+    {
+        using var scratch = new NativeArray<byte>(256, Allocator.Temp);
+        var writer = new DataStreamWriter(scratch);
+        writer.WriteReplyHeader((int)ReplyMessageType.PlayerProperty, NetworkRelayType.Channel);
+
+        var property = new LevelPlayerProperty
+        {
+            effectTargetHP = 1,
+            instanceName = new FixedString32Bytes("SyntheticBot")
+        };
+        property.Write(ref writer, StreamCompressionModel.Default);
 
         var payload = new byte[writer.Length];
         for (int i = 0; i < writer.Length; ++i)

@@ -180,9 +180,16 @@ public sealed class RecordingCoopHarness : MonoBehaviour
             return;
         }
 
-        __recorder.BeginRecording();
-        BotReplayLog.Diag("Recording armed before Login scene is ready.");
-        Debug.Log("[LevelRecording] Recording started.");
+        if (__recorder.BeginRecording())
+        {
+            BotReplayLog.Diag("Recording armed before Login scene is ready.");
+            Debug.Log("[LevelRecording] Recording started.");
+        }
+        else
+        {
+            Debug.LogError(
+                "[LevelRecording] Recording did not start because the EndWrite capture journal was unavailable.");
+        }
     }
 
     public bool TryFinishRecording(out LevelRecordingSession session)

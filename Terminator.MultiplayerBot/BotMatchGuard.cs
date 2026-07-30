@@ -12,8 +12,6 @@ using Unity.Collections.LowLevel.Unsafe;
 public static class BotMatchGuard
 {
     public const int NoMatchingSlotOwner = -1;
-    public static bool IsConfiguredBotUser(BotConfig config, uint userID) =>
-        config != null && config.IsBotUserID(userID);
 
     public static bool IsFarmBotUser(in BotRelayFarmNative farm, uint userID)
     {
@@ -29,7 +27,10 @@ public static class BotMatchGuard
         return false;
     }
 
-    /// <summary>Only one bot agent may hold the farm matching slot (enter Match pool) at a time.</summary>
+    /// <summary>
+    /// Only one Bot may have an outstanding MatchToSend request at a time. MatchToRead releases
+    /// the lease before a possibly later temporary-squad Join.
+    /// </summary>
     public static bool TryClaimMatchingSlot(ref BotRelayFarmNative farm, int index)
     {
         if (!farm.matchingSlotOwner.IsCreated)
@@ -117,19 +118,4 @@ public static class BotMatchGuard
         Volatile.Write(ref gate, 0);
     }
 
-    public static bool HasSquadSlotClaim(in BotRelayFarmNative farm, int index, uint squadInviteID)
-    {
-        return farm.squadSlotSquadKeys.IsCreated &&
-               index >= 0 &&
-               index < farm.squadSlotSquadKeys.Length &&
-               farm.squadSlotSquadKeys[index] == (long)squadInviteID + 1L;
-    }
-
-    public static bool HasAnySquadSlotClaim(in BotRelayFarmNative farm, int index)
-    {
-        return farm.squadSlotSquadKeys.IsCreated &&
-               index >= 0 &&
-               index < farm.squadSlotSquadKeys.Length &&
-               farm.squadSlotSquadKeys[index] != 0;
-    }
 }

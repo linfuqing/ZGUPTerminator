@@ -67,8 +67,6 @@ public static class BotRelayWorld
     internal sealed class InitContext
     {
         public NetworkDriver listenDriver;
-        public NetworkDriver clientDriver;
-        public NetworkPipeline clientPipeline;
         public BotRelayWireCatalogState wireCatalog;
         public int driverIndex;
         
@@ -146,9 +144,7 @@ public ushort port;
             return false;
         }
 
-        var settings = CreateNetworkSettings();
         var sampleHeader = config.ToClientHeader(profiles[0]);
-        var matchLevel = BotConfig.ResolveMatchLevel(in profiles[0]);
         int agentCount = Mathf.Clamp(config.maxBots, config.minBots, profiles.Length);
         if (agentCount < 1)
             agentCount = 1;
@@ -157,7 +153,7 @@ public ushort port;
         try
         {
             BotRelayManager.ManagerAccessHandle.Complete();
-            ctx.wireCatalog = BotRelayWireCatalog.Capture(ref settings, ctx.port, in sampleHeader, matchLevel);
+            ctx.wireCatalog = BotRelayWireCatalog.Capture(ctx.port, in sampleHeader);
             if (!ctx.wireCatalog.IsValid)
                 return false;
 
@@ -242,22 +238,12 @@ public ushort port;
         BotRelayManager.ManagerAccessHandle.Complete();
         entityManager.CompleteAllTrackedJobs();
 
-        NetworkDriver clientDriver = default;
         Entity serverEntity = Entity.Null;
 
         if (TryGetWorldEntity(entityManager, out var worldEntity))
         {
             if (entityManager.HasComponent<BotRelayHubState>(worldEntity))
                 serverEntity = entityManager.GetComponentData<BotRelayHubState>(worldEntity).serverEntity;
-
-            if (entityManager.HasComponent<BotRelayClientResources>(worldEntity))
-                clientDriver = entityManager.GetComponentData<BotRelayClientResources>(worldEntity).driver;
-
-            if (entityManager.HasComponent<BotRelayWireCatalogState>(worldEntity))
-            {
-                var catalog = entityManager.GetComponentData<BotRelayWireCatalogState>(worldEntity);
-                catalog.Dispose();
-            }
 
             BotRelayWireCatalogHost.Dispose();
 
@@ -270,25 +256,14 @@ public ushort port;
             if (entityManager.HasComponent<BotRelayFarmNative>(worldEntity))
             {
                 var farm = entityManager.GetComponentData<BotRelayFarmNative>(worldEntity);
-                if (clientDriver.IsCreated)
-                {
-                    for (int i = 0; i < farm.agentCount; ++i)
-                        BotRelaySlotOps.TryDisconnect(ref farm, i, ref clientDriver);
-                }
-                else
-                {
-                    for (int i = 0; i < farm.agentCount; ++i)
-                        BotRelaySlotOps.TryDisconnect(ref farm, i);
-                }
+                for (int i = 0; i < farm.agentCount; ++i)
+                    BotRelaySlotOps.TryDisconnect(ref farm, i);
 
                 farm.Dispose();
             }
 
             entityManager.DestroyEntity(worldEntity);
         }
-
-        if (clientDriver.IsCreated)
-            clientDriver.Dispose();
 
         BotRelayManager.Instance.Reset();
     }

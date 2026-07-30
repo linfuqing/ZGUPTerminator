@@ -6,7 +6,6 @@ public static class LevelRecordingConstants
 {
     public const string Magic = "TRBT";
     public const ushort Version = 2;
-    public const ushort LegacyVersion = 1;
     public const string RecordingFolderName = "Recordings";
 }
 
@@ -32,8 +31,11 @@ public sealed class LevelRecordingSession
 {
     public LevelRecordingFileHeader header;
     public readonly List<LevelRecordingFrame> frames = new List<LevelRecordingFrame>();
-    public float startTime;
+    public double startTime;
+    public string captureError;
     public bool isActive;
 
-    public float ElapsedTime => isActive ? UnityEngine.Time.unscaledTime - startTime : header.duration;
+    public float ElapsedTime => isActive
+        ? (float)(UnityEngine.Time.unscaledTimeAsDouble - startTime)
+        : header.duration;
 }

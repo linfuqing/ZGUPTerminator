@@ -2,7 +2,9 @@ using Unity.Entities;
 using ZG;
 
 /// <summary>
-/// Capture sendBuffer EndWrites before <see cref="NetworkClientSystem"/> Apply clears pending payloads.
+/// Drains the independent recording journal before the transport apply window.
+/// Correctness does not depend on this running before <see cref="NetworkClientSystem"/>:
+/// journal entries survive transport Apply/Clear and are consumed exactly once.
 /// </summary>
 [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation)]
 [UpdateInGroup(typeof(PresentationSystemGroup))]

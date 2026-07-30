@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Unity.Collections;
-using Unity.Mathematics;
 using ZG;
 
 /// <summary>
@@ -11,14 +10,11 @@ internal static class LevelRecordingHandshakeDiagnostics
 {
     private static bool s_loggedStartWindow;
     private static bool s_loggedStatusWithoutProperty;
-    private static bool s_loggedWireRecovery;
 
     public static void Reset()
     {
         s_loggedStartWindow = false;
         s_loggedStatusWithoutProperty = false;
-        s_loggedWireRecovery = false;
-        LevelRecordingPlayerPropertyWireRecovery.ResetNativeResendAttempt();
     }
 
     /// <summary>Call while recording; fires once when <see cref="LoginManager.Status.Start"/> is observed.</summary>
@@ -86,36 +82,8 @@ internal static class LevelRecordingHandshakeDiagnostics
                     LevelRecordingSubmitStageRootCause.DescribeForHandshake(localPropertyEmpty, largePending));
             }
 
-            if (__TryNativeResendAndRecapture())
-            {
-                return;
-            }
-
-            __TryRecoverPlayerPropertyWire(mutableFrames, i);
             return;
         }
-    }
-
-    private static bool __TryNativeResendAndRecapture()
-    {
-        if (__SessionHasPlayerProperty())
-        {
-            return false;
-        }
-
-        if (!LevelRecordingPlayerPropertyWireRecovery.TryNativeResendViaClientData())
-        {
-            return false;
-        }
-
-        var harness = RecordingCoopHarness.Instance;
-        if (harness == null || !harness.IsRecording)
-        {
-            return false;
-        }
-
-        harness.Recorder?.CaptureEndOfFrame();
-        return __SessionHasPlayerProperty();
     }
 
     private static int __CountLargePendingPayloads()
@@ -142,42 +110,6 @@ internal static class LevelRecordingHandshakeDiagnostics
         }
 
         return largePending;
-    }
-
-    private static void __TryRecoverPlayerPropertyWire(List<LevelRecordingFrame> frames, int statusFrameIndex)
-    {
-        if (s_loggedWireRecovery || __SessionHasPlayerProperty(frames))
-        {
-            return;
-        }
-
-        ref readonly var property = ref LevelPlayerShared<LocalPlayer>.property;
-        if (LevelRecordingReplayPropertyOps.IsPropertyEmpty(in property))
-        {
-            BotReplayLog.Diag(
-                "PlayerProperty wire recovery skipped: LocalPlayer.property still empty " +
-                "(ApplyStage/__SubmitStage likely has not applied yet).");
-            return;
-        }
-
-        if (!LevelRecordingPlayerPropertyWireRecovery.TryBuildRecordedPayload(in property, out var payload))
-        {
-            BotReplayLog.Warn(
-                "[RecordingDiag] PlayerProperty wire recovery failed: could not encode LocalPlayer.property.");
-            return;
-        }
-
-        s_loggedWireRecovery = true;
-        float statusTimestamp = frames[statusFrameIndex].timestamp;
-        frames.Insert(statusFrameIndex, new LevelRecordingFrame
-        {
-            timestamp = math.max(0f, statusTimestamp - 0.001f),
-            payload = payload
-        });
-        BotReplayLog.Diag(
-            "Recovered PlayerProperty wire from post-ApplyStage LocalPlayer.property " +
-            $"(bytes={payload.Length}, insertBeforeStatusIndex={statusFrameIndex}). " +
-            "Native re-send and sendBuffer EndWrite were both absent; likely SinglePlay→Disabled at LoginManager.__Start.");
     }
 
     private static bool __SessionHasPlayerProperty(IReadOnlyList<LevelRecordingFrame> frames = null)

@@ -1,124 +1,100 @@
 using NUnit.Framework;
-using Unity.Collections;
-using Unity.Networking.Transport;
 using ZG;
 
 public class BotRelayWireBytesTests
 {
     [Test]
-    public void LooksLikePipelineWire_StatusOutbound_ReturnsTrue()
-    {
-        var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.StatusOutboundWire);
-        Assert.IsTrue(BotRelayWireBytes.LooksLikePipelineWire(in wire));
-    }
-
-    [Test]
-    public void LooksLikePipelineWire_PipelineHeaderOnly_ReturnsFalse()
-    {
-        var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.PipelineHeader);
-        Assert.IsFalse(BotRelayWireBytes.LooksLikePipelineWire(in wire),
-            "A pipeline prefix without an application payload is not a wire message.");
-        Assert.IsFalse(BotRelayWireBytes.LooksLikeConnectHandshake(in wire));
-    }
-
-    [Test]
-    public void TryBuildInviteApp_ProducesNonEmptyPayload()
+    public void CurrentFraming_MeasuredAppOffset_ResolvesExactStreamStart()
     {
         Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
-            BotRelayWireTestFixtures.RealPlayerUserId,
-            1,
+            8737,
+            0,
             0,
             0,
             out var app));
-        Assert.Greater(app.length, 8);
+        var wire = BotRelayWireTestFixtures.WrapFramedAppAtPrefix(
+            BotRelayWireTestFixtures.SyntheticTransportPrefix,
+            in app);
+        int appOffset =
+            BotRelayWireTestFixtures.SyntheticTransportPrefix.Length + sizeof(ushort);
+
+        Assert.IsTrue(BotRelayWireBytes.TryGetCurrentPopEventsStreamStart(
+            in wire,
+            appOffset,
+            out int streamStart));
+        Assert.AreEqual(
+            BotRelayWireTestFixtures.SyntheticTransportPrefix.Length,
+            streamStart);
     }
 
     [Test]
-    public void InviteType_PackedPrefix_StartsWithExpectedBytes()
-    {
-        var prefix = BotRelayWireTestFixtures.BuildInviteTypePrefix();
-        Assert.AreEqual(2, prefix.Length);
-        Assert.AreEqual((int)ReplyMessageType.Invite, ReadPackedInt(prefix));
-    }
-
-    [Test]
-    public void TryExtract_PipelineRawInviteApp_ExtractsInvite()
+    public void CurrentFraming_WrongMeasuredOffset_IsRejected()
     {
         Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
-            BotRelayWireTestFixtures.RealPlayerUserId,
-            1,
+            8737,
+            0,
             0,
             0,
             out var app));
+        var wire = BotRelayWireTestFixtures.WrapFramedAppAtPrefix(
+            BotRelayWireTestFixtures.SyntheticTransportPrefix,
+            in app);
+        int correctOffset =
+            BotRelayWireTestFixtures.SyntheticTransportPrefix.Length + sizeof(ushort);
 
-        var wire = BotRelayWireTestFixtures.WrapPipelineRawApp(BotRelayWireTestFixtures.PipelineHeader, in app);
-
-        Assert.IsTrue(BotRelayWireTestFixtures.TryExtract(in wire, 8, out var extracted));
-        Assert.IsTrue(BotRelayCodec.TryParseWorldInviteRelayApp(in extracted, out var squadId));
-        Assert.AreEqual(1u, squadId);
-        Assert.AreEqual(app.length, extracted.length);
+        Assert.IsFalse(BotRelayWireBytes.TryGetCurrentPopEventsStreamStart(
+            in wire,
+            correctOffset + 1,
+            out _));
     }
 
     [Test]
-    public void TryExtract_PipelineFramedInviteApp_ExtractsInvite()
+    public void CanonicalInviteApp_UtilityRead_MatchesCurrentFields()
     {
         Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
-            BotRelayWireTestFixtures.RealPlayerUserId,
+            8737,
+            11,
+            12,
             1,
-            0,
-            0,
             out var app));
 
-        var wire = BotRelayWireTestFixtures.WrapPipelineFramedApp(BotRelayWireTestFixtures.PipelineHeader, in app);
-
-        Assert.IsTrue(BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out var extracted));
-        Assert.IsTrue(BotRelayCodec.TryParseWorldInviteRelayApp(in extracted, out var squadId));
-        Assert.AreEqual(1u, squadId);
-        Assert.AreEqual(app.length, extracted.length);
+        Assert.IsTrue(BotRelayMessageUtility.TryReadSendRelayInviteFromPacket(
+            in app,
+            out var invite));
+        Assert.AreEqual(8737u, invite.id);
+        Assert.AreEqual(11, invite.channel);
+        Assert.AreEqual(12u, invite.levelID);
+        Assert.AreEqual(1, invite.stage);
     }
 
     [Test]
-    public void CanonicalInviteWire_PopEventsExtract_ParsesSquadId()
-    {
-        var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.BuildPipelineInviteWireBytes());
-
-        Assert.IsTrue(
-            BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out var app),
-            BotRelayWireTestFixtures.ToHex(in wire, 80));
-
-        Assert.IsTrue(BotRelayCodec.TryParseWorldInviteRelayApp(in app, out var squadId));
-        Assert.AreEqual(1u, squadId);
-        Assert.LessOrEqual(app.length, wire.length);
-    }
-
-    [Test]
-    public void CanonicalInviteApp_UtilityRead_MatchesZgupFields()
+    public void CanonicalInvite_CurrentMeasuredFraming_ExtractsExactApp()
     {
         Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
-            BotRelayWireTestFixtures.RealPlayerUserId,
-            1,
+            8737,
+            11,
             0,
             0,
-            out var app));
+            out var expected));
+        var wire = BotRelayWireTestFixtures.WrapFramedAppAtPrefix(
+            BotRelayWireTestFixtures.SyntheticTransportPrefix,
+            in expected);
+        int appOffset =
+            BotRelayWireTestFixtures.SyntheticTransportPrefix.Length + sizeof(ushort);
 
-        using var bytes = new NativeArray<byte>(app.length, Allocator.Temp);
-        Assert.IsTrue(app.TryCopyTo(bytes));
-        Assert.IsTrue(
-            BotRelayMessageUtility.TryReadSendRelayInviteFromBytes(
-                bytes,
-                StreamCompressionModel.Default,
-                out var invite,
-                BotRelayMessageUtility.InviteReadOptions.Default));
-        Assert.AreEqual(BotRelayWireTestFixtures.RealPlayerUserId, invite.id);
-        Assert.AreEqual(1, invite.channel);
+        Assert.IsTrue(BotRelayWireBytes.TryExtractCurrentFramedApp(
+            in wire,
+            appOffset,
+            out var actual));
+        Assert.IsTrue(BotRelayWireBytes.Equals(in expected, in actual));
     }
 
     [Test]
-    public void ParseTransportPayload_CanonicalInviteApp_EnqueuesSquadInviteEvent()
+    public void ParseTransportPayload_CanonicalInvite_EnqueuesInviteEvent()
     {
         Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
-            BotRelayWireTestFixtures.RealPlayerUserId,
-            1,
+            8737,
+            11,
             0,
             0,
             out var app));
@@ -130,82 +106,20 @@ public class BotRelayWireBytesTests
                 in app,
                 0,
                 ref farm,
-                BotRelayWireTestFixtures.BuildBotHeader(),
-                sentInitialStatus: true);
+                BotRelayWireTestFixtures.BuildBotHeader());
 
-            Assert.IsTrue(BotRelaySlotInbox.TryDequeueEvent(0, ref farm, out var evt));
-            Assert.AreEqual(BotRelayEventType.SquadInvite, evt.type);
-            Assert.AreEqual(1u, evt.squadInvite.squadInviteID);
-        }
-        finally
-        {
-            farm.Dispose();
-        }
-    }
-
-    [Test]
-    public void ParseTransportPayload_PipelineFramedInvite_EnqueuesSquadInviteEvent()
-    {
-        var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.CapturedLiveInviteWire117);
-        Assert.IsTrue(BotRelayWireTestFixtures.TryExtractLiveInviteWire(in wire, out var app));
-
-        var farm = BotRelayFlowTestFixtures.CreateFarm();
-        try
-        {
-            BotRelaySlotInbox.ParseTransportPayload(
-                in app,
+            Assert.IsTrue(BotRelaySlotInbox.TryDequeueEvent(
                 0,
                 ref farm,
-                BotRelayWireTestFixtures.BuildBotHeader(),
-                sentInitialStatus: true);
-
-            Assert.IsTrue(BotRelaySlotInbox.TryDequeueEvent(0, ref farm, out var evt));
+                out var evt));
             Assert.AreEqual(BotRelayEventType.SquadInvite, evt.type);
-            Assert.AreEqual(1u, evt.squadInvite.squadInviteID);
-            Assert.AreEqual(BotRelayWireTestFixtures.RealPlayerUserId, evt.header.userID);
+            Assert.AreEqual(11u, evt.squadInvite.squadInviteID);
+            Assert.AreEqual(8737u, evt.header.userID);
         }
         finally
         {
             farm.Dispose();
         }
-    }
-
-    [Test]
-    public void ParseTransportPayload_DriverShapeFramedInvite_EnqueuesSquadInviteEvent()
-    {
-        var wire = BotRelayWireTestFixtures.FromBytes(
-            BotRelayIntegrationTestFixtures.BuildDriverShapeInviteWireBytes());
-        Assert.IsTrue(
-            BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out var extracted));
-
-        var farm = BotRelayFlowTestFixtures.CreateFarm();
-        try
-        {
-            BotRelaySlotInbox.ParseTransportPayload(
-                in extracted,
-                0,
-                ref farm,
-                BotRelayWireTestFixtures.BuildBotHeader(),
-                sentInitialStatus: true);
-
-            Assert.IsTrue(BotRelaySlotInbox.TryDequeueEvent(0, ref farm, out var evt));
-            Assert.AreEqual(BotRelayEventType.SquadInvite, evt.type);
-            Assert.AreEqual(1u, evt.squadInvite.squadInviteID);
-        }
-        finally
-        {
-            farm.Dispose();
-        }
-    }
-
-    [Test]
-    public void BuildMatchApp_ProducesNonEmptyPayload()
-    {
-        Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInboundMatchApp(
-            9,
-            BotRelayFlowTestFixtures.MatchLevel,
-            out var app));
-        Assert.IsFalse(app.IsEmpty, BotRelayWireTestFixtures.ToHex(in app));
     }
 
     [Test]
@@ -215,8 +129,7 @@ public class BotRelayWireBytesTests
             1,
             0,
             out var app));
-        Assert.AreEqual(2, app.length,
-            "The live first Match notification is bit-packed into two bytes.");
+        Assert.AreEqual(2, app.length);
 
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         try
@@ -225,10 +138,12 @@ public class BotRelayWireBytesTests
                 in app,
                 0,
                 ref farm,
-                BotRelayWireTestFixtures.BuildBotHeader(),
-                sentInitialStatus: true);
+                BotRelayWireTestFixtures.BuildBotHeader());
 
-            Assert.IsTrue(BotRelaySlotInbox.TryDequeueEvent(0, ref farm, out var evt), "no event dequeued");
+            Assert.IsTrue(BotRelaySlotInbox.TryDequeueEvent(
+                0,
+                ref farm,
+                out var evt));
             Assert.AreEqual(BotRelayEventType.Match, evt.type);
             Assert.AreEqual(1, evt.match.matchID);
             Assert.AreEqual(0, evt.match.level);
@@ -238,76 +153,4 @@ public class BotRelayWireBytesTests
             farm.Dispose();
         }
     }
-
-    private static int ReadPackedInt(byte[] bytes)
-    {
-        var scratch = new NativeArray<byte>(bytes.Length, Allocator.Temp);
-        try
-        {
-            for (int i = 0; i < bytes.Length; ++i)
-                scratch[i] = bytes[i];
-
-            var reader = new DataStreamReader(scratch);
-            return reader.ReadPackedInt(StreamCompressionModel.Default);
-        }
-        finally
-        {
-            scratch.Dispose();
-        }
-    }
-
-    private static uint ReadPackedUInt(byte[] bytes)
-    {
-        var scratch = new NativeArray<byte>(bytes.Length, Allocator.Temp);
-        try
-        {
-            for (int i = 0; i < bytes.Length; ++i)
-                scratch[i] = bytes[i];
-
-            var reader = new DataStreamReader(scratch);
-            return reader.ReadPackedUInt(StreamCompressionModel.Default);
-        }
-        finally
-        {
-            scratch.Dispose();
-        }
-    }
-
-    [Test]
-    [Category("Regression")]
-    public void LatestPlay104_InviteTypePrefix_MatchesCodec()
-    {
-        var prefix = BotRelayWireTestFixtures.BuildInviteTypePrefix();
-        Assert.GreaterOrEqual(prefix.Length, 2);
-        Assert.AreEqual(0x04, BotRelayWireTestFixtures.McpLatestPlayInvite104SendRelayTail[0]);
-        Assert.AreEqual(
-            0xD5,
-            BotRelayWireTestFixtures.McpLatestPlayInvite104SendRelayTail[1],
-            "live Play session packs Invite(104) as 04 D5");
-    }
-
-    [Test]
-    [Category("Regression")]
-    public void LatestPlay104_PayloadInner8_ReadsReplyInvite()
-    {
-        Assert.IsTrue(
-            BotRelayWireTestFixtures.TryBuildMcpCapturedInvite104JunkPayload(out var payload),
-            "payload");
-        var app = default(BotRelayPacket);
-        const int inner = BotRelayWireBytes.InvitePipelineJunkAnchoredInnerOffset;
-        app.length = payload.length - inner;
-        for (int i = 0; i < app.length; ++i)
-        {
-            app.SetByte(i, payload.GetByte(inner + i));
-        }
-
-        Assert.IsTrue(
-            BotRelayMessageUtility.TryReadInviteFromPacket(
-                in app,
-                out var invite,
-                BotRelayMessageUtility.InviteReadOptions.Default),
-            "reply payload read");
-        Assert.AreEqual(1, invite.channel);
-    }
-
 }

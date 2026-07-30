@@ -132,8 +132,9 @@ public enum ClientMessageType
     Error,
 
     /// <summary>
-    /// Matching-only level-entry descriptor. Both matched clients publish the server UserStage ID
-    /// and the exact ApplyStart level/scene tuple; receivers consume it without starting a level.
+    /// Bot-facing level-entry descriptor. LoginManager.__Start publishes the server UserStage ID
+    /// together with the exact level/scene tuple after the local Waiting state is established.
+    /// matchID is zero for an ordinary Host-led squad and non-zero after matchmaking.
     /// </summary>
     MatchStart
 }

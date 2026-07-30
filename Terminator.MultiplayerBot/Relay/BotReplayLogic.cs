@@ -49,6 +49,10 @@ public static class BotReplayLogic
         if ((runtime.flags & BotReplayRuntimeFlags.Playing) == 0)
             return;
 
+        // Connect is the only UTP exception. Gameplay replay has no outbound-wire fallback.
+        if (injectEnabled == 0)
+            return;
+
         if (!catalogEntries.IsCreated ||
             runtime.catalogIndex < 0 ||
             runtime.catalogIndex >= catalogEntries.Length)
@@ -72,6 +76,8 @@ public static class BotReplayLogic
         runtime.playbackTime += deltaTime;
 
         var playbackElapsed = runtime.playbackTime;
+        int firstFrameIndex = runtime.nextFrameIndex;
+        int injectedThisTick = 0;
         while (runtime.nextFrameIndex < blob.frames.Length)
         {
             ref readonly var meta = ref blob.frames[runtime.nextFrameIndex];
@@ -88,26 +94,13 @@ public static class BotReplayLogic
                 // re-sent: once injected they reach the server, get relayed to the host and echoed
                 // back, driving a feedback storm that saturates the send queue (NetworkSendQueueFull).
                 // PlayerProperty is handled once via TrySendFirstPlayerProperty, not here.
-                // The production path is app-layer injection. Keep the old outbound slot only for
-                // the explicit no-injection test/fallback path; otherwise it fills with packets that
-                // no longer have a UTP flush owner and can incorrectly make later legacy writes fail.
-                if (injectEnabled != 0)
+                if (BotRelayInjectOps.InjectAppPacket(
+                        ref injectWriter,
+                        farm.agentStates[agentIndex].userID,
+                        in packet))
                 {
-                    if (BotRelayInjectOps.InjectAppPacket(
-                            ref injectWriter,
-                            farm.agentStates[agentIndex].userID,
-                            in packet))
-                    {
-                        BotRelayInboundProbe.RecordAppInjected();
-                    }
-                }
-                else
-                {
-                    BotRelaySlotOps.TryEnqueueOutbound(
-                        agentIndex,
-                        farm.outbound,
-                        farm.outboundCount,
-                        in packet);
+                    BotRelayInboundProbe.RecordAppInjected();
+                    ++injectedThisTick;
                 }
             }
 
@@ -117,7 +110,17 @@ public static class BotReplayLogic
         BotRelayInboundProbe.RecordReplayFrames(runtime.nextFrameIndex, blob.frames.Length);
 
         if (runtime.nextFrameIndex >= blob.frames.Length)
+        {
             runtime.flags &= ~BotReplayRuntimeFlags.Playing;
+            BotRelayAgentDiagnostics.LogReplayCompleted(
+                farm.agentStates[agentIndex].userID,
+                runtime.catalogIndex,
+                blob.frames.Length,
+                runtime.nextFrameIndex - firstFrameIndex,
+                injectedThisTick,
+                deltaTime,
+                runtime.playbackTime);
+        }
     }
 
     // In-level gameplay reply messages a co-op remote player emits during a stage. Everything
@@ -177,7 +180,7 @@ public static class BotReplayLoadUtility
         ref NativeQueue<BotRelayInject>.ParallelWriter injectWriter,
         byte injectEnabled)
     {
-        if (!recording.IsCreated)
+        if (!recording.IsCreated || injectEnabled == 0)
             return false;
 
         ref var blob = ref recording.Value;
@@ -191,31 +194,13 @@ public static class BotReplayLoadUtility
                 return false;
 
             // The host marks the bot RemotePlayer as Joined only when it receives a PlayerProperty.
-            // Production must report the injection result, not whether an obsolete outbound UTP slot
-            // had room; otherwise a successful injection is treated as a failed lobby handshake.
-            if (injectEnabled != 0)
-            {
-                if (!BotRelayCodec.TryBuildPlayerPropertyPacket(in packet, out var injectPacket))
-                    return false;
+            if (!BotRelayCodec.TryBuildPlayerPropertyPacket(in packet, out var injectPacket))
+                return false;
 
-                return BotRelayInjectOps.InjectAppPacket(
-                    ref injectWriter,
-                    farm.agentStates[agentIndex].userID,
-                    in injectPacket);
-            }
-
-            // Explicit no-injection fallback only. Production never allocates a managed payload in
-            // ReplayLoadJob; this conversion remains for the retired outbound-wire test path.
-            var payload = new byte[packet.length];
-            using (var native = new NativeArray<byte>(packet.length, Allocator.Temp))
-            {
-                if (!packet.TryCopyTo(native))
-                    return false;
-
-                native.CopyTo(payload);
-            }
-
-            return BotRelaySlotOps.TryWritePlayerPropertyBody(ref farm, agentIndex, payload);
+            return BotRelayInjectOps.InjectAppPacket(
+                ref injectWriter,
+                farm.agentStates[agentIndex].userID,
+                in injectPacket);
         }
 
         return false;

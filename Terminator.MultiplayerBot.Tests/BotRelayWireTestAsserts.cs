@@ -38,28 +38,6 @@ internal static class BotRelayWireTestAsserts
         }
     }
 
-    public static bool TryExtractLive117Wire(out BotRelayPacket app, out string failure)
-    {
-        app = default;
-        failure = null;
-        var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.CapturedLiveInviteWire117);
-
-        using var logs = LogScope.Begin();
-        if (!BotRelayWireTestFixtures.TryExtractLiveInviteWire(in wire, out app) || app.IsEmpty)
-        {
-            failure = "TryExtractLiveInviteWire returned false for CapturedLiveInviteWire117.";
-            return false;
-        }
-
-        if (logs.StreamOverreadErrorCount > 0)
-        {
-            failure = $"stream over-read errors={logs.StreamOverreadErrorCount}";
-            return false;
-        }
-
-        return true;
-    }
-
     public static void AssertNoStreamOverreadErrors(LogScope scope, string context)
     {
         if (scope.StreamOverreadErrorCount > 0)

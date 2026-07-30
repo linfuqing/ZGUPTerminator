@@ -1,129 +1,47 @@
 using NUnit.Framework;
-using Unity.Collections;
-using Unity.Networking.Transport;
-using UnityEngine;
-using UnityEngine.TestTools;
-using ZG;
 
 /// <summary>
-/// Integration-style EditMode tests: WireCatalog driver capture + Manager queue + DrainInbound + agent.
-/// Simulates RouteSend(1390→botVport) without full ClientData / NetworkRelayServerSystem.
+/// Manager queue -> strict PopEvents peel -> inbox -> agent integration for the current frame.
 /// </summary>
 public class BotRelayInviteIntegrationTests
 {
     [Test]
-    public void RouteServerToBot_EnqueuesOnManagerChannel()
+    [Category("Integration")]
+    public void CanonicalMeasuredInvite_FullRoute_ReachesPendingInvite()
     {
+        const uint senderId = 8737;
+        const int squadChannel = 11;
         var session = BotRelayIntegrationTestFixtures.CreateConnectedSession();
         try
         {
-            BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayIntegrationTestFixtures.BuildDriverShapeInviteWireBytes());
-
-            Assert.IsTrue(
-                BotRelayManager.Instance.TryDequeueToBot(
-                    BotRelayIntegrationSession.BotVirtualPort,
-                    out var wire));
-            Assert.Greater(wire.length, 0);
-        }
-        finally
-        {
-            session.Dispose();
-        }
-    }
-
-    [Test]
-    public void DriverShapeInviteWire_RouteQueue_DrainInbound_EnqueuesAppLayer()
-    {
-        var session = BotRelayIntegrationTestFixtures.CreateConnectedSession();
-        try
-        {
-            BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayIntegrationTestFixtures.BuildDriverShapeInviteWireBytes());
-
-            BotRelayIntegrationTestFixtures.DrainInbound(ref session);
-
-            Assert.Greater(
-                session.farm.inboundCount[0],
+            Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
+                senderId,
+                squadChannel,
                 0,
-                "DrainInbound should extract SquadInvite app from driver-shaped pipeline wire.");
-        }
-        finally
-        {
-            session.Dispose();
-        }
-    }
+                0,
+                out var app));
+            ref var catalog = ref session.catalogBlob.Value;
+            Assert.IsTrue(BotRelayWireTestFixtures.TryBuildConnectShapedInboundWire(
+                ref catalog,
+                in app,
+                out var wire));
 
-    [Test]
-    public void DriverShapeInviteWire_FullPipeline_ReachesPendingInviteState()
-    {
-        var session = BotRelayIntegrationTestFixtures.CreateConnectedSession();
-        try
-        {
+            BotRelayManager.Instance.SetPeelCatalogBlob(session.catalogBlob);
             BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayIntegrationTestFixtures.BuildDriverShapeInviteWireBytes());
+                BotRelayWireTestFixtures.ToBytes(in wire));
 
             BotRelayIntegrationTestFixtures.DrainInbound(ref session);
             BotRelayIntegrationTestFixtures.PumpAgentInbound(ref session);
-
-            Assert.Greater(session.farm.eventCount[0], 0, "PumpInbound should enqueue SquadInvite event.");
-
             BotAgentLogic.Execute(
                 0,
                 ref session.farm,
-                BotRelayFlowTestFixtures.CreateTickConfig(0f, 0f));
+                BotRelayFlowTestFixtures.CreateTickConfig(0f));
 
             Assert.AreEqual(BotState.PendingInvite, session.farm.agentStates[0].state);
-            Assert.IsTrue(session.farm.agentStates[0].hasPendingInvite);
-        }
-        finally
-        {
-            session.Dispose();
-        }
-    }
-
-    [Test]
-    public void LiveCapturedInviteWire117_FullPipeline_ParsesValidSquadId()
-    {
-        var session = BotRelayIntegrationTestFixtures.CreateConnectedSession();
-        try
-        {
-            BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayWireTestFixtures.CapturedLiveInviteWire117);
-            BotRelayIntegrationTestFixtures.DrainInbound(ref session);
-            Assert.Greater(session.farm.inboundCount[0], 0);
-
-            BotRelayIntegrationTestFixtures.PumpAgentInbound(ref session);
-
-            Assert.Greater(session.farm.eventCount[0], 0);
-
-            BotAgentLogic.Execute(
-                0,
-                ref session.farm,
-                BotRelayFlowTestFixtures.CreateTickConfig(0f, 0f));
-
-            Assert.AreEqual(BotState.PendingInvite, session.farm.agentStates[0].state);
-            Assert.AreEqual(1u, session.farm.agentStates[0].pendingInvite.squadInviteID);
-        }
-        finally
-        {
-            session.Dispose();
-        }
-    }
-
-    [Test]
-    public void LiveCapturedInviteWire117_DrainInbound_ExtractsInvitePrefix()
-    {
-        var session = BotRelayIntegrationTestFixtures.CreateConnectedSession();
-        try
-        {
-            using var logs = BotRelayWireTestAsserts.LogScope.Begin();
-            BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayWireTestFixtures.CapturedLiveInviteWire117);
-            BotRelayIntegrationTestFixtures.DrainInbound(ref session);
-
-            BotRelayWireTestAsserts.AssertNoStreamOverreadErrors(logs, "DrainInbound live 117B");
-            Assert.Greater(session.farm.inboundCount[0], 0, "Expected live invite app in inbound queue.");
+            Assert.IsTrue(session.farm.agentStates[0].HasPendingInvite);
+            Assert.AreEqual(
+                (uint)squadChannel,
+                session.farm.agentStates[0].pendingInvite.squadInviteID);
         }
         finally
         {
@@ -133,24 +51,37 @@ public class BotRelayInviteIntegrationTests
 
     [Test]
     [Category("Integration")]
-    public void WireCatalog_DriverCapture_ProducesValidCatalogForDrain()
+    public void WrongMeasuredFrameOffset_DoesNotReachPendingInvite()
     {
-        var session = BotRelayIntegrationTestFixtures.CreateConnectedSession(captureWireCatalog: true);
+        var session = BotRelayIntegrationTestFixtures.CreateConnectedSession();
         try
         {
-            Assert.IsTrue(session.catalogBlob.IsCreated);
-            Assert.IsTrue(session.catalogBlob.Value.IsValid);
-            ref var catalog = ref session.catalogBlob.Value;
-            Assert.GreaterOrEqual(
-                catalog.inboundMappings.Length,
-                2,
-                "WireCatalog must record server hello + invite inbound mappings.");
+            Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInviteApp(
+                8737,
+                11,
+                0,
+                0,
+                out var app));
+            int measuredStreamStart =
+                session.catalogBlob.Value.inboundAppPayloadOffset - sizeof(ushort);
+            Assert.GreaterOrEqual(measuredStreamStart, 0);
+            var wrongPrefix = new byte[measuredStreamStart + 1];
+            var wire = BotRelayWireTestFixtures.WrapFramedAppAtPrefix(
+                wrongPrefix,
+                in app);
 
+            BotRelayManager.Instance.SetPeelCatalogBlob(session.catalogBlob);
             BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayIntegrationTestFixtures.BuildDriverShapeInviteWireBytes());
+                BotRelayWireTestFixtures.ToBytes(in wire));
             BotRelayIntegrationTestFixtures.DrainInbound(ref session);
+            BotRelayIntegrationTestFixtures.PumpAgentInbound(ref session);
+            BotAgentLogic.Execute(
+                0,
+                ref session.farm,
+                BotRelayFlowTestFixtures.CreateTickConfig(0f));
 
-            Assert.Greater(session.farm.inboundCount[0], 0);
+            Assert.AreEqual(BotState.Idle, session.farm.agentStates[0].state);
+            Assert.IsFalse(session.farm.agentStates[0].HasPendingInvite);
         }
         finally
         {

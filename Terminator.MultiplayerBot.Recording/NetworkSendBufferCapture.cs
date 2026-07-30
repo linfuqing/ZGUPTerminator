@@ -1,82 +1,130 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
-using Unity.Mathematics;
 using ZG;
 
 /// <summary>
-/// Snapshots pending sendBuffer payloads for level recording.
-/// Uses per-slot <see cref="NetworkClientSendBuffer.TryReadPendingSend"/> so capture survives
-/// global EndWrite index resets from <see cref="NetworkClientSendBuffer.Apply"/>.
-/// SelectSkill upgrade chains rely on frame timestamps and replay validation, not message-type ordering.
+/// Drains the opt-in EndWrite journal without touching the transport send/retry cursor.
+/// Payload, global EndWrite sequence and producer timestamp are committed together by the common package.
 /// </summary>
 internal static class NetworkSendBufferCapture
 {
-    private const float DefaultBatchFrameSpacingSeconds = 1f / 30f;
+    internal struct Cursor
+    {
+        public bool hasValue;
+        public uint sequence;
+        public uint epoch;
+        public double timestamp;
+    }
 
     public static bool TryCapture(
         in NetworkClientSendBuffer sendBuffer,
-        ref int[] slotReadCursors,
+        ref Cursor cursor,
         List<LevelRecordingFrame> output,
-        float timestamp)
+        out int capturedCount,
+        out string error)
     {
+        capturedCount = 0;
+        error = null;
         if (!sendBuffer.isCreated)
         {
+            error = "NetworkClientSendBuffer is not created.";
             return false;
         }
 
-        int slotCount = sendBuffer.GetPendingSendSlotCount();
-        LevelRecordingSendBufferAccess.EnsureSlotCursors(ref slotReadCursors, slotCount);
-
-        int batchStart = output.Count;
-        bool captured = false;
-        NativeArray<byte> bytes;
-        for (int slot = 0; slot < slotCount; ++slot)
+        if (output == null)
         {
-            int probeIndex = slotReadCursors[slot];
-            while (sendBuffer.TryReadPendingSend(slot, ref probeIndex, out bytes))
-            {
-                if (!bytes.IsCreated || bytes.Length == 0)
-                {
-                    continue;
-                }
+            error = "Recording frame output is null.";
+            return false;
+        }
 
-                var copy = new byte[bytes.Length];
-                bytes.CopyTo(copy);
-                output.Add(new LevelRecordingFrame
-                {
-                    timestamp = timestamp,
-                    payload = copy
-                });
-                captured = true;
+        while (true)
+        {
+            var status = sendBuffer.TryPeekCapturedEndWrite(
+                out var token,
+                out NativeArray<byte> bytes,
+                out var stamp);
+            switch (status)
+            {
+                case NetworkClientSendBuffer.EndWriteCaptureReadStatus.Empty:
+                    return true;
+                case NetworkClientSendBuffer.EndWriteCaptureReadStatus.NotActive:
+                    error = "EndWrite capture journal is not active.";
+                    return false;
+                case NetworkClientSendBuffer.EndWriteCaptureReadStatus.Faulted:
+                    error = $"EndWrite capture journal fault: {sendBuffer.endWriteCaptureFault}.";
+                    return false;
+                case NetworkClientSendBuffer.EndWriteCaptureReadStatus.Success:
+                    break;
+                default:
+                    error = $"Unexpected EndWrite capture read status: {status}.";
+                    return false;
             }
 
-            slotReadCursors[slot] = probeIndex;
-        }
+            if (!bytes.IsCreated || bytes.Length < 1)
+            {
+                error = $"EndWrite capture sequence {token.sequence} has an empty payload.";
+                return false;
+            }
 
-        int batchCount = output.Count - batchStart;
-        if (batchCount > 1)
-        {
-            __SpreadBatchCaptureTimestamps(output, batchStart, batchCount, timestamp);
-        }
+            if (double.IsNaN(stamp.timestamp) ||
+                double.IsInfinity(stamp.timestamp) ||
+                stamp.timestamp < 0.0)
+            {
+                error =
+                    $"EndWrite capture sequence {token.sequence} has invalid timestamp {stamp.timestamp}.";
+                return false;
+            }
 
-        return captured;
-    }
+            if (cursor.hasValue)
+            {
+                int sequenceDelta = unchecked((int)(token.sequence - cursor.sequence));
+                if (sequenceDelta <= 0)
+                {
+                    error =
+                        $"EndWrite capture sequence is not increasing: {cursor.sequence} -> {token.sequence}.";
+                    return false;
+                }
 
-    private static void __SpreadBatchCaptureTimestamps(
-        List<LevelRecordingFrame> output,
-        int batchStart,
-        int batchCount,
-        float fallbackTimestamp)
-    {
-        float anchor = batchStart > 0
-            ? output[batchStart - 1].timestamp
-            : math.max(0f, fallbackTimestamp - (batchCount - 1) * DefaultBatchFrameSpacingSeconds);
+                int epochDelta = unchecked((int)(stamp.epoch - cursor.epoch));
+                if (epochDelta < 0 || stamp.timestamp < cursor.timestamp)
+                {
+                    error =
+                        "EndWrite producer timestamp regressed at sequence " +
+                        $"{token.sequence}: epoch {cursor.epoch}->{stamp.epoch}, " +
+                        $"time {cursor.timestamp:R}->{stamp.timestamp:R}.";
+                    return false;
+                }
+            }
 
-        for (int i = 0; i < batchCount; ++i)
-        {
-            var frame = output[batchStart + i];
-            frame.timestamp = anchor + (i + 1) * DefaultBatchFrameSpacingSeconds;
-            output[batchStart + i] = frame;
+            float timestamp = (float)stamp.timestamp;
+            if (float.IsNaN(timestamp) || float.IsInfinity(timestamp))
+            {
+                error =
+                    $"EndWrite capture sequence {token.sequence} timestamp exceeds TRBT v2 float range.";
+                return false;
+            }
+
+            var copy = new byte[bytes.Length];
+            bytes.CopyTo(copy);
+            output.Add(new LevelRecordingFrame
+            {
+                timestamp = timestamp,
+                payload = copy
+            });
+
+            if (!sendBuffer.ConsumeCapturedEndWrite(in token))
+            {
+                output.RemoveAt(output.Count - 1);
+                error = $"Failed to consume EndWrite capture sequence {token.sequence}.";
+                return false;
+            }
+
+            cursor.hasValue = true;
+            cursor.sequence = token.sequence;
+            cursor.epoch = stamp.epoch;
+            cursor.timestamp = stamp.timestamp;
+            ++capturedCount;
         }
     }
 }

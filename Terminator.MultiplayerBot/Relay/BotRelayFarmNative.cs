@@ -1,37 +1,35 @@
 using System;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Networking.Transport;
 using ZG;
 
 [System.Flags]
 public enum BotRelayTransportFlags : byte
 {
     None = 0,
-    Created = 1 << 0,
-    ConnectPending = 1 << 1,
-    ConnectRequested = 1 << 2,
-    Connected = 1 << 3,
-    SentInitialStatus = 1 << 4,
+    ConnectPending = 1 << 0,
+    ConnectRequested = 1 << 1,
+    Connected = 1 << 2,
 }
 
 public struct BotRelayTransportState
 {
-    public NetworkConnection connection;
     public ClientHeader header;
-    public ushort listenPort;
     public ushort virtualPort;
     public BotRelayTransportFlags flags;
 }
 
 public struct BotRelayFarmNative : IComponentData, IDisposable
 {
-    public const int MaxOutboundPerAgent = 16;
     public const int MaxInboundPerAgent = 64;
     public const int MaxEventsPerAgent = 32;
 
     public int agentCount;
-    /// <summary>Length-1; [0] = agent index holding the sole Matching slot, or <see cref="BotMatchGuard.NoMatchingSlotOwner"/>.</summary>
+    /// <summary>
+    /// Length-1; [0] = agent index owning the sole outstanding MatchToSend request, or
+    /// <see cref="BotMatchGuard.NoMatchingSlotOwner"/>. MatchToRead releases it even when the
+    /// temporary squad Join arrives on a later tick.
+    /// </summary>
     public NativeArray<int> matchingSlotOwner;
     /// <summary>Length-1 spin gate protecting <see cref="squadSlotSquadKeys"/> across parallel agents.</summary>
     public NativeArray<int> squadSlotLock;
@@ -42,8 +40,6 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
     /// </summary>
     public NativeArray<long> squadSlotSquadKeys;
     public NativeArray<BotRelayTransportState> transport;
-    public NativeArray<BotRelayPacket> outbound;
-    public NativeArray<int> outboundCount;
     public NativeArray<BotRelayPacket> inbound;
     public NativeArray<int> inboundCount;
     public NativeArray<BotRelayEvent> events;
@@ -52,15 +48,12 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
     public NativeArray<BotAgentState> agentStates;
     public NativeArray<BotAgentRuntimeFlags> agentFlags;
     public NativeArray<double> nextIdleMatchTime;
-    public NativeArray<uint> lastSeenChapterStage;
     public NativeArray<int> prevRemoteChannelStatus;
-    public NativeArray<ClientMessagePlay> pendingPlayMessage;
-    public NativeArray<byte> inboxSentInitialStatus;
+    /// <summary>The committed descriptor for the current joined squad/match generation.</summary>
+    public NativeArray<ClientMessageMatchStart> levelStartMessages;
     /// <summary>One-shot: app-layer Status(0) injected so NetworkRelayServer registers the bot for All-broadcast.</summary>
     public NativeArray<byte> relayServerStatusInjected;
     public NativeArray<BotRelayPacket> wireLiveServerHello;
-    /// <summary>Large inbound relay shell (e.g. 117B invite) used as Join listen-inject template; must not overwrite server hello.</summary>
-    public NativeArray<BotRelayPacket> wireLiveJoinListenShell;
     public NativeArray<BotReplayRuntimeState> replayRuntime;
     public NativeArray<byte> wireScratch;
 
@@ -78,8 +71,6 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
         farm.squadSlotLock = new NativeArray<int>(1, allocator);
         farm.squadSlotSquadKeys = new NativeArray<long>(agentCount, allocator);
         farm.transport = new NativeArray<BotRelayTransportState>(agentCount, allocator);
-        farm.outbound = new NativeArray<BotRelayPacket>(agentCount * MaxOutboundPerAgent, allocator);
-        farm.outboundCount = new NativeArray<int>(agentCount, allocator);
         farm.inbound = new NativeArray<BotRelayPacket>(agentCount * MaxInboundPerAgent, allocator);
         farm.inboundCount = new NativeArray<int>(agentCount, allocator);
         farm.events = new NativeArray<BotRelayEvent>(agentCount * MaxEventsPerAgent, allocator);
@@ -88,13 +79,10 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
         farm.agentStates = new NativeArray<BotAgentState>(agentCount, allocator);
         farm.agentFlags = new NativeArray<BotAgentRuntimeFlags>(agentCount, allocator);
         farm.nextIdleMatchTime = new NativeArray<double>(agentCount, allocator);
-        farm.lastSeenChapterStage = new NativeArray<uint>(agentCount, allocator);
         farm.prevRemoteChannelStatus = new NativeArray<int>(agentCount, allocator);
-        farm.pendingPlayMessage = new NativeArray<ClientMessagePlay>(agentCount, allocator);
-        farm.inboxSentInitialStatus = new NativeArray<byte>(agentCount, allocator);
+        farm.levelStartMessages = new NativeArray<ClientMessageMatchStart>(agentCount, allocator);
         farm.relayServerStatusInjected = new NativeArray<byte>(agentCount, allocator);
         farm.wireLiveServerHello = new NativeArray<BotRelayPacket>(agentCount, allocator);
-        farm.wireLiveJoinListenShell = new NativeArray<BotRelayPacket>(agentCount, allocator);
         farm.replayRuntime = new NativeArray<BotReplayRuntimeState>(agentCount, allocator);
         farm.wireScratch = new NativeArray<byte>(agentCount * BotRelayPacket.MaxPayloadSize, allocator);
 
@@ -103,7 +91,6 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
             farm.sessions[i] = new BotSessionState
             {
                 channel = ReplyMessageShared.CHANNEL_NULL,
-                pendingHostSquadChannel = BotRelayInviteChannelAuthority.UnsetChannel,
             };
             farm.replayRuntime[i] = new BotReplayRuntimeState
             {
@@ -126,10 +113,6 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
             replayRuntime.Dispose();
         if (transport.IsCreated)
             transport.Dispose();
-        if (outbound.IsCreated)
-            outbound.Dispose();
-        if (outboundCount.IsCreated)
-            outboundCount.Dispose();
         if (inbound.IsCreated)
             inbound.Dispose();
         if (inboundCount.IsCreated)
@@ -146,20 +129,14 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
             agentFlags.Dispose();
         if (nextIdleMatchTime.IsCreated)
             nextIdleMatchTime.Dispose();
-        if (lastSeenChapterStage.IsCreated)
-            lastSeenChapterStage.Dispose();
         if (prevRemoteChannelStatus.IsCreated)
             prevRemoteChannelStatus.Dispose();
-        if (pendingPlayMessage.IsCreated)
-            pendingPlayMessage.Dispose();
-        if (inboxSentInitialStatus.IsCreated)
-            inboxSentInitialStatus.Dispose();
+        if (levelStartMessages.IsCreated)
+            levelStartMessages.Dispose();
         if (relayServerStatusInjected.IsCreated)
             relayServerStatusInjected.Dispose();
         if (wireLiveServerHello.IsCreated)
             wireLiveServerHello.Dispose();
-        if (wireLiveJoinListenShell.IsCreated)
-            wireLiveJoinListenShell.Dispose();
         if (wireScratch.IsCreated)
             wireScratch.Dispose();
 

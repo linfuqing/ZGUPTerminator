@@ -65,12 +65,10 @@ internal static class BotRelayFarmSpawner
     {
         entityManager.SetComponentData(worldEntity, new BotRelayHubState
         {
-            listenPort = ctx.port,
-            driverAdded = true,
             serverEntity = serverEntity
         });
 
-        BotRelayWireCatalogHost.Publish(in ctx.wireCatalog, ctx.agentConnectWires);
+        BotRelayWireCatalogHost.Publish(ref ctx.wireCatalog, ctx.agentConnectWires);
         ctx.DisposeAgentConnectWires();
 
         BotRelayManager.Instance.SetPeelCatalogBlob(BotRelayWireCatalogHost.CatalogBlob);
@@ -106,7 +104,6 @@ internal static class BotRelayFarmSpawner
                 ref farm,
                 i,
                 in header,
-                ctx.port,
                 BotConfig.ResolveMatchLevel(in profile));
             Debug.Log(
                 $"[BotAgent:{profile.userID}] Created (slot {i}, matchLevel={BotConfig.ResolveMatchLevel(in profile)}).");

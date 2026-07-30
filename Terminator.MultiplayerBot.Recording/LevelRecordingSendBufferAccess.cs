@@ -1,10 +1,9 @@
-using System.Collections.Generic;
-using Unity.Collections;
+using System;
 using ZG;
 
 /// <summary>
-/// Recording capture reads the same sendBuffer as <see cref="ClientData.__Send"/> / ApplyStage PlayerProperty.
-/// Do not gate on ECS <see cref="NetworkClientDriver"/> singleton (replay inject uses ClientData for the same reason).
+/// Owns the recording-only EndWrite journal lifecycle on the same sendBuffer used by ClientData.
+/// The journal never reads or advances the transport send/retry cursor.
 /// </summary>
 internal static class LevelRecordingSendBufferAccess
 {
@@ -20,122 +19,93 @@ internal static class LevelRecordingSendBufferAccess
         return sendBuffer.isCreated;
     }
 
-    public static void EnsureSlotCursors(ref int[] slotReadCursors, int slotCount)
+    public static bool TryBeginCapture(
+        in NetworkClientSendBuffer.EndWriteCaptureStamp initialStamp,
+        out uint generation,
+        out string error)
     {
-        if (slotCount <= 0)
+        generation = 0;
+        error = null;
+        if (!TryGetSendBuffer(out var sendBuffer))
         {
-            return;
+            error = "ClientData.sendBuffer is unavailable.";
+            return false;
         }
 
-        if (slotReadCursors != null && slotReadCursors.Length >= slotCount)
+        try
         {
-            return;
+            generation = sendBuffer.BeginEndWriteCapture(in initialStamp);
+            return generation != 0;
         }
-
-        var next = new int[slotCount];
-        if (slotReadCursors != null)
+        catch (Exception exception)
         {
-            for (int i = 0; i < slotReadCursors.Length && i < slotCount; ++i)
-            {
-                next[i] = slotReadCursors[i];
-            }
+            error = exception.Message;
+            return false;
         }
-
-        slotReadCursors = next;
     }
 
-    /// <summary>
-    /// Advance capture cursors past EndWrites that existed before this session.
-    /// Never silently drop <see cref="ReplyMessageType.PlayerProperty"/> — ApplyStage can EndWrite before
-    /// <see cref="ReplyMessageRecorder.BeginRecording"/> if Login starts before the first harness Update.
-    /// </summary>
-    public static void EstablishRecordingBaseline(
-        ref int[] slotReadCursors,
-        List<LevelRecordingFrame> preservePlayerPropertyFrames,
-        float timestamp)
+    public static bool TrySetCaptureStamp(
+        uint generation,
+        in NetworkClientSendBuffer.EndWriteCaptureStamp stamp,
+        out string error)
+    {
+        error = null;
+        if (!TryGetSendBuffer(out var sendBuffer))
+        {
+            error = "ClientData.sendBuffer is unavailable while advancing the capture clock.";
+            return false;
+        }
+
+        if (sendBuffer.SetEndWriteCaptureStamp(generation, in stamp))
+        {
+            return true;
+        }
+
+        error = $"EndWrite capture generation {generation} is no longer active.";
+        return false;
+    }
+
+    public static bool TryEndCapture(
+        uint generation,
+        bool discardUnread,
+        out string error)
+    {
+        error = null;
+        if (!TryGetSendBuffer(out var sendBuffer))
+        {
+            error = "ClientData.sendBuffer is unavailable while ending capture.";
+            return false;
+        }
+
+        if (sendBuffer.EndWriteCapture(generation, discardUnread))
+        {
+            return true;
+        }
+
+        error =
+            $"EndWrite capture generation {generation} could not end cleanly " +
+            $"(outstanding={sendBuffer.capturedEndWriteCount}, fault={sendBuffer.endWriteCaptureFault}, " +
+            $"discardUnread={discardUnread}).";
+        return false;
+    }
+
+    public static string DescribeCaptureJournal()
     {
         if (!TryGetSendBuffer(out var sendBuffer))
         {
-            return;
+            return "sendBuffer=unavailable";
         }
 
-        int slotCount = sendBuffer.GetPendingSendSlotCount();
-        EnsureSlotCursors(ref slotReadCursors, slotCount);
-
-        NativeArray<byte> bytes;
-        for (int slot = 0; slot < slotCount; ++slot)
-        {
-            int probeIndex = slotReadCursors[slot];
-            while (sendBuffer.TryReadPendingSend(slot, ref probeIndex, out bytes))
-            {
-                if (!bytes.IsCreated || bytes.Length == 0)
-                {
-                    continue;
-                }
-
-                var copy = new byte[bytes.Length];
-                bytes.CopyTo(copy);
-                if (!LevelRecordingPayloadUtility.TryGetReplyMessageType(copy, out var messageType) ||
-                    messageType != ReplyMessageType.PlayerProperty ||
-                    preservePlayerPropertyFrames == null)
-                {
-                    continue;
-                }
-
-                preservePlayerPropertyFrames.Add(new LevelRecordingFrame
-                {
-                    timestamp = timestamp,
-                    payload = copy
-                });
-                BotReplayLog.Diag(
-                    $"Preserved pre-baseline PlayerProperty EndWrite ({copy.Length} bytes).");
-            }
-
-            slotReadCursors[slot] = probeIndex;
-        }
+        return
+            $"captureOutstanding={sendBuffer.capturedEndWriteCount}, " +
+            $"captureFault={sendBuffer.endWriteCaptureFault}, " +
+            $"sendBufferSlots={sendBuffer.GetPendingSendSlotCount()}";
     }
 
-    /// <summary>Slots with unread pending EndWrites at current per-slot cursors.</summary>
-    public static int CountUncapturedPendingSlots(int[] slotReadCursors)
+    public static int GetCapturedEndWriteCount()
     {
-        if (!TryGetSendBuffer(out var sendBuffer))
-        {
-            return 0;
-        }
-
-        int slotCount = sendBuffer.GetPendingSendSlotCount();
-        EnsureSlotCursors(ref slotReadCursors, slotCount);
-
-        int uncapturedSlots = 0;
-        NativeArray<byte> bytes;
-        for (int slot = 0; slot < slotCount; ++slot)
-        {
-            int probeIndex = slotReadCursors[slot];
-            if (sendBuffer.TryReadPendingSend(slot, ref probeIndex, out bytes))
-            {
-                uncapturedSlots++;
-            }
-        }
-
-        return uncapturedSlots;
-    }
-
-    public static string DescribeSlotCursors(int[] slotReadCursors)
-    {
-        if (slotReadCursors == null || slotReadCursors.Length == 0)
-        {
-            return "slotCursors=empty";
-        }
-
-        int max = slotReadCursors[0];
-        for (int i = 1; i < slotReadCursors.Length; ++i)
-        {
-            if (slotReadCursors[i] > max)
-            {
-                max = slotReadCursors[i];
-            }
-        }
-
-        return $"slotCount={slotReadCursors.Length}, maxSlotCursor={max}";
+        return TryGetSendBuffer(out var sendBuffer)
+            ? sendBuffer.capturedEndWriteCount
+            : 0;
     }
 }

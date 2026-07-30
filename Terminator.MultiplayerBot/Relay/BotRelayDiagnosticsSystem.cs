@@ -15,10 +15,6 @@ public partial struct BotRelayDiagnosticsSystem : ISystem
     private int __prevSendPkts;
     private int __prevInboundApps;
 
-    private int __prevJoinInj;
-    private int __prevMismatchInj;
-    private int __prevMatchInj;
-
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<BotRelayWorldTag>();
@@ -40,10 +36,7 @@ public partial struct BotRelayDiagnosticsSystem : ISystem
             manager.diagInboundDequeued != __prevInboundDequeued ||
             manager.diagRouteSendZeroPort != __prevRouteZero ||
             manager.diagSendJobPackets != __prevSendPkts ||
-            manager.diagInboundAppsEnqueued != __prevInboundApps ||
-            manager.diagJoinWireInjected != __prevJoinInj ||
-            manager.diagMismatchWireInjected != __prevMismatchInj ||
-            manager.diagMatchWireInjected != __prevMatchInj;
+            manager.diagInboundAppsEnqueued != __prevInboundApps;
 
         if (!changed)
             return;
@@ -55,8 +48,5 @@ public partial struct BotRelayDiagnosticsSystem : ISystem
         __prevRouteZero = manager.diagRouteSendZeroPort;
         __prevSendPkts = manager.diagSendJobPackets;
         __prevInboundApps = manager.diagInboundAppsEnqueued;
-        __prevJoinInj = manager.diagJoinWireInjected;
-        __prevMismatchInj = manager.diagMismatchWireInjected;
-        __prevMatchInj = manager.diagMatchWireInjected;
     }
 }

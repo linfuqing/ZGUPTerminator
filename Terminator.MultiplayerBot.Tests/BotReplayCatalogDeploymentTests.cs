@@ -14,6 +14,7 @@ public sealed class BotReplayCatalogDeploymentTests
     {
         var catalog = BotReplayCatalogBuilder.Build(Allocator.TempJob);
         var farm = BotRelayFlowTestFixtures.CreateFarm();
+        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
         try
         {
             Assert.Greater(catalog.EntryCount, 0,
@@ -47,16 +48,13 @@ public sealed class BotReplayCatalogDeploymentTests
             runtime.flags = BotReplayRuntimeFlags.Playing;
             farm.replayRuntime[0] = runtime;
 
-            var noInject = default(NativeQueue<BotRelayInject>.ParallelWriter);
-            BotReplayLogic.Tick(0, ref farm, catalog.entries, 0.0, ref noInject, 0);
+            var injectWriter = injects.AsParallelWriter();
+            BotReplayLogic.Tick(0, ref farm, catalog.entries, 0.0, ref injectWriter, 1);
 
-            int outboundCount = BotRelayFlowTestFixtures.GetOutboundCount(ref farm, 0);
-            Assert.Greater(outboundCount, 0);
             bool injectedMove = false;
-            for (int i = 0; i < outboundCount; ++i)
+            while (injects.TryDequeue(out var inject))
             {
-                var packet = BotRelayFlowTestFixtures.GetOutboundPacket(ref farm, 0, i);
-                if (BotRelayFlowTestFixtures.TryReadFirstMessageType(in packet, out int messageType) &&
+                if (BotRelayFlowTestFixtures.TryReadInjectMessageType(in inject, out int messageType) &&
                     messageType == (int)ReplyMessageType.Move)
                 {
                     injectedMove = true;
@@ -68,6 +66,7 @@ public sealed class BotReplayCatalogDeploymentTests
         }
         finally
         {
+            injects.Dispose();
             for (int i = 0; i < catalog.EntryCount; ++i)
             {
                 var recording = catalog.entries[i].recording;

@@ -116,7 +116,7 @@ public class BotRelayPlayModeTests
     /// <summary>入站：真人房主 WorldInvite → bot 收到并进入 PendingInvite（携带 squadInviteID）。</summary>
     private static IEnumerator __Live117Invite_ReachesPendingInvite()
     {
-        BotRelayPlayModeHarness.RouteLiveInvite117ToBot(0);
+        BotRelayPlayModeHarness.RouteCurrentInviteToBot(0);
 
         yield return BotRelayPlayModeHarness.WaitForAgentState(
             0,
@@ -134,7 +134,7 @@ public class BotRelayPlayModeTests
     /// </summary>
     private static IEnumerator __Live117Invite_BotSendsJoinReply()
     {
-        BotRelayPlayModeHarness.RouteLiveInvite117ToBot(0);
+        BotRelayPlayModeHarness.RouteCurrentInviteToBot(0);
 
         yield return BotRelayPlayModeHarness.WaitForAgentState(
             0,
@@ -144,7 +144,7 @@ public class BotRelayPlayModeTests
         Assert.IsTrue(BotRelayPlayModeHarness.TryGetPendingInviteId(0, out var squadId));
         Assert.AreEqual(1u, squadId);
 
-        // Join dispatch defers behind Mismatch + ack-fallback + invite delay, so allow a generous window.
+        // Join dispatch waits at least one Server tick after ordered prep, plus invite delay.
         float joinTimeout = BotRelayPlayModeHarness.GetInviteTimeoutMaxSeconds() + 30f;
         yield return BotRelayPlayModeHarness.WaitForJoinDispatched(0, joinTimeout);
 
@@ -159,7 +159,7 @@ public class BotRelayPlayModeTests
     /// </summary>
     private static IEnumerator __Invite_BotEntersInSquad_Deterministic()
     {
-        BotRelayPlayModeHarness.RouteLiveInvite117ToBot(0);
+        BotRelayPlayModeHarness.RouteCurrentInviteToBot(0);
 
         yield return BotRelayPlayModeHarness.WaitForAgentState(
             0,
@@ -167,6 +167,8 @@ public class BotRelayPlayModeTests
             timeoutSeconds: 8f);
 
         Assert.IsTrue(BotRelayPlayModeHarness.TryGetPendingInviteId(0, out var squadId));
+        float joinTimeout = BotRelayPlayModeHarness.GetInviteTimeoutMaxSeconds() + 30f;
+        yield return BotRelayPlayModeHarness.WaitForJoinDispatched(0, joinTimeout);
         BotRelayPlayModeAcceptance.SimulateServerJoinAckToBot(0, squadId);
 
         for (int i = 0; i < 30; ++i)

@@ -2,7 +2,6 @@ using ZG;
 
 public struct BotSessionState
 {
-    public uint userID;
     public int channel;
     public int matchID;
     public bool isHost;
@@ -17,11 +16,6 @@ public struct BotSessionState
 
     public uint remoteUserID;
     public int remotePlayerCount;
-    public LevelPlayerHeader remoteHeader;
-
-    /// <summary>Last remote host Create/Join relay channel observed while bot was idle (invite authority).</summary>
-    public int pendingHostSquadChannel;
-    public uint pendingHostUserId;
 
     public bool IsInSquad => channel != ReplyMessageShared.CHANNEL_NULL;
 
@@ -37,8 +31,5 @@ public struct BotSessionState
         remoteOnline = false;
         remoteUserID = 0;
         remotePlayerCount = 0;
-        remoteHeader = default;
-        pendingHostSquadChannel = BotRelayInviteChannelAuthority.UnsetChannel;
-        pendingHostUserId = 0;
     }
 }

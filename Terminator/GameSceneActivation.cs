@@ -557,7 +557,8 @@ public class GameSceneActivation : IGameSceneActivation
             Directory.CreateDirectory(folder);
         }
 
-        File.WriteAllBytes(destPath, AssetFileUtility.ReadAllBytes(sourcePath));
+        AssetFileUtility.Materialize(sourcePath, destPath);
+        //File.WriteAllBytes(destPath, AssetFileUtility.ReadAllBytes(sourcePath));
     }
 #endif
 }

@@ -1,21 +1,5 @@
 using Unity.Collections;
 using Unity.Entities;
-public enum BotRelayCatalogPacketSlot : byte
-{
-    ServerHello = 0,
-    StatusOutbound,
-    MatchOutbound,
-    StatusApp,
-    MatchApp,
-    SquadJoinOutbound,
-    SquadJoinApp,
-    ApplyMatchOutbound,
-    ApplyMatchApp,
-    SquadLeaveOutbound,
-    SquadLeaveApp,
-    Count
-}
-
 public struct BotRelayWireBlob
 {
     public int length;
@@ -24,7 +8,6 @@ public struct BotRelayWireBlob
 
 public struct BotRelayConnectWireBlobEntry
 {
-    public ushort fromVirtualPort;
     public int wireIndex;
 }
 
@@ -34,27 +17,15 @@ public struct BotRelayAgentConnectWireRange
     public int count;
 }
 
-public struct BotRelayInboundWireBlobMapping
-{
-    public int wireIndex;
-    public int appIndex;
-}
-
 public struct BotRelayCatalogBlob
 {
-    public int connectClientWireCount;
-    public int squadJoinPayloadOffset;
-    public int statusOutboundPayloadOffset;
-    public int matchOutboundPayloadOffset;
     public int inboundAppPayloadOffset;
-    public int joinListenShellWireIndex;
-    public BlobArray<int> templateWireIndex;
+    public int serverHelloWireIndex;
     public BlobArray<BotRelayConnectWireBlobEntry> connectClientWires;
     /// <summary>Per-agent UTP Connect handshake wires. Business frames are not stored here.</summary>
     public BlobArray<BotRelayAgentConnectWireRange> agentConnectClientWireRanges;
     public BlobArray<BotRelayConnectWireBlobEntry> agentConnectClientWires;
     public BlobArray<BotRelayConnectWireBlobEntry> connectServerWires;
-    public BlobArray<BotRelayInboundWireBlobMapping> inboundMappings;
     public BlobArray<int> linkAckWireIndices;
     public BlobArray<BotRelayWireBlob> wires;
 
@@ -72,7 +43,7 @@ internal static class BotRelayCatalogBlobBuilder
         in BotRelayWireCatalogState catalog,
         BotRelayConnectWireState[] agentConnectWires = null)
     {
-        if (!catalog.IsValid)
+        if (!catalog.IsValid || !__HasRequiredAgentConnectWires(agentConnectWires))
             return default;
 
         var uniquePackets = new NativeList<BotRelayPacket>(32, Allocator.Temp);
@@ -83,34 +54,8 @@ internal static class BotRelayCatalogBlobBuilder
         var builder = new BlobBuilder(Allocator.Temp);
         ref var root = ref builder.ConstructRoot<BotRelayCatalogBlob>();
 
-        root.connectClientWireCount = catalog.connectClientWireCount;
-        root.squadJoinPayloadOffset = catalog.squadJoinPayloadOffset;
-        root.statusOutboundPayloadOffset = catalog.statusOutboundPayloadOffset;
-        root.matchOutboundPayloadOffset = catalog.matchOutboundPayloadOffset;
         root.inboundAppPayloadOffset = catalog.inboundAppPayloadOffset;
-        if (root.inboundAppPayloadOffset < 0 &&
-            !catalog.statusOutboundWire.IsEmpty &&
-            !catalog.statusAppTemplate.IsEmpty &&
-            BotRelayWireBytes.TryResolveInboundAppPayloadOffset(
-                in catalog.statusOutboundWire,
-                in catalog.statusAppTemplate,
-                out int statusAppOffset))
-        {
-            root.inboundAppPayloadOffset = statusAppOffset;
-        }
-
-        var templateIndices = builder.Allocate(ref root.templateWireIndex, (int)BotRelayCatalogPacketSlot.Count);
-        templateIndices[(int)BotRelayCatalogPacketSlot.ServerHello] = AddWire(in catalog.serverHelloWire);
-        templateIndices[(int)BotRelayCatalogPacketSlot.StatusOutbound] = AddWire(in catalog.statusOutboundWire);
-        templateIndices[(int)BotRelayCatalogPacketSlot.MatchOutbound] = AddWire(in catalog.matchOutboundWire);
-        templateIndices[(int)BotRelayCatalogPacketSlot.StatusApp] = AddWire(in catalog.statusAppTemplate);
-        templateIndices[(int)BotRelayCatalogPacketSlot.MatchApp] = AddWire(in catalog.matchAppTemplate);
-        templateIndices[(int)BotRelayCatalogPacketSlot.SquadJoinOutbound] = AddWire(in catalog.squadJoinOutboundWire);
-        templateIndices[(int)BotRelayCatalogPacketSlot.SquadJoinApp] = AddWire(in catalog.squadJoinAppTemplate);
-        templateIndices[(int)BotRelayCatalogPacketSlot.ApplyMatchOutbound] = AddWire(in catalog.applyMatchOutboundWire);
-        templateIndices[(int)BotRelayCatalogPacketSlot.ApplyMatchApp] = AddWire(in catalog.applyMatchAppTemplate);
-        templateIndices[(int)BotRelayCatalogPacketSlot.SquadLeaveOutbound] = AddWire(in catalog.squadLeaveOutboundWire);
-        templateIndices[(int)BotRelayCatalogPacketSlot.SquadLeaveApp] = AddWire(in catalog.squadLeaveAppTemplate);
+        root.serverHelloWireIndex = AddWire(in catalog.serverHelloWire);
 
         __CopyConnectWires(ref builder, ref root.connectClientWires, catalog.connectWire.clientPackets, ref uniquePackets);
         __CopyPerAgentConnectWires(
@@ -122,20 +67,6 @@ internal static class BotRelayCatalogBlobBuilder
             ref uniquePackets);
         __CopyConnectWires(ref builder, ref root.connectServerWires, catalog.connectWire.serverPackets, ref uniquePackets);
 
-        int inboundCount = catalog.inboundMappings.IsCreated ? catalog.inboundMappings.Length : 0;
-        var inboundArray = builder.Allocate(ref root.inboundMappings, inboundCount);
-        for (int i = 0; i < inboundCount; ++i)
-        {
-            var mapping = catalog.inboundMappings[i];
-            var wire = mapping.wire;
-            var appFrame = mapping.appFrame;
-            inboundArray[i] = new BotRelayInboundWireBlobMapping
-            {
-                wireIndex = AddWire(in wire),
-                appIndex = AddWire(in appFrame)
-            };
-        }
-
         int ackCount = catalog.linkAckTemplates.IsCreated ? catalog.linkAckTemplates.Length : 0;
         var ackArray = builder.Allocate(ref root.linkAckWireIndices, ackCount);
         for (int i = 0; i < ackCount; ++i)
@@ -143,28 +74,6 @@ internal static class BotRelayCatalogBlobBuilder
             var ackTemplate = catalog.linkAckTemplates[i];
             ackArray[i] = AddWire(in ackTemplate);
         }
-
-        int joinListenShellWireIndex = BotRelayWireBytes.EmptyWireIndex;
-        int joinListenShellLen = 0;
-        for (int i = 1; i < uniquePackets.Length; ++i)
-        {
-            var packet = uniquePackets[i];
-            if (packet.length <= joinListenShellLen)
-                continue;
-
-            if (BotRelayWireBytes.LooksLikeConnectHandshake(in packet))
-                continue;
-
-            if (BotRelayWireBytes.ShellCarriesInviteRelayApp(
-                    root.inboundAppPayloadOffset,
-                    in packet))
-                continue;
-
-            joinListenShellLen = packet.length;
-            joinListenShellWireIndex = i;
-        }
-
-        root.joinListenShellWireIndex = joinListenShellWireIndex;
 
         var wiresArray = builder.Allocate(ref root.wires, uniquePackets.Length);
         for (int i = 0; i < uniquePackets.Length; ++i)
@@ -197,8 +106,7 @@ internal static class BotRelayCatalogBlobBuilder
 
         for (int agentIndex = 0; agentIndex < agentCount; ++agentIndex)
         {
-            bool hasDedicatedWire = agentIndex > 0 &&
-                agentConnectWires[agentIndex].IsValid;
+            bool hasDedicatedWire = agentIndex > 0;
             int wireCount = hasDedicatedWire
                 ? agentConnectWires[agentIndex].clientPackets.Length
                 : catalog.connectClientWireCount;
@@ -217,8 +125,7 @@ internal static class BotRelayCatalogBlobBuilder
 
         for (int agentIndex = 0; agentIndex < agentCount; ++agentIndex)
         {
-            bool hasDedicatedWire = agentIndex > 0 &&
-                agentConnectWires[agentIndex].IsValid;
+            bool hasDedicatedWire = agentIndex > 0;
             int wireCount = hasDedicatedWire
                 ? agentConnectWires[agentIndex].clientPackets.Length
                 : catalog.connectClientWireCount;
@@ -241,15 +148,28 @@ internal static class BotRelayCatalogBlobBuilder
                     : catalog.connectWire.clientPackets[wireIndex];
                 wireArray[writeIndex++] = new BotRelayConnectWireBlobEntry
                 {
-                    fromVirtualPort = entry.fromVirtualPort,
                     wireIndex = __FindOrAddWire(in entry.wire, ref uniquePackets)
                 };
             }
         }
     }
 
-    
-private static void __CopyConnectWires(
+    private static bool __HasRequiredAgentConnectWires(
+        BotRelayConnectWireState[] agentConnectWires)
+    {
+        if (agentConnectWires == null)
+            return true;
+
+        for (int i = 1; i < agentConnectWires.Length; ++i)
+        {
+            if (!agentConnectWires[i].IsValid)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static void __CopyConnectWires(
         ref BlobBuilder builder,
         ref BlobArray<BotRelayConnectWireBlobEntry> destination,
         NativeList<BotRelayConnectWirePacket> source,
@@ -262,7 +182,6 @@ private static void __CopyConnectWires(
             var entry = source[i];
             array[i] = new BotRelayConnectWireBlobEntry
             {
-                fromVirtualPort = entry.fromVirtualPort,
                 wireIndex = __FindOrAddWire(in entry.wire, ref uniquePackets)
             };
         }

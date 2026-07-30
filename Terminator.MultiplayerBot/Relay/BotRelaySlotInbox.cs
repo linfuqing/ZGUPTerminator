@@ -10,16 +10,10 @@ internal static class BotRelaySlotInbox
         in BotRelayPacket packet,
         int agentIndex,
         ref BotRelayFarmNative farm,
-        in ClientHeader selfHeader,
-        bool sentInitialStatus)
+        in ClientHeader selfHeader)
     {
-        if (packet.IsEmpty)
-        {
-            NotifyConnected(agentIndex, ref farm, in selfHeader, sentInitialStatus);
-            return;
-        }
-
-        if (packet.length <= 0)
+        if (packet.IsEmpty ||
+            !BotRelayWireBytes.TryAcceptCurrentInboundApp(in packet, out _))
             return;
 
         int scratchBase = agentIndex * BotRelayPacket.MaxPayloadSize;
@@ -28,26 +22,6 @@ internal static class BotRelaySlotInbox
 
         var payload = farm.wireScratch.GetSubArray(scratchBase, packet.length);
         ParseDataPayload(payload, agentIndex, ref farm, in selfHeader);
-    }
-
-    public static void NotifyConnected(
-        int agentIndex,
-        ref BotRelayFarmNative farm,
-        in ClientHeader selfHeader,
-        bool sentInitialStatus)
-    {
-        if (!sentInitialStatus)
-        {
-            // Initial status is injected by BotAgentLogic after the Connect/link path marks the
-            // slot ready. Do not place a business Status packet in the deprecated UTP outbound slot.
-            farm.inboxSentInitialStatus[agentIndex] = 1;
-        }
-
-        TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
-        {
-            type = BotRelayEventType.Connected,
-            header = selfHeader
-        });
     }
 
     public static bool TryDequeueEvent(int agentIndex, ref BotRelayFarmNative farm, out BotRelayEvent evt)
@@ -102,30 +76,59 @@ internal static class BotRelaySlotInbox
             return;
 
         var reader = new DataStreamReader(payload);
-        ref var session = ref farm.sessions.ElementAt(agentIndex);
-
         int type = reader.ReadPackedInt(streamCompressionModel);
+        if (reader.HasFailedReads)
+            return;
+
         BotRelayInboundProbe.RecordInbound(type);
         switch ((NetworkRelayMessageType)type)
         {
             case NetworkRelayMessageType.Matching:
-                session.matchID = 0;
+                // Validate the complete current notification, but do not cache a pending
+                // generation. MatchToRead is the sole authority that commits matchID.
+                BotRelayMessageUtility.TryReadServerMatchStateNotification(
+                    ref reader,
+                    in streamCompressionModel,
+                    out _,
+                    out _);
                 break;
             case NetworkRelayMessageType.Mismatch:
-                session.matchID = 0;
+            {
+                if (!BotRelayMessageUtility.TryReadServerMatchStateNotification(
+                        ref reader,
+                        in streamCompressionModel,
+                        out int mismatchID,
+                        out uint sourceID))
+                {
+                    return;
+                }
+
+                ClientMessageMatchToRead mismatch;
+                mismatch.matchID = mismatchID;
+                mismatch.level = 0;
                 TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.Mismatch,
-                    header = selfHeader
+                    header = sourceID == 0
+                        ? selfHeader
+                        : new ClientHeader(sourceID, default),
+                    match = mismatch
                 });
                 break;
+            }
             case NetworkRelayMessageType.Match:
             {
                 if (!BotRelayMessageUtility.TryReadServerMatchNotification(
-                        ref reader, in streamCompressionModel, out int matchID, out int level))
+                        ref reader,
+                        in streamCompressionModel,
+                        out int matchID,
+                        out int level) ||
+                    matchID <= 0 ||
+                    level < 0)
+                {
                     return;
+                }
 
-                session.matchID = matchID;
                 ClientMessageMatchToRead match;
                 match.matchID = matchID;
                 match.level = level;
@@ -145,10 +148,13 @@ internal static class BotRelaySlotInbox
                 break;
             case NetworkRelayMessageType.JoinFailed:
             {
-                if (!HasRemaining(ref reader, 1))
-                    return;
-
                 int failedChannel = reader.ReadPackedInt(streamCompressionModel);
+                if (failedChannel < 0 ||
+                    !BotRelayMessageUtility.IsAtEnd(ref reader))
+                {
+                    return;
+                }
+
                 ClientMessageSquadJoinToRead joinFail;
                 joinFail.playerStatus.flag = 0;
                 joinFail.squadInviteID = (uint)failedChannel;
@@ -164,84 +170,28 @@ internal static class BotRelaySlotInbox
                 ParseRelayQueryMessage(ref reader, streamCompressionModel, agentIndex, ref farm);
                 break;
             case NetworkRelayMessageType.Connect:
-                __ParseWrappedRelayPayload(payload, agentIndex, ref farm, in selfHeader);
-                break;
             case NetworkRelayMessageType.Status:
             case NetworkRelayMessageType.Add:
             {
                 // Server __WriteStatus is always [channelFlag][userID]. Do not treat a short remainder
                 // as a bare channelStatus — that would store (stage<<3|flags) and break stage lookup.
-                if (!HasRemaining(ref reader, 2))
-                    return;
-
                 ParseRelayStatusMessage(type, ref reader, streamCompressionModel, agentIndex, ref farm, in selfHeader);
                 break;
             }
             case NetworkRelayMessageType.Disconnect:
             case NetworkRelayMessageType.Remove:
-                if (!HasRemaining(ref reader, 1))
-                    return;
-
                 ParseRelayStatusMessage(type, ref reader, streamCompressionModel, agentIndex, ref farm, in selfHeader);
                 break;
             default:
                 if (type == (int)ReplyMessageType.Invite)
                     ParseInviteSendRelayMessage(payload, agentIndex, ref farm, in selfHeader);
-                else if (type >= (int)ReplyMessageType.Chat && type <= (int)ReplyMessageType.PlayerProperty)
+                else if (type == (int)ReplyMessageType.PlayerProperty)
                     ParseReplyPayloadMessage(type, ref reader, streamCompressionModel, agentIndex, ref farm, in selfHeader);
-                else if (type >= (int)NetworkRelayMessageType.Query + 2 && type < (int)ReplyMessageType.Chat)
+                else if (type >= (int)ClientMessageType.ApplyFriend &&
+                         type <= (int)ClientMessageType.MatchStart)
                     ParseReplyHeaderClientMessage(type, ref reader, agentIndex, ref farm, in selfHeader);
                 break;
         }
-    }
-
-    private static void __ParseWrappedRelayPayload(
-        NativeArray<byte> payload,
-        int agentIndex,
-        ref BotRelayFarmNative farm,
-        in ClientHeader selfHeader)
-    {
-        if (payload.Length <= 0)
-            return;
-
-        var wire = default(BotRelayPacket);
-        wire.length = payload.Length;
-        for (int i = 0; i < payload.Length; ++i)
-            wire.SetByte(i, payload[i]);
-
-        if (BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out var inner) &&
-            !inner.IsEmpty &&
-            __TryParseResolvedApp(in inner, agentIndex, ref farm, in selfHeader))
-            return;
-
-        if (BotRelayWireBytes.TryNormalizePopEventsPayload(in wire, out inner) &&
-            !inner.IsEmpty &&
-            __TryParseResolvedApp(in inner, agentIndex, ref farm, in selfHeader))
-            return;
-    }
-
-    private static bool __TryParseResolvedApp(
-        in BotRelayPacket app,
-        int agentIndex,
-        ref BotRelayFarmNative farm,
-        in ClientHeader selfHeader)
-    {
-        if (app.IsEmpty)
-            return false;
-
-        if (!BotRelayWireBytes.TryReadRelayMessageTypeHeader(in app, out int type))
-            return false;
-
-        if (type == (int)NetworkRelayMessageType.Connect)
-            return false;
-
-        int scratchBase = agentIndex * BotRelayPacket.MaxPayloadSize;
-        if (!app.TryCopyBytesTo(farm.wireScratch, scratchBase))
-            return false;
-
-        var payload = farm.wireScratch.GetSubArray(scratchBase, app.length);
-        ParseDataPayload(payload, agentIndex, ref farm, in selfHeader);
-        return true;
     }
 
     private static void ParseInviteSendRelayMessage(
@@ -257,22 +207,15 @@ internal static class BotRelaySlotInbox
             packet.SetByte(i, payload[i]);
         }
 
-        var options = BotRelayMessageUtility.InviteReadOptions.Default;
-        if (!BotRelayMessageUtility.TryReadInviteFromPacket(in packet, out var invite, options))
+        // Defense in depth: RouteSend normally admits only validated Invite apps, but a bad
+        // PopEvents offset must never be able to manufacture a PendingInvite if it reaches Inbox.
+        if (!BotRelayInviteDecodeOps.IsStrictSendRelayInviteApp(in packet, out var invite))
         {
             BotRelayAgentDiagnostics.LogInviteParseFailed(selfHeader.userID, payload, payload.Length);
             return;
         }
 
-        ref var session = ref farm.sessions.ElementAt(agentIndex);
         ref readonly var transport = ref farm.transport.ElementAt(agentIndex);
-        var shellWire = default(BotRelayPacket);
-        BotRelayInviteShellCacheStore.TryGet(transport.virtualPort, out shellWire);
-        BotRelayInviteChannelAuthority.TryResolveSquadChannel(
-            ref invite,
-            in packet,
-            in shellWire,
-            in session);
 
         ClientMessageSquadInviteToRead squadInvite = new ClientMessageSquadInviteToRead(invite, out var header);
         if (invite.stage >= 0)
@@ -280,12 +223,7 @@ internal static class BotRelaySlotInbox
             squadInvite.stage = invite.stage;
         }
 
-        ref var agentState = ref farm.agentStates.ElementAt(agentIndex);
-        if (invite.stage > 0)
-        {
-            agentState.playStageIndex = invite.stage;
-        }
-
+        ref readonly var agentState = ref farm.agentStates.ElementAt(agentIndex);
         BotRelayAgentDiagnostics.LogSquadInvite(
             invite.id,
             (int)invite.type,
@@ -295,8 +233,7 @@ internal static class BotRelaySlotInbox
             selfHeader.userID);
 
         ref readonly var sessionReadonly = ref farm.sessions.ElementAt(agentIndex);
-        bool relayReady = farm.inboxSentInitialStatus[agentIndex] != 0 &&
-                          (transport.flags & BotRelayTransportFlags.Connected) != 0;
+        bool relayReady = (transport.flags & BotRelayTransportFlags.Connected) != 0;
         BotRelayAgentDiagnostics.LogInviteReceived(
             selfHeader.userID,
             invite.id,
@@ -325,8 +262,6 @@ internal static class BotRelaySlotInbox
         ref var session = ref farm.sessions.ElementAt(agentIndex);
 
         var messageType = (NetworkRelayMessageType)type;
-        bool carriesChannelFlag = messageType != NetworkRelayMessageType.Disconnect &&
-                                  messageType != NetworkRelayMessageType.Remove;
         int channelFlag;
         switch (messageType)
         {
@@ -335,20 +270,29 @@ internal static class BotRelaySlotInbox
                 channelFlag = 0;
                 break;
             default:
-                if (!HasRemaining(ref reader, 1))
-                    return;
-
                 channelFlag = reader.ReadPackedInt(streamCompressionModel);
                 break;
         }
 
-        if (!HasRemaining(ref reader, 2))
-            return;
-
         var remoteUserID = reader.ReadPackedUInt(streamCompressionModel);
-        if (remoteUserID != 0 && remoteUserID != selfHeader.userID)
+        if (channelFlag < 0 ||
+            remoteUserID == 0 ||
+            !BotRelayMessageUtility.IsAtEnd(ref reader))
         {
-            session.remoteUserID = remoteUserID;
+            return;
+        }
+
+        if (remoteUserID != selfHeader.userID)
+        {
+            // Status is live presence only. It must not establish a peer before Join or replace
+            // the peer committed for the current squad generation.
+            if (!session.IsInSquad ||
+                session.remoteUserID == 0 ||
+                session.remoteUserID != remoteUserID)
+            {
+                return;
+            }
+
             if (messageType == NetworkRelayMessageType.Disconnect)
             {
                 // Disconnect carries only userID. It clears transport presence, not the authoritative
@@ -362,19 +306,6 @@ internal static class BotRelaySlotInbox
                 session.remoteOnline = ((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Online) != 0;
             }
 
-            if (session.remotePlayerCount == 0)
-                session.remotePlayerCount = 1;
-
-            if (carriesChannelFlag && session.remoteChannelStatus > 0)
-            {
-                ref var state = ref farm.agentStates.ElementAt(agentIndex);
-                if (state.matchPaired)
-                {
-                    state.awaitingFreshMatchStage = false;
-                    state.targetUserStageID = (uint)session.remoteChannelStatus;
-                    farm.lastSeenChapterStage[agentIndex] = (uint)session.remoteChannelStatus;
-                }
-            }
         }
     }
 
@@ -387,35 +318,42 @@ internal static class BotRelaySlotInbox
         int agentIndex,
         ref BotRelayFarmNative farm)
     {
-        if (!HasRemaining(ref reader, 2))
-            return;
-
         int queryChannel = reader.ReadPackedInt(streamCompressionModel);
         int channelFlag = reader.ReadPackedInt(streamCompressionModel);
-        ref var session = ref farm.sessions.ElementAt(agentIndex);
-        if (queryChannel != session.channel)
+        if (reader.HasFailedReads || queryChannel < 0 || channelFlag < 0)
             return;
+
+        // Query emits one response per member. The bodyless response is the Bot's own snapshot;
+        // only the complete remote payload may update peer presence.
+        if (BotRelayMessageUtility.IsAtEnd(ref reader))
+            return;
+
+        reader.Flush();
+        uint remoteUserID = reader.ReadPackedUInt(streamCompressionModel);
+        if (remoteUserID == 0 ||
+            !BotRelayMessageUtility.TryReadOptionalRemoteClientHeader(
+                remoteUserID,
+                ref reader,
+                streamCompressionModel,
+                out _) ||
+            !BotRelayMessageUtility.IsAtEnd(ref reader))
+        {
+            return;
+        }
+
+        ref var session = ref farm.sessions.ElementAt(agentIndex);
+        if (!session.IsInSquad ||
+            queryChannel != session.channel ||
+            session.remoteUserID == 0 ||
+            remoteUserID != session.remoteUserID)
+        {
+            return;
+        }
 
         int remoteStage = BotRelayMessageUtility.DecodeChannelStatus(channelFlag);
-        if (remoteStage <= 0)
-            return;
-
         session.remoteChannelStatus = remoteStage;
         session.remoteOnline = ((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Online) != 0;
-        if (session.remotePlayerCount == 0)
-            session.remotePlayerCount = 1;
-
-        ref var state = ref farm.agentStates.ElementAt(agentIndex);
-        if (state.matchPaired)
-        {
-            state.awaitingFreshMatchStage = false;
-            state.targetUserStageID = (uint)remoteStage;
-            farm.lastSeenChapterStage[agentIndex] = (uint)remoteStage;
-        }
     }
-
-    private static bool HasRemaining(ref DataStreamReader reader, int minimumBytes) =>
-        reader.Length - reader.GetBytesRead() >= minimumBytes;
 
     private static void ParseChannelMessage(
         int type,
@@ -425,111 +363,72 @@ internal static class BotRelaySlotInbox
         ref BotRelayFarmNative farm,
         in ClientHeader selfHeader)
     {
-        ref var session = ref farm.sessions.ElementAt(agentIndex);
-
         int channel = reader.ReadPackedInt(streamCompressionModel);
         int channelFlag = reader.ReadPackedInt(streamCompressionModel);
-
-        if ((NetworkRelayMessageType)type == NetworkRelayMessageType.Leave)
-        {
-            BotRelayInboundProbe.RecordChannelLeave();
-            session.ResetChannel();
-            TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
-            {
-                type = BotRelayEventType.SquadLeave,
-                header = selfHeader
-            });
+        if (reader.HasFailedReads || channel < 0 || channelFlag < 0)
             return;
-        }
 
-        if ((NetworkRelayMessageType)type == NetworkRelayMessageType.Drop)
-        {
-            BotRelayInboundProbe.RecordChannelLeave();
-            session.ResetChannel();
-            TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
-            {
-                type = BotRelayEventType.SquadDrop,
-                header = selfHeader
-            });
-            return;
-        }
-
-        BotRelayInboundProbe.RecordChannelJoin();
-
-        // Align with ReplyMessage.cs:
-        // - Create (self) => isHost=true
-        // - Join with remote payload => peer joined our channel; keep self isHost
-        // - Join without remote payload => self join ack; isHost=false
-        bool wasIdle = !session.IsInSquad;
+        var channelMessageType = (NetworkRelayMessageType)type;
         bool hasRemotePayload = reader.GetBytesRead() < reader.Length;
-        if (hasRemotePayload &&
-            wasIdle &&
-            (NetworkRelayMessageType)type == NetworkRelayMessageType.Create)
-        {
-            if (!HasRemaining(ref reader, 1))
-            {
-                return;
-            }
-
-            var remoteUserID = reader.ReadPackedUInt(streamCompressionModel);
-            BotRelayInviteChannelAuthority.RecordRemoteHostCreateOrJoin(
-                ref session,
-                channel,
-                remoteUserID);
-            return;
-        }
-
-        if ((NetworkRelayMessageType)type == NetworkRelayMessageType.Create)
-        {
-            session.isHost = true;
-            session.channel = channel;
-            session.channelStatus = BotRelayMessageUtility.DecodeChannelStatus(channelFlag);
-            if (!hasRemotePayload)
-                session.remotePlayerCount = 0;
-        }
-        else
-        {
-            session.channel = channel;
-            if (!hasRemotePayload)
-            {
-                session.isHost = false;
-                session.channelStatus = BotRelayMessageUtility.DecodeChannelStatus(channelFlag);
-                session.remotePlayerCount = 0;
-            }
-        }
-
+        bool hasRemoteHeader = false;
+        uint remoteUserID = 0;
+        ClientHeader remoteHeader = default;
         if (hasRemotePayload)
         {
-            if (session.IsInSquad && (int)channel != session.channel)
-            {
-                return;
-            }
-
-            var remoteUserID = reader.ReadPackedUInt(streamCompressionModel);
-            session.remoteUserID = remoteUserID;
-            if (BotRelayMessageUtility.TryReadOptionalRemoteClientHeader(
+            // Current Server channel payloads mirror ClientData exactly:
+            // [packed remoteUserID][fixed LevelPlayerHeader]. Truncated legacy variants are not
+            // accepted, because an incomplete peer snapshot must never establish membership.
+            reader.Flush();
+            remoteUserID = reader.ReadPackedUInt(streamCompressionModel);
+            if (reader.HasFailedReads ||
+                remoteUserID == 0 ||
+                !BotRelayMessageUtility.TryReadOptionalRemoteClientHeader(
                     remoteUserID,
                     ref reader,
                     streamCompressionModel,
-                    out var remoteHeader))
+                    out remoteHeader) ||
+                BotRelayMessageUtility.RemainingBytes(ref reader) != 0)
             {
-                session.remoteHeader = remoteHeader.ToLevelPlayerHeader();
+                return;
             }
 
-            session.remotePlayerCount = 1;
-            // Peer Join/Create relay embeds the *peer's* channelFlag.
-            session.remoteChannelStatus = BotRelayMessageUtility.DecodeChannelStatus(channelFlag);
-            session.remoteOnline = ((NetworkRelayChannelFlag)channelFlag & NetworkRelayChannelFlag.Online) != 0;
+            hasRemoteHeader = true;
         }
 
         ClientMessageSquadJoinToRead join;
         join.playerStatus.flag = (ClientRemotePlayerFlag)channelFlag;
         join.squadInviteID = (uint)channel;
+
+        BotRelayEventType eventType;
+        switch (channelMessageType)
+        {
+            case NetworkRelayMessageType.Leave:
+                eventType = BotRelayEventType.SquadLeave;
+                BotRelayInboundProbe.RecordChannelLeave();
+                break;
+            case NetworkRelayMessageType.Drop:
+                eventType = BotRelayEventType.SquadDrop;
+                BotRelayInboundProbe.RecordChannelLeave();
+                break;
+            case NetworkRelayMessageType.Create:
+            case NetworkRelayMessageType.Join:
+                eventType = BotRelayEventType.SquadJoin;
+                BotRelayInboundProbe.RecordChannelJoin();
+                break;
+            default:
+                return;
+        }
+
         TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
         {
-            type = BotRelayEventType.SquadJoin,
+            type = eventType,
             header = selfHeader,
-            squadJoin = join
+            squadJoin = join,
+            channelMessageType = channelMessageType,
+            channelHasRemotePayload = hasRemotePayload,
+            channelHasRemoteHeader = hasRemoteHeader,
+            channelRemoteUserID = remoteUserID,
+            channelRemoteHeader = remoteHeader
         });
     }
 
@@ -546,14 +445,11 @@ internal static class BotRelaySlotInbox
     {
         relayType = default;
         senderId = 0;
-        if (!HasRemaining(ref reader, 1))
-            return false;
-
         relayType = (NetworkRelayType)reader.ReadPackedInt(streamCompressionModel);
-        if (!HasRemaining(ref reader, 1))
+        senderId = reader.ReadPackedUInt(streamCompressionModel);
+        if (reader.HasFailedReads)
             return false;
 
-        senderId = reader.ReadPackedUInt(streamCompressionModel);
         reader.Flush();
         return true;
     }
@@ -568,22 +464,26 @@ internal static class BotRelaySlotInbox
     {
         if (type == (int)ReplyMessageType.PlayerProperty)
         {
-            if (!HasRemaining(ref reader, 2))
+            if (!TryReadRelayHeader(
+                    ref reader,
+                    streamCompressionModel,
+                    out NetworkRelayType relayType,
+                    out uint senderID) ||
+                relayType != NetworkRelayType.Channel ||
+                senderID == 0 ||
+                senderID == selfHeader.userID)
                 return;
 
-            var relayType = (NetworkRelayType)reader.ReadPackedInt(streamCompressionModel);
-            if (relayType != NetworkRelayType.Channel)
+            ref readonly var session = ref farm.sessions.ElementAt(agentIndex);
+            if (!session.IsInSquad ||
+                session.remoteUserID == 0 ||
+                session.remoteUserID != senderID)
                 return;
 
-            uint senderID = reader.ReadPackedUInt(streamCompressionModel);
-
-            if (senderID == 0 || senderID == selfHeader.userID)
+            _ = new ClientMessagePlayerProperty(ref reader);
+            if (!BotRelayMessageUtility.IsAtEnd(ref reader))
                 return;
 
-            ref var session = ref farm.sessions.ElementAt(agentIndex);
-            session.remoteUserID = senderID;
-            session.remotePlayerCount = 1;
-            session.remoteOnline = true;
             TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
             {
                 type = BotRelayEventType.RemotePlayerProperty,
@@ -592,14 +492,6 @@ internal static class BotRelaySlotInbox
             return;
         }
 
-        if (!HasRemaining(ref reader, 2))
-            return;
-
-        int channel = reader.ReadPackedInt(streamCompressionModel);
-        uint legacySenderID = reader.ReadPackedUInt(streamCompressionModel);
-
-        if ((ReplyMessageType)type == ReplyMessageType.Invite)
-            return;
     }
 
     private static void ParseReplyHeaderClientMessage(
@@ -610,63 +502,80 @@ internal static class BotRelaySlotInbox
         in ClientHeader selfHeader)
     {
         var streamCompressionModel = StreamCompressionModel.Default;
-        if (!TryReadRelayHeader(ref reader, streamCompressionModel, out _, out uint senderId))
+        if (!TryReadRelayHeader(
+                ref reader,
+                streamCompressionModel,
+                out NetworkRelayType relayType,
+                out uint senderId) ||
+            relayType != NetworkRelayType.Channel ||
+            senderId == 0 ||
+            senderId == selfHeader.userID)
             return;
 
-        if (senderId != 0 && senderId != selfHeader.userID)
-        {
-            ref var session = ref farm.sessions.ElementAt(agentIndex);
-            session.remoteUserID = senderId;
-            if (session.remotePlayerCount == 0)
-                session.remotePlayerCount = 1;
-            session.remoteOnline = true;
-        }
+        ref readonly var knownSession = ref farm.sessions.ElementAt(agentIndex);
+        // Once Join/Create has established the peer for this squad generation, an app envelope
+        // attributed to a different sender is a framing false-positive or stale traffic.
+        if (knownSession.remoteUserID != 0 && knownSession.remoteUserID != senderId)
+            return;
+
+        var senderHeader = new ClientHeader(senderId, default);
 
         BotRelayInboundProbe.RecordClientMessage(type);
         switch ((ClientMessageType)type)
         {
             case ClientMessageType.ApplyMatch:
+                if (!BotRelayMessageUtility.IsAtEnd(ref reader))
+                    return;
+
                 TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.ApplyMatch,
-                    header = selfHeader
+                    header = senderHeader
                 });
                 break;
             case ClientMessageType.ApplyMatchFail:
+                if (!BotRelayMessageUtility.IsAtEnd(ref reader))
+                    return;
+
                 TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.ApplyMatchFail,
-                    header = selfHeader
+                    header = senderHeader
                 });
                 break;
             case ClientMessageType.RejectMatch:
+                if (!BotRelayMessageUtility.IsAtEnd(ref reader))
+                    return;
+
                 TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.RejectMatch,
-                    header = selfHeader
+                    header = senderHeader
                 });
                 break;
             case ClientMessageType.ChapterStage:
             {
-                var chapterStage = new ClientMessageChapterStage(ref reader, StreamCompressionModel.Default);
-                BotRelayInboundProbe.RecordChapterStage();
-                TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.ChapterStage,
-                    header = selfHeader,
-                    chapterStageID = chapterStage.userStageID
-                });
+                // Human UI navigation metadata is not a Bot level-entry authority. Decode the
+                // complete body so the packet cursor cannot be reused as another protocol, then
+                // deliberately discard it without committing sender/session state.
+                _ = new ClientMessageChapterStage(ref reader, StreamCompressionModel.Default);
+                if (!BotRelayMessageUtility.IsAtEnd(ref reader))
+                    return;
                 break;
             }
             case ClientMessageType.MatchStart:
             {
                 var matchStart = new ClientMessageMatchStart(ref reader);
-                if (reader.HasFailedReads)
+                if (!BotRelayMessageUtility.IsAtEnd(ref reader))
                     return;
+
+                // AgentLogic first verifies mode/generation and the expected Host/peer identity.
+                // Committing here would let a stale/foreign early descriptor poison remoteUserID
+                // and make the real Host fail the known-peer envelope gate.
                 TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
                 {
                     type = BotRelayEventType.MatchStart,
-                    header = selfHeader,
+                    header = senderHeader,
                     matchStart = matchStart
                 });
                 break;
@@ -674,18 +583,12 @@ internal static class BotRelaySlotInbox
             case ClientMessageType.Play:
             {
                 // The Server.SendRelay envelope was byte-aligned by TryReadRelayHeader above.
-                // Decode the body with the protocol's own reader so its packed-bit cursor and
-                // FixedString alignment stay identical to the real client implementation.
-                var play = new ClientMessagePlay(ref reader);
-                if (reader.HasFailedReads)
+                // Decode the full current human body, but never turn it into Bot entry state.
+                // Keeping the full skip prevents arbitrary string bytes from being reinterpreted
+                // as a shorter control application by an outer transport walk.
+                _ = new ClientMessagePlay(ref reader);
+                if (!BotRelayMessageUtility.IsAtEnd(ref reader))
                     return;
-                BotRelayInboundProbe.RecordPlaySeen();
-                TryEnqueueEvent(agentIndex, ref farm, new BotRelayEvent
-                {
-                    type = BotRelayEventType.Play,
-                    header = selfHeader,
-                    play = play
-                });
                 break;
             }
         }
