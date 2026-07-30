@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.Serialization;
 using Unity.Jobs;
+using Unity.Scenes;
 using UnityEngine;
 using ZG;
 using EntityHash128 = Unity.Entities.Hash128;
@@ -11,7 +12,8 @@ using EntityHash128 = Unity.Entities.Hash128;
 [CreateAfter(typeof(ZG.PrefabLoaderSystem)),
  UpdateInGroup(typeof(Unity.Scenes.SceneSystemGroup)),
  UpdateAfter(typeof(ZG.PrefabLoaderSystem)),
- UpdateAfter(typeof(Unity.Scenes.WeakAssetReferenceLoadingSystem))]
+ UpdateAfter(typeof(Unity.Scenes.WeakAssetReferenceLoadingSystem)),
+ UpdateAfter(typeof(Unity.Scenes.SceneSectionStreamingSystem))]
 public partial class SceneArchiveDependencySystem : SystemBase
 {
     private struct PendingRelease
@@ -212,6 +214,87 @@ public partial class SceneArchiveDependencySystem : SystemBase
     private NativeList<int> __archiveQueue;
 
     private bool __hasScheduledPlan;
+    private bool __isDraining;
+    private bool __isReadyForRelease;
+    private bool __isReleaseRequested;
+    private bool __isReleaseComplete;
+    private int __releaseRequestFrame;
+
+    private EntityQuery __sceneQuery;
+    private EntityQuery __pendingPrefabLoadQuery;
+    private EntityQuery __prefabLoaderReferencesQuery;
+    private NativeParallelHashSet<EntityHash128> __releaseGuids;
+
+    public bool isReadyForRelease =>
+        !__dependencyBlob.IsCreated || (__isDraining && __isReadyForRelease);
+
+    public bool isReleaseComplete =>
+        !__dependencyBlob.IsCreated || (__isReleaseRequested && __isReleaseComplete);
+
+    /// <summary>
+    /// Stops forwarding new prefab requests and waits for every already-started
+    /// Unity.Scenes header/section load to reach a stable state.
+    /// </summary>
+    public void BeginShutdown()
+    {
+        // Close the loading entrance immediately, but keep existing requester
+        // entities alive until all observable Unity.Scenes IO is stable.
+        PrefabLoaderSettings.PauseLoading();
+
+        if (!__dependencyBlob.IsCreated)
+        {
+            __isDraining = true;
+            __isReadyForRelease = true;
+            __isReleaseRequested = false;
+            __isReleaseComplete = false;
+            return;
+        }
+
+        __isDraining = true;
+        __isReadyForRelease = false;
+        __isReleaseRequested = false;
+        __isReleaseComplete = false;
+
+        CancelPendingPlans();
+        ClearExternalInProgressRequests();
+    }
+
+    /// <summary>
+    /// Triggers the one-shot prefab release after the drain fence is ready.
+    /// Completion is reported only after PrefabLoader/WeakAsset/section streaming
+    /// have received another SceneSystemGroup update.
+    /// </summary>
+    public void NotifyReleaseAll()
+    {
+        if (!__isDraining)
+        {
+            BeginShutdown();
+        }
+
+        if (!__isReadyForRelease)
+        {
+            Debug.LogError(
+                "[SceneArchiveDependencySystem] Release requested before the " +
+                "Unity.Scenes drain fence became ready.");
+            return;
+        }
+
+        __releaseGuids.Clear();
+        using (var guids = __readyGuids.ToNativeArray(Allocator.Temp))
+        {
+            EnsureCapacity(ref __releaseGuids, guids.Length);
+            for (int i = 0; i < guids.Length; i++)
+            {
+                __releaseGuids.Add(guids[i]);
+            }
+        }
+
+        PrefabLoaderSettings.ReleaseAllRightNow();
+
+        __isReleaseRequested = true;
+        __isReleaseComplete = false;
+        __releaseRequestFrame = UnityEngine.Time.frameCount;
+    }
 
     /// <summary>
     /// Hands an activation-owned Blob graph and materializer to this system.
@@ -262,6 +345,11 @@ public partial class SceneArchiveDependencySystem : SystemBase
         __materialize = materialize;
         __dematerialize = dematerialize;
 
+        // ReleaseAllRightNow keeps prefab loading closed across activation disposal.
+        // Reopen only after the next activation has a valid dependency graph and
+        // its critical files have already been materialized.
+        PrefabLoaderSettings.ResumeLoading();
+
         return __generation;
     }
 
@@ -296,6 +384,23 @@ public partial class SceneArchiveDependencySystem : SystemBase
         __entityQueue = new NativeList<int>(1, Allocator.Persistent);
         __archiveVisited = new NativeParallelHashSet<int>(1, Allocator.Persistent);
         __archiveQueue = new NativeList<int>(1, Allocator.Persistent);
+        __releaseGuids = new NativeParallelHashSet<EntityHash128>(1, Allocator.Persistent);
+
+        __sceneQuery = new EntityQueryBuilder(Allocator.Temp)
+            .WithAll<SceneReference>()
+            .WithOptions(EntityQueryOptions.IncludeDisabledEntities)
+            .Build(this);
+        __pendingPrefabLoadQuery = new EntityQueryBuilder(Allocator.Temp)
+            .WithAll<RequestEntityPrefabLoaded>()
+            .WithNone<PrefabLoadResult>()
+            // CompleteLoad also adds RequestEntityPrefabLoaded to the Prefab root.
+            // Keep the default Prefab exclusion so only unresolved request entities
+            // participate in the shutdown fence.
+            .WithOptions(EntityQueryOptions.IncludeDisabledEntities)
+            .Build(this);
+        __prefabLoaderReferencesQuery = new EntityQueryBuilder(Allocator.Temp)
+            .WithAllRW<PrefabLoaderReferences>()
+            .Build(this);
 
         RequireForUpdate<PrefabLoaderReferences>();
     }
@@ -317,6 +422,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
         Dispose(ref __entityQueue);
         Dispose(ref __archiveVisited);
         Dispose(ref __archiveQueue);
+        Dispose(ref __releaseGuids);
 
         base.OnDestroy();
     }
@@ -330,8 +436,32 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
         var references = SystemAPI.GetSingletonRW<PrefabLoaderReferences>().ValueRW;
 
-        ProcessPendingReleases();
         ReleaseUnloaded(ref references.unloaded);
+
+        if (__isDraining)
+        {
+            // PrefabLoaderSystem runs before this system. References produced by it
+            // during shutdown must not survive into the next frame and start a new
+            // WeakAsset header load.
+            references.inProgress.Clear();
+            CancelPendingPlans();
+
+            __isReadyForRelease = !HasUnityScenesLoadInProgress();
+            if (__isReleaseRequested)
+            {
+                __isReleaseComplete =
+                    UnityEngine.Time.frameCount > __releaseRequestFrame &&
+                    __isReadyForRelease &&
+                    !HasReleasedSceneEntities();
+            }
+
+            // Keep all materialized files alive until GameSceneActivation.Dispose().
+            // In particular, Unity.Scenes can retain an internal header cleanup job
+            // after its scene entity has already disappeared.
+            return;
+        }
+
+        ProcessPendingReleases();
 
         // Hold every new load request outside PrefabLoaderSystem until both planning
         // and managed materialization have completed.
@@ -511,11 +641,15 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
             __pathsByGuid.Remove(guid);
         }
+
+        // PrefabLoaderSystem publishes one-frame safe-unload events. Consume each
+        // event exactly once instead of retaining it until the loader has new work.
+        unloaded.Clear();
     }
 
     private void QueueRelease(FixedString128Bytes relativePath)
     {
-        var releaseFrame = UnityEngine.Time.frameCount + 2;
+        var releaseFrame = UnityEngine.Time.frameCount;
         for (int i = 0; i < __pendingReleases.Length; i++)
         {
             var pending = __pendingReleases[i];
@@ -594,6 +728,11 @@ public partial class SceneArchiveDependencySystem : SystemBase
         __materialize = null;
         __dematerialize = null;
         __dependencyBlob = default;
+        __isDraining = false;
+        __isReadyForRelease = false;
+        __isReleaseRequested = false;
+        __isReleaseComplete = false;
+        __releaseRequestFrame = 0;
 
         if (__activeRequests.IsCreated)
         {
@@ -610,7 +749,119 @@ public partial class SceneArchiveDependencySystem : SystemBase
             __entityQueue.Clear();
             __archiveVisited.Clear();
             __archiveQueue.Clear();
+            __releaseGuids.Clear();
         }
+    }
+
+    private void CancelPendingPlans()
+    {
+        if (__hasScheduledPlan)
+        {
+            CompleteDependency();
+            __hasScheduledPlan = false;
+        }
+
+        if (__activeRequests.IsCreated)
+        {
+            __activeRequests.Clear();
+            __waitingRequests.Clear();
+            __plans.Clear();
+            __commands.Clear();
+        }
+    }
+
+    private void ClearExternalInProgressRequests()
+    {
+        if (__prefabLoaderReferencesQuery.IsEmptyIgnoreFilter)
+        {
+            return;
+        }
+
+        var entity = __prefabLoaderReferencesQuery.GetSingletonEntity();
+        var references = EntityManager.GetComponentData<PrefabLoaderReferences>(entity);
+        references.inProgress.Clear();
+    }
+
+    private bool HasUnityScenesLoadInProgress()
+    {
+        if (__hasScheduledPlan ||
+            !__activeRequests.IsEmpty ||
+            !__waitingRequests.IsEmpty ||
+            !__pendingPrefabLoadQuery.IsEmptyIgnoreFilter)
+        {
+            return true;
+        }
+
+        using var sceneEntities = __sceneQuery.ToEntityArray(Allocator.Temp);
+        for (int i = 0; i < sceneEntities.Length; i++)
+        {
+            var sceneEntity = sceneEntities[i];
+            if (!EntityManager.Exists(sceneEntity))
+            {
+                continue;
+            }
+
+            var hasRequest = EntityManager.HasComponent<RequestSceneLoaded>(sceneEntity);
+            var hasResolvedSections =
+                EntityManager.HasComponent<ResolvedSectionEntity>(sceneEntity);
+
+            // This is the public representation of an in-flight entity header.
+            if (hasRequest && !hasResolvedSections)
+            {
+                return true;
+            }
+
+            if (!hasResolvedSections)
+            {
+                continue;
+            }
+
+            var sections = EntityManager.GetBuffer<ResolvedSectionEntity>(
+                sceneEntity,
+                true);
+            for (int sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
+            {
+                var sectionEntity = sections[sectionIndex].SectionEntity;
+                if (!EntityManager.Exists(sectionEntity))
+                {
+                    continue;
+                }
+
+                switch (SceneSystem.GetSectionStreamingState(
+                            World.Unmanaged,
+                            sectionEntity))
+                {
+                    case SceneSystem.SectionStreamingState.LoadRequested:
+                    case SceneSystem.SectionStreamingState.Loading:
+                    case SceneSystem.SectionStreamingState.UnloadRequested:
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasReleasedSceneEntities()
+    {
+        if (__releaseGuids.Count() == 0)
+        {
+            return false;
+        }
+
+        using var sceneEntities = __sceneQuery.ToEntityArray(Allocator.Temp);
+        using var sceneReferences =
+            __sceneQuery.ToComponentDataArray<SceneReference>(Allocator.Temp);
+        for (int i = 0; i < sceneEntities.Length; i++)
+        {
+            if (EntityManager.Exists(sceneEntities[i]) &&
+                __releaseGuids.Contains(sceneReferences[i].SceneGUID))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void SwapRequestBuffers()

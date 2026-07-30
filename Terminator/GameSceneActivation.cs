@@ -61,6 +61,9 @@ public class GameSceneActivation : IGameSceneActivation
         
         yield return MaterializeForScene(AssetFileUtility.GetFileNameWithoutExtension(sceneName));
 #else
+        PrefabLoaderSettings.ResumeLoading();
+        initializedProgress = 1f;
+        isInitialized = true;
         yield break;
 #endif
     }

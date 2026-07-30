@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -555,9 +556,34 @@ public partial class LevelManager : MonoBehaviour
 
     private IEnumerator __Quit(float time)
     {
-        ZG.PrefabLoaderSettings.ReleaseAllRightNow();
-        
-        yield return new WaitForSecondsRealtime(time);
+        SceneArchiveDependencySystem dependencySystem = null;
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world != null && world.IsCreated)
+        {
+            dependencySystem =
+                world.GetExistingSystemManaged<SceneArchiveDependencySystem>();
+            dependencySystem?.BeginShutdown();
+        }
+
+        // Do not cancel a WeakAsset/SubScene while its header or a section is still
+        // loading. Once cancelled, Unity.Scenes can keep the read in a private
+        // pending-cleanup list that cannot be observed through public APIs.
+        while (dependencySystem != null && !dependencySystem.isReadyForRelease)
+        {
+            yield return null;
+        }
+
+        if (dependencySystem == null)
+            ZG.PrefabLoaderSettings.ReleaseAllRightNow();
+        else
+            dependencySystem.NotifyReleaseAll();
+
+        var releaseTime = Time.realtimeSinceStartup;
+        while (Time.realtimeSinceStartup - releaseTime < time ||
+               dependencySystem != null && !dependencySystem.isReleaseComplete)
+        {
+            yield return null;
+        }
         
         __ClearTimeScales();
 
