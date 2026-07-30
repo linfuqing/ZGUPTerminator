@@ -872,7 +872,7 @@ public partial class UserDataMain
                 break;
             case UserStageReward.Condition.Time:
                 if ((stageFlag & IUserData.StageFlag.Normal) == IUserData.StageFlag.Normal)
-                    result = conditionValue > 0 ? 1.0f - Mathf.Min(1.0f, time * 1.0f / conditionValue) : 0.0f;
+                    result = conditionValue > 0 ? 2.0f - time * 1.0f / conditionValue : 0.0f;
                 else
                     result = 0.0f;
                 break;

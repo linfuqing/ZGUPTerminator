@@ -83,6 +83,17 @@ internal static class BotRelayAgentDiagnostics
     public static void LogMatchSuccess(uint userID, int matchID, int level) =>
         Debug.Log($"[BotAgent:{userID}] Match success id={matchID} level={level}");
 
+    public static void LogMatchStartAccepted(
+        uint userID,
+        int matchID,
+        uint userStageID,
+        uint levelID,
+        int stage,
+        in FixedString32Bytes sceneName) =>
+        Debug.Log(
+            $"[BotAgent:{userID}] MatchStart accepted matchID={matchID} userStage={userStageID} " +
+            $"level={levelID}_{stage} scene={sceneName}.");
+
     public static void LogMatchChapterStageMismatch(
         uint userID,
         uint matchStartUserStageID,

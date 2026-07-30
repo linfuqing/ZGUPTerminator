@@ -845,6 +845,8 @@ public static class BotAgentLogic
         // ApplyStart owns the authoritative tuple: Register has already translated the client's
         // level/stage pair to the backend UserStage ID, while ApplyStart still has the exact scene.
         // Keep it as a ClientMessagePlay-shaped value so catalog lookup remains shared with squads.
+        bool isFirstDescriptor =
+            (farm.agentFlags[index] & BotAgentRuntimeFlags.MatchStartReceived) == 0;
         state.targetUserStageID = matchStart.userStageID;
         state.awaitingFreshMatchStage = false;
         state.playLevelID = matchStart.levelID;
@@ -858,6 +860,16 @@ public static class BotAgentLogic
             sceneName = matchStart.sceneName
         };
         farm.agentFlags[index] |= BotAgentRuntimeFlags.MatchStartReceived;
+        if (isFirstDescriptor)
+        {
+            BotRelayAgentDiagnostics.LogMatchStartAccepted(
+                state.userID,
+                matchStart.matchID,
+                matchStart.userStageID,
+                matchStart.levelID,
+                matchStart.stage,
+                matchStart.sceneName);
+        }
     }
 
     private static void __OnMismatch(int index, ref BotRelayFarmNative farm, double elapsedTime)

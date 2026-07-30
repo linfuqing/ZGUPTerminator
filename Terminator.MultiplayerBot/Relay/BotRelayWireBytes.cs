@@ -1609,6 +1609,60 @@ internal static class BotRelayWireBytes
                __IsRelayAppMessageType(type);
     }
 
+    /// <summary>
+    /// Validates the complete Server.SendRelay envelope and body for MatchStart.
+    /// This is intentionally stronger than the generic packed-type probe: MatchStart contains
+    /// arbitrary strings whose interior bytes can otherwise be misclassified as a transport app
+    /// when PopEvents normalization scans inner offsets.
+    /// </summary>
+    public static bool TryValidateMatchStartRelayApp(in BotRelayPacket packet)
+    {
+        if (packet.IsEmpty)
+            return false;
+
+        unsafe
+        {
+            byte* buffer = stackalloc byte[packet.length];
+            for (int i = 0; i < packet.length; ++i)
+                buffer[i] = packet.GetByte(i);
+
+            var bytes = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<byte>(
+                buffer,
+                packet.length,
+                Allocator.None);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(
+                ref bytes,
+                AtomicSafetyHandle.GetTempMemoryHandle());
+#endif
+            var reader = new DataStreamReader(bytes);
+            var model = StreamCompressionModel.Default;
+            if (!BotRelayMessageUtility.TryReadSendRelayHeader(
+                    ref reader,
+                    in model,
+                    out int type,
+                    out _,
+                    out uint senderID) ||
+                type != (int)ClientMessageType.MatchStart ||
+                senderID == 0 ||
+                reader.HasFailedReads)
+            {
+                return false;
+            }
+
+            // NetworkRelayServerIdentity.SendRelay flushes the envelope before copying the raw
+            // client body, so the body starts on the next byte boundary.
+            reader.Flush();
+            var matchStart = new ClientMessageMatchStart(ref reader);
+            return !reader.HasFailedReads &&
+                   matchStart.matchID != 0 &&
+                   matchStart.userStageID != 0 &&
+                   matchStart.levelID != 0 &&
+                   matchStart.stage >= 0 &&
+                   matchStart.sceneName.Length > 0;
+        }
+    }
+
     public static bool TryReadPackedUIntAtOffset(
         in BotRelayPacket packet,
         int offset,

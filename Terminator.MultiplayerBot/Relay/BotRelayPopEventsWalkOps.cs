@@ -729,6 +729,17 @@ internal static class BotRelayPopEventsWalkOps
             return true;
         }
 
+        // MatchStart is already the complete Server.SendRelay app at PopEvents offset zero.
+        // Its level/scene strings are arbitrary bytes and must never enter the generic inner-offset
+        // scanner: the scanner can reinterpret an interior slice as a valid control message
+        // (the live failure decoded type=24 as type=11 and silently discarded the descriptor).
+        if (relayType == (int)ClientMessageType.MatchStart &&
+            BotRelayWireBytes.TryValidateMatchStartRelayApp(in rawPayload))
+        {
+            app = rawPayload;
+            return true;
+        }
+
         if (__PayloadStartsWithInviteJunkPrefix(in rawPayload) &&
             __TryExtractInviteFromPopEventsPayload(in rawPayload, out app) &&
             !app.IsEmpty)

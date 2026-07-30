@@ -559,19 +559,42 @@ public class BotRelayTransportRegressionTests
         try
         {
             Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInboundMatchStartApp(
-                17,
+                9,
                 210,
                 22,
                 0,
-                BotRelayWireTestFixtures.RealPlayerUserId,
-                new FixedString32Bytes("Bronze"),
-                new FixedString32Bytes("Scenes/Level2-2.scene"),
+                4655,
+                new FixedString32Bytes("青铜III"),
+                new FixedString32Bytes("Scenes/Level3-1.scene"),
                 out var matchStartApp));
+            Assert.IsTrue(
+                BotRelayWireTestFixtures.TryBuildConnectShapedInboundWire(
+                    ref session.catalogBlob.Value,
+                    in matchStartApp,
+                    out var matchStartWire),
+                "MatchStart regression must use the captured server pipeline shell, not a zero prefix.");
+            var peelBatch = default(BotRelayPopEventsWalkBatch);
+            ref var catalog = ref session.catalogBlob.Value;
+            Assert.IsTrue(
+                BotRelayRoutePeelOps.TryPeelAllServerToBotApps(
+                    in matchStartWire,
+                    ref catalog,
+                    ref peelBatch,
+                    out bool fullyConsumed,
+                    out int peelPath),
+                $"MatchStart pipeline shell must peel (wire={matchStartWire.length}, path={peelPath}, fullyConsumed={fullyConsumed}).");
+            Assert.Greater(peelBatch.appCount, 0);
+            var peeledMatchStartApp = peelBatch.GetApp(0);
+            Assert.IsTrue(
+                BotRelayWireBytes.TryReadRelayMessageTypeHeader(in peeledMatchStartApp, out int peeledType),
+                $"Peeled MatchStart must retain a readable header (path={peelPath}).");
+            Assert.AreEqual(
+                (int)ClientMessageType.MatchStart,
+                peeledType,
+                $"Pipeline normalization selected the wrong app (path={peelPath}, appLen={peeledMatchStartApp.length}).");
             BotRelayManager.Instance.SetPeelCatalogBlob(session.catalogBlob);
             BotRelayIntegrationTestFixtures.RouteServerToBot(
-                BotRelayIntegrationTestFixtures.BuildNullFramedRelayAppWireBytes(
-                    ref session,
-                    in matchStartApp));
+                BotRelayWireTestFixtures.ToBytes(in matchStartWire));
             BotRelayIntegrationTestFixtures.DrainInbound(ref session);
             BotRelayIntegrationTestFixtures.PumpAgentInbound(ref session);
 
@@ -587,11 +610,11 @@ public class BotRelayTransportRegressionTests
             }
 
             Assert.IsTrue(foundMatchStart, "The routed app queue must contain MatchStart.");
-            Assert.AreEqual(17, evt.matchStart.matchID);
+            Assert.AreEqual(9, evt.matchStart.matchID);
             Assert.AreEqual(210u, evt.matchStart.userStageID);
             Assert.AreEqual(22u, evt.matchStart.levelID);
-            Assert.AreEqual("Bronze", evt.matchStart.levelName.ToString());
-            Assert.AreEqual("Scenes/Level2-2.scene", evt.matchStart.sceneName.ToString());
+            Assert.AreEqual("青铜III", evt.matchStart.levelName.ToString());
+            Assert.AreEqual("Scenes/Level3-1.scene", evt.matchStart.sceneName.ToString());
         }
         finally
         {

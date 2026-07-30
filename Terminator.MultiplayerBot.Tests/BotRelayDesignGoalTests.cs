@@ -1910,7 +1910,7 @@ public class BotRelayDesignGoalTests
 
     /// <summary>
     /// Squad-invite path: Host Play downlink via RouteSend pipeline wire (Invite integration analogue).
-    /// PlayHandled logic is covered by <see cref="PlayResponse_AgentLogic_SetsPendingPlayFlag"/>.
+    /// Matching-Play rejection is covered by <see cref="MatchingPlay_AgentLogic_IgnoresLegacyPlay"/>.
     /// </summary>
     [Test]
     [Category("Regression")]
@@ -2881,7 +2881,7 @@ public class BotRelayDesignGoalTests
     }
 
     [Test]
-    public void PlayResponse_AgentLogic_SetsPendingPlayFlag()
+    public void MatchingPlay_AgentLogic_IgnoresLegacyPlay()
     {
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         try
@@ -2902,8 +2902,9 @@ public class BotRelayDesignGoalTests
             });
 
             BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig(0f));
-            Assert.AreEqual(BotAgentRuntimeFlags.PlayHandled | BotAgentRuntimeFlags.PendingPlay, farm.agentFlags[0]);
-            Assert.AreEqual(7u, farm.pendingPlayMessage[0].levelID);
+            Assert.AreEqual(BotAgentRuntimeFlags.None, farm.agentFlags[0],
+                "Matching entry is authorized only by MatchStart; legacy Play must be ignored.");
+            Assert.AreEqual(0u, farm.pendingPlayMessage[0].levelID);
         }
         finally
         {

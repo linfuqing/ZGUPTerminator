@@ -13,10 +13,11 @@ public class BotRelayWireBytesTests
     }
 
     [Test]
-    public void LooksLikePipelineWire_PipelineHeaderOnly_ReturnsTrue()
+    public void LooksLikePipelineWire_PipelineHeaderOnly_ReturnsFalse()
     {
         var wire = BotRelayWireTestFixtures.FromBytes(BotRelayWireTestFixtures.PipelineHeader);
-        Assert.IsTrue(BotRelayWireBytes.LooksLikePipelineWire(in wire));
+        Assert.IsFalse(BotRelayWireBytes.LooksLikePipelineWire(in wire),
+            "A pipeline prefix without an application payload is not a wire message.");
         Assert.IsFalse(BotRelayWireBytes.LooksLikeConnectHandshake(in wire));
     }
 
@@ -70,10 +71,10 @@ public class BotRelayWireBytesTests
 
         var wire = BotRelayWireTestFixtures.WrapPipelineFramedApp(BotRelayWireTestFixtures.PipelineHeader, in app);
 
-        Assert.IsTrue(BotRelayWireTestFixtures.TryExtract(in wire, 8, out var extracted));
+        Assert.IsTrue(BotRelayWireBytes.TryExtractAppViaTransportFraming(in wire, out var extracted));
         Assert.IsTrue(BotRelayCodec.TryParseWorldInviteRelayApp(in extracted, out var squadId));
         Assert.AreEqual(1u, squadId);
-        Assert.LessOrEqual(extracted.length, app.length);
+        Assert.AreEqual(app.length, extracted.length);
     }
 
     [Test]
