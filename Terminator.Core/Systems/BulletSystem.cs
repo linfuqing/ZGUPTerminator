@@ -383,6 +383,7 @@ public partial struct BulletSystem : ISystem
                 if (instances[i].Apply(
                         instanceID, 
                         time,
+                        cameraRotation, 
                         collisionWorld,
                         physicsGraphicalInterpolationBuffers,
                         characterInterpolations, 

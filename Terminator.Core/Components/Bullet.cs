@@ -1053,6 +1053,7 @@ public struct BulletInstance : IBufferElementData
     public bool Apply(
         int instanceID, 
         in double time, 
+        in quaternion cameraRotation,
         in CollisionWorld collisionWorld,
         in ComponentLookup<PhysicsGraphicalInterpolationBuffer> physicsGraphicalInterpolationBuffers, 
         in ComponentLookup<CharacterInterpolation> characterInterpolations, 
@@ -1078,6 +1079,7 @@ public struct BulletInstance : IBufferElementData
         
         __Apply(
             instanceID, 
+            cameraRotation, 
             entity, 
             prefabRoot, 
             collisionWorld, 
@@ -1099,6 +1101,7 @@ public struct BulletInstance : IBufferElementData
 
     private Entity __Apply(
         int instanceID, 
+        in quaternion cameraRotation,
         in Entity entity, 
         in Entity prefabRoot, 
         in CollisionWorld collisionWorld,
@@ -1150,6 +1153,7 @@ public struct BulletInstance : IBufferElementData
             case BulletFollowTarget.Source:
                 followTarget.entity = parent;
                 followTarget.offset = data.space == BulletSpace.Local ? transformResult.pos : transformResult.pos - parentPosition;//transform.c3.xyz;
+                followTarget.offset = math.mul(math.inverse(cameraRotation), followTarget.offset);
                 followTarget.space = FollowTargetSpace.Camera;
                 entityManager.SetComponent(1, entity, followTarget);
                 entityManager.SetComponentEnabled<FollowTarget>(1, entity, true);
