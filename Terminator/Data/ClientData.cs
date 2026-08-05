@@ -718,7 +718,8 @@ public class ClientData : MonoBehaviour, IClientData
                     if (caCertificate == null)
                         settings.WithSecureClientParameters(serverName);
                     else
-                        settings.WithSecureClientParameters(serverName, caCertificate);
+                        // UTP API is (caCertificate, serverName); swapped args make DTLS fail at SERVER_CERTIFICATE → DisconnectReason 6.
+                        settings.WithSecureClientParameters(caCertificate, serverName);
                 }
 
                 var driver = new NetworkClientDriver(
