@@ -718,8 +718,13 @@ public class ClientData : MonoBehaviour, IClientData
                     if (caCertificate == null)
                         settings.WithSecureClientParameters(serverName);
                     else
-                        // UTP API is (caCertificate, serverName); swapped args make DTLS fail at SERVER_CERTIFICATE → DisconnectReason 6.
+                    {
+                        // Config.txt is line-based; PEM must be stored with "\n" escapes and restored here.
+                        // Compact PEM without newlines is rejected by UnityTLS (SERVER_CERTIFICATE / DisconnectReason 6).
+                        // UTP API is (caCertificate, serverName).
+                        caCertificate = caCertificate.Replace("\\n", "\n").Replace("\\r", "\r");
                         settings.WithSecureClientParameters(caCertificate, serverName);
+                    }
                 }
 
                 var driver = new NetworkClientDriver(
