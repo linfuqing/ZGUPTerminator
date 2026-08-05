@@ -376,11 +376,13 @@ public class GameSceneActivation : IGameSceneActivation
             return false;
         }
 
-        // Only track files we create so Dispose won't delete files still needed by another scene.
-        if (File.Exists(destPath))
+        // Adopt leftovers from a previous incomplete dematerialize so Dispose can
+        // reclaim them. Only one GameSceneActivation owns tmp/content at a time.
+        /*if (File.Exists(destPath))
         {
+            TrackMaterializedPath(destPath);
             return true;
-        }
+        }*/
 
         if (!TryResolveAssetSource(relativePath, assetManager, out var sourcePath, out var fileOffset))
         {
@@ -397,8 +399,7 @@ public class GameSceneActivation : IGameSceneActivation
         try
         {
             CopyAssetToFile(sourcePath, destPath);
-            
-            __materializedPaths.Add(destPath);
+            TrackMaterializedPath(destPath);
             return true;
         }
         catch (Exception e)
@@ -430,36 +431,23 @@ public class GameSceneActivation : IGameSceneActivation
             return false;
         }
 
-        var materializedIndex = -1;
-        if (__materializedPaths != null)
-        {
-            for (int i = 0; i < __materializedPaths.Count; i++)
-            {
-                if (string.Equals(
-                        __materializedPaths[i],
-                        destPath,
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    materializedIndex = i;
-                    break;
-                }
-            }
-        }
-
-        // Do not delete a file this activation did not create.
-        if (materializedIndex < 0)
-        {
-            return true;
-        }
+        var materializedIndex = IndexOfMaterializedPath(destPath);
 
         try
         {
+            // Dependency-system release is authoritative for non-critical paths.
+            // Delete even when the file was adopted (File.Exists) and never copied
+            // by this activation; otherwise leftovers accumulate in tmp/content.
             if (File.Exists(destPath))
             {
                 File.Delete(destPath);
             }
 
-            __materializedPaths.RemoveAt(materializedIndex);
+            if (materializedIndex >= 0)
+            {
+                __materializedPaths.RemoveAt(materializedIndex);
+            }
+
             return true;
         }
         catch (Exception e)
@@ -468,6 +456,42 @@ public class GameSceneActivation : IGameSceneActivation
                 $"[GameSceneActivation] Failed to release {destPath}: {e.Message}");
             return false;
         }
+    }
+
+    void TrackMaterializedPath(string destPath)
+    {
+        if (__materializedPaths == null || string.IsNullOrEmpty(destPath))
+        {
+            return;
+        }
+
+        if (IndexOfMaterializedPath(destPath) >= 0)
+        {
+            return;
+        }
+
+        __materializedPaths.Add(destPath);
+    }
+
+    int IndexOfMaterializedPath(string destPath)
+    {
+        if (__materializedPaths == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < __materializedPaths.Count; i++)
+        {
+            if (string.Equals(
+                    __materializedPaths[i],
+                    destPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     static bool TryResolveAssetSource(
@@ -501,24 +525,108 @@ public class GameSceneActivation : IGameSceneActivation
 
     void Dematerialize()
     {
-        if (__materializedPaths == null)
-            return;
-
-        for (int i = 0; i < __materializedPaths.Count; i++)
+        string contentRoot = null;
+        if (__materializedPaths != null)
         {
-            var path = __materializedPaths[i];
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            for (int i = 0; i < __materializedPaths.Count; i++)
             {
-                continue;
-            }
+                var path = __materializedPaths[i];
+                if (string.IsNullOrEmpty(path))
+                {
+                    continue;
+                }
 
+                if (contentRoot == null)
+                {
+                    contentRoot = TryGetContentRoot(path);
+                }
+
+                if (!File.Exists(path))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[GameSceneActivation] Failed to delete {path}: {e.Message}");
+                }
+            }
+        }
+
+        if (contentRoot == null && ContentDeliveryGlobalState.PathRemapFunc != null)
+        {
+            contentRoot = TryGetContentRoot(
+                ContentDeliveryGlobalState.PathRemapFunc("contentarchives/_"));
+        }
+
+        // Sweep archive/entityscene leftovers that were never tracked (e.g. adopted
+        // from a previous incomplete quit). Do not touch the content catalog file.
+        ScrubMaterializeFolder(contentRoot, "contentarchives");
+        ScrubMaterializeFolder(contentRoot, "entityscenes");
+    }
+
+    static string TryGetContentRoot(string materializedPath)
+    {
+        if (string.IsNullOrEmpty(materializedPath))
+        {
+            return null;
+        }
+
+        var directory = Path.GetDirectoryName(materializedPath);
+        if (string.IsNullOrEmpty(directory))
+        {
+            return null;
+        }
+
+        var folderName = Path.GetFileName(directory);
+        if (string.Equals(folderName, "contentarchives", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(folderName, "entityscenes", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.GetDirectoryName(directory);
+        }
+
+        return directory;
+    }
+
+    static void ScrubMaterializeFolder(string contentRoot, string folderName)
+    {
+        if (string.IsNullOrEmpty(contentRoot))
+        {
+            return;
+        }
+
+        var folder = Path.Combine(contentRoot, folderName);
+        if (!Directory.Exists(folder))
+        {
+            return;
+        }
+
+        string[] files;
+        try
+        {
+            files = Directory.GetFiles(folder, "*", SearchOption.AllDirectories);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning(
+                $"[GameSceneActivation] Failed to list {folder} for scrub: {e.Message}");
+            return;
+        }
+
+        for (int i = 0; i < files.Length; i++)
+        {
             try
             {
-                File.Delete(path);
+                File.Delete(files[i]);
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[GameSceneActivation] Failed to delete {path}: {e.Message}");
+                Debug.LogWarning(
+                    $"[GameSceneActivation] Failed to scrub {files[i]}: {e.Message}");
             }
         }
     }
@@ -553,9 +661,7 @@ public class GameSceneActivation : IGameSceneActivation
     {
         var folder = Path.GetDirectoryName(destPath);
         if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
-        {
             Directory.CreateDirectory(folder);
-        }
 
         AssetFileUtility.Materialize(sourcePath, destPath);
         //File.WriteAllBytes(destPath, AssetFileUtility.ReadAllBytes(sourcePath));

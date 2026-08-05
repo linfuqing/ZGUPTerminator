@@ -502,7 +502,7 @@ public class GameMain : GameUser
                     var folder = Path.GetDirectoryName(catalogPath);
                     if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
                         Directory.CreateDirectory(folder);
-
+                    
                     AssetFileUtility.Materialize(filePath, catalogPath);
                     //File.WriteAllBytes(catalogPath, AssetFileUtility.ReadAllBytes(filePath));
                 }
