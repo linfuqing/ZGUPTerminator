@@ -438,15 +438,10 @@ public class GameSceneActivation : IGameSceneActivation
             // Dependency-system release is authoritative for non-critical paths.
             // Delete even when the file was adopted (File.Exists) and never copied
             // by this activation; otherwise leftovers accumulate in tmp/content.
-            if (File.Exists(destPath))
-            {
-                File.Delete(destPath);
-            }
+            AssetFileUtility.Dematerialize(destPath);
 
             if (materializedIndex >= 0)
-            {
                 __materializedPaths.RemoveAt(materializedIndex);
-            }
 
             return true;
         }
@@ -525,30 +520,21 @@ public class GameSceneActivation : IGameSceneActivation
 
     void Dematerialize()
     {
-        string contentRoot = null;
+        //string contentRoot = null;
         if (__materializedPaths != null)
         {
             for (int i = 0; i < __materializedPaths.Count; i++)
             {
                 var path = __materializedPaths[i];
                 if (string.IsNullOrEmpty(path))
-                {
                     continue;
-                }
 
-                if (contentRoot == null)
-                {
-                    contentRoot = TryGetContentRoot(path);
-                }
-
-                if (!File.Exists(path))
-                {
-                    continue;
-                }
+                /*if (contentRoot == null)
+                    contentRoot = TryGetContentRoot(path);*/
 
                 try
                 {
-                    File.Delete(path);
+                    AssetFileUtility.Dematerialize(path);
                 }
                 catch (Exception e)
                 {
@@ -557,7 +543,7 @@ public class GameSceneActivation : IGameSceneActivation
             }
         }
 
-        if (contentRoot == null && ContentDeliveryGlobalState.PathRemapFunc != null)
+        /*if (contentRoot == null && ContentDeliveryGlobalState.PathRemapFunc != null)
         {
             contentRoot = TryGetContentRoot(
                 ContentDeliveryGlobalState.PathRemapFunc("contentarchives/_"));
@@ -566,10 +552,10 @@ public class GameSceneActivation : IGameSceneActivation
         // Sweep archive/entityscene leftovers that were never tracked (e.g. adopted
         // from a previous incomplete quit). Do not touch the content catalog file.
         ScrubMaterializeFolder(contentRoot, "contentarchives");
-        ScrubMaterializeFolder(contentRoot, "entityscenes");
+        ScrubMaterializeFolder(contentRoot, "entityscenes");*/
     }
 
-    static string TryGetContentRoot(string materializedPath)
+    /*static string TryGetContentRoot(string materializedPath)
     {
         if (string.IsNullOrEmpty(materializedPath))
         {
@@ -595,15 +581,11 @@ public class GameSceneActivation : IGameSceneActivation
     static void ScrubMaterializeFolder(string contentRoot, string folderName)
     {
         if (string.IsNullOrEmpty(contentRoot))
-        {
             return;
-        }
 
         var folder = Path.Combine(contentRoot, folderName);
         if (!Directory.Exists(folder))
-        {
             return;
-        }
 
         string[] files;
         try
@@ -621,7 +603,7 @@ public class GameSceneActivation : IGameSceneActivation
         {
             try
             {
-                File.Delete(files[i]);
+                AssetFileUtility.Dematerialize(files[i]);
             }
             catch (Exception e)
             {
@@ -629,7 +611,7 @@ public class GameSceneActivation : IGameSceneActivation
                     $"[GameSceneActivation] Failed to scrub {files[i]}: {e.Message}");
             }
         }
-    }
+    }*/
 
     static bool TryLoadDependencyFile(out SceneArchiveDependencies.File dependencyFile)
     {
