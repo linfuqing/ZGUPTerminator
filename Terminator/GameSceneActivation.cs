@@ -13,14 +13,20 @@ public class GameSceneActivation : IGameSceneActivation
 {
     private int __maxEntityScenesPerTime;
     private int __maxArchivesPerTime;
-    
-    private List<string> __materializedPaths;
 
 #if ENABLE_CONTENT_DELIVERY
+    // Stale tmp/content files (crash leftovers, previous session copies of
+    // identity-named archives whose bytes changed after a content rebuild) are
+    // swept once per app session before the first materialization.
+    private static bool __hasSweptSessionLeftovers;
+
     private int __dependencySystemGeneration;
     private SceneArchiveDependencySystem __dependencySystem;
     private BlobAssetReference<SceneArchiveDependencies.RuntimeBlob> __dependencyBlob;
-    private HashSet<string> __criticalRelativePaths;
+    // Single bookkeeper for every materialized file of this activation: critical
+    // set (held as references for the activation lifetime) and on-demand prefab
+    // dependencies (refcounted by SceneArchiveDependencySystem) share it.
+    private SceneArchiveContentProvisioner __provisioner;
 #endif
 
     public bool isInitialized
@@ -46,12 +52,11 @@ public class GameSceneActivation : IGameSceneActivation
     {
         isInitialized = false;
         initializedProgress = 0f;
-        __materializedPaths = null;
+
 #if ENABLE_CONTENT_DELIVERY
-        __criticalRelativePaths = null;
-#endif
- 
-#if ENABLE_CONTENT_DELIVERY
+        __provisioner = null;
+
+
         while (ContentDeliveryGlobalState.CurrentContentUpdateState <
                ContentDeliveryGlobalState.ContentUpdateState.ContentReady)
             yield return null;
@@ -84,10 +89,15 @@ public class GameSceneActivation : IGameSceneActivation
             __dependencyBlob = default;
         }
 
-        Dematerialize();
-        __criticalRelativePaths = null;
+        // Deletes every tracked file (criticals, ready prefab dependencies and any
+        // deferred-release backlog) without a budget. Callers guarantee the drain
+        // fence (BeginShutdown/NotifyReleaseAll) completed before Dispose.
+        if (__provisioner != null)
+        {
+            __provisioner.Flush();
+            __provisioner = null;
+        }
 #endif
-        __materializedPaths = null;
     }
 
 #if ENABLE_CONTENT_DELIVERY
@@ -165,8 +175,11 @@ public class GameSceneActivation : IGameSceneActivation
             yield break;
         }
 
-        __materializedPaths = new List<string>(criticalArchives.Count + criticalEntityScenes.Count);
-        __criticalRelativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        SweepSessionLeftovers(remap);
+
+        __provisioner = new SceneArchiveContentProvisioner(
+            relativePath => MaterializeRelativePath(relativePath, remap, assetManager),
+            relativePath => DematerializeRelativePath(relativePath, remap));
 
         var criticalSteps = Math.Max(1, criticalEntityScenes.Count + criticalArchives.Count);
         var criticalDone = 0;
@@ -175,15 +188,13 @@ public class GameSceneActivation : IGameSceneActivation
             sceneName,
             criticalEntityScenes,
             entityScenePool,
-            remap,
-            assetManager,
             () =>
             {
                 criticalDone++;
                 initializedProgress = criticalDone * 0.95f / criticalSteps;
             });
 
-        if (__materializedPaths == null)
+        if (__provisioner == null)
         {
             yield break;
         }
@@ -192,15 +203,13 @@ public class GameSceneActivation : IGameSceneActivation
             sceneName,
             criticalArchives,
             archivePool,
-            remap,
-            assetManager,
             () =>
             {
                 criticalDone++;
                 initializedProgress = criticalDone * 0.95f / criticalSteps;
             });
 
-        if (__materializedPaths == null)
+        if (__provisioner == null)
         {
             yield break;
         }
@@ -237,8 +246,7 @@ public class GameSceneActivation : IGameSceneActivation
             generation = dependencySystem.Initialize(
                 sceneName,
                 dependencyBlob,
-                relativePath => MaterializeRelativePath(relativePath, remap, assetManager),
-                relativePath => DematerializeRelativePath(relativePath, remap));
+                __provisioner);
         }
         catch
         {
@@ -261,7 +269,7 @@ public class GameSceneActivation : IGameSceneActivation
         isInitialized = true;
 
         Debug.Log(
-            $"[GameSceneActivation] Materialized {__materializedPaths.Count} critical files for '{sceneName}' " +
+            $"[GameSceneActivation] Materialized {__provisioner.trackedCount} critical files for '{sceneName}' " +
             $"(roots archives={archiveRootCount}, entityScenes={entityRootCount}; " +
             $"critical archives={criticalArchives.Count}, entityScenes={criticalEntityScenes.Count}); " +
             "remaining prefab dependencies will be materialized on demand.");
@@ -271,8 +279,6 @@ public class GameSceneActivation : IGameSceneActivation
         string sceneName,
         List<int> indices,
         string[] entityScenePool,
-        Func<string, string> remap,
-        AssetManager assetManager,
         Action onEach)
     {
         if (indices == null || indices.Count == 0)
@@ -294,9 +300,9 @@ public class GameSceneActivation : IGameSceneActivation
                 var relativePath = entityScenePool[poolIndex];
                 if (!string.IsNullOrEmpty(relativePath))
                 {
-                    relativePath = relativePath.Replace('\\', '/');
-                    __criticalRelativePaths.Add(relativePath);
-                    MaterializeRelativePath(relativePath, remap, assetManager);
+                    // The activation keeps this reference until Dispose, so critical
+                    // files can never be deleted (or re-copied) by on-demand plans.
+                    __provisioner.Acquire(relativePath);
                 }
             }
 
@@ -309,7 +315,7 @@ public class GameSceneActivation : IGameSceneActivation
             {
                 yield return null;
 
-                if (__materializedPaths == null)
+                if (__provisioner == null)
                 {
                     yield break;
                 }
@@ -321,8 +327,6 @@ public class GameSceneActivation : IGameSceneActivation
         string sceneName,
         List<int> indices,
         string[] archivePool,
-        Func<string, string> remap,
-        AssetManager assetManager,
         Action onEach)
     {
         if (indices == null || indices.Count == 0)
@@ -344,9 +348,10 @@ public class GameSceneActivation : IGameSceneActivation
                 var archiveId = archivePool[poolIndex];
                 if (!string.IsNullOrEmpty(archiveId))
                 {
-                    var relativePath = RuntimeContentManager.DefaultArchivePathFunc(archiveId);
-                    __criticalRelativePaths.Add(relativePath);
-                    MaterializeRelativePath(relativePath, remap, assetManager);
+                    // The activation keeps this reference until Dispose, so critical
+                    // files can never be deleted (or re-copied) by on-demand plans.
+                    __provisioner.Acquire(
+                        RuntimeContentManager.DefaultArchivePathFunc(archiveId));
                 }
             }
 
@@ -359,7 +364,7 @@ public class GameSceneActivation : IGameSceneActivation
             {
                 yield return null;
 
-                if (__materializedPaths == null)
+                if (__provisioner == null)
                 {
                     yield break;
                 }
@@ -367,6 +372,9 @@ public class GameSceneActivation : IGameSceneActivation
         }
     }
 
+    // Raw copy primitive for the provisioner: resolve + replace-write, no tracking.
+    // Exactly-once semantics are guaranteed by SceneArchiveContentProvisioner;
+    // AssetFileUtility.Materialize is a destructive refresh (see IAssetFileManager).
     bool MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
     {
         var destPath = remap(relativePath);
@@ -375,14 +383,6 @@ public class GameSceneActivation : IGameSceneActivation
             Debug.LogError($"[GameSceneActivation] Remap failed for {relativePath}");
             return false;
         }
-
-        // Adopt leftovers from a previous incomplete dematerialize so Dispose can
-        // reclaim them. Only one GameSceneActivation owns tmp/content at a time.
-        /*if (File.Exists(destPath))
-        {
-            TrackMaterializedPath(destPath);
-            return true;
-        }*/
 
         if (!TryResolveAssetSource(relativePath, assetManager, out var sourcePath, out var fileOffset))
         {
@@ -399,7 +399,6 @@ public class GameSceneActivation : IGameSceneActivation
         try
         {
             CopyAssetToFile(sourcePath, destPath);
-            TrackMaterializedPath(destPath);
             return true;
         }
         catch (Exception e)
@@ -410,20 +409,10 @@ public class GameSceneActivation : IGameSceneActivation
         }
     }
 
+    // Raw delete primitive for the provisioner. Returns false to request a retry
+    // (e.g. the archive is still unmounting asynchronously).
     bool DematerializeRelativePath(string relativePath, Func<string, string> remap)
     {
-        if (string.IsNullOrEmpty(relativePath))
-        {
-            return true;
-        }
-
-        relativePath = relativePath.Replace('\\', '/');
-        if (__criticalRelativePaths != null &&
-            __criticalRelativePaths.Contains(relativePath))
-        {
-            return true;
-        }
-
         var destPath = remap(relativePath);
         if (string.IsNullOrEmpty(destPath))
         {
@@ -431,18 +420,9 @@ public class GameSceneActivation : IGameSceneActivation
             return false;
         }
 
-        var materializedIndex = IndexOfMaterializedPath(destPath);
-
         try
         {
-            // Dependency-system release is authoritative for non-critical paths.
-            // Delete even when the file was adopted (File.Exists) and never copied
-            // by this activation; otherwise leftovers accumulate in tmp/content.
             AssetFileUtility.Dematerialize(destPath);
-
-            if (materializedIndex >= 0)
-                __materializedPaths.RemoveAt(materializedIndex);
-
             return true;
         }
         catch (Exception e)
@@ -451,42 +431,6 @@ public class GameSceneActivation : IGameSceneActivation
                 $"[GameSceneActivation] Failed to release {destPath}: {e.Message}");
             return false;
         }
-    }
-
-    void TrackMaterializedPath(string destPath)
-    {
-        if (__materializedPaths == null || string.IsNullOrEmpty(destPath))
-        {
-            return;
-        }
-
-        if (IndexOfMaterializedPath(destPath) >= 0)
-        {
-            return;
-        }
-
-        __materializedPaths.Add(destPath);
-    }
-
-    int IndexOfMaterializedPath(string destPath)
-    {
-        if (__materializedPaths == null)
-        {
-            return -1;
-        }
-
-        for (int i = 0; i < __materializedPaths.Count; i++)
-        {
-            if (string.Equals(
-                    __materializedPaths[i],
-                    destPath,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return i;
-            }
-        }
-
-        return -1;
     }
 
     static bool TryResolveAssetSource(
@@ -518,74 +462,54 @@ public class GameSceneActivation : IGameSceneActivation
         return false;
     }
 
-    void Dematerialize()
+    /// <summary>
+    /// One cold sweep per app session, before the first materialization: deletes
+    /// stale tmp/content files from crashes or previous sessions. Necessary because
+    /// archive/entityscene names are identity hashes (asset-GUID set / sceneGUID),
+    /// not content hashes — a rebuilt asset keeps the same file name with different
+    /// bytes, so a leftover copy must never be trusted. The content catalog file is
+    /// materialized once by GameMain at boot and is skipped. On WeChat devices the
+    /// backing store is per-session MEMFS, so this is a no-op there.
+    /// </summary>
+    static void SweepSessionLeftovers(Func<string, string> remap)
     {
-        //string contentRoot = null;
-        if (__materializedPaths != null)
+        if (__hasSweptSessionLeftovers)
         {
-            for (int i = 0; i < __materializedPaths.Count; i++)
-            {
-                var path = __materializedPaths[i];
-                if (string.IsNullOrEmpty(path))
-                    continue;
-
-                /*if (contentRoot == null)
-                    contentRoot = TryGetContentRoot(path);*/
-
-                try
-                {
-                    AssetFileUtility.Dematerialize(path);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[GameSceneActivation] Failed to delete {path}: {e.Message}");
-                }
-            }
+            return;
         }
 
-        /*if (contentRoot == null && ContentDeliveryGlobalState.PathRemapFunc != null)
+        __hasSweptSessionLeftovers = true;
+
+        string contentRoot;
+        try
         {
-            contentRoot = TryGetContentRoot(
-                ContentDeliveryGlobalState.PathRemapFunc("contentarchives/_"));
+            // remap(x) == Path.Combine(contentRoot, x.ToLower()); a name without '/'
+            // avoids the LoadFrom side effect inside GameMain's remap closure.
+            contentRoot = Path.GetDirectoryName(remap("_"));
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning(
+                $"[GameSceneActivation] Failed to resolve content root for sweep: {e.Message}");
+            return;
         }
 
-        // Sweep archive/entityscene leftovers that were never tracked (e.g. adopted
-        // from a previous incomplete quit). Do not touch the content catalog file.
-        ScrubMaterializeFolder(contentRoot, "contentarchives");
-        ScrubMaterializeFolder(contentRoot, "entityscenes");*/
-    }
-
-    /*static string TryGetContentRoot(string materializedPath)
-    {
-        if (string.IsNullOrEmpty(materializedPath))
-        {
-            return null;
-        }
-
-        var directory = Path.GetDirectoryName(materializedPath);
-        if (string.IsNullOrEmpty(directory))
-        {
-            return null;
-        }
-
-        var folderName = Path.GetFileName(directory);
-        if (string.Equals(folderName, "contentarchives", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(folderName, "entityscenes", StringComparison.OrdinalIgnoreCase))
-        {
-            return Path.GetDirectoryName(directory);
-        }
-
-        return directory;
-    }
-
-    static void ScrubMaterializeFolder(string contentRoot, string folderName)
-    {
         if (string.IsNullOrEmpty(contentRoot))
+        {
             return;
+        }
 
-        var folder = Path.Combine(contentRoot, folderName);
-        if (!Directory.Exists(folder))
+        var catalogFileName = Path.GetFileName(RuntimeContentManager.RelativeCatalogPath);
+        SweepFolder(Path.Combine(contentRoot, "contentarchives"), catalogFileName);
+        SweepFolder(Path.Combine(contentRoot, "entityscenes"), catalogFileName);
+    }
+
+    static void SweepFolder(string folder, string skipFileName)
+    {
+        if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+        {
             return;
+        }
 
         string[] files;
         try
@@ -595,23 +519,39 @@ public class GameSceneActivation : IGameSceneActivation
         catch (Exception e)
         {
             Debug.LogWarning(
-                $"[GameSceneActivation] Failed to list {folder} for scrub: {e.Message}");
+                $"[GameSceneActivation] Failed to list {folder} for sweep: {e.Message}");
             return;
         }
 
+        var count = 0;
         for (int i = 0; i < files.Length; i++)
         {
+            if (!string.IsNullOrEmpty(skipFileName) &&
+                string.Equals(
+                    Path.GetFileName(files[i]),
+                    skipFileName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             try
             {
                 AssetFileUtility.Dematerialize(files[i]);
+                count++;
             }
             catch (Exception e)
             {
                 Debug.LogWarning(
-                    $"[GameSceneActivation] Failed to scrub {files[i]}: {e.Message}");
+                    $"[GameSceneActivation] Failed to sweep {files[i]}: {e.Message}");
             }
         }
-    }*/
+
+        if (count > 0)
+        {
+            Debug.Log($"[GameSceneActivation] Swept {count} stale files from {folder}.");
+        }
+    }
 
     static bool TryLoadDependencyFile(out SceneArchiveDependencies.File dependencyFile)
     {

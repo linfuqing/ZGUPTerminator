@@ -47,7 +47,22 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
     public NativeArray<BotSessionState> sessions;
     public NativeArray<BotAgentState> agentStates;
     public NativeArray<BotAgentRuntimeFlags> agentFlags;
+    /// <summary>
+    /// Per-agent force / harness gate for MatchToSend. Production keeps <c>+Infinity</c> (reactive
+    /// dispatch owns matching). Finite values are only set by tests/harness to request an immediate
+    /// MatchToSend while Idle.
+    /// </summary>
     public NativeArray<double> nextIdleMatchTime;
+    /// <summary>Length-1: non-bot <c>matchIDs</c> user currently observed for matchTimeout dispatch, or 0.</summary>
+    public NativeArray<uint> matchObserveUserID;
+    /// <summary>
+    /// Length-1: bumps each time a new observe episode starts (human enters/re-enters matchIDs).
+    /// Seeds closest-Idle tie breaks so the same user can get a different bot on re-queue while
+    /// a single episode stays deterministic.
+    /// </summary>
+    public NativeArray<uint> matchObserveGeneration;
+    /// <summary>Length-1: elapsed time when farm may dispatch a closest Idle bot for <see cref="matchObserveUserID"/>.</summary>
+    public NativeArray<double> matchObserveDispatchTime;
     public NativeArray<int> prevRemoteChannelStatus;
     /// <summary>The committed descriptor for the current joined squad/match generation.</summary>
     public NativeArray<ClientMessageMatchStart> levelStartMessages;
@@ -79,6 +94,10 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
         farm.agentStates = new NativeArray<BotAgentState>(agentCount, allocator);
         farm.agentFlags = new NativeArray<BotAgentRuntimeFlags>(agentCount, allocator);
         farm.nextIdleMatchTime = new NativeArray<double>(agentCount, allocator);
+        farm.matchObserveUserID = new NativeArray<uint>(1, allocator);
+        farm.matchObserveGeneration = new NativeArray<uint>(1, allocator);
+        farm.matchObserveDispatchTime = new NativeArray<double>(1, allocator);
+        farm.matchObserveDispatchTime[0] = double.PositiveInfinity;
         farm.prevRemoteChannelStatus = new NativeArray<int>(agentCount, allocator);
         farm.levelStartMessages = new NativeArray<ClientMessageMatchStart>(agentCount, allocator);
         farm.relayServerStatusInjected = new NativeArray<byte>(agentCount, allocator);
@@ -129,6 +148,12 @@ public struct BotRelayFarmNative : IComponentData, IDisposable
             agentFlags.Dispose();
         if (nextIdleMatchTime.IsCreated)
             nextIdleMatchTime.Dispose();
+        if (matchObserveUserID.IsCreated)
+            matchObserveUserID.Dispose();
+        if (matchObserveGeneration.IsCreated)
+            matchObserveGeneration.Dispose();
+        if (matchObserveDispatchTime.IsCreated)
+            matchObserveDispatchTime.Dispose();
         if (prevRemoteChannelStatus.IsCreated)
             prevRemoteChannelStatus.Dispose();
         if (levelStartMessages.IsCreated)

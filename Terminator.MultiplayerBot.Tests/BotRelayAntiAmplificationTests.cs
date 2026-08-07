@@ -137,7 +137,11 @@ public class BotRelayAntiAmplificationTests
                 });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
-                    type = BotRelayEventType.SquadLeave
+                    type = BotRelayEventType.SquadLeave,
+                    // Host LoginManager rebroadcasts carry the peer payload; bodyless Leave is the
+                    // Creator self-teardown path and must release InLevel (see design-goal test).
+                    channelHasRemotePayload = true,
+                    channelRemoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId
                 });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
@@ -258,7 +262,9 @@ public class BotRelayAntiAmplificationTests
                 });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {
-                    type = BotRelayEventType.SquadLeave
+                    type = BotRelayEventType.SquadLeave,
+                    channelHasRemotePayload = true,
+                    channelRemoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId
                 });
                 BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
                 {

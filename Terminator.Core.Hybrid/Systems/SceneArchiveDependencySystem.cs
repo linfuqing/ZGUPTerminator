@@ -16,12 +16,6 @@ using EntityHash128 = Unity.Entities.Hash128;
  UpdateAfter(typeof(SceneSectionStreamingSystem))]
 public partial class SceneArchiveDependencySystem : SystemBase
 {
-    private struct PendingRelease
-    {
-        public FixedString128Bytes relativePath;
-        public int frame;
-    }
-
     private struct PendingMaterialize
     {
         public EntityPrefabReference reference;
@@ -209,8 +203,10 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
     private int __generation;
     private string __sceneName;
-    private Func<string, bool> __materialize;
-    private Func<string, bool> __dematerialize;
+    // Single bookkeeper for materialized files, owned by GameSceneActivation and
+    // shared with its critical set. This system only adds/removes references;
+    // dedup, refcounts, deferred deletes and teardown all live in the provisioner.
+    private SceneArchiveContentProvisioner __provisioner;
     private BlobAssetReference<SceneArchiveDependencies.RuntimeBlob> __dependencyBlob;
 
     private int __maxMaterializePerFrame = DefaultMaxMaterializePerFrame;
@@ -226,8 +222,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
     private NativeParallelHashSet<EntityHash128> __readyGuids;
     private NativeParallelHashSet<EntityHash128> __blockedGuids;
     private NativeParallelMultiHashMap<EntityHash128, FixedString128Bytes> __pathsByGuid;
-    private NativeParallelHashMap<FixedString128Bytes, int> __pathReferenceCounts;
-    private NativeList<PendingRelease> __pendingReleases;
     private NativeParallelHashSet<int> __entityVisited;
     private NativeList<int> __entityQueue;
     private NativeParallelHashSet<int> __archiveVisited;
@@ -312,19 +306,18 @@ public partial class SceneArchiveDependencySystem : SystemBase
     }
 
     /// <summary>
-    /// Hands an activation-owned Blob graph and materializer to this system.
+    /// Hands an activation-owned Blob graph and provisioner to this system.
     /// The returned generation prevents an old activation from clearing newer state.
+    /// The provisioner stays owned by the activation, which Flushes it on Dispose.
     /// </summary>
     public int Initialize(
         string sceneName,
         BlobAssetReference<SceneArchiveDependencies.RuntimeBlob> dependencyBlob,
-        Func<string, bool> materialize,
-        Func<string, bool> dematerialize)
+        SceneArchiveContentProvisioner provisioner)
     {
         if (!dependencyBlob.IsCreated ||
             dependencyBlob.Value.headers.Length == 0 ||
-            materialize == null ||
-            dematerialize == null)
+            provisioner == null)
         {
             Debug.LogError(
                 $"[SceneArchiveDependencySystem] Invalid dependency graph for '{sceneName}'.");
@@ -343,8 +336,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
         EnsureCapacity(ref __readyGuids, graph.headers.Length);
         EnsureCapacity(ref __blockedGuids, graph.headers.Length);
         EnsureCapacity(ref __pathsByGuid, 16);
-        EnsureCapacity(ref __pathReferenceCounts, 16);
-        EnsureCapacity(ref __pendingReleases, 16);
         EnsureCapacity(ref __entityVisited, graph.entityScenePaths.Length);
         EnsureCapacity(ref __archiveVisited, graph.archivePaths.Length);
 
@@ -359,8 +350,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
         __sceneName = sceneName;
         __dependencyBlob = dependencyBlob;
-        __materialize = materialize;
-        __dematerialize = dematerialize;
+        __provisioner = provisioner;
 
         // ReleaseAllRightNow keeps prefab loading closed across activation disposal.
         // Reopen only after the next activation has a valid dependency graph and
@@ -396,9 +386,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
         __blockedGuids = new NativeParallelHashSet<EntityHash128>(1, Allocator.Persistent);
         __pathsByGuid =
             new NativeParallelMultiHashMap<EntityHash128, FixedString128Bytes>(1, Allocator.Persistent);
-        __pathReferenceCounts =
-            new NativeParallelHashMap<FixedString128Bytes, int>(1, Allocator.Persistent);
-        __pendingReleases = new NativeList<PendingRelease>(1, Allocator.Persistent);
         __entityVisited = new NativeParallelHashSet<int>(1, Allocator.Persistent);
         __entityQueue = new NativeList<int>(1, Allocator.Persistent);
         __archiveVisited = new NativeParallelHashSet<int>(1, Allocator.Persistent);
@@ -436,8 +423,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
         Dispose(ref __readyGuids);
         Dispose(ref __blockedGuids);
         Dispose(ref __pathsByGuid);
-        Dispose(ref __pathReferenceCounts);
-        Dispose(ref __pendingReleases);
         Dispose(ref __entityVisited);
         Dispose(ref __entityQueue);
         Dispose(ref __archiveVisited);
@@ -481,7 +466,9 @@ public partial class SceneArchiveDependencySystem : SystemBase
             return;
         }
 
-        ProcessPendingReleases();
+        // Deferred deletes run here (never while draining, so every materialized
+        // file stays alive until GameSceneActivation.Dispose flushes the provisioner).
+        __provisioner?.Tick(__maxDematerializePerFrame);
 
         // Hold every new load request outside PrefabLoaderSystem until both planning
         // and managed materialization have completed.
@@ -612,7 +599,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
     private void ProcessMaterializeQueue(ref PrefabLoaderReferences references)
     {
-        if (__materialize == null || __materializePlans.IsEmpty)
+        if (__provisioner == null || __materializePlans.IsEmpty)
         {
             return;
         }
@@ -629,9 +616,10 @@ public partial class SceneArchiveDependencySystem : SystemBase
             }
 
             var relativePath = __materializeCommands[plan.commandStart + plan.nextOffset];
-            if (relativePath.IsEmpty || !__materialize(relativePath.ToString()))
+            if (relativePath.IsEmpty ||
+                !__provisioner.Acquire(relativePath.ToString(), out var performedIO))
             {
-                RollbackMaterializedPaths(plan.commandStart, plan.nextOffset);
+                ReleaseAcquiredCommands(plan.commandStart, plan.nextOffset);
                 Block(
                     plan.guid,
                     $"Failed to materialize '{relativePath}' for prefab {plan.guid}.");
@@ -640,7 +628,13 @@ public partial class SceneArchiveDependencySystem : SystemBase
             }
 
             plan.nextOffset++;
-            remaining--;
+
+            // Paths already on disk (shared with the critical set or another ready
+            // GUID) only bump a refcount; charge the IO budget for real copies only.
+            if (performedIO)
+            {
+                remaining--;
+            }
 
             if (plan.nextOffset >= plan.commandCount)
             {
@@ -672,36 +666,26 @@ public partial class SceneArchiveDependencySystem : SystemBase
         int commandStart,
         int commandCount)
     {
+        // References were already added per command at Acquire time; this only
+        // records which paths must be released when the GUID unloads.
         EnsureCapacity(ref __pathsByGuid, __pathsByGuid.Count() + commandCount);
-        EnsureCapacity(
-            ref __pathReferenceCounts,
-            __pathReferenceCounts.Count() + commandCount);
 
         for (int commandOffset = 0; commandOffset < commandCount; commandOffset++)
         {
-            var relativePath = __materializeCommands[commandStart + commandOffset];
-            RemovePendingRelease(relativePath);
-
-            if (__pathReferenceCounts.TryGetValue(relativePath, out var count))
-            {
-                __pathReferenceCounts[relativePath] = count + 1;
-            }
-            else
-            {
-                __pathReferenceCounts.Add(relativePath, 1);
-            }
-
-            __pathsByGuid.Add(guid, relativePath);
+            __pathsByGuid.Add(guid, __materializeCommands[commandStart + commandOffset]);
         }
     }
 
-    private void RollbackMaterializedPaths(int commandStart, int commandCount)
+    private void ReleaseAcquiredCommands(int commandStart, int commandCount)
     {
-        if (__dematerialize == null || commandCount <= 0)
+        if (__provisioner == null || commandCount <= 0)
         {
             return;
         }
 
+        // Drop the references this plan acquired so far. Paths shared with the
+        // critical set or other ready GUIDs stay refcounted and on disk; unshared
+        // ones are queued for deferred deletion.
         for (int commandOffset = 0; commandOffset < commandCount; commandOffset++)
         {
             var relativePath = __materializeCommands[commandStart + commandOffset];
@@ -710,13 +694,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
                 continue;
             }
 
-            // Paths already owned by a ready GUID must stay on disk.
-            if (__pathReferenceCounts.ContainsKey(relativePath))
-            {
-                continue;
-            }
-
-            __dematerialize(relativePath.ToString());
+            __provisioner.Release(relativePath.ToString());
         }
     }
 
@@ -737,7 +715,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
             var plan = __materializePlans[i];
             if (plan.nextOffset > 0)
             {
-                RollbackMaterializedPaths(plan.commandStart, plan.nextOffset);
+                ReleaseAcquiredCommands(plan.commandStart, plan.nextOffset);
             }
         }
 
@@ -755,24 +733,12 @@ public partial class SceneArchiveDependencySystem : SystemBase
                 continue;
             }
 
-            if (__pathsByGuid.TryGetFirstValue(guid, out var relativePath, out var iterator))
+            if (__provisioner != null &&
+                __pathsByGuid.TryGetFirstValue(guid, out var relativePath, out var iterator))
             {
                 do
                 {
-                    if (!__pathReferenceCounts.TryGetValue(relativePath, out var count))
-                    {
-                        continue;
-                    }
-
-                    if (count > 1)
-                    {
-                        __pathReferenceCounts[relativePath] = count - 1;
-                    }
-                    else
-                    {
-                        __pathReferenceCounts.Remove(relativePath);
-                        QueueRelease(relativePath);
-                    }
+                    __provisioner.Release(relativePath.ToString());
                 }
                 while (__pathsByGuid.TryGetNextValue(out relativePath, ref iterator));
             }
@@ -783,77 +749,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
         // PrefabLoaderSystem publishes one-frame safe-unload events. Consume each
         // event exactly once instead of retaining it until the loader has new work.
         unloaded.Clear();
-    }
-
-    private void QueueRelease(FixedString128Bytes relativePath)
-    {
-        var releaseFrame = UnityEngine.Time.frameCount;
-        for (int i = 0; i < __pendingReleases.Length; i++)
-        {
-            var pending = __pendingReleases[i];
-            if (pending.relativePath != relativePath)
-            {
-                continue;
-            }
-
-            pending.frame = releaseFrame;
-            __pendingReleases[i] = pending;
-            return;
-        }
-
-        __pendingReleases.Add(new PendingRelease
-        {
-            relativePath = relativePath,
-            frame = releaseFrame
-        });
-    }
-
-    private void RemovePendingRelease(FixedString128Bytes relativePath)
-    {
-        for (int i = __pendingReleases.Length - 1; i >= 0; i--)
-        {
-            if (__pendingReleases[i].relativePath == relativePath)
-            {
-                __pendingReleases.RemoveAtSwapBack(i);
-            }
-        }
-    }
-
-    private void ProcessPendingReleases()
-    {
-        if (__dematerialize == null || __pendingReleases.IsEmpty)
-        {
-            return;
-        }
-
-        var frame = UnityEngine.Time.frameCount;
-        var remaining = Math.Max(1, __maxDematerializePerFrame);
-        for (int i = __pendingReleases.Length - 1; i >= 0 && remaining > 0; i--)
-        {
-            var pending = __pendingReleases[i];
-            if (frame < pending.frame)
-            {
-                continue;
-            }
-
-            if (__pathReferenceCounts.ContainsKey(pending.relativePath))
-            {
-                __pendingReleases.RemoveAtSwapBack(i);
-                continue;
-            }
-
-            remaining--;
-            if (__dematerialize(pending.relativePath.ToString()))
-            {
-                __pendingReleases.RemoveAtSwapBack(i);
-            }
-            else
-            {
-                // The archive can still be unmounting asynchronously. Retry next frame.
-                pending.frame = frame + 1;
-                __pendingReleases[i] = pending;
-            }
-        }
     }
 
     private void Block(EntityHash128 guid, string message)
@@ -875,14 +770,12 @@ public partial class SceneArchiveDependencySystem : SystemBase
         }
 
         CancelPendingMaterializes();
-        // Streaming dematerialize may still hold a backlog when Dispose/Uninitialize
-        // runs (drain skips the per-frame budget). Flush without a budget so files
-        // are not stranded in tmp/content after the callback is cleared.
-        FlushPendingReleases();
 
+        // Deferred deletes still queued in the provisioner are handled by the
+        // activation: GameSceneActivation.Dispose calls provisioner.Flush() right
+        // after Uninitialize, deleting every tracked file without a budget.
         __sceneName = null;
-        __materialize = null;
-        __dematerialize = null;
+        __provisioner = null;
         __dependencyBlob = default;
         __isDraining = false;
         __isReadyForRelease = false;
@@ -900,37 +793,10 @@ public partial class SceneArchiveDependencySystem : SystemBase
             __readyGuids.Clear();
             __blockedGuids.Clear();
             __pathsByGuid.Clear();
-            __pathReferenceCounts.Clear();
-            __pendingReleases.Clear();
             __entityVisited.Clear();
             __entityQueue.Clear();
             __archiveVisited.Clear();
             __archiveQueue.Clear();
-        }
-    }
-
-    private void FlushPendingReleases()
-    {
-        if (__dematerialize == null ||
-            !__pendingReleases.IsCreated ||
-            __pendingReleases.IsEmpty)
-        {
-            return;
-        }
-
-        for (int i = __pendingReleases.Length - 1; i >= 0; i--)
-        {
-            var pending = __pendingReleases[i];
-            if (__pathReferenceCounts.ContainsKey(pending.relativePath))
-            {
-                __pendingReleases.RemoveAtSwapBack(i);
-                continue;
-            }
-
-            // Best-effort: Dispose.Dematerialize still sweeps tracked leftovers if
-            // a file is locked for one more frame.
-            __dematerialize(pending.relativePath.ToString());
-            __pendingReleases.RemoveAtSwapBack(i);
         }
     }
 

@@ -8,6 +8,8 @@ public struct BotRelayFarmTickConfig
 {
     public float inviteTimeoutMin;
     public float inviteTimeoutMax;
+    public float matchTimeoutMin;
+    public float matchTimeoutMax;
     public float remoteOfflineLeaveTimeout;
     public double elapsedTime;
     public uint frameSeed;
@@ -44,6 +46,179 @@ public static class BotAgentLogic
         BotRelayInboundProbe.RecordBotState((int)farm.agentStates[index].state);
     }
 
+    /// <summary>
+    /// Farm-wide reactive matching: observe non-bot entries in <see cref="NetworkRelayServer.ReadOnly.matchIDs"/>,
+    /// wait <c>matchTimeout*</c>, then dispatch the closest Idle bot. Serial; call after PostAgent.
+    /// </summary>
+    public static void TickMatchDispatch(
+        ref BotRelayFarmNative farm,
+        in BotRelayFarmTickConfig config,
+        in NetworkRelayServer.ReadOnly server)
+    {
+        if (!farm.matchObserveUserID.IsCreated ||
+            !farm.matchObserveGeneration.IsCreated ||
+            !farm.matchObserveDispatchTime.IsCreated ||
+            !farm.matchingSlotOwner.IsCreated)
+        {
+            return;
+        }
+
+        if (farm.matchingSlotOwner[0] != BotMatchGuard.NoMatchingSlotOwner)
+            return;
+
+        if (!__TryPickObservedHuman(in farm, in server, out uint humanUserID, out int humanDistance))
+        {
+            farm.matchObserveUserID[0] = 0;
+            farm.matchObserveDispatchTime[0] = double.PositiveInfinity;
+            return;
+        }
+
+        if (farm.matchObserveUserID[0] != humanUserID)
+        {
+            farm.matchObserveUserID[0] = humanUserID;
+            farm.matchObserveGeneration[0] += 1u;
+            var random = Unity.Mathematics.Random.CreateFromIndex(
+                config.frameSeed ^ humanUserID ^ 0x4D415443u);
+            farm.matchObserveDispatchTime[0] =
+                config.elapsedTime + __RandomMatchTimeout(in config, ref random);
+        }
+
+        if (config.elapsedTime < farm.matchObserveDispatchTime[0])
+            return;
+
+        if (!__TryPickClosestIdleBot(in farm, humanDistance, out int agentIndex))
+            return;
+
+        __StartMatching(agentIndex, ref farm, in config);
+        if (farm.agentStates[agentIndex].state == BotState.Matching)
+        {
+            farm.matchObserveUserID[0] = 0;
+            farm.matchObserveDispatchTime[0] = double.PositiveInfinity;
+        }
+    }
+
+    private static bool __TryPickObservedHuman(
+        in BotRelayFarmNative farm,
+        in NetworkRelayServer.ReadOnly server,
+        out uint humanUserID,
+        out int humanDistance)
+    {
+        humanUserID = 0;
+        humanDistance = 0;
+        double bestStart = double.PositiveInfinity;
+        bool found = false;
+
+        for (int i = 0; i < server.matchIDs.Length; ++i)
+        {
+            uint userID = server.matchIDs[i];
+            if (userID == 0 || BotMatchGuard.IsFarmBotUser(in farm, userID))
+                continue;
+
+            if (!server.sendBuffer.GetConnection(userID, out int connectionIndex, out int identityIndex, out _) ||
+                connectionIndex < 0 ||
+                identityIndex < 0 ||
+                identityIndex >= server.identities.Length ||
+                identityIndex >= server.matches.Length)
+            {
+                continue;
+            }
+
+            var identity = server.identities[identityIndex];
+            if (!identity.canMatch || identity.match == 0)
+                continue;
+
+            var match = server.matches[identityIndex];
+            if (!found || match.startTime < bestStart)
+            {
+                found = true;
+                bestStart = match.startTime;
+                humanUserID = userID;
+                humanDistance = match.value.distance;
+            }
+        }
+
+        return found;
+    }
+
+    private static bool __TryPickClosestIdleBot(
+        in BotRelayFarmNative farm,
+        int humanDistance,
+        out int agentIndex)
+    {
+        agentIndex = -1;
+        int bestDelta = int.MaxValue;
+        int tieCount = 0;
+
+        for (int i = 0; i < farm.agentCount; ++i)
+        {
+            ref readonly var state = ref farm.agentStates.ElementAt(i);
+            if (state.state != BotState.Idle)
+                continue;
+
+            ref readonly var session = ref farm.sessions.ElementAt(i);
+            if (!session.IsIdleForMatch)
+                continue;
+
+            if ((farm.transport[i].flags & BotRelayTransportFlags.Connected) == 0)
+                continue;
+
+            int delta = state.matchLevel - humanDistance;
+            if (delta < 0)
+                delta = -delta;
+
+            if (delta < bestDelta)
+            {
+                bestDelta = delta;
+                agentIndex = i;
+                tieCount = 1;
+            }
+            else if (delta == bestDelta)
+            {
+                tieCount++;
+            }
+        }
+
+        if (agentIndex < 0 || tieCount <= 1)
+            return agentIndex >= 0;
+
+        // Among closest Idle bots: deterministic per observe episode (userID ^ generation),
+        // so the same human re-entering matchIDs can land on a different peer.
+        var tieRandom = Unity.Mathematics.Random.CreateFromIndex(
+            farm.matchObserveUserID[0] ^ farm.matchObserveGeneration[0] ^ 0x54494533u);
+        int pickOrdinal = tieRandom.NextInt(0, tieCount);
+        int seen = 0;
+        for (int i = 0; i < farm.agentCount; ++i)
+        {
+            ref readonly var state = ref farm.agentStates.ElementAt(i);
+            if (state.state != BotState.Idle)
+                continue;
+
+            ref readonly var session = ref farm.sessions.ElementAt(i);
+            if (!session.IsIdleForMatch)
+                continue;
+
+            if ((farm.transport[i].flags & BotRelayTransportFlags.Connected) == 0)
+                continue;
+
+            int delta = state.matchLevel - humanDistance;
+            if (delta < 0)
+                delta = -delta;
+
+            if (delta != bestDelta)
+                continue;
+
+            if (seen == pickOrdinal)
+            {
+                agentIndex = i;
+                return true;
+            }
+
+            seen++;
+        }
+
+        return agentIndex >= 0;
+    }
+
     private static void __HandleEvent(
         int index,
         ref BotRelayFarmNative farm,
@@ -64,10 +239,20 @@ public static class BotAgentLogic
                 __OnSquadJoinFail(index, ref farm, in config, in evt.squadJoin);
                 break;
             case BotRelayEventType.SquadLeave:
-                __OnSquadLeave(index, ref farm, in config, wasDropped: false);
+                __OnSquadLeave(
+                    index,
+                    ref farm,
+                    in config,
+                    wasDropped: false,
+                    hasRemotePayload: evt.channelHasRemotePayload);
                 break;
             case BotRelayEventType.SquadDrop:
-                __OnSquadLeave(index, ref farm, in config, wasDropped: true);
+                __OnSquadLeave(
+                    index,
+                    ref farm,
+                    in config,
+                    wasDropped: true,
+                    hasRemotePayload: evt.channelHasRemotePayload);
                 break;
             case BotRelayEventType.ApplyMatch:
                 __OnApplyMatch(index, ref farm, in config, in evt.header);
@@ -103,20 +288,17 @@ public static class BotAgentLogic
         switch (state.state)
         {
             case BotState.Idle:
-                // Spawn defers idle MatchToSend (nextIdleMatchTime=∞) so Join is not rejected while
-                // server match!=0. Re-arm once relay Status is queued so boot bots enter the human pool.
-                if (double.IsPositiveInfinity(farm.nextIdleMatchTime[index]) &&
-                    (farm.transport[index].flags & BotRelayTransportFlags.Connected) != 0)
-                {
+                // Register Status once Connected. Production MatchToSend is reactive via
+                // TickMatchDispatch (non-bot matchIDs + matchTimeout). A finite nextIdleMatchTime is
+                // only a tests/harness force gate — spawn keeps +Infinity.
+                if ((farm.transport[index].flags & BotRelayTransportFlags.Connected) != 0)
                     __TryRegisterRelayServerPresence(index, ref farm, in config);
-                    farm.nextIdleMatchTime[index] = config.elapsedTime;
-                    BotRelayAgentDiagnostics.LogIdleMatchArmed(state.userID);
-                }
 
-                if (config.elapsedTime >= farm.nextIdleMatchTime[index])
+                if (!double.IsPositiveInfinity(farm.nextIdleMatchTime[index]) &&
+                    config.elapsedTime >= farm.nextIdleMatchTime[index])
                 {
                     __StartMatching(index, ref farm, in config);
-                    farm.nextIdleMatchTime[index] = config.elapsedTime + 5.0;
+                    farm.nextIdleMatchTime[index] = double.PositiveInfinity;
                 }
                 break;
 
@@ -158,12 +340,13 @@ public static class BotAgentLogic
                 __InjectRelayMessage(in config, state.userID, NetworkRelayMessageType.Leave, 0, false);
                 __InjectRelayMessage(in config, state.userID, NetworkRelayMessageType.Mismatch, 0, false);
                 __InjectRelayMessage(in config, state.userID, NetworkRelayMessageType.Status, 0, true);
+                farm.relayServerStatusInjected[index] = 1;
                 ref var leavingSession = ref farm.sessions.ElementAt(index);
                 leavingSession.ResetChannel();
                 BotRelayInboundProbe.RecordLevelStartCleared(1);
                 __ClearLevelStartGeneration(index, ref farm);
                 __TransitionTo(index, ref farm, BotState.Idle, config.elapsedTime);
-                farm.nextIdleMatchTime[index] = config.elapsedTime + 5.0;
+                farm.nextIdleMatchTime[index] = double.PositiveInfinity;
                 BotRelayAgentDiagnostics.LogLeftSquad(state.userID);
                 break;
         }
@@ -481,19 +664,21 @@ public static class BotAgentLogic
             (farm.agentFlags[index] & BotAgentRuntimeFlags.JoinDispatched) != 0 &&
             evt.channelMessageType == NetworkRelayMessageType.Join &&
             !evt.channelHasRemotePayload;
-        bool fromMatchedGeneration = state.state == BotState.Matching &&
-                                      session.matchID != 0;
+        // Solo matchmaking may deliver temp-squad Create/Join before MatchToRead. Design §3.2:
+        // channel membership may commit first with matchID still 0; only MatchToRead binds the
+        // ranked generation. Requiring matchID!=0 here caused Leave teardown of a live pairing.
+        bool fromMatchingChannel = state.state == BotState.Matching;
         bool duplicateCurrentSquad =
             (state.state == BotState.InSquad || state.state == BotState.InLevel) &&
             session.IsInSquad &&
             session.channel == (int)join.squadInviteID;
 
         // Join is consumed only by the generation that is already active. PendingInvite requires
-        // the exact dispatched self-Join acknowledgement,
-        // Matching requires MatchToRead first, and Idle/Leaving reject every Join.
+        // the exact dispatched self-Join acknowledgement; Matching may accept temp-squad
+        // Create/Join before MatchToRead; Idle/Leaving reject every Join.
         if (!supportedChannelMessage ||
             !validRemoteSnapshot ||
-            (!fromSquadInvite && !fromMatchedGeneration && !duplicateCurrentSquad))
+            (!fromSquadInvite && !fromMatchingChannel && !duplicateCurrentSquad))
         {
             BotRelayAgentDiagnostics.LogUnexpectedSquadJoinRejected(
                 state.userID,
@@ -515,16 +700,9 @@ public static class BotAgentLogic
                 // cleanup tick.
                 __TransitionTo(index, ref farm, BotState.PendingInvite, config.elapsedTime);
             }
-            else if (state.state == BotState.Matching)
-            {
-                __TransitionTo(index, ref farm, BotState.Idle, config.elapsedTime);
-                farm.nextIdleMatchTime[index] =
-                    config.elapsedTime + PostSquadLeaveRematchDelaySeconds;
-            }
             else if (state.state == BotState.Idle)
             {
-                farm.nextIdleMatchTime[index] =
-                    config.elapsedTime + PostSquadLeaveRematchDelaySeconds;
+                farm.nextIdleMatchTime[index] = double.PositiveInfinity;
             }
 
             return;
@@ -642,21 +820,18 @@ public static class BotAgentLogic
         int index,
         ref BotRelayFarmNative farm,
         in BotRelayFarmTickConfig config,
-        bool wasDropped)
+        bool wasDropped,
+        bool hasRemotePayload)
     {
         ref var state = ref farm.agentStates.ElementAt(index);
 
-        // Sticky InLevel. While the host waits for our stable JOINed presence it re-broadcasts the
-        // channel Create/Join/Leave bundle every frame (LoginManager.__Start). Honouring a Leave
-        // here drops us back to Idle, which makes ReplayTickJob Stop the replay; the next honoured
-        // Play then reloads and re-drains the recording in a single tick (~200 frames) →
-        // NetworkSendMessage -5 flood and an invisible bot (never held in-level). Once committed to
-        // the level, ignore squad Leave churn; level exit is driven by the live remote stage
-        // returning to zero (__TickChannelTracker), never by replay exhaustion.
-        // Drop is an explicit host removal, not the transient Leave rebroadcast that InLevel must
-        // debounce. Honour it immediately so the old replay and farm-wide squad lease are cleared
-        // before a one-shot replacement Invite from the same network batch is evaluated.
-        if (state.state == BotState.InLevel && !wasDropped)
+        // Sticky InLevel only against peer/channel Leave flaps. While the human host waits for
+        // stable JOINed presence it re-broadcasts Create/Join/Leave with a remote payload every
+        // frame (LoginManager.__Start); honouring those would Stop replay and flood -5.
+        // Server Drop() maps Creator → Leave and non-Creator → Drop. The Creator self header is
+        // bodyless (SendHeader to self). Matchmaking bots often Create first, so ignoring that
+        // bodyless Leave left them InLevel forever after the human had already left.
+        if (state.state == BotState.InLevel && !wasDropped && hasRemotePayload)
         {
             return;
         }
@@ -693,12 +868,13 @@ public static class BotAgentLogic
         // next MatchToSend is rejected server-side. Defer rematch one tick so inject flattens first.
         __InjectRelayMessage(in config, userID, NetworkRelayMessageType.Mismatch, 0, false);
         __InjectRelayMessage(in config, userID, NetworkRelayMessageType.Status, 0, true);
+        farm.relayServerStatusInjected[index] = 1;
 
         BotRelayInboundProbe.RecordLevelStartCleared(3);
         __ClearLevelStartGeneration(index, ref farm);
         session.ResetChannel();
         __TransitionTo(index, ref farm, BotState.Idle, config.elapsedTime);
-        farm.nextIdleMatchTime[index] = config.elapsedTime + PostSquadLeaveRematchDelaySeconds;
+        farm.nextIdleMatchTime[index] = double.PositiveInfinity;
         BotRelayAgentDiagnostics.LogLeftSquadReadyForRematch(userID);
     }
 
@@ -852,7 +1028,7 @@ public static class BotAgentLogic
             __ClearLevelStartGeneration(index, ref farm);
             BotMatchGuard.ReleaseMatchingSlot(ref farm, index);
             __TransitionTo(index, ref farm, BotState.Idle, elapsedTime);
-            farm.nextIdleMatchTime[index] = elapsedTime + 5.0;
+            farm.nextIdleMatchTime[index] = double.PositiveInfinity;
             return;
         }
 
@@ -1056,7 +1232,9 @@ public static class BotAgentLogic
     {
         __ClearLevelStartGeneration(index, ref farm);
         __TransitionTo(index, ref farm, BotState.Idle, elapsedTime);
-        farm.nextIdleMatchTime[index] = elapsedTime + rematchDelay;
+        // rematchDelay retained for call-site compatibility; reactive matching ignores it.
+        farm.nextIdleMatchTime[index] = double.PositiveInfinity;
+        _ = rematchDelay;
     }
 
     private static void __InjectUnexpectedSquadJoinCleanup(
@@ -1068,6 +1246,7 @@ public static class BotAgentLogic
         __InjectRelayMessage(in config, state.userID, NetworkRelayMessageType.Leave, 0, false);
         __InjectRelayMessage(in config, state.userID, NetworkRelayMessageType.Mismatch, 0, false);
         __InjectRelayMessage(in config, state.userID, NetworkRelayMessageType.Status, 0, true);
+        farm.relayServerStatusInjected[index] = 1;
     }
 
     /// <summary>
@@ -1287,6 +1466,15 @@ public static class BotAgentLogic
     {
         var min = config.inviteTimeoutMin;
         var max = config.inviteTimeoutMax;
+        if (max < min)
+            max = min;
+        return random.NextFloat(min, max);
+    }
+
+    private static float __RandomMatchTimeout(in BotRelayFarmTickConfig config, ref Unity.Mathematics.Random random)
+    {
+        var min = config.matchTimeoutMin;
+        var max = config.matchTimeoutMax;
         if (max < min)
             max = min;
         return random.NextFloat(min, max);

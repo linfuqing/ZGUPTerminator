@@ -20,6 +20,8 @@ public struct BotRelayFarmConfig : IComponentData
 {
     public float inviteTimeoutMin;
     public float inviteTimeoutMax;
+    public float matchTimeoutMin;
+    public float matchTimeoutMax;
     public float remoteOfflineLeaveTimeout;
 }
 

@@ -53,6 +53,19 @@ namespace ZG
     }
 
     [BurstCompile]
+    internal struct BotRelayMatchDispatchJob : IJob
+    {
+        public BotRelayFarmNative farm;
+        public BotRelayFarmTickConfig tickConfig;
+        public NetworkRelayServer.ReadOnly server;
+
+        public void Execute()
+        {
+            BotAgentLogic.TickMatchDispatch(ref farm, in tickConfig, in server);
+        }
+    }
+
+    [BurstCompile]
     internal struct BotRelayPostFlushBurstJob : IJobParallelFor
     {
         [NativeDisableParallelForRestriction] public BotRelayFarmNative farm;

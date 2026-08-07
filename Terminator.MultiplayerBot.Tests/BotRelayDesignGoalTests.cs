@@ -90,7 +90,18 @@ public class BotRelayDesignGoalTests
 
             BotAgentLogic.Execute(0, ref farm, in tickConfig);
             Assert.AreEqual(BotState.Idle, farm.agentStates[0].state);
-            Assert.AreEqual(0, injects.Count);
+
+            int matchInjectCount = 0;
+            while (injects.TryDequeue(out var inject))
+            {
+                if (BotRelayFlowTestFixtures.TryReadInjectMessageType(in inject, out int type) &&
+                    type == (int)NetworkRelayMessageType.Match)
+                {
+                    matchInjectCount++;
+                }
+            }
+
+            Assert.AreEqual(0, matchInjectCount, "Missing replay catalog must not MatchToSend.");
 
             BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
             {
@@ -310,7 +321,7 @@ public class BotRelayDesignGoalTests
 
             Assert.AreEqual(BotState.Idle, farm.agentStates[0].state);
             Assert.IsFalse(farm.agentStates[0].HasPendingInvite);
-            Assert.Greater(farm.nextIdleMatchTime[0], tickConfig.elapsedTime);
+            Assert.IsTrue(double.IsPositiveInfinity(farm.nextIdleMatchTime[0]));
 
             // The previous Join is not retried, but a later incoming Invite event is eligible
             // again. It deliberately uses the same squad channel: squadInviteID is a squad id,
@@ -865,7 +876,7 @@ public class BotRelayDesignGoalTests
 
     [Test]
     [Category("Regression")]
-    public void MatchResponse_BootDeferredIdleMatch_ArmsAfterRelayReady()
+    public void MatchResponse_BootConnected_RegistersStatusWithoutProactiveMatch()
     {
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
@@ -878,9 +889,21 @@ public class BotRelayDesignGoalTests
             config.injectWriter = injects.AsParallelWriter();
             BotAgentLogic.Execute(0, ref farm, in config);
 
-            Assert.AreEqual(BotState.Matching, farm.agentStates[0].state);
-            Assert.IsFalse(double.IsPositiveInfinity(farm.nextIdleMatchTime[0]));
-            Assert.Greater(injects.Count, 0);
+            Assert.AreEqual(BotState.Idle, farm.agentStates[0].state);
+            Assert.IsTrue(double.IsPositiveInfinity(farm.nextIdleMatchTime[0]));
+            Assert.AreEqual((byte)1, farm.relayServerStatusInjected[0]);
+
+            int matchInjectCount = 0;
+            while (injects.TryDequeue(out var inject))
+            {
+                if (BotRelayFlowTestFixtures.TryReadInjectMessageType(in inject, out int type) &&
+                    type == (int)NetworkRelayMessageType.Match)
+                {
+                    matchInjectCount++;
+                }
+            }
+
+            Assert.AreEqual(0, matchInjectCount, "Reactive matching must not MatchToSend on Connected alone.");
         }
         finally
         {
@@ -909,10 +932,21 @@ public class BotRelayDesignGoalTests
 
             Assert.AreEqual(BotState.Matching, state.state);
             Assert.AreEqual(profileLevel, state.matchLevel);
-            Assert.IsTrue(injects.TryDequeue(out var matchInject));
-            Assert.IsTrue(BotRelayFlowTestFixtures.TryReadMatchDistance(
-                in matchInject.packet,
-                out int transmittedLevel));
+
+            bool foundMatch = false;
+            int transmittedLevel = -1;
+            while (injects.TryDequeue(out var inject))
+            {
+                if (BotRelayFlowTestFixtures.TryReadInjectMessageType(in inject, out int type) &&
+                    type == (int)NetworkRelayMessageType.Match &&
+                    BotRelayFlowTestFixtures.TryReadMatchDistance(in inject.packet, out transmittedLevel))
+                {
+                    foundMatch = true;
+                    break;
+                }
+            }
+
+            Assert.IsTrue(foundMatch);
             Assert.AreEqual(profileLevel, transmittedLevel);
         }
         finally
@@ -954,7 +988,7 @@ public class BotRelayDesignGoalTests
                 1,
                 statusInjectCount,
                 "Boot must register relay-server presence with exactly one Status(0) inject; " +
-                "MatchToSend on the same tick is covered by BootDeferredIdleMatch.");
+                "proactive MatchToSend on Connected is covered by MatchResponse_BootConnected_RegistersStatusWithoutProactiveMatch.");
         }
         finally
         {
@@ -988,7 +1022,7 @@ public class BotRelayDesignGoalTests
             BotAgentLogic.Execute(0, ref farm, in config);
 
             Assert.AreEqual(BotState.Idle, farm.agentStates[0].state);
-            Assert.Greater(farm.nextIdleMatchTime[0], config.elapsedTime);
+            Assert.IsTrue(double.IsPositiveInfinity(farm.nextIdleMatchTime[0]));
             Assert.AreEqual(2, injects.Count);
 
             int mismatchType = 0;
@@ -1067,6 +1101,103 @@ public class BotRelayDesignGoalTests
     }
 
     [Test]
+    [Category("Regression")]
+    public void InLevelCreatorBodylessLeave_FreesBotForInvite()
+    {
+        // Server Drop() sends Leave (not Drop) to the channel Creator. Matchmaking bots often
+        // Create the temp squad first; that bodyless self Leave must release InLevel occupancy.
+        var farm = BotRelayFlowTestFixtures.CreateFarm();
+        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
+        try
+        {
+            ref var state = ref farm.agentStates.ElementAt(0);
+            state.state = BotState.InLevel;
+
+            ref var session = ref farm.sessions.ElementAt(0);
+            session.channel = 3;
+            session.isHost = true;
+            session.remoteChannelStatus = 210;
+            session.remoteOnline = true;
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+            session.remotePlayerCount = 1;
+
+            ref var runtime = ref farm.replayRuntime.ElementAt(0);
+            runtime.flags = BotReplayRuntimeFlags.Loaded | BotReplayRuntimeFlags.Playing;
+
+            Assert.IsTrue(BotMatchGuard.TryClaimSquadSlot(ref farm, 0, 3));
+
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.SquadLeave,
+                channelHasRemotePayload = false
+            });
+            const uint nextSquadInviteId = 23;
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.SquadInvite,
+                squadInvite = BotRelayFlowTestFixtures.BuildPublicInvite(nextSquadInviteId)
+            });
+
+            var config = BotRelayFlowTestFixtures.CreateTickConfig(10.0);
+            config.injectEnabled = 1;
+            config.injectWriter = injects.AsParallelWriter();
+            BotAgentLogic.Execute(0, ref farm, in config);
+
+            Assert.AreEqual(BotState.PendingInvite, farm.agentStates[0].state);
+            Assert.AreEqual(nextSquadInviteId, farm.agentStates[0].pendingInvite.squadInviteID);
+            Assert.IsTrue(HasSquadSlotClaim(in farm, 0, nextSquadInviteId));
+            Assert.IsFalse(farm.sessions[0].IsInSquad);
+            Assert.AreEqual(BotReplayRuntimeFlags.None, farm.replayRuntime[0].flags);
+        }
+        finally
+        {
+            injects.Dispose();
+            farm.Dispose();
+        }
+    }
+
+    [Test]
+    [Category("Regression")]
+    public void InLevelPeerLeaveFlap_KeepsInLevel()
+    {
+        var farm = BotRelayFlowTestFixtures.CreateFarm();
+        try
+        {
+            ref var state = ref farm.agentStates.ElementAt(0);
+            state.state = BotState.InLevel;
+
+            ref var session = ref farm.sessions.ElementAt(0);
+            session.channel = (int)BotRelayFlowTestFixtures.SquadInviteId;
+            session.isHost = false;
+            session.remoteChannelStatus = 210;
+            session.remoteOnline = true;
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+
+            ref var runtime = ref farm.replayRuntime.ElementAt(0);
+            runtime.flags = BotReplayRuntimeFlags.Loaded | BotReplayRuntimeFlags.Playing;
+
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.SquadLeave,
+                channelHasRemotePayload = true,
+                channelRemoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId
+            });
+
+            BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig(10.0));
+
+            Assert.AreEqual(BotState.InLevel, farm.agentStates[0].state);
+            Assert.IsTrue(farm.sessions[0].IsInSquad);
+            Assert.AreEqual(
+                BotReplayRuntimeFlags.Loaded | BotReplayRuntimeFlags.Playing,
+                farm.replayRuntime[0].flags);
+        }
+        finally
+        {
+            farm.Dispose();
+        }
+    }
+
+    [Test]
     public void MatchResponse_ParseMatch_EnqueuesMatchEvent()
     {
         Assert.IsTrue(BotRelayWireTestFixtures.TryBuildInboundMatchApp(
@@ -1140,6 +1271,53 @@ public class BotRelayDesignGoalTests
 
         profile.matchLevel = -1;
         Assert.AreEqual(0, BotConfig.ResolveMatchLevel(in profile));
+    }
+
+    [Test]
+    [Category("Regression")]
+    public void MatchDispatch_EmptyMatchIDs_ClearsObserveAndStaysIdle()
+    {
+        var farm = BotRelayFlowTestFixtures.CreateFarm();
+        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
+        var matchIDs = new NativeList<uint>(Allocator.Temp);
+        var matches = new NativeList<NetworkRelayServerMatch>(Allocator.Temp);
+        var identities = new NativeList<NetworkRelayServerIdentity>(Allocator.Temp);
+        var sendBuffer = new NetworkServerSendBuffer(Allocator.Temp);
+        try
+        {
+            farm.nextIdleMatchTime[0] = double.PositiveInfinity;
+            farm.matchObserveUserID[0] = 99;
+            farm.matchObserveGeneration[0] = 3u;
+            farm.matchObserveDispatchTime[0] = 0;
+
+            var server = new NetworkRelayServer.ReadOnly
+            {
+                matchIDs = matchIDs,
+                matches = matches,
+                identities = identities,
+                sendBuffer = sendBuffer.AsReadOnly()
+            };
+
+            var config = BotRelayFlowTestFixtures.CreateTickConfig(10.0);
+            config.injectEnabled = 1;
+            config.injectWriter = injects.AsParallelWriter();
+            BotAgentLogic.TickMatchDispatch(ref farm, in config, in server);
+
+            Assert.AreEqual(BotState.Idle, farm.agentStates[0].state);
+            Assert.AreEqual(0u, farm.matchObserveUserID[0]);
+            Assert.AreEqual(3u, farm.matchObserveGeneration[0]);
+            Assert.IsTrue(double.IsPositiveInfinity(farm.matchObserveDispatchTime[0]));
+            Assert.AreEqual(0, injects.Count);
+        }
+        finally
+        {
+            injects.Dispose();
+            farm.Dispose();
+            matchIDs.Dispose();
+            matches.Dispose();
+            identities.Dispose();
+            sendBuffer.Dispose();
+        }
     }
 
     [Test]
@@ -2125,7 +2303,57 @@ public class BotRelayDesignGoalTests
 
     [Test]
     [Category("Regression")]
-    public void Matching_SquadJoinBeforeMatch_IsRejected()
+    public void Matching_SquadJoinBeforeMatch_CommitsInSquadWithZeroMatchId()
+    {
+        var farm = BotRelayFlowTestFixtures.CreateFarm();
+        var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
+        try
+        {
+            var agentState = farm.agentStates[0];
+            agentState.state = BotState.Matching;
+            farm.agentStates[0] = agentState;
+            Assert.IsTrue(BotMatchGuard.TryClaimMatchingSlot(ref farm, 0));
+
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.SquadJoin,
+                channelMessageType = NetworkRelayMessageType.Create,
+                squadJoin = new ClientMessageSquadJoinToRead
+                {
+                    squadInviteID = 42,
+                    playerStatus = new ClientMessageRemotePlayerStatus
+                    {
+                        flag = ClientRemotePlayerFlag.Online | ClientRemotePlayerFlag.Creator
+                    }
+                }
+            });
+
+            var config = BotRelayFlowTestFixtures.CreateTickConfig(0f);
+            config.injectEnabled = 1;
+            config.injectWriter = injects.AsParallelWriter();
+            BotAgentLogic.Execute(0, ref farm, in config);
+
+            Assert.AreEqual(BotState.InSquad, farm.agentStates[0].state);
+            Assert.AreEqual(0, farm.sessions[0].matchID,
+                "Create/Join before MatchToRead is channel membership only.");
+            Assert.AreEqual(42, farm.sessions[0].channel);
+            Assert.IsTrue(farm.sessions[0].isHost);
+            Assert.AreEqual(0, injects.Count, "Temp-squad join must not inject Leave/Mismatch.");
+            Assert.AreEqual(
+                BotMatchGuard.NoMatchingSlotOwner,
+                farm.matchingSlotOwner[0],
+                "Leaving Matching releases the farm matching lease.");
+        }
+        finally
+        {
+            injects.Dispose();
+            farm.Dispose();
+        }
+    }
+
+    [Test]
+    [Category("Regression")]
+    public void Matching_JoinBeforeMatch_ThenMatch_BindsGeneration()
     {
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         try
@@ -2137,21 +2365,88 @@ public class BotRelayDesignGoalTests
             BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
             {
                 type = BotRelayEventType.SquadJoin,
-                channelMessageType = NetworkRelayMessageType.Join,
+                channelMessageType = NetworkRelayMessageType.Create,
                 squadJoin = new ClientMessageSquadJoinToRead
                 {
-                    squadInviteID = 42,
+                    squadInviteID = 10,
                     playerStatus = new ClientMessageRemotePlayerStatus
                     {
-                        flag = ClientRemotePlayerFlag.Online
+                        flag = ClientRemotePlayerFlag.Online | ClientRemotePlayerFlag.Creator
                     }
                 }
             });
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.Match,
+                match = new ClientMessageMatchToRead { matchID = 13, level = 0 }
+            });
 
             BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig(0f));
-            Assert.AreEqual(BotState.Idle, farm.agentStates[0].state);
-            Assert.AreEqual(0, farm.sessions[0].matchID);
-            Assert.IsFalse(farm.sessions[0].IsInSquad);
+
+            Assert.AreEqual(BotState.InSquad, farm.agentStates[0].state);
+            Assert.AreEqual(13, farm.sessions[0].matchID);
+            Assert.AreEqual(10, farm.sessions[0].channel);
+            Assert.IsTrue(farm.sessions[0].isHost);
+        }
+        finally
+        {
+            farm.Dispose();
+        }
+    }
+
+    [Test]
+    [Category("Regression")]
+    public void Matching_JoinBeforeMatch_HostMatchStartZero_IsRejectedUntilMatch()
+    {
+        // Creator temp-squad before MatchToRead must not consume ordinary MatchStart(matchID=0).
+        var farm = BotRelayFlowTestFixtures.CreateFarm();
+        try
+        {
+            var agentState = farm.agentStates[0];
+            agentState.state = BotState.Matching;
+            farm.agentStates[0] = agentState;
+
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.SquadJoin,
+                channelMessageType = NetworkRelayMessageType.Create,
+                squadJoin = new ClientMessageSquadJoinToRead
+                {
+                    squadInviteID = 10,
+                    playerStatus = new ClientMessageRemotePlayerStatus
+                    {
+                        flag = ClientRemotePlayerFlag.Online | ClientRemotePlayerFlag.Creator
+                    }
+                }
+            });
+            BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig(0f));
+            Assert.AreEqual(BotState.InSquad, farm.agentStates[0].state);
+            Assert.IsTrue(farm.sessions[0].isHost);
+
+            // Peer presence required by MatchStart gate; still matchID==0 + isHost => reject.
+            var session = farm.sessions[0];
+            session.remoteUserID = BotRelayFlowTestFixtures.RealPlayerUserId;
+            session.remotePlayerCount = 1;
+            session.remoteOnline = true;
+            farm.sessions[0] = session;
+
+            BotRelayFlowTestFixtures.EnqueueEvent(0, ref farm, new BotRelayEvent
+            {
+                type = BotRelayEventType.MatchStart,
+                header = new ClientHeader { userID = BotRelayFlowTestFixtures.RealPlayerUserId },
+                matchStart = new ClientMessageMatchStart
+                {
+                    matchID = 0,
+                    userStageID = 210,
+                    levelID = 26,
+                    stage = 0,
+                    sceneName = "Scenes/Level9-1.scene"
+                }
+            });
+            BotAgentLogic.Execute(0, ref farm, BotRelayFlowTestFixtures.CreateTickConfig(1f));
+
+            Assert.AreEqual(0u, farm.levelStartMessages[0].userStageID);
+            Assert.AreEqual(BotLevelLoginPhase.None, farm.agentStates[0].levelLoginPhase);
         }
         finally
         {

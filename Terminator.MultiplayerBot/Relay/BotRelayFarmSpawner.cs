@@ -92,6 +92,8 @@ internal static class BotRelayFarmSpawner
         {
             inviteTimeoutMin = config.inviteTimeoutMin,
             inviteTimeoutMax = config.inviteTimeoutMax,
+            matchTimeoutMin = config.matchTimeoutMin,
+            matchTimeoutMax = config.matchTimeoutMax,
             remoteOfflineLeaveTimeout = config.remoteOfflineLeaveTimeout
         });
 

@@ -47,6 +47,19 @@ internal static class BotRelayPlayModeHarness
 
 #if UNITY_EDITOR
 
+        // EnterPlayMode often already boots Server.unity. Reloading Single tears down the live
+        // NetworkRelayServer listen socket and races a re-bind on replyServerPort (1386), which
+        // leaves BotCoDeploy without a WorldTag for the WaitForBotFarmReady window.
+        var active = SceneManager.GetActiveScene();
+        if (active.IsValid() &&
+            (string.Equals(active.path, ServerScenePath, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(active.name, "Server", StringComparison.OrdinalIgnoreCase)))
+        {
+            for (int i = 0; i < 10; ++i)
+                yield return null;
+            yield break;
+        }
+
         var parameters = new LoadSceneParameters(LoadSceneMode.Single);
 
         var op = EditorSceneManager.LoadSceneAsyncInPlayMode(ServerScenePath, parameters);
@@ -459,8 +472,11 @@ internal static class BotRelayPlayModeHarness
         return false;
     }
 
-    /// <summary>Reproduce manual Play boot: enable idle MatchToSend (spawn defers via nextIdleMatchTime=∞).</summary>
-public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
+    /// <summary>
+    /// Test/harness force gate: set a finite <c>nextIdleMatchTime</c> so Idle MatchToSend fires
+    /// without a human <c>matchIDs</c> observe (production keeps +Infinity and uses matchTimeout dispatch).
+    /// </summary>
+    public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
     {
         if (!TryReadFarmSync(agentIndex, out var farm, out var worldEntity))
             throw new InvalidOperationException("Farm unavailable for ScheduleExclusiveIdleMatchNow.");
@@ -486,9 +502,8 @@ public static void ScheduleExclusiveIdleMatchNow(int agentIndex = 0)
                 otherState.state = BotState.Idle;
             }
 
-            // +Infinity is the production boot sentinel and is deliberately re-armed by
-            // BotAgentLogic once initial Status is ready. Use a finite far-future value so
-            // non-target agents remain quiet for this deterministic test scenario.
+            // Production uses +Infinity (no proactive match). Use MaxValue for non-targets so a
+            // finite force on the target cannot race other agents on the same harness tick.
             farm.nextIdleMatchTime[i] = double.MaxValue;
         }
 

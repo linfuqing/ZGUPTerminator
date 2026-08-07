@@ -17,6 +17,8 @@ internal static class BotRelayFlowTestFixtures
         {
             inviteTimeoutMin = 0f,
             inviteTimeoutMax = inviteDelayMax,
+            matchTimeoutMin = 0f,
+            matchTimeoutMax = 0f,
             remoteOfflineLeaveTimeout = (float)BotAgentLogic.DefaultRemoteOfflineLeaveTimeoutSeconds,
             elapsedTime = elapsedTime,
             frameSeed = 1u

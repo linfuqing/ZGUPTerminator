@@ -20,20 +20,18 @@ public sealed class BotCoDeployBootstrap : MonoBehaviour
 
 private void Update()
     {
-        if (__started)
+        if (__HasLiveFarm())
         {
-            if (__HasLiveFarm())
-                return;
-
-            // With Enter Play Mode Options disabling scene/domain reload, the MonoBehaviour
-            // instance outlives the previous play session while BotRelayWorld is correctly
-            // shut down. Reconcile the stale instance state before attempting a fresh boot.
-            __started = false;
+            __started = true;
             __initFailed = false;
+            return;
         }
 
-        if (__initFailed)
-            return;
+        // With Enter Play Mode Options disabling scene/domain reload, this MonoBehaviour can
+        // outlive BotRelayWorld. Clear both success and sticky failure flags whenever the live
+        // farm is gone so a prior init/PostTick fault cannot block the next PlayMode session.
+        __started = false;
+        __initFailed = false;
 
         if (!__EnsureConfig() || !__IsCoDeployEnabled())
             return;

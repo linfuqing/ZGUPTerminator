@@ -49,8 +49,8 @@ internal static class BotRelaySlotOps
             remoteOfflineSince = -1.0
         };
 
-        // Server Join rejects while identity.match != 0; defer idle MatchToSend until relay Status
-        // is queued (BotAgentLogic re-arms nextIdleMatchTime) or post-squad leave (+5s).
+        // Production matching is reactive (matchIDs observe + matchTimeout). Keep +Infinity so Idle
+        // never auto MatchToSend; tests/harness may write a finite nextIdleMatchTime to force one.
         farm.nextIdleMatchTime[index] = double.PositiveInfinity;
         farm.relayServerStatusInjected[index] = 0;
     }

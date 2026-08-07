@@ -69,6 +69,7 @@ namespace ZG
             state.RequireForUpdate(__wireGroup);
             state.RequireForUpdate<BotRelayInjectQueueSingleton>();
             state.RequireForUpdate<NetworkRelayServerInjectSingleton>();
+            state.RequireForUpdate<NetworkRelayServer>();
         }
 
         [BurstCompile]
@@ -87,6 +88,8 @@ namespace ZG
             {
                 inviteTimeoutMin = config.inviteTimeoutMin,
                 inviteTimeoutMax = config.inviteTimeoutMax,
+                matchTimeoutMin = config.matchTimeoutMin,
+                matchTimeoutMax = config.matchTimeoutMax,
                 remoteOfflineLeaveTimeout = config.remoteOfflineLeaveTimeout,
                 elapsedTime = SystemAPI.Time.ElapsedTime,
                 frameSeed = (uint)state.GlobalSystemVersion,
@@ -104,6 +107,10 @@ namespace ZG
             if (!catalogBlob.IsCreated || !catalogBlob.Value.IsValid)
                 return;
 
+            // Copy of NetworkRelayServer: Native containers are handles. ReadOnly views are consumed
+            // by MatchDispatchJob scheduled on state.Dependency (includes Server Scheduler) — no Complete.
+            var serverReadOnly = SystemAPI.GetSingleton<NetworkRelayServer>().AsReadOnly();
+
             var dep = JobHandle.CombineDependencies(state.Dependency, BotRelayManager.ManagerAccessHandle);
 
             var drainJob = new BotRelayPostDrainBurstJob
@@ -118,11 +125,18 @@ namespace ZG
                 tickConfig = tickConfig
             }.Schedule(farm.agentCount, 1, drainJob);
 
+            var matchDispatchJob = new BotRelayMatchDispatchJob
+            {
+                farm = farm,
+                tickConfig = tickConfig,
+                server = serverReadOnly
+            }.Schedule(agentJob);
+
             var flushJob = new BotRelayPostFlushBurstJob
             {
                 farm = farm,
                 catalogBlob = catalogBlob
-            }.Schedule(farm.agentCount, 1, agentJob);
+            }.Schedule(farm.agentCount, 1, matchDispatchJob);
 
             BotRelayManager.ManagerAccessHandle = flushJob;
             state.Dependency = flushJob;

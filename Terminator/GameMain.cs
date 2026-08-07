@@ -820,7 +820,7 @@ public class GameMain : GameUser
                     defaultSceneName = GameConstantManager.Get(DefaultSceneName);
                 else
                 {
-                    PlayerPrefs.DeleteAll();
+                    //PlayerPrefs.DeleteAll();
 
                     levelID = x.levelID;
                     stage = x.stage;

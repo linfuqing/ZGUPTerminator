@@ -33,6 +33,10 @@ public class BotConfig : ScriptableObject
     public float inviteTimeoutMin = 5f;
     public float inviteTimeoutMax = 10f;
 
+    [Header("匹配（观察到非 Bot 进入 matchIDs 后的派遣等待）")]
+    public float matchTimeoutMin = 3f;
+    public float matchTimeoutMax = 10f;
+
     [Header("Remote player offline policy")]
     [Min(0.1f)]
     [Tooltip("Seconds a human squad peer may remain offline before the Bot leaves the squad. Keep this longer than the client's reconnect delay.")]
