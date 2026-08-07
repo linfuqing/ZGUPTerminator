@@ -15,11 +15,6 @@ public class GameSceneActivation : IGameSceneActivation
     private int __maxArchivesPerTime;
 
 #if ENABLE_CONTENT_DELIVERY
-    // Stale tmp/content files (crash leftovers, previous session copies of
-    // identity-named archives whose bytes changed after a content rebuild) are
-    // swept once per app session before the first materialization.
-    private static bool __hasSweptSessionLeftovers;
-
     private int __dependencySystemGeneration;
     private SceneArchiveDependencySystem __dependencySystem;
     private BlobAssetReference<SceneArchiveDependencies.RuntimeBlob> __dependencyBlob;
@@ -175,11 +170,9 @@ public class GameSceneActivation : IGameSceneActivation
             yield break;
         }
 
-        SweepSessionLeftovers(remap);
-
         __provisioner = new SceneArchiveContentProvisioner(
             relativePath => MaterializeRelativePath(relativePath, remap, assetManager),
-            relativePath => DematerializeRelativePath(relativePath, remap));
+            relativePath => DematerializeRelativePath(relativePath, remap, assetManager));
 
         var criticalSteps = Math.Max(1, criticalEntityScenes.Count + criticalArchives.Count);
         var criticalDone = 0;
@@ -396,6 +389,13 @@ public class GameSceneActivation : IGameSceneActivation
             return false;
         }
 
+        // In-place platform: the download store already serves this file at the
+        // remapped location (source == dest); zero IO needed.
+        if (PathsEqual(sourcePath, destPath))
+        {
+            return true;
+        }
+
         try
         {
             CopyAssetToFile(sourcePath, destPath);
@@ -411,13 +411,23 @@ public class GameSceneActivation : IGameSceneActivation
 
     // Raw delete primitive for the provisioner. Returns false to request a retry
     // (e.g. the archive is still unmounting asynchronously).
-    bool DematerializeRelativePath(string relativePath, Func<string, string> remap)
+    bool DematerializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
     {
         var destPath = remap(relativePath);
         if (string.IsNullOrEmpty(destPath))
         {
             Debug.LogError($"[GameSceneActivation] Remap failed while releasing {relativePath}");
             return false;
+        }
+
+        // In-place platform guard: when the resolved source IS the destination
+        // (download store shares the remap root), the file is canonical downloaded
+        // content, not a tmp copy — never delete it.
+        if (assetManager != null &&
+            TryResolveAssetSource(relativePath, assetManager, out var sourcePath, out _) &&
+            PathsEqual(sourcePath, destPath))
+        {
+            return true;
         }
 
         try
@@ -431,6 +441,16 @@ public class GameSceneActivation : IGameSceneActivation
                 $"[GameSceneActivation] Failed to release {destPath}: {e.Message}");
             return false;
         }
+    }
+
+    static bool PathsEqual(string a, string b)
+    {
+        return !string.IsNullOrEmpty(a) &&
+               !string.IsNullOrEmpty(b) &&
+               string.Equals(
+                   a.Replace('\\', '/'),
+                   b.Replace('\\', '/'),
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     static bool TryResolveAssetSource(
@@ -460,97 +480,6 @@ public class GameSceneActivation : IGameSceneActivation
         fileOffset = 0;
 
         return false;
-    }
-
-    /// <summary>
-    /// One cold sweep per app session, before the first materialization: deletes
-    /// stale tmp/content files from crashes or previous sessions. Necessary because
-    /// archive/entityscene names are identity hashes (asset-GUID set / sceneGUID),
-    /// not content hashes — a rebuilt asset keeps the same file name with different
-    /// bytes, so a leftover copy must never be trusted. The content catalog file is
-    /// materialized once by GameMain at boot and is skipped. On WeChat devices the
-    /// backing store is per-session MEMFS, so this is a no-op there.
-    /// </summary>
-    static void SweepSessionLeftovers(Func<string, string> remap)
-    {
-        if (__hasSweptSessionLeftovers)
-        {
-            return;
-        }
-
-        __hasSweptSessionLeftovers = true;
-
-        string contentRoot;
-        try
-        {
-            // remap(x) == Path.Combine(contentRoot, x.ToLower()); a name without '/'
-            // avoids the LoadFrom side effect inside GameMain's remap closure.
-            contentRoot = Path.GetDirectoryName(remap("_"));
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning(
-                $"[GameSceneActivation] Failed to resolve content root for sweep: {e.Message}");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(contentRoot))
-        {
-            return;
-        }
-
-        var catalogFileName = Path.GetFileName(RuntimeContentManager.RelativeCatalogPath);
-        SweepFolder(Path.Combine(contentRoot, "contentarchives"), catalogFileName);
-        SweepFolder(Path.Combine(contentRoot, "entityscenes"), catalogFileName);
-    }
-
-    static void SweepFolder(string folder, string skipFileName)
-    {
-        if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
-        {
-            return;
-        }
-
-        string[] files;
-        try
-        {
-            files = Directory.GetFiles(folder, "*", SearchOption.AllDirectories);
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning(
-                $"[GameSceneActivation] Failed to list {folder} for sweep: {e.Message}");
-            return;
-        }
-
-        var count = 0;
-        for (int i = 0; i < files.Length; i++)
-        {
-            if (!string.IsNullOrEmpty(skipFileName) &&
-                string.Equals(
-                    Path.GetFileName(files[i]),
-                    skipFileName,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            try
-            {
-                AssetFileUtility.Dematerialize(files[i]);
-                count++;
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning(
-                    $"[GameSceneActivation] Failed to sweep {files[i]}: {e.Message}");
-            }
-        }
-
-        if (count > 0)
-        {
-            Debug.Log($"[GameSceneActivation] Swept {count} stale files from {folder}.");
-        }
     }
 
     static bool TryLoadDependencyFile(out SceneArchiveDependencies.File dependencyFile)
