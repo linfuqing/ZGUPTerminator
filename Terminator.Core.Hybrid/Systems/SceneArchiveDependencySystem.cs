@@ -617,7 +617,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
             var relativePath = __materializeCommands[plan.commandStart + plan.nextOffset];
             if (relativePath.IsEmpty ||
-                !__provisioner.Acquire(relativePath.ToString(), out var performedIO))
+                !__provisioner.Acquire(relativePath, out var performedIO))
             {
                 ReleaseAcquiredCommands(plan.commandStart, plan.nextOffset);
                 Block(
@@ -694,7 +694,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
                 continue;
             }
 
-            __provisioner.Release(relativePath.ToString());
+            __provisioner.Release(relativePath);
         }
     }
 
@@ -738,7 +738,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
             {
                 do
                 {
-                    __provisioner.Release(relativePath.ToString());
+                    __provisioner.Release(relativePath);
                 }
                 while (__pathsByGuid.TryGetNextValue(out relativePath, ref iterator));
             }

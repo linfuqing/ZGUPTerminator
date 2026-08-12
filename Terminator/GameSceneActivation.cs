@@ -90,6 +90,7 @@ public class GameSceneActivation : IGameSceneActivation
         if (__provisioner != null)
         {
             __provisioner.Flush();
+            __provisioner.Dispose();
             __provisioner = null;
         }
 #endif
