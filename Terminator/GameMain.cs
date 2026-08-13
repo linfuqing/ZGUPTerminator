@@ -457,7 +457,12 @@ public class GameMain : GameUser
                     Application.persistentDataPath,
                     #endif
                     filename);
+                
+#if UNITY_6000_5_OR_NEWER
+                Func<string, bool, string> remapFunc = (x, y) =>
+#else
                 Func<string, string> remapFunc = x =>
+#endif
                 {
                     int separatorIndex = x.LastIndexOf('/');
                     string folder = separatorIndex == -1 ? string.Empty : x.Remove(separatorIndex);
@@ -489,13 +494,20 @@ public class GameMain : GameUser
                     //return filePath;
                 };
 
-                ContentDeliveryGlobalState.PathRemapFunc = remapFunc;
-                
-                #if DEBUG
+#if DEBUG
                 ContentDeliveryGlobalState.LogFunc = Debug.Log;
-                #endif
+#endif
+
+#if UNITY_6000_5_OR_NEWER
+                ContentDeliveryGlobalState.PathRemapFuncWithFileCheck = remapFunc;
                 
+                var catalogPath = remapFunc(RuntimeContentManager.RelativeCatalogPath, false);
+#else
+                ContentDeliveryGlobalState.PathRemapFunc = remapFunc;
+
                 var catalogPath = remapFunc(RuntimeContentManager.RelativeCatalogPath);
+#endif
+                
                 if (sceneArchiveAssetManager.GetAssetPath(RuntimeContentManager.RelativeCatalogPath.ToLower(), out _,
                         out _, out string filePath))
                 {
@@ -509,7 +521,11 @@ public class GameMain : GameUser
 
                 RuntimeContentManager.LoadLocalCatalogData(catalogPath,
                     RuntimeContentManager.DefaultContentFileNameFunc,
-                    p => remapFunc(RuntimeContentManager.DefaultArchivePathFunc(p)));
+                    p => remapFunc(RuntimeContentManager.DefaultArchivePathFunc(p)
+#if UNITY_6000_5_OR_NEWER
+                        , false
+#endif
+                    ));
             }
             /*else
                 RuntimeContentSystem.LoadContentCatalog(

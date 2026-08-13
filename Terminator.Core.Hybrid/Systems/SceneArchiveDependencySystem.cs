@@ -953,20 +953,7 @@ public partial class SceneArchiveDependencySystem : SystemBase
             map.Capacity = capacity;
         }
     }
-
-    private static void EnsureCapacity<TKey, TValue>(
-        ref NativeParallelHashMap<TKey, TValue> map,
-        int capacity)
-        where TKey : unmanaged, IEquatable<TKey>
-        where TValue : unmanaged
-    {
-        capacity = Math.Max(1, capacity);
-        if (map.Capacity < capacity)
-        {
-            map.Capacity = capacity;
-        }
-    }
-
+    
     private static void Dispose<T>(ref NativeList<T> list)
         where T : unmanaged
     {
@@ -987,17 +974,6 @@ public partial class SceneArchiveDependencySystem : SystemBase
 
     private static void Dispose<TKey, TValue>(
         ref NativeParallelMultiHashMap<TKey, TValue> map)
-        where TKey : unmanaged, IEquatable<TKey>
-        where TValue : unmanaged
-    {
-        if (map.IsCreated)
-        {
-            map.Dispose();
-        }
-    }
-
-    private static void Dispose<TKey, TValue>(
-        ref NativeParallelHashMap<TKey, TValue> map)
         where TKey : unmanaged, IEquatable<TKey>
         where TValue : unmanaged
     {

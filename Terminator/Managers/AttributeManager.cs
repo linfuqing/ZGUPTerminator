@@ -1,6 +1,13 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
+
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
+using static ZG.InstanceUtility;
 
 public enum AttributeSpace
 {
@@ -23,7 +30,7 @@ public class AttributeManager : MonoBehaviour
     [SerializeField] 
     internal AttributeStyle[] _styles;
 
-    private Dictionary<int, Attribute> __attributes;
+    private Dictionary<EntityID, Attribute> __attributes;
 
     public static AttributeManager instance
     {
@@ -34,16 +41,16 @@ public class AttributeManager : MonoBehaviour
 
     public void Set(
         AttributeSpace space, 
-        int instanceID, 
+        in EntityID entityID, 
         int styleIndex, 
         int attributeIndex,
         int value, 
         int max)
     {
         if (__attributes == null)
-            __attributes = new Dictionary<int, Attribute>();
+            __attributes = new Dictionary<EntityID, Attribute>();
 
-        if (__attributes.TryGetValue(instanceID, out var attribute))
+        if (__attributes.TryGetValue(entityID, out var attribute))
         {
             if (attribute.styleIndex != styleIndex && attribute.style != null)
             {
@@ -75,12 +82,12 @@ public class AttributeManager : MonoBehaviour
 
         attribute.space = space;
 
-        __attributes[instanceID] = attribute;
+        __attributes[entityID] = attribute;
     }
 
-    public bool Unset(int instanceID)
+    public bool Unset(in EntityID entityID)
     {
-        if (__attributes.Remove(instanceID, out var attribute))
+        if (__attributes.Remove(entityID, out var attribute))
         {
             if (attribute.style != null)
                 Destroy(attribute.style.gameObject);
@@ -125,7 +132,7 @@ public class AttributeManager : MonoBehaviour
             if(rectTransform == null)
                 continue;
 
-            transform = Resources.InstanceIDToObject(pair.Key) as Transform;
+            transform = EntityIDToObject(pair.Key) as Transform;
             if(transform == null)
                 continue;
             

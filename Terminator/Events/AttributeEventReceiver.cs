@@ -1,7 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
+
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
+using static ZG.InstanceUtility;
 
 public class AttributeEventReceiver : MonoBehaviour
 {
@@ -51,7 +58,7 @@ public class AttributeEventReceiver : MonoBehaviour
     [SerializeField] 
     internal int _styleIndex;
 
-    private int __instanceID;
+    private EntityID __entityID;
 
     /*private int __shield;
     private int __hpMax;
@@ -72,7 +79,7 @@ public class AttributeEventReceiver : MonoBehaviour
     
     public void Clear()
     {
-        if(!isActiveAndEnabled || __instanceID == 0)
+        if(!isActiveAndEnabled || __entityID == default)
             return;
         
         int numAttributes = _attributes.Length, value, max;
@@ -86,7 +93,7 @@ public class AttributeEventReceiver : MonoBehaviour
             max = __attributes.TryGetValue(attribute.idMax, out max) ? max : value;
             AttributeManager.instance.Set(
                 _space, 
-                __instanceID, 
+                __entityID, 
                 _styleIndex, 
                 attribute.index, 
                 0, 
@@ -108,8 +115,8 @@ public class AttributeEventReceiver : MonoBehaviour
         if(!isActiveAndEnabled)
             return;
         
-        if(__instanceID == 0)
-            __instanceID = transform.GetInstanceID();
+        if(__entityID == default)
+            __entityID = transform.GetEntityID();
 
         int dirtyFlag = 0, numAttributes = _attributes == null ? 0 : _attributes.Length, id, destination, source, i;
         foreach (var pair in parameters.values)
@@ -157,7 +164,7 @@ public class AttributeEventReceiver : MonoBehaviour
                 
                 AttributeManager.instance.Set(
                     _space, 
-                    __instanceID, 
+                    __entityID, 
                     _styleIndex, 
                     attribute.index, 
                     source, 
@@ -245,11 +252,11 @@ public class AttributeEventReceiver : MonoBehaviour
 
     public void OnDisable()
     {
-        if (__instanceID == 0)
+        if (__entityID == default)
             return;
         
-        AttributeManager.instance.Unset(__instanceID);
+        AttributeManager.instance.Unset(__entityID);
 
-        __instanceID = 0;
+        __entityID = default;
     }
 }

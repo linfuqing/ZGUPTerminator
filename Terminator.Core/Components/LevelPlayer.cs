@@ -2,8 +2,13 @@ using System.Runtime.InteropServices;
 using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Mathematics;
 using ZG;
+
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = int;
+#endif
 
 public interface ILevelPlayer
 {
@@ -55,13 +60,13 @@ public struct RemotePlayer : IComponentData, ILevelPlayer
 
 public struct LocalPlayer : IComponentData, ILevelPlayer
 {
-    private static readonly SharedStatic<int> InstanceID = SharedStatic<int>.GetOrCreate<LevelPlayer>();
+    private static readonly SharedStatic<EntityID> EntityID = SharedStatic<EntityID>.GetOrCreate<LevelPlayer>();
 
-    public static int instanceID
+    public static EntityID entityID
     {
-        get => InstanceID.Data;
+        get => EntityID.Data;
 
-        set => InstanceID.Data = value;
+        set => EntityID.Data = value;
     }
 }
 

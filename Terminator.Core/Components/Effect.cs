@@ -15,7 +15,7 @@ public enum EffectAttributeID
     HP,
     Shield, 
     Damage, 
-    InstanceID
+    EntityID
 }
 
 public enum EffectSpace

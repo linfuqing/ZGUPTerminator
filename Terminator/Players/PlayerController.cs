@@ -2,6 +2,14 @@ using System;
 using UnityEngine;
 using UnityEngine.Scripting;
 
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
+using static ZG.InstanceUtility;
+
 public enum PlayerType
 {
     Local,
@@ -33,7 +41,7 @@ public class PlayerController : MonoBehaviour
 
     private bool __isLocal;
     private Status __status;
-    private int __instanceID;
+    private EntityID __entityID;
     
     private Vector3 __position;
     private Vector3 __velocity;
@@ -193,7 +201,7 @@ public class PlayerController : MonoBehaviour
     
     void OnEnable()
     {
-        __instanceID = 0;
+        __entityID = default;
         
         if (__attributeEventReceiver == null)
             __attributeEventReceiver = GetComponentInChildren<AttributeEventReceiver>();
@@ -224,21 +232,21 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        int instanceID = LocalPlayer.instanceID;
-        if (instanceID == 0)
+        var entityID = LocalPlayer.entityID;
+        if (entityID == default)
             return;
 
         var transform = this.transform;
         var position = transform.position;
 
-        if (__instanceID == 0)
+        if (__entityID == default)
         {
-            __instanceID = transform.GetInstanceID();
+            __entityID = transform.GetEntityID();
             
             __position = position;
         }
 
-        if (!__isLocal && __instanceID == instanceID)
+        if (!__isLocal && __entityID == entityID)
         {
             __isLocal = true;
 

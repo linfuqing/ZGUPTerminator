@@ -5,20 +5,13 @@ using Unity.Mathematics;
 using Unity.Physics;
 using Unity.CharacterController;
 
-[assembly:Unity.Jobs.RegisterGenericJobType(typeof(BufferLookupBufferJob<SimulationEvent>))]
-
-/*public struct ThirdPersonCharacterSimulationEventResult
-{
-    public Entity entity;
-
-    public SimulationEvent value;
-}*/
+[assembly: Unity.Jobs.RegisterGenericJobType(typeof(BufferLookupBufferJob<SimulationEvent>))]
 
 [Serializable]
 public struct CharacterFrictionSurface : IComponentData
 {
     public float VelocityFactor;
-} 
+}
 
 public struct ThirdPersonCharacterUpdateContext
 {
@@ -28,104 +21,174 @@ public struct ThirdPersonCharacterUpdateContext
     public ComponentLookup<CharacterFrictionSurface> characterFrictionSurfaceLookup;
 
     [ReadOnly]
+    public ComponentLookup<ThirdPersonCharacterLookAt> characterLookAtLookup;
+
+    [ReadOnly]
+    public ComponentLookup<ThirdPersionCharacterGravityFactor> gravityFactorLookup;
+
+    [ReadOnly]
     public BufferLookup<SimulationEvent> simulationEvents;
 
     public BufferLookupBuffer<SimulationEvent>.ParallelWriter simulationEventResults;
 
-    // This is called by systems that schedule jobs that update the character aspect, in their OnCreate().
+    // This is called by systems that schedule jobs that update the character processor, in their OnCreate().
     // Here, you can get the component lookups.
     public void OnSystemCreate(ref BufferLookupBuffer<SimulationEvent> simulationEventResults, ref SystemState state)
     {
         characterFrictionSurfaceLookup = state.GetComponentLookup<CharacterFrictionSurface>(true);
+        characterLookAtLookup = state.GetComponentLookup<ThirdPersonCharacterLookAt>(true);
+        gravityFactorLookup = state.GetComponentLookup<ThirdPersionCharacterGravityFactor>(true);
         simulationEvents = simulationEventResults.results;
         this.simulationEventResults = simulationEventResults.AsParallelWriter();
     }
-    
-    // This is called by systems that schedule jobs that update the character aspect, in their OnUpdate()
+
+    // This is called by systems that schedule jobs that update the character processor, in their OnUpdate()
     // Here, you can update the component lookups.
     public void OnSystemUpdate(ref SystemState state)
     {
         characterFrictionSurfaceLookup.Update(ref state);
+        characterLookAtLookup.Update(ref state);
+        gravityFactorLookup.Update(ref state);
         simulationEvents.Update(ref state);
     }
 }
 
-public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicCharacterProcessor<ThirdPersonCharacterUpdateContext>
+public struct ThirdPersonCharacterProcessor : IKinematicCharacterProcessor<ThirdPersonCharacterUpdateContext>
 {
-    public readonly KinematicCharacterAspect CharacterAspect;
-    public readonly RefRW<ThirdPersonCharacterComponent> CharacterComponent;
-    public readonly RefRW<ThirdPersonCharacterControl> CharacterControl;
-    [Optional]
-    public readonly RefRO<ThirdPersonCharacterLookAt> CharacterLookAt;
-    [Optional]
-    public readonly RefRO<ThirdPersionCharacterGravityFactor> GravityFactor;
-    
-    public readonly DynamicBuffer<ThirdPersonCharacterStandTime> StandTimes;
+    public KinematicCharacterDataAccess CharacterDataAccess;
+    public RefRW<ThirdPersonCharacterComponent> CharacterComponent;
+    public RefRW<ThirdPersonCharacterControl> CharacterControl;
+    public DynamicBuffer<ThirdPersonCharacterStandTime> StandTimes;
 
-    public void PhysicsUpdate(
-        in Entity entity, 
-        ref ThirdPersonCharacterUpdateContext context, 
-        ref KinematicCharacterUpdateContext baseContext/*, 
-        ref NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults*/)
+    public void PhysicsUpdate(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
-        ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
-        ref float3 characterPosition = ref CharacterAspect.LocalTransform.ValueRW.Position;
+        ref KinematicCharacterBody characterBody = ref CharacterDataAccess.CharacterBody.ValueRW;
+        ref float3 characterPosition = ref CharacterDataAccess.LocalTransform.ValueRW.Position;
+        Entity entity = CharacterDataAccess.CharacterEntity;
 
         // First phase of default character update
-        CharacterAspect.Update_Initialize(in this, ref context, ref baseContext, ref characterBody, baseContext.Time.DeltaTime);
-        CharacterAspect.Update_ParentMovement(in this, ref context, ref baseContext, ref characterBody, ref characterPosition, characterBody.WasGroundedBeforeCharacterUpdate);
-        CharacterAspect.Update_Grounding(in this, ref context, ref baseContext, ref characterBody, ref characterPosition);
-        
+        KinematicCharacterUtilities.Update_Initialize(
+            in this,
+            ref context,
+            ref baseContext,
+            ref characterBody,
+            CharacterDataAccess.CharacterHitsBuffer,
+            CharacterDataAccess.DeferredImpulsesBuffer,
+            CharacterDataAccess.VelocityProjectionHits,
+            baseContext.Time.DeltaTime);
+
+        KinematicCharacterUtilities.Update_ParentMovement(
+            in this,
+            ref context,
+            ref baseContext,
+            entity,
+            ref characterBody,
+            CharacterDataAccess.CharacterProperties.ValueRO,
+            CharacterDataAccess.PhysicsCollider.ValueRO,
+            CharacterDataAccess.LocalTransform.ValueRO,
+            ref characterPosition,
+            characterBody.WasGroundedBeforeCharacterUpdate);
+
+        KinematicCharacterUtilities.Update_Grounding(
+            in this,
+            ref context,
+            ref baseContext,
+            ref characterBody,
+            entity,
+            CharacterDataAccess.CharacterProperties.ValueRO,
+            CharacterDataAccess.PhysicsCollider.ValueRO,
+            CharacterDataAccess.LocalTransform.ValueRO,
+            CharacterDataAccess.VelocityProjectionHits,
+            CharacterDataAccess.CharacterHitsBuffer,
+            ref characterPosition);
+
         // Update desired character velocity after grounding was detected, but before doing additional processing that depends on velocity
         HandleVelocityControl(ref context, ref baseContext);
 
         // Second phase of default character update
-        CharacterAspect.Update_PreventGroundingFromFutureSlopeChange(in this, ref context, ref baseContext, ref characterBody, in characterComponent.StepAndSlopeHandling);
-        float gravityFactor = GravityFactor.IsValid ? GravityFactor.ValueRO.value : 1.0f;
-        CharacterAspect.Update_GroundPushing(in this, ref context, ref baseContext, characterComponent.Gravity * gravityFactor);
-        CharacterAspect.Update_MovementAndDecollisions(in this, ref context, ref baseContext, ref characterBody, ref characterPosition);
-        CharacterAspect.Update_MovingPlatformDetection(ref baseContext, ref characterBody); 
-        CharacterAspect.Update_ParentMomentum(ref baseContext, ref characterBody);
-        CharacterAspect.Update_ProcessStatefulCharacterHits();
+        KinematicCharacterUtilities.Update_PreventGroundingFromFutureSlopeChange(
+            in this,
+            ref context,
+            ref baseContext,
+            entity,
+            ref characterBody,
+            CharacterDataAccess.CharacterProperties.ValueRO,
+            CharacterDataAccess.PhysicsCollider.ValueRO,
+            in characterComponent.StepAndSlopeHandling);
+
+        float gravityFactor = 1.0f;
+        if (context.gravityFactorLookup.TryGetComponent(entity, out ThirdPersionCharacterGravityFactor gravityFactorComponent))
+        {
+            gravityFactor = gravityFactorComponent.value;
+        }
+
+        KinematicCharacterUtilities.Update_GroundPushing(
+            in this,
+            ref context,
+            ref baseContext,
+            ref characterBody,
+            CharacterDataAccess.CharacterProperties.ValueRO,
+            CharacterDataAccess.LocalTransform.ValueRO,
+            CharacterDataAccess.DeferredImpulsesBuffer,
+            characterComponent.Gravity * gravityFactor);
+
+        KinematicCharacterUtilities.Update_MovementAndDecollisions(
+            in this,
+            ref context,
+            ref baseContext,
+            entity,
+            ref characterBody,
+            CharacterDataAccess.CharacterProperties.ValueRO,
+            CharacterDataAccess.PhysicsCollider.ValueRO,
+            CharacterDataAccess.LocalTransform.ValueRO,
+            CharacterDataAccess.VelocityProjectionHits,
+            CharacterDataAccess.CharacterHitsBuffer,
+            CharacterDataAccess.DeferredImpulsesBuffer,
+            ref characterPosition);
+
+        KinematicCharacterUtilities.Update_MovingPlatformDetection(
+            ref baseContext,
+            ref characterBody);
+
+        KinematicCharacterUtilities.Update_ParentMomentum(
+            ref baseContext,
+            ref characterBody,
+            CharacterDataAccess.LocalTransform.ValueRO.Position);
+
+        KinematicCharacterUtilities.Update_ProcessStatefulCharacterHits(
+            CharacterDataAccess.CharacterHitsBuffer,
+            CharacterDataAccess.StatefulHitsBuffer);
 
         if (context.simulationEvents.TryGetBuffer(entity, out var simulationEvents))
         {
             SimulationEvent simulationEvent;
-            foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
+            foreach (var characterHit in CharacterDataAccess.CharacterHitsBuffer)
             {
                 simulationEvent.entity = characterHit.Entity;
                 simulationEvent.colliderKey = characterHit.ColliderKey;
-                if(!SimulationEvent.Contains(simulationEvents, simulationEvent))
+                if (!SimulationEvent.Contains(simulationEvents, simulationEvent))
+                {
                     context.simulationEventResults.Enqueue(entity, simulationEvent, BufferLookupBufferOpcode.Enabled);
+                }
             }
         }
-        
-        /*simulationEventResult.value.entity = entity;
-        foreach (var characterHit in CharacterAspect.CharacterHitsBuffer)
-        {
-            if(!context.simulationEvents.HasBuffer(characterHit.Entity))
-                continue;
-            
-            simulationEventResult.value.colliderKey = characterHit.ColliderKey;
-            simulationEventResult.entity = characterHit.Entity;
-
-            simulationEventResults.Enqueue(simulationEventResult);
-        }*/
     }
 
     private void HandleVelocityControl(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
         float deltaTime = baseContext.Time.DeltaTime;
-        ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
+        ref KinematicCharacterBody characterBody = ref CharacterDataAccess.CharacterBody.ValueRW;
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref ThirdPersonCharacterControl characterControl = ref CharacterControl.ValueRW;
 
-        if(ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+        if (ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+        {
             characterControl.MoveVector = float3.zero;
+        }
 
         // Rotate move input and velocity to take into account parent rotation
-        if(characterBody.ParentEntity != Entity.Null)
+        if (characterBody.ParentEntity != Entity.Null)
         {
             characterControl.MoveVector = math.rotate(characterBody.RotationFromParent, characterControl.MoveVector);
             characterBody.RelativeVelocity = math.rotate(characterBody.RotationFromParent, characterBody.RelativeVelocity);
@@ -135,21 +198,21 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         {
             // Move on ground
             float3 targetVelocity = characterControl.MoveVector * characterComponent.GroundMaxSpeed;
-            
+
             // Sprint
             if (characterControl.Sprint)
             {
                 targetVelocity *= characterComponent.SprintSpeedMultiplier;
             }
-            
+
             // Friction surfaces
             if (context.characterFrictionSurfaceLookup.TryGetComponent(characterBody.GroundHit.Entity, out CharacterFrictionSurface frictionSurface))
             {
                 targetVelocity *= frictionSurface.VelocityFactor;
             }
-            
+
             CharacterControlUtilities.StandardGroundMove_Interpolated(ref characterBody.RelativeVelocity, targetVelocity, characterComponent.GroundedMovementSharpness, deltaTime, characterBody.GroundingUp, characterBody.GroundHit.Normal);
-            
+
             // Jump
             if (characterControl.Jump)
             {
@@ -169,7 +232,17 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
                 CharacterControlUtilities.StandardAirMove(ref characterBody.RelativeVelocity, airAcceleration, characterComponent.AirMaxSpeed, characterBody.GroundingUp, deltaTime, false);
 
                 // Cancel air acceleration from input if we would hit a non-grounded surface (prevents air-climbing slopes at high air accelerations)
-                if (characterComponent.PreventAirAccelerationAgainstUngroundedHits && CharacterAspect.MovementWouldHitNonGroundedObstruction(in this, ref context, ref baseContext, characterBody.RelativeVelocity * deltaTime, out ColliderCastHit hit))
+                if (characterComponent.PreventAirAccelerationAgainstUngroundedHits
+                    && KinematicCharacterUtilities.MovementWouldHitNonGroundedObstruction(
+                        in this,
+                        ref context,
+                        ref baseContext,
+                        CharacterDataAccess.CharacterProperties.ValueRO,
+                        CharacterDataAccess.LocalTransform.ValueRO,
+                        CharacterDataAccess.CharacterEntity,
+                        CharacterDataAccess.PhysicsCollider.ValueRO,
+                        characterBody.RelativeVelocity * deltaTime,
+                        out ColliderCastHit hit))
                 {
                     characterBody.RelativeVelocity = tmpVelocity;
                 }
@@ -181,9 +254,14 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
                 CharacterControlUtilities.StandardJump(ref characterBody, characterBody.GroundingUp * characterComponent.JumpSpeed, true, characterBody.GroundingUp);
                 characterComponent.CurrentAirJumps++;
             }
-            
+
             // Gravity
-            float gravityFactor = GravityFactor.IsValid ? GravityFactor.ValueRO.value : 1.0f;
+            float gravityFactor = 1.0f;
+            if (context.gravityFactorLookup.TryGetComponent(CharacterDataAccess.CharacterEntity, out ThirdPersionCharacterGravityFactor gravityFactorComponent))
+            {
+                gravityFactor = gravityFactorComponent.value;
+            }
+
             CharacterControlUtilities.AccelerateVelocity(ref characterBody.RelativeVelocity, characterComponent.Gravity * gravityFactor, deltaTime);
 
             // Drag
@@ -193,42 +271,53 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
 
     public void VariableUpdate(ref ThirdPersonCharacterUpdateContext context, ref KinematicCharacterUpdateContext baseContext)
     {
-        if(ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+        if (ThirdPersonCharacterStandTime.IsStand(baseContext.Time.ElapsedTime, StandTimes))
+        {
             return;
+        }
 
-        ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
+        ref KinematicCharacterBody characterBody = ref CharacterDataAccess.CharacterBody.ValueRW;
         ref ThirdPersonCharacterComponent characterComponent = ref CharacterComponent.ValueRW;
         ref ThirdPersonCharacterControl characterControl = ref CharacterControl.ValueRW;
-        ref var characterTransform = ref CharacterAspect.LocalTransform.ValueRW;
+        ref var characterTransform = ref CharacterDataAccess.LocalTransform.ValueRW;
 
         // Add rotation from parent body to the character rotation
         // (this is for allowing a rotating moving platform to rotate your character as well, and handle interpolation properly)
         KinematicCharacterUtilities.AddVariableRateRotationFromFixedRateRotation(ref characterTransform.Rotation, characterBody.RotationFromParent, baseContext.Time.DeltaTime, characterBody.LastPhysicsUpdateDeltaTime);
 
         float3 direction = characterControl.MoveVector;
-        if (CharacterLookAt.IsValid && math.lengthsq(CharacterLookAt.ValueRO.direction) > math.FLT_MIN_NORMAL)
-            direction = math.forward(CharacterLookAt.ValueRO.direction);
+        if (context.characterLookAtLookup.TryGetComponent(CharacterDataAccess.CharacterEntity, out ThirdPersonCharacterLookAt lookAt)
+            && math.lengthsq(lookAt.direction) > math.FLT_MIN_NORMAL)
+        {
+            direction = math.forward(lookAt.direction);
+        }
         else if (math.lengthsq(direction) > math.FLT_MIN_NORMAL)
+        {
             direction = math.normalize(direction);
+        }
         else
+        {
             return;
+        }
 
         // Rotate towards move direction
         CharacterControlUtilities.SlerpRotationTowardsDirectionAroundUp(ref characterTransform.Rotation, baseContext.Time.DeltaTime, direction, MathUtilities.GetUpFromRotation(characterTransform.Rotation), characterComponent.RotationSharpness);
     }
-    
+
     #region Character Processor Callbacks
     public void UpdateGroundingUp(
         ref ThirdPersonCharacterUpdateContext context,
         ref KinematicCharacterUpdateContext baseContext)
     {
-        ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
-        
-        CharacterAspect.Default_UpdateGroundingUp(ref characterBody);
+        ref KinematicCharacterBody characterBody = ref CharacterDataAccess.CharacterBody.ValueRW;
+
+        KinematicCharacterUtilities.Default_UpdateGroundingUp(
+            ref characterBody,
+            CharacterDataAccess.LocalTransform.ValueRO.Rotation);
     }
-    
+
     public bool CanCollideWithHit(
-        ref ThirdPersonCharacterUpdateContext context, 
+        ref ThirdPersonCharacterUpdateContext context,
         ref KinematicCharacterUpdateContext baseContext,
         in BasicHit hit)
     {
@@ -250,41 +339,50 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
     }
 
     public bool IsGroundedOnHit(
-        ref ThirdPersonCharacterUpdateContext context, 
+        ref ThirdPersonCharacterUpdateContext context,
         ref KinematicCharacterUpdateContext baseContext,
-        in BasicHit hit, 
+        in BasicHit hit,
         int groundingEvaluationType)
     {
         ThirdPersonCharacterComponent characterComponent = CharacterComponent.ValueRO;
-        
-        return CharacterAspect.Default_IsGroundedOnHit(
+
+        return KinematicCharacterUtilities.Default_IsGroundedOnHit(
             in this,
             ref context,
             ref baseContext,
+            CharacterDataAccess.CharacterEntity,
+            CharacterDataAccess.PhysicsCollider.ValueRO,
+            CharacterDataAccess.CharacterBody.ValueRO,
+            CharacterDataAccess.CharacterProperties.ValueRO,
             in hit,
             in characterComponent.StepAndSlopeHandling,
             groundingEvaluationType);
     }
 
     public void OnMovementHit(
-            ref ThirdPersonCharacterUpdateContext context,
-            ref KinematicCharacterUpdateContext baseContext,
-            ref KinematicCharacterHit hit,
-            ref float3 remainingMovementDirection,
-            ref float remainingMovementLength,
-            float3 originalVelocityDirection,
-            float hitDistance)
+        ref ThirdPersonCharacterUpdateContext context,
+        ref KinematicCharacterUpdateContext baseContext,
+        ref KinematicCharacterHit hit,
+        ref float3 remainingMovementDirection,
+        ref float remainingMovementLength,
+        float3 originalVelocityDirection,
+        float hitDistance)
     {
-        ref KinematicCharacterBody characterBody = ref CharacterAspect.CharacterBody.ValueRW;
-        ref float3 characterPosition = ref CharacterAspect.LocalTransform.ValueRW.Position;
+        ref KinematicCharacterBody characterBody = ref CharacterDataAccess.CharacterBody.ValueRW;
+        ref float3 characterPosition = ref CharacterDataAccess.LocalTransform.ValueRW.Position;
         ThirdPersonCharacterComponent characterComponent = CharacterComponent.ValueRO;
-        
-        CharacterAspect.Default_OnMovementHit(
+
+        KinematicCharacterUtilities.Default_OnMovementHit(
             in this,
             ref context,
             ref baseContext,
             ref characterBody,
+            CharacterDataAccess.CharacterEntity,
+            CharacterDataAccess.CharacterProperties.ValueRO,
+            CharacterDataAccess.PhysicsCollider.ValueRO,
+            CharacterDataAccess.LocalTransform.ValueRO,
             ref characterPosition,
+            CharacterDataAccess.VelocityProjectionHits,
             ref hit,
             ref remainingMovementDirection,
             ref remainingMovementLength,
@@ -314,14 +412,15 @@ public readonly partial struct ThirdPersonCharacterAspect : IAspect, IKinematicC
         float3 originalVelocityDirection)
     {
         ThirdPersonCharacterComponent characterComponent = CharacterComponent.ValueRO;
-        
-        CharacterAspect.Default_ProjectVelocityOnHits(
+
+        KinematicCharacterUtilities.Default_ProjectVelocityOnHits(
             ref velocity,
             ref characterIsGrounded,
             ref characterGroundHit,
             in velocityProjectionHits,
             originalVelocityDirection,
-            characterComponent.StepAndSlopeHandling.ConstrainVelocityToGroundPlane);
+            characterComponent.StepAndSlopeHandling.ConstrainVelocityToGroundPlane,
+            in CharacterDataAccess.CharacterBody.ValueRO);
     }
     #endregion
 }

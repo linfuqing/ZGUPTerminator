@@ -2,14 +2,9 @@ using Unity.Burst;
 using Unity.Burst.Intrinsics;
 using Unity.Entities;
 using Unity.Collections;
-using Unity.Jobs;
-using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
 using Unity.CharacterController;
-using Unity.Collections.LowLevel.Unsafe;
-
-[assembly:RegisterGenericJobType(typeof(BufferLookupBuffer<SimulationEvent>))]
 
 [UpdateInGroup(typeof(KinematicCharacterPhysicsUpdateGroup))]
 [BurstCompile]
@@ -19,8 +14,6 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
     private BufferLookupBuffer<SimulationEvent> __simulationEventResults;
     private ThirdPersonCharacterUpdateContext __context;
     private KinematicCharacterUpdateContext __baseContext;
-    
-    //private NativeQueue<ThirdPersonCharacterSimulationEventResult> __simulationEventResults;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -56,8 +49,7 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         ThirdPersonCharacterPhysicsUpdateJob job = new ThirdPersonCharacterPhysicsUpdateJob()
         {
             context = __context,
-            baseContext = __baseContext//,
-            //simulationEventResults = __simulationEventResults.AsParallelWriter()
+            baseContext = __baseContext
         };
         job.ScheduleParallelByRef(__group);
 
@@ -71,13 +63,38 @@ public partial struct ThirdPersonCharacterPhysicsUpdateSystem : ISystem
         public ThirdPersonCharacterUpdateContext context;
         public KinematicCharacterUpdateContext baseContext;
 
-        //public NativeQueue<ThirdPersonCharacterSimulationEventResult>.ParallelWriter simulationEventResults;
-
         void Execute(
-            in Entity entity, 
-            ThirdPersonCharacterAspect characterAspect)
+            Entity entity,
+            RefRW<LocalTransform> localTransform,
+            RefRW<KinematicCharacterProperties> characterProperties,
+            RefRW<KinematicCharacterBody> characterBody,
+            RefRW<PhysicsCollider> physicsCollider,
+            RefRW<ThirdPersonCharacterComponent> characterComponent,
+            RefRW<ThirdPersonCharacterControl> characterControl,
+            DynamicBuffer<KinematicCharacterHit> characterHitsBuffer,
+            DynamicBuffer<StatefulKinematicCharacterHit> statefulHitsBuffer,
+            DynamicBuffer<KinematicCharacterDeferredImpulse> deferredImpulsesBuffer,
+            DynamicBuffer<KinematicVelocityProjectionHit> velocityProjectionHits,
+            DynamicBuffer<ThirdPersonCharacterStandTime> standTimes)
         {
-            characterAspect.PhysicsUpdate(entity, ref context, ref baseContext/*, ref simulationEventResults*/);
+            var characterProcessor = new ThirdPersonCharacterProcessor
+            {
+                CharacterDataAccess = new KinematicCharacterDataAccess(
+                    entity,
+                    localTransform,
+                    characterProperties,
+                    characterBody,
+                    physicsCollider,
+                    characterHitsBuffer,
+                    statefulHitsBuffer,
+                    deferredImpulsesBuffer,
+                    velocityProjectionHits),
+                CharacterComponent = characterComponent,
+                CharacterControl = characterControl,
+                StandTimes = standTimes
+            };
+
+            characterProcessor.PhysicsUpdate(ref context, ref baseContext);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -113,12 +130,12 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
                 ThirdPersonCharacterControl>()
             .WithAllRW<ThirdPersonCharacterStandTime>()
             .Build(ref state);
-        
+
         __simulationEventResults = new BufferLookupBuffer<SimulationEvent>(ref state, Allocator.Persistent);
 
         __context.OnSystemCreate(ref __simulationEventResults, ref state);
         __baseContext.OnSystemCreate(ref state);
-        
+
         state.RequireForUpdate(__group);
     }
 
@@ -133,7 +150,7 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
     {
         __context.OnSystemUpdate(ref state);
         __baseContext.OnSystemUpdate(ref state, SystemAPI.Time, SystemAPI.GetSingleton<PhysicsWorldSingleton>());
-        
+
         ThirdPersonCharacterVariableUpdateJob job = new ThirdPersonCharacterVariableUpdateJob
         {
             Context = __context,
@@ -148,10 +165,39 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
     {
         public ThirdPersonCharacterUpdateContext Context;
         public KinematicCharacterUpdateContext BaseContext;
-        
-        void Execute(ThirdPersonCharacterAspect characterAspect)
+
+        void Execute(
+            Entity entity,
+            RefRW<LocalTransform> localTransform,
+            RefRW<KinematicCharacterProperties> characterProperties,
+            RefRW<KinematicCharacterBody> characterBody,
+            RefRW<PhysicsCollider> physicsCollider,
+            RefRW<ThirdPersonCharacterComponent> characterComponent,
+            RefRW<ThirdPersonCharacterControl> characterControl,
+            DynamicBuffer<KinematicCharacterHit> characterHitsBuffer,
+            DynamicBuffer<StatefulKinematicCharacterHit> statefulHitsBuffer,
+            DynamicBuffer<KinematicCharacterDeferredImpulse> deferredImpulsesBuffer,
+            DynamicBuffer<KinematicVelocityProjectionHit> velocityProjectionHits,
+            DynamicBuffer<ThirdPersonCharacterStandTime> standTimes)
         {
-            characterAspect.VariableUpdate(ref Context, ref BaseContext);
+            var characterProcessor = new ThirdPersonCharacterProcessor
+            {
+                CharacterDataAccess = new KinematicCharacterDataAccess(
+                    entity,
+                    localTransform,
+                    characterProperties,
+                    characterBody,
+                    physicsCollider,
+                    characterHitsBuffer,
+                    statefulHitsBuffer,
+                    deferredImpulsesBuffer,
+                    velocityProjectionHits),
+                CharacterComponent = characterComponent,
+                CharacterControl = characterControl,
+                StandTimes = standTimes
+            };
+
+            characterProcessor.VariableUpdate(ref Context, ref BaseContext);
         }
 
         public bool OnChunkBegin(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
@@ -161,6 +207,7 @@ public partial struct ThirdPersonCharacterVariableUpdateSystem : ISystem
         }
 
         public void OnChunkEnd(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask, bool chunkWasExecuted)
-        { }
+        {
+        }
     }
 }

@@ -11,6 +11,12 @@ using Unity.Physics.Systems;
 using Unity.Transforms;
 using ZG;
 
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
 [BurstCompile, UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial struct BulletEntitySystem : ISystem
 {
@@ -250,7 +256,7 @@ public partial struct BulletSystem : ISystem
                 out var character);
     
             bool isFire = this.isFire;
-            int instanceID;
+            EntityID instanceID;
             BulletLocation location = 0;
             float3 up = math.up();
             quaternion cameraRotation;
@@ -265,7 +271,7 @@ public partial struct BulletSystem : ISystem
                 instanceID =
                     copyMatrixToTransformInstanceIDs.TryGetComponent(entity, out var copyMatrixToTransformInstanceID)
                         ? copyMatrixToTransformInstanceID.value
-                        : 0;
+                        : default;
             }
             else
             {
@@ -288,7 +294,7 @@ public partial struct BulletSystem : ISystem
                 instanceID =
                     copyMatrixToTransformInstanceIDs.TryGetComponent(character, out var copyMatrixToTransformInstanceID)
                         ? copyMatrixToTransformInstanceID.value
-                        : 0;
+                        : default;
 
                 isFire &= characterBodies.IsComponentEnabled(character);
             }

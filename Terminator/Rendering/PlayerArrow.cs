@@ -2,6 +2,8 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Scripting;
 
+using static ZG.InstanceUtility;
+
 public class PlayerArrow : MonoBehaviour
 {
     [SerializeField] 
@@ -20,11 +22,7 @@ public class PlayerArrow : MonoBehaviour
     
     private Renderer __renderer;
     
-    public 
-        #if UNITY_EDITOR
-        new 
-        #endif
-        Renderer renderer
+    public Renderer renderer
     {
         get
         {
@@ -38,8 +36,8 @@ public class PlayerArrow : MonoBehaviour
     [Preserve]
     public void SetPlayerTransform(Parameters parameters)
     {
-        if (parameters.TryGet((int)EffectAttributeID.InstanceID, out int instanceID))
-            __transform = Resources.InstanceIDToObject(instanceID) as Transform;
+        if (parameters.TryGet((int)EffectAttributeID.EntityID, out var entityID))
+            __transform = EntityIDToObject(FromMessageValue(entityID)) as Transform;
     }
     
     protected void LateUpdate()

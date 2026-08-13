@@ -16,6 +16,12 @@ using ZG;
 using Math = ZG.Mathematics.Math;
 using Random = Unity.Mathematics.Random;
 
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
 [assembly:RegisterGenericJobType(typeof(BufferLookupBufferJob<Message>))]
 
 [BurstCompile, 
@@ -157,12 +163,16 @@ public partial struct EffectSystem : ISystem
             if (numMessages > 0 && 
                 messages.HasBuffer(prefabRoot))
             {
-                int instanceID;
+                EntityID entityID;
                 if (copyMatrixToTransformInstanceIDs.TryGetComponent(root,
                         out var copyMatrixToTransformInstanceID))
-                    instanceID = copyMatrixToTransformInstanceID.value;
+                {
+                    entityID = copyMatrixToTransformInstanceID.value;
+                }
                 else
-                    instanceID = 0;
+                {
+                    entityID = default;
+                }
                 
                 MessageParameter targetMessageParameter;
                 Message targetMessage;
@@ -183,8 +193,8 @@ public partial struct EffectSystem : ISystem
                     if (targetMessageParameters.IsCreated)
                     {
                         targetMessageParameter.messageKey = targetMessage.key;
-                        targetMessageParameter.id = (int)EffectAttributeID.InstanceID;
-                        targetMessageParameter.value = instanceID;
+                        targetMessageParameter.id = (int)EffectAttributeID.EntityID;
+                        targetMessageParameter.value = InstanceUtility.ToMessageValue(entityID);
                     
                         targetMessageParameters.Add(targetMessageParameter);
                     }

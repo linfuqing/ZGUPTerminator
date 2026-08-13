@@ -13,6 +13,12 @@ using Math = ZG.Mathematics.Math;
 using Object = UnityEngine.Object;
 using Random = Unity.Mathematics.Random;
 
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
 [Flags]
 public enum BulletLocation
 {
@@ -1051,7 +1057,7 @@ public struct BulletInstance : IBufferElementData
     public EntityPrefabReference entityPrefabReference;
 
     public bool Apply(
-        int instanceID, 
+        in EntityID entityID, 
         in double time, 
         in quaternion cameraRotation,
         in CollisionWorld collisionWorld,
@@ -1078,7 +1084,7 @@ public struct BulletInstance : IBufferElementData
         Entity entity = entityManager.Instantiate(0, prefabRoot);
         
         __Apply(
-            instanceID, 
+            entityID, 
             cameraRotation, 
             entity, 
             prefabRoot, 
@@ -1100,7 +1106,7 @@ public struct BulletInstance : IBufferElementData
     }
 
     private Entity __Apply(
-        int instanceID, 
+        EntityID entityID, 
         in quaternion cameraRotation,
         in Entity entity, 
         in Entity prefabRoot, 
@@ -1272,8 +1278,8 @@ public struct BulletInstance : IBufferElementData
                 if (outputMessageParameters.IsCreated)
                 {
                     outputMessageParameter.messageKey = outputMessage.key;
-                    outputMessageParameter.id = (int)EffectAttributeID.InstanceID;
-                    outputMessageParameter.value = instanceID;
+                    outputMessageParameter.id = (int)EffectAttributeID.EntityID;
+                    outputMessageParameter.value = InstanceUtility.ToMessageValue(entityID);
                     
                     outputMessageParameters.Add(outputMessageParameter);
                 }

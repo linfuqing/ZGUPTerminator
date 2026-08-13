@@ -3,16 +3,24 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Profiling;
 
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
+using static ZG.InstanceUtility;
+
 public partial class LevelSystemManaged
 {
     private struct SkillActive
     {
-        private int __instanceID;
+        private EntityID __entityID;
         private NativeHashMap<int, int> __indices;
 
         public SkillActive(in AllocatorManager.AllocatorHandle allocator)
         {
-            __instanceID = 0;
+            __entityID = default;
             __indices = new NativeHashMap<int, int>(1, allocator);
         }
 
@@ -35,13 +43,13 @@ public partial class LevelSystemManaged
             //in DynamicBuffer<LevelSkillDesc> descs,
             LevelManager manager)
         {
-            int instanceID = manager.GetInstanceID();
-            if (__instanceID == 0)
-                __instanceID = instanceID;
+            var entityID = manager.GetEntityID();
+            if (__entityID == 0)
+                __entityID = entityID;
 
-            if (__instanceID != instanceID)
+            if (__entityID != entityID)
             {
-                __instanceID = instanceID;
+                __entityID = entityID;
                 using(__reset.Auto())
                 using(var keys = __indices.GetKeyArray(Allocator.Temp))
                 {

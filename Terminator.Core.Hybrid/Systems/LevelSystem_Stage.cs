@@ -1,11 +1,19 @@
 using Unity.Collections;
 using Unity.Entities;
 
+#if UNITY_6000_5_OR_NEWER
+using EntityID = UnityEngine.EntityId;
+#else
+using EntityID = System.Int32;
+#endif
+
+using static ZG.InstanceUtility;
+
 public partial class LevelSystemManaged
 {
     private struct Stage
     {
-        private int __managerInstanceID;
+        private EntityID __managerEntityID;
         private NativeList<int> __values;
 
         public Stage(in AllocatorManager.AllocatorHandle allocator)
@@ -13,7 +21,7 @@ public partial class LevelSystemManaged
             //system.RequireForUpdate<LevelDefinitionData>();
             //system.RequireForUpdate<LevelStage>();
 
-            __managerInstanceID = 0;
+            __managerEntityID = default;
             
             __values = new NativeList<int>(allocator);
         }
@@ -25,8 +33,8 @@ public partial class LevelSystemManaged
 
         public void Clear(LevelManager manager, ref LevelDefinition definition)
         {
-            int managerInstanceID = manager == null ? 0 : manager.GetInstanceID();
-            if (managerInstanceID != __managerInstanceID)
+            var managerEntityID = manager == null ? default : manager.GetEntityID();
+            if (managerEntityID != __managerEntityID)
                 manager = null;
             
             int numValues = __values.Length;
@@ -50,12 +58,12 @@ public partial class LevelSystemManaged
             in DynamicBuffer<LevelStage> stages, 
             ref LevelDefinition definition)
         {
-            int managerInstanceID = manager.GetInstanceID();
-            if (managerInstanceID != __managerInstanceID)
+            var managerEntityID = manager == null ? default : manager.GetEntityID();
+            if (managerEntityID != __managerEntityID)
             {
                 Clear(null, ref definition);
                 
-                __managerInstanceID = managerInstanceID;
+                __managerEntityID = managerEntityID;
             }
             
             int numStages = stages.Length, numValues = __values.Length;

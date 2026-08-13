@@ -157,7 +157,7 @@ public class GameSceneActivation : IGameSceneActivation
         SceneArchiveDependencies.ExpandSceneRootsLocal(
             dependencyFile, entry, criticalArchives, criticalEntityScenes);
 
-        var remap = ContentDeliveryGlobalState.PathRemapFunc;
+        var remap = ContentDeliveryGlobalState.PathRemapFuncWithFileCheck;
         if (remap == null)
         {
             Debug.LogError("[GameSceneActivation] PathRemapFunc is null.");
@@ -369,9 +369,9 @@ public class GameSceneActivation : IGameSceneActivation
     // Raw copy primitive for the provisioner: resolve + replace-write, no tracking.
     // Exactly-once semantics are guaranteed by SceneArchiveContentProvisioner;
     // AssetFileUtility.Materialize is a destructive refresh (see IAssetFileManager).
-    bool MaterializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
+    bool MaterializeRelativePath(string relativePath, Func<string, bool, string> remap, AssetManager assetManager)
     {
-        var destPath = remap(relativePath);
+        var destPath = remap(relativePath, false);
         if (string.IsNullOrEmpty(destPath))
         {
             Debug.LogError($"[GameSceneActivation] Remap failed for {relativePath}");
@@ -412,9 +412,9 @@ public class GameSceneActivation : IGameSceneActivation
 
     // Raw delete primitive for the provisioner. Returns false to request a retry
     // (e.g. the archive is still unmounting asynchronously).
-    bool DematerializeRelativePath(string relativePath, Func<string, string> remap, AssetManager assetManager)
+    bool DematerializeRelativePath(string relativePath, Func<string, bool, string> remap, AssetManager assetManager)
     {
-        var destPath = remap(relativePath);
+        var destPath = remap(relativePath, false);
         if (string.IsNullOrEmpty(destPath))
         {
             Debug.LogError($"[GameSceneActivation] Remap failed while releasing {relativePath}");
