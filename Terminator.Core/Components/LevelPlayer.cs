@@ -7,7 +7,7 @@ using ZG;
 #if UNITY_6000_5_OR_NEWER
 using EntityID = UnityEngine.EntityId;
 #else
-using EntityID = int;
+using EntityID = System.Int32;
 #endif
 
 public interface ILevelPlayer
