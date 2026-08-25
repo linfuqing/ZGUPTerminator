@@ -8,15 +8,17 @@ internal static class BotRelayFarmSpawner
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static bool TrySpawn(
         BotConfig config,
+        BotConfig.BotProfile[] profiles,
         Entity serverEntity,
         BotRelayWorld.InitContext ctx)
     {
-        return __TrySpawnCore(config, serverEntity, ctx);
+        return __TrySpawnCore(config, profiles, serverEntity, ctx);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static bool __TrySpawnCore(
         BotConfig config,
+        BotConfig.BotProfile[] profiles,
         Entity serverEntity,
         BotRelayWorld.InitContext ctx)
     {
@@ -25,14 +27,16 @@ internal static class BotRelayFarmSpawner
             return false;
 
         var entityManager = world.EntityManager;
-        var profiles = config.botProfiles;
+        if (profiles == null || profiles.Length == 0)
+            return false;
+
         int count = Mathf.Clamp(config.maxBots, config.minBots, profiles.Length);
         if (count < 1)
             count = 1;
 
         var worldEntity = __CreateWorldEntity(entityManager);
         __WriteHubComponents(entityManager, worldEntity, serverEntity, ctx);
-        __WriteFarmComponents(entityManager, worldEntity, config, ctx, count);
+        __WriteFarmComponents(entityManager, worldEntity, config, profiles, ctx, count);
 
         Debug.Log($"[BotRelay] Bot relay driver added on port {ctx.port}, index={ctx.driverIndex}.");
         Debug.Log($"[BotFarm] Initialized {count} bot agent(s).");
@@ -84,10 +88,10 @@ internal static class BotRelayFarmSpawner
         EntityManager entityManager,
         Entity worldEntity,
         BotConfig config,
+        BotConfig.BotProfile[] profiles,
         BotRelayWorld.InitContext ctx,
         int count)
     {
-        var profiles = config.botProfiles;
         entityManager.SetComponentData(worldEntity, new BotRelayFarmConfig
         {
             inviteTimeoutMin = config.inviteTimeoutMin,

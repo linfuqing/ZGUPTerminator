@@ -53,6 +53,63 @@ public class BotConfig : ScriptableObject
     public static int ResolveMatchLevel(in BotProfile profile) =>
         profile.matchLevel >= 0 ? profile.matchLevel : 0;
 
+    /// <summary>
+    /// Builds the profile list used by the runtime farm. A Bot userID is also the relay routing
+    /// key, so duplicate IDs cannot represent independent agents: their replies would be routed
+    /// to only one virtual port. Preserve the first valid occurrence and drop invalid/duplicate
+    /// entries before any Connect wire or agent slot is created.
+    /// </summary>
+    internal static BotProfile[] BuildRuntimeProfiles(
+        BotProfile[] source,
+        out int invalidUserIDCount,
+        out int duplicateUserIDCount,
+        out uint firstDuplicateUserID)
+    {
+        invalidUserIDCount = 0;
+        duplicateUserIDCount = 0;
+        firstDuplicateUserID = 0;
+
+        if (source == null || source.Length == 0)
+            return System.Array.Empty<BotProfile>();
+
+        var unique = new BotProfile[source.Length];
+        int uniqueCount = 0;
+        for (int i = 0; i < source.Length; ++i)
+        {
+            var profile = source[i];
+            if (profile.userID == 0)
+            {
+                ++invalidUserIDCount;
+                continue;
+            }
+
+            bool duplicate = false;
+            for (int j = 0; j < uniqueCount; ++j)
+            {
+                if (unique[j].userID != profile.userID)
+                    continue;
+
+                duplicate = true;
+                break;
+            }
+
+            if (duplicate)
+            {
+                if (firstDuplicateUserID == 0)
+                    firstDuplicateUserID = profile.userID;
+
+                ++duplicateUserIDCount;
+                continue;
+            }
+
+            unique[uniqueCount++] = profile;
+        }
+
+        var result = new BotProfile[uniqueCount];
+        System.Array.Copy(unique, result, uniqueCount);
+        return result;
+    }
+
     public bool TryGetProfile(uint userID, out BotProfile profile)
     {
         if (botProfiles != null)

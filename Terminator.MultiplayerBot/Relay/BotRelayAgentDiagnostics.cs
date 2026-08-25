@@ -27,9 +27,7 @@ internal static class BotRelayAgentDiagnostics
         double timeoutSeconds,
         int state,
         int remoteChannelStatus) =>
-        Debug.Log(
-            $"[BotAgent:{userID}] Remote {remoteUserID} offline for {timeoutSeconds}s " +
-            $"(state={state}, remoteStatus={remoteChannelStatus}); sending SquadLeave.");
+        Debug.Log($"[BotAgent:{userID}] Remote {remoteUserID} offline for {timeoutSeconds}s (state={state}, remoteStatus={remoteChannelStatus}); sending SquadLeave.");
 
     public static void LogJoinStall(
         uint userID,
@@ -62,9 +60,7 @@ internal static class BotRelayAgentDiagnostics
         uint userStageID,
         int matchID,
         in FixedString32Bytes sceneName) =>
-        Debug.Log(
-            $"[BotAgent:{userID}] Level login PlayerProperty armed userStage={userStageID} " +
-            $"matchID={matchID} replayScene={sceneName}; Status remains 0 until the next entry tick.");
+        Debug.Log($"[BotAgent:{userID}] Level login PlayerProperty armed userStage={userStageID} matchID={matchID} replayScene={sceneName}; Status remains 0 until the next entry tick.");
 
     public static void LogSentApplyMatch(uint userID) =>
         Debug.Log($"[BotAgent:{userID}] Sent ApplyMatch.");
@@ -79,9 +75,7 @@ internal static class BotRelayAgentDiagnostics
         uint levelID,
         int stage,
         in FixedString32Bytes sceneName) =>
-        Debug.Log(
-            $"[BotAgent:{userID}] MatchStart accepted matchID={matchID} userStage={userStageID} " +
-            $"level={levelID}_{stage} scene={sceneName}.");
+        Debug.Log($"[BotAgent:{userID}] MatchStart accepted matchID={matchID} userStage={userStageID} level={levelID}_{stage} scene={sceneName}.");
 
     public static void LogRemotePlayerProperty(uint userID, uint remoteUserID) =>
         Debug.Log($"[BotAgent:{userID}] Remote PlayerProperty from {remoteUserID} (diagnostic only).");
@@ -97,18 +91,14 @@ internal static class BotRelayAgentDiagnostics
         uint userID,
         uint squadChannel,
         double timeoutSeconds) =>
-        Debug.LogWarning(
-            $"[BotAgent:{userID}] SquadJoin {squadChannel} received no Join/JoinFailed for " +
-            $"{timeoutSeconds}s; cancelling this invitation and releasing its farm lease.");
+        Debug.LogWarning($"[BotAgent:{userID}] SquadJoin {squadChannel} received no Join/JoinFailed for {timeoutSeconds}s; cancelling this invitation and releasing its farm lease.");
 
     public static void LogUnexpectedSquadJoinRejected(
         uint userID,
         uint squadChannel,
         int state,
         uint expectedPendingSquadChannel) =>
-        Debug.LogWarning(
-            $"[BotAgent:{userID}] Rejected SquadJoin {squadChannel} outside its active generation " +
-            $"(state={state}, expectedPending={expectedPendingSquadChannel}).");
+        Debug.LogWarning($"[BotAgent:{userID}] Rejected SquadJoin {squadChannel} outside its active generation (state={state}, expectedPending={expectedPendingSquadChannel}).");
 
     public static void LogSentMatch(uint userID, int matchLevel) =>
         Debug.Log($"[BotAgent:{userID}] Sent MatchToSend level={matchLevel}.");
@@ -119,9 +109,7 @@ internal static class BotRelayAgentDiagnostics
         int matchID,
         in Unity.Collections.FixedString32Bytes sceneName,
         int remoteChannelStatus) =>
-        Debug.Log(
-            $"[BotAgent:{userID}] Match level entry armed userStage={userStageID} " +
-            $"matchID={matchID} replayScene={sceneName} remoteStatus={remoteChannelStatus}.");
+        Debug.Log($"[BotAgent:{userID}] Match level entry armed userStage={userStageID} matchID={matchID} replayScene={sceneName} remoteStatus={remoteChannelStatus}.");
 
     public static void LogIdleMatchArmed(uint userID) =>
         Debug.Log($"[BotAgent:{userID}] Idle match armed (relay ready).");
@@ -227,10 +215,7 @@ internal static class BotRelayAgentDiagnostics
         int injectedThisTick,
         double deltaTime,
         double playbackTime) =>
-        Debug.Log(
-            $"[BotAgent:{userID}] Replay completed catalog={catalogIndex} frames={frameCount} " +
-            $"finalTickAdvanced={advancedThisTick} finalTickInjected={injectedThisTick} " +
-            $"delta={deltaTime}s playback={playbackTime}s.");
+        Debug.Log($"[BotAgent:{userID}] Replay completed catalog={catalogIndex} frames={frameCount} finalTickAdvanced={advancedThisTick} finalTickInjected={injectedThisTick} delta={deltaTime}s playback={playbackTime}s.");
 
     public static void LogRouteSendEnqueued(ushort fromPort, ushort toPort, int length)
     {

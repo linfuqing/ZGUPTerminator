@@ -849,19 +849,66 @@ public class BotRelayDesignGoalTests
     }
 
     [Test]
-    public void MatchResponse_IdleBot_SendsMatchWhenReady()
+    [Category("Regression")]
+    public void MatchDispatch_ObservedHuman_SendsMatchFromIdleBotAfterDelay()
     {
         var farm = BotRelayFlowTestFixtures.CreateFarm();
         var injects = new NativeQueue<BotRelayInject>(Allocator.TempJob);
+        var matchIDs = new NativeList<uint>(Allocator.Temp);
+        var matches = new NativeList<NetworkRelayServerMatch>(Allocator.Temp);
+        var identities = new NativeList<NetworkRelayServerIdentity>(Allocator.Temp);
+        var sendBuffer = new NetworkServerSendBuffer(Allocator.Temp);
+        var connectionPayload = new NativeArray<byte>(16, Allocator.Temp, NativeArrayOptions.ClearMemory);
         try
         {
+            // Production starts Idle bots with +Infinity and only dispatches after observing a
+            // connected non-Bot in NetworkRelayServer.matchIDs.
+            farm.nextIdleMatchTime[0] = double.PositiveInfinity;
+
+            var payloadWriter = new DataStreamWriter(connectionPayload);
+            payloadWriter.WritePackedUInt(
+                BotRelayFlowTestFixtures.RealPlayerUserId,
+                StreamCompressionModel.Default);
+            payloadWriter.Flush();
+            var connection = default(NetworkConnection);
+            Assert.AreEqual(
+                BotRelayFlowTestFixtures.RealPlayerUserId,
+                sendBuffer.Connect(ref connection, connectionPayload));
+
+            var identity = new NetworkRelayServerIdentity(
+                BotRelayFlowTestFixtures.RealPlayerUserId,
+                Allocator.Temp);
+            identity.isOnline = true;
+            var identitySendBuffer = new NetworkServerSendBuffer.Identity(
+                BotRelayFlowTestFixtures.RealPlayerUserId,
+                ref sendBuffer);
+            Assert.IsTrue(identity.Matching(1, identity.ID, ref identitySendBuffer));
+            identities.Add(identity);
+
+            matches.Add(new NetworkRelayServerMatch
+            {
+                startTime = 1.0,
+                value = new NetworkRelayMatch { distance = 0 }
+            });
+            matchIDs.Add(BotRelayFlowTestFixtures.RealPlayerUserId);
+
+            var server = new NetworkRelayServer.ReadOnly
+            {
+                matchIDs = matchIDs,
+                matches = matches,
+                identities = identities,
+                sendBuffer = sendBuffer.AsReadOnly()
+            };
             var config = BotRelayFlowTestFixtures.CreateTickConfig(0f);
             config.injectEnabled = 1;
             config.injectWriter = injects.AsParallelWriter();
-            BotAgentLogic.Execute(0, ref farm, in config);
-            Assert.AreEqual(BotState.Matching, farm.agentStates[0].state);
-            Assert.IsTrue(injects.TryDequeue(out var matchInject));
+            BotAgentLogic.TickMatchDispatch(ref farm, in config, in server);
 
+            Assert.AreEqual(BotState.Matching, farm.agentStates[0].state);
+            Assert.AreEqual(0, farm.matchingSlotOwner[0]);
+            Assert.AreEqual(0u, farm.matchObserveUserID[0]);
+
+            Assert.IsTrue(injects.TryDequeue(out var matchInject));
             Assert.IsTrue(BotRelayFlowTestFixtures.TryReadInjectMessageType(in matchInject, out int type));
             Assert.AreEqual((int)NetworkRelayMessageType.Match, type);
             Assert.IsTrue(BotRelayFlowTestFixtures.TryReadMatchDistance(in matchInject.packet, out int level));
@@ -869,6 +916,14 @@ public class BotRelayDesignGoalTests
         }
         finally
         {
+            for (int i = 0; i < identities.Length; ++i)
+                identities[i].Dispose();
+
+            connectionPayload.Dispose();
+            sendBuffer.Dispose();
+            identities.Dispose();
+            matches.Dispose();
+            matchIDs.Dispose();
             injects.Dispose();
             farm.Dispose();
         }
@@ -1271,6 +1326,46 @@ public class BotRelayDesignGoalTests
 
         profile.matchLevel = -1;
         Assert.AreEqual(0, BotConfig.ResolveMatchLevel(in profile));
+    }
+
+    [Test]
+    [Category("Regression")]
+    public void RuntimeProfiles_DuplicateUserID_CreatesOnlyOneRoutingSlot()
+    {
+        var first = new BotConfig.BotProfile
+        {
+            userID = 1221,
+            userName = "first",
+            power = 10,
+            matchLevel = 2
+        };
+        var duplicate = new BotConfig.BotProfile
+        {
+            userID = 1221,
+            userName = "duplicate",
+            power = 20,
+            matchLevel = 7
+        };
+        var other = new BotConfig.BotProfile
+        {
+            userID = 1222,
+            userName = "other",
+            power = 30,
+            matchLevel = 9
+        };
+
+        var profiles = BotConfig.BuildRuntimeProfiles(
+            new[] { first, duplicate, default(BotConfig.BotProfile), other },
+            out int invalidCount,
+            out int duplicateCount,
+            out uint firstDuplicateUserID);
+
+        Assert.AreEqual(2, profiles.Length, "Only unique non-zero userIDs may become runtime agents.");
+        Assert.AreEqual(1, invalidCount);
+        Assert.AreEqual(1, duplicateCount);
+        Assert.AreEqual(1221u, firstDuplicateUserID);
+        Assert.AreEqual("first", profiles[0].userName, "The first configured occurrence is authoritative.");
+        Assert.AreEqual(1222u, profiles[1].userID);
     }
 
     [Test]

@@ -157,7 +157,11 @@ public class GameSceneActivation : IGameSceneActivation
         SceneArchiveDependencies.ExpandSceneRootsLocal(
             dependencyFile, entry, criticalArchives, criticalEntityScenes);
 
+#if UNITY_6000_5_OR_NEWER
         var remap = ContentDeliveryGlobalState.PathRemapFuncWithFileCheck;
+#else
+        var remap = ContentDeliveryGlobalState.PathRemapFunc;
+#endif
         if (remap == null)
         {
             Debug.LogError("[GameSceneActivation] PathRemapFunc is null.");
@@ -369,9 +373,20 @@ public class GameSceneActivation : IGameSceneActivation
     // Raw copy primitive for the provisioner: resolve + replace-write, no tracking.
     // Exactly-once semantics are guaranteed by SceneArchiveContentProvisioner;
     // AssetFileUtility.Materialize is a destructive refresh (see IAssetFileManager).
-    bool MaterializeRelativePath(string relativePath, Func<string, bool, string> remap, AssetManager assetManager)
+    bool MaterializeRelativePath(
+        string relativePath, 
+#if UNITY_6000_5_OR_NEWER
+        Func<string, bool, string> remap, 
+#else
+        Func<string, string> remap, 
+#endif
+        AssetManager assetManager)
     {
+#if UNITY_6000_5_OR_NEWER
         var destPath = remap(relativePath, false);
+#else
+        var destPath = remap(relativePath);
+#endif
         if (string.IsNullOrEmpty(destPath))
         {
             Debug.LogError($"[GameSceneActivation] Remap failed for {relativePath}");
@@ -412,9 +427,20 @@ public class GameSceneActivation : IGameSceneActivation
 
     // Raw delete primitive for the provisioner. Returns false to request a retry
     // (e.g. the archive is still unmounting asynchronously).
-    bool DematerializeRelativePath(string relativePath, Func<string, bool, string> remap, AssetManager assetManager)
+    bool DematerializeRelativePath(
+        string relativePath, 
+#if UNITY_6000_5_OR_NEWER
+        Func<string, bool, string> remap, 
+#else
+        Func<string, string> remap, 
+#endif
+        AssetManager assetManager)
     {
+#if UNITY_6000_5_OR_NEWER
         var destPath = remap(relativePath, false);
+#else
+        var destPath = remap(relativePath);
+#endif
         if (string.IsNullOrEmpty(destPath))
         {
             Debug.LogError($"[GameSceneActivation] Remap failed while releasing {relativePath}");

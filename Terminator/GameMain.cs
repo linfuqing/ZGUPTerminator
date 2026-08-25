@@ -937,7 +937,7 @@ public class GameMain : GameUser
             activation, 
             new IGameAssetUnzipper[] {new AssetUnzipper()}, 
             assetPaths);
-
+ 
         __coroutine = null;
     }
 

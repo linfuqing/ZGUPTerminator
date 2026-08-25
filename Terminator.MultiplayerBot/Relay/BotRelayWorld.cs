@@ -91,12 +91,36 @@ public ushort port;
         BotConfig config,
         Entity serverEntity)
     {
+        var profiles = BotConfig.BuildRuntimeProfiles(
+            config.botProfiles,
+            out int invalidUserIDCount,
+            out int duplicateUserIDCount,
+            out uint firstDuplicateUserID);
+        if (invalidUserIDCount > 0)
+        {
+            Debug.LogWarning(
+                $"[BotFarm] Ignored {invalidUserIDCount} bot profile(s) with userID=0.");
+        }
+
+        if (duplicateUserIDCount > 0)
+        {
+            Debug.LogWarning(
+                $"[BotFarm] Ignored {duplicateUserIDCount} duplicate bot profile(s); " +
+                $"first duplicate userID={firstDuplicateUserID}. Every runtime Bot userID must be unique.");
+        }
+
+        if (profiles.Length == 0)
+        {
+            Debug.LogError("[BotFarm] No valid unique bot profiles are configured.");
+            return false;
+        }
+
         var ctx = new InitContext
         {
             port = config.botRelayPort != 0 ? config.botRelayPort : (ushort)1390
         };
 
-        if (!__TryCaptureWireCatalog(config, ctx))
+        if (!__TryCaptureWireCatalog(config, profiles, ctx))
             return false;
 
         if (!__TryCreateListenDriver(config, ctx))
@@ -105,7 +129,7 @@ public ushort port;
         if (!__TryAttachListenDriver(ctx))
             return false;
 
-        if (!BotRelayFarmSpawner.TrySpawn(config, serverEntity, ctx))
+        if (!BotRelayFarmSpawner.TrySpawn(config, profiles, serverEntity, ctx))
             return false;
 
         return true;
@@ -135,9 +159,11 @@ public ushort port;
     }
 
 [MethodImpl(MethodImplOptions.NoInlining)]
-    private static bool __TryCaptureWireCatalog(BotConfig config, InitContext ctx)
+    private static bool __TryCaptureWireCatalog(
+        BotConfig config,
+        BotConfig.BotProfile[] profiles,
+        InitContext ctx)
     {
-        var profiles = config.botProfiles;
         if (profiles == null || profiles.Length == 0)
         {
             Debug.LogError("[BotFarm] botProfiles is empty.");

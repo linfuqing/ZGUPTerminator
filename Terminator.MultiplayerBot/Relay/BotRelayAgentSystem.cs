@@ -107,9 +107,13 @@ namespace ZG
             if (!catalogBlob.IsCreated || !catalogBlob.Value.IsValid)
                 return;
 
-            // Copy of NetworkRelayServer: Native containers are handles. ReadOnly views are consumed
-            // by MatchDispatchJob scheduled on state.Dependency (includes Server Scheduler) — no Complete.
-            var serverReadOnly = SystemAPI.GetSingleton<NetworkRelayServer>().AsReadOnly();
+            // Build the compact view through the singleton ref; the full server exceeds Mono's by-value limit.
+            // The resulting view is consumed by MatchDispatchJob on state.Dependency (includes
+            // Server Scheduler), so no main-thread Complete is required.
+            var serverReadOnly = SystemAPI
+                .GetSingletonRW<NetworkRelayServer>()
+                .ValueRO
+                .AsReadOnly();
 
             var dep = JobHandle.CombineDependencies(state.Dependency, BotRelayManager.ManagerAccessHandle);
 
