@@ -30,125 +30,6 @@ public sealed class LoginManager : MonoBehaviour
     }
 
     [Serializable]
-    internal struct Scene
-    {
-        [Serializable]
-        public struct Stage
-        {
-            public string name;
-
-            public string bossTitle;
-            public string bossDescription;
-
-            public int index;
-        }
-
-        public string name;
-        public string title;
-        public string description;
-
-        public AssetObjectLoader prefab;
-
-        public Stage[] stages;
-
-        public int StageIndexOf(int stageIndex)
-        {
-            int numStages = stages.Length;
-            for (int i = 0; i < numStages; ++i)
-            {
-                if (stages[i].index == stageIndex)
-                    return i;
-            }
-
-            return -1;
-        }
-    }
-
-    [Serializable]
-    internal struct Level
-    {
-        [Flags]
-        public enum Flag
-        {
-            Chapter = 0x01
-        }
-
-        public string name;
-
-        public Flag flag;
-
-        public Scene[] scenes;
-
-        public Scene.Stage GetSceneStage(string sceneName, int stageIndex)
-        {
-            if (scenes != null)
-            {
-                int index;
-                foreach (var scene in scenes)
-                {
-                    if(scene.name != sceneName)
-                        continue;
-                    
-                    index = scene.StageIndexOf(stageIndex);
-                    if (index != -1)
-                        return scene.stages[index];
-                }
-            }
-
-            return default;
-        }
-
-#if UNITY_EDITOR
-        [CSVField]
-        public string 章节名称
-        {
-            set => name = value;
-        }
-
-        [CSVField]
-        public int 章节标签
-        {
-            set => flag = (Flag)value;
-        }
-
-        [CSVField]
-        public string 章节场景
-        {
-            set
-            {
-                string[] parameters = value.Split('+'), temp, temp2;
-                int i, j, stageIndex = 0, numStages, numParameters = parameters.Length;
-                scenes = new Scene[numParameters];
-                Scene scene;
-                for (i = 0; i < numParameters; ++i)
-                {
-                    temp = parameters[i].Split(':');
-                    scene.name = temp[0];
-                    scene.title = temp[1];
-                    scene.description = temp[2];
-                    scene.description = scene.description.Replace(@"\n", "\n");
-                    scene.prefab = new AssetObjectLoader(AssetObjectLoader.Space.Local, temp[3], temp[4], null, null);
-                    temp = temp[5].Split('|');
-                    numStages = temp.Length;
-                    scene.stages = new Scene.Stage[numStages];
-                    for (j = 0; j < numStages; ++j)
-                    {
-                        temp2 = temp[j].Split('*');
-                        ref var stage = ref scene.stages[j];
-                        stage.name = temp2[0].Replace(@"\n", "\n");
-                        stage.bossTitle = temp2[1];
-                        stage.bossDescription = temp2[2];
-                        stage.index = temp2.Length < 4 ? stageIndex++ : int.Parse(temp2[3]);
-                    }
-
-                    scenes[i] = scene;
-                }
-            }
-        }
-#endif
-    }
-
-    [Serializable]
     internal struct UserType
     {
         public string name;
@@ -203,7 +84,7 @@ public sealed class LoginManager : MonoBehaviour
 
         public void Init(
             int index, 
-            in Level level, 
+            in LevelDatabase.Level level, 
             LevelStyle levelStyle, 
             MonoBehaviour monoBehaviour,
             AssetManager assetManager)
@@ -387,14 +268,9 @@ public sealed class LoginManager : MonoBehaviour
     
     [SerializeField]
     internal LevelStyle _style;
-
-    [SerializeField] 
-    internal Level[] _levels;
     
-#if UNITY_EDITOR
-    [SerializeField, CSV("_levels", guidIndex = -1, nameIndex = 0)] 
-    internal string _levelsPath;
-#endif
+    [SerializeField]
+    internal LevelDatabase _levelDatabase;
 
     [SerializeField] 
     internal UserType[] _userTypes;
@@ -738,13 +614,13 @@ public sealed class LoginManager : MonoBehaviour
     {
         if (__levelIndices == null)
         {
-            int numLevels = _levels.Length;
+            int numLevels = _levelDatabase.levels.Length;
             __levelIndices = new Dictionary<string, int>(numLevels);
             for (int i = 0; i < numLevels; ++i)
-                __levelIndices[_levels[i].name] = i;
+                __levelIndices[_levelDatabase.levels[i].name] = i;
         }
 
-        return new AssetObjectLoader(_levels[__levelIndices[levelName]].scenes[sceneIndex].prefab);
+        return new AssetObjectLoader(_levelDatabase.levels[__levelIndices[levelName]].scenes[sceneIndex].prefab);
     }
     
     private void __ApplyLevelChapters(IUserData.LevelChapters levelChapters)
@@ -799,12 +675,12 @@ public sealed class LoginManager : MonoBehaviour
             __loaders.Clear();
         }
 
-        int i, numLevels = _levels.Length;
+        int i, numLevels = _levelDatabase.levels.Length;
         if (__levelIndices == null)
         {
             __levelIndices = new Dictionary<string, int>(numLevels);
             for (i = 0; i < numLevels; ++i)
-                __levelIndices[_levels[i].name] = i;
+                __levelIndices[_levelDatabase.levels[i].name] = i;
         }
 
         bool isSelected = false;
@@ -812,7 +688,7 @@ public sealed class LoginManager : MonoBehaviour
         {
             if (level.id == __selectedUserLevelID)
             {
-                if((_levels[__levelIndices[level.name]].flag & Level.Flag.Chapter) == Level.Flag.Chapter)
+                if((_levelDatabase.levels[__levelIndices[level.name]].flag & LevelDatabase.Level.Flag.Chapter) == LevelDatabase.Level.Flag.Chapter)
                     isSelected = true;
                 
                 break;
@@ -945,7 +821,7 @@ public sealed class LoginManager : MonoBehaviour
             var selectedLevel = userLevel;
 
             index = __levelIndices[userLevel.name];
-            var level = _levels[index];
+            var level = _levelDatabase.levels[index];
             
             /*if(style.onTitle != null)
                 style.onTitle.Invoke(level.title);
@@ -1650,8 +1526,8 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelShared.stages.Clear();
 
-        Scene.Stage sceneStage;
-        var level = __levelIndices.TryGetValue(__levelName, out int levelIndex) ? _levels[levelIndex] : default;
+        LevelDatabase.Scene.Stage sceneStage;
+        var level = __levelIndices.TryGetValue(__levelName, out int levelIndex) ? _levelDatabase.levels[levelIndex] : default;
         int numLevelStages = property.levelStages.Length;
         for (int i = 0; i < numLevelStages; ++i)
         {
@@ -1698,8 +1574,8 @@ public sealed class LoginManager : MonoBehaviour
 
         LevelShared.stages.Clear();
 
-        Scene.Stage sceneStage;
-        var level = __levelIndices.TryGetValue(__levelName, out int levelIndex) ? _levels[levelIndex] : default;
+        LevelDatabase.Scene.Stage sceneStage;
+        var level = __levelIndices.TryGetValue(__levelName, out int levelIndex) ? _levelDatabase.levels[levelIndex] : default;
         int numLevelStages = property.levelStages.Length;
         for (int i = 0; i < numLevelStages; ++i)
         {
