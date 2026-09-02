@@ -48,7 +48,7 @@ public partial class UserDataMain
                 id = 1;
                 //count = 0;//3;
                 key = NAME_SPACE_USER_CARDS_CAPACITY;
-                count = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY);
+                count = cardCapacity;
                 if (count + reward.count > 4)
                 {
                     var temp = reward;
@@ -59,7 +59,7 @@ public partial class UserDataMain
                     return false;
                 }
                 
-                count = 0;
+                count = _defaultCardCapacity;
 
                 break;
             case UserRewardType.Card:
@@ -107,7 +107,7 @@ public partial class UserDataMain
                     PlayerPrefs.SetInt(key, cardCount - 1);
                     PlayerPrefs.SetInt(rankKey, 0);
 
-                    int cardCapacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY);
+                    int cardCapacity = this.cardCapacity;
                     if (cardCapacity < 4)
                     {
                         int i;
@@ -964,7 +964,7 @@ public partial class UserDataMain
         
         keyPrefix = $"{NAME_SPACE_USER_CARD_GROUP}{groupName}{UserData.SEPARATOR}";
 
-        int cardCapacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY);
+        int cardCapacity = this.cardCapacity;
         if (cardCapacity > 0)
         {
             int[] cardIndices = new int[cardCapacity];

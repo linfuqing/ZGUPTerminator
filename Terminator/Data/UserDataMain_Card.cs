@@ -427,6 +427,9 @@ public partial class UserDataMain
 #endif
 
     private const string NAME_SPACE_USER_CARDS_CAPACITY = "UserCardsCapacity";
+
+    public int cardCapacity => PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, _defaultCardCapacity);
+    
     private const string NAME_SPACE_USER_CARD_LEVEL = "UserCardLevel";
     private const string NAME_SPACE_USER_CARD_RANK = "UserCardRank";
     private const string NAME_SPACE_USER_CARD_GROUP = "UserCardGroup";
@@ -459,7 +462,7 @@ public partial class UserDataMain
 
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
 
-        result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, _defaultCardCapacity);
+        result.capacity = cardCapacity;
 
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
         result.selectedGroupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetCardGroupIndex(groupName));
