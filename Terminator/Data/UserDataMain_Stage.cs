@@ -307,7 +307,7 @@ public partial class UserDataMain
 
     [Header("Stage")] 
     [SerializeField]
-    internal int _defaultTalentsUnlockChapter = 5;
+    internal int _talentsUnlockChapter = 5;
 
     [SerializeField]
     internal Stage[] _stages;
@@ -773,7 +773,7 @@ public partial class UserDataMain
             isDirty = true;
         }
 
-        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0 && UserData.chapter > _defaultTalentsUnlockChapter/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0 && UserData.chapter > _talentsUnlockChapter/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
         {
             flag |= Flag.TalentsUnlock;
 

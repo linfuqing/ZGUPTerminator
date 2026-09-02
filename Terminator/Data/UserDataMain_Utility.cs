@@ -86,43 +86,21 @@ public partial class UserDataMain
                 if (rank == -1)
                 {
                     bool isDirty = false;
-                    switch (UserData.chapter)
+                    
+                    if ((flag & Flag.CardsUnlock) == 0 && UserData.chapter > _cardsUnlockChapter)
                     {
-                        case 2:
-                            if ((flag & Flag.CardsUnlock) == 0 /* && UserData.level > 0*/) //(flag & Flag.CardsCreated) == 0)
-                            {
-                                flag |= Flag.CardsUnlock;
+                        flag |= Flag.CardsUnlock;
 
-                                isDirty = true;
-                            }
-                            break;
-                        case 3:
-                            if ((flag & Flag.CardReplace) == 0)
-                            {
-                                flag |= Flag.CardReplace;
-                                
-                                isDirty = true;
-                            }
-                            /*{
-                                int capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY), length = 0;
-                                foreach (var card in _cards)
-                                {
-                                    if(__GetCardLevel(card.name, out _) == -1)
-                                        continue;
-
-                                    if (++length >= capacity)
-                                    {
-                                        flag |= Flag.CardReplace;
-
-                                        isDirty = true;
-
-                                        break;
-                                    }
-                                }
-                            }*/
-                            break;
+                        isDirty = true;
                     }
-
+                    
+                    if ((flag & Flag.CardReplace) == 0  && UserData.chapter > _cardReplaceChapter)
+                    {
+                        flag |= Flag.CardReplace;
+                                
+                        isDirty = true;
+                    }
+                    
                     if (isDirty)
                         UserDataMain.flag = flag;
                     
