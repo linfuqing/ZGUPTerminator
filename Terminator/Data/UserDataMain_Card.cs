@@ -396,6 +396,9 @@ public partial class UserDataMain
     }
 
     [SerializeField] 
+    internal int _defaultCardCapacity;
+
+    [SerializeField] 
     internal Group[] _cardGroups;
     
     [SerializeField] 
@@ -450,7 +453,7 @@ public partial class UserDataMain
 
         bool isCreated = (flag & Flag.CardsCreated) != Flag.CardsCreated;
 
-        result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY/*, 3*/);
+        result.capacity = PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY, _defaultCardCapacity);
 
         string groupName = PlayerPrefs.GetString(NAME_SPACE_USER_CARD_GROUP);
         result.selectedGroupID = __ToID(string.IsNullOrEmpty(groupName) ? 0 : __GetCardGroupIndex(groupName));
