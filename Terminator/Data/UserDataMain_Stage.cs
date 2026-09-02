@@ -305,7 +305,9 @@ public partial class UserDataMain
 #endif
     }
 
-    [Header("Stage")]
+    [Header("Stage")] 
+    [SerializeField]
+    internal int _talentsUnlockChapter = 5;
 
     [SerializeField]
     internal Stage[] _stages;
@@ -757,7 +759,7 @@ public partial class UserDataMain
         return stage;
     }
     
-    private static void __SubmitStageFlag()
+    private void __SubmitStageFlag()
     {
         var flag = UserDataMain.flag;
         bool isDirty = (flag & Flag.PurchasesUnlockFirst) == Flag.PurchasesUnlockFirst;
@@ -771,7 +773,7 @@ public partial class UserDataMain
             isDirty = true;
         }
 
-        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0 && UserData.chapter > 5/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
+        if ((flag & Flag.TalentsUnlock) == 0 && (flag & Flag.CardsUnlock) != 0 && UserData.chapter > _talentsUnlockChapter/*PlayerPrefs.GetInt(NAME_SPACE_USER_CARDS_CAPACITY) > 3*/)
         {
             flag |= Flag.TalentsUnlock;
 
