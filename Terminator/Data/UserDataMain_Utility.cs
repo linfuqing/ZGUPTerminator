@@ -33,12 +33,12 @@ public partial class UserDataMain
                     return __PurchasePool(purchasePoolIndex, reward.count, out _, outRewards, out _);
                 }
 
-                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > 2)
+                if ((flag & Flag.PurchasesUnlock) == 0 && UserData.chapter > _purchasesUnlockChapter)
                     UserDataMain.flag |= Flag.PurchasesUnlock;
 
                 break;
             case UserRewardType.CardsCapacity:
-                if ((flag & Flag.CardUnlock) == 0 && UserData.chapter > 1)
+                if ((flag & Flag.CardUnlock) == 0 && UserData.chapter > _cardUnlockChapter)
                 {
                     flag &= ~Flag.CardUpgradeFirst;
                     

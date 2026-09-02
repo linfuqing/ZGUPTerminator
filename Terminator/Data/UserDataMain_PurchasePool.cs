@@ -35,8 +35,11 @@ public partial class UserDataMain
         }
 #endif
     }
+
+    [Header("PurchasePool")] 
+    [SerializeField]
+    internal int _purchasesUnlockChapter = 2;
     
-    [Header("PurchasePool")]
     [SerializeField]
     internal RewardPool[] _rewardPools;
     

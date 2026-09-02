@@ -141,6 +141,18 @@ public partial class UserDataMain
     }
 
     [Header("Cards")]
+    [SerializeField] 
+    internal int _cardsUnlockChapter = 1;
+
+    [SerializeField] 
+    internal int _cardUnlockChapter = 1;
+
+    [SerializeField] 
+    internal int _cardReplaceChapter = 2;
+
+    [SerializeField] 
+    internal int _defaultCardCapacity;
+
     [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("_cardsDefaults")] 
     internal CardDefault[] _cardDefaults;
 
@@ -394,15 +406,6 @@ public partial class UserDataMain
         }
 #endif
     }
-
-    [SerializeField] 
-    internal int _cardsUnlockChapter = 1;
-
-    [SerializeField] 
-    internal int _cardReplaceChapter = 2;
-
-    [SerializeField] 
-    internal int _defaultCardCapacity;
 
     [SerializeField] 
     internal Group[] _cardGroups;
