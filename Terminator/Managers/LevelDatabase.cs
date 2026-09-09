@@ -24,6 +24,7 @@ public class LevelDatabase : ScriptableObject
         public string description;
 
         public AssetObjectLoader prefab;
+        public AssetObjectLoader lockPrefab;
 
         public Stage[] stages;
 
@@ -104,7 +105,8 @@ public class LevelDatabase : ScriptableObject
                     scene.description = temp[2];
                     scene.description = scene.description.Replace(@"\n", "\n");
                     scene.prefab = new AssetObjectLoader(AssetObjectLoader.Space.Local, temp[3], temp[4], null, null);
-                    temp = temp[5].Split('|');
+                    scene.lockPrefab = new AssetObjectLoader(AssetObjectLoader.Space.Local, temp[3], temp[5], null, null);
+                    temp = temp[6].Split('|');
                     numStages = temp.Length;
                     scene.stages = new Scene.Stage[numStages];
                     for (j = 0; j < numStages; ++j)

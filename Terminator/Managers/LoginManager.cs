@@ -82,6 +82,8 @@ public sealed class LoginManager : MonoBehaviour
     {
         public Loader[] values;
 
+        public bool useLockPrefab;
+
         public void Init(
             int index, 
             in LevelDatabase.Level level, 
@@ -90,7 +92,9 @@ public sealed class LoginManager : MonoBehaviour
             AssetManager assetManager)
         {
             var levelStyleScene = levelStyle.scenes[index];
-            var source = level.scenes[index].prefab;
+            var source = useLockPrefab
+                ? level.scenes[index].lockPrefab
+                : level.scenes[index].prefab;
             var destination = values[index];
             if (destination.assetObject != source)
             {
@@ -163,6 +167,19 @@ public sealed class LoginManager : MonoBehaviour
     public static event Action<Stage> onStageChanged;
     
     public event Action<int> onEnergyChanged;
+
+    public bool isLockedLevelPreview { get; private set; }
+
+    [SerializeField, Header("选中未解锁章节预览时执行，开始按钮置灰、禁止点击")]
+    internal UnityEvent _onLockedLevelPreview;
+
+    private void __NotifyLevelPreviewState()
+    {
+        if (isLockedLevelPreview)
+            _onLockedLevelPreview?.Invoke();
+        else
+            onEnergyChanged?.Invoke(energy);
+    }
 
     [SerializeField] 
     internal float _startTime = 0.5f;
@@ -313,6 +330,8 @@ public sealed class LoginManager : MonoBehaviour
     private bool __isEnergyActive = true;
     private bool? __levelActivatedFirst;
     private bool? __isLevelActive;
+
+    private int __lastUnlockedLevelIndex = -1;
 
     private const string NAME_SPACE = "LoginManager";
 
@@ -480,7 +499,7 @@ public sealed class LoginManager : MonoBehaviour
         {
             int levelIndex;
             if (canMoveToSinglePlayer)
-                levelIndex = __levelStyles.Length - 1;
+                levelIndex = __lastUnlockedLevelIndex;
             else
             {
                 levelIndex = -1;
@@ -490,6 +509,9 @@ public sealed class LoginManager : MonoBehaviour
                         levelIndex = levelStage.levelIndex;
                 }
             }
+
+            if (levelIndex < 0)
+                return;
 
             if (!__MoveTo(_style.transform.parent.GetComponentInParent<ZG.ScrollRectComponentEx>(true),
                     levelIndex))
@@ -607,6 +629,9 @@ public sealed class LoginManager : MonoBehaviour
 
     public void ApplyStart(bool isRestart)
     {
+        if (isLockedLevelPreview)
+            return;
+
         ApplyStart(isRestart, __selectedUserLevelID, __selectedStageIndex, __levelName, __sceneName);
     }
 
@@ -713,6 +738,14 @@ public sealed class LoginManager : MonoBehaviour
         //__sceneIndices = new HashSet<(int, int)>();
         
         numLevels = levelChapters.levels.Length;
+        __lastUnlockedLevelIndex = -1;
+        for (i = 0; i < numLevels; ++i)
+        {
+            var stages = levelChapters.levels[i].stages;
+            if (stages != null && stages.Length > 0 && stages[0].rewardFlags != null)
+                __lastUnlockedLevelIndex = i;
+        }
+
         bool canMoveToSinglePlayer = this.canMoveToSinglePlayer, isHot = false, isMoved, isUnlock;
         int movedLevelIndex = -1, 
             selectedLevelIndex = -1,
@@ -878,6 +911,7 @@ public sealed class LoginManager : MonoBehaviour
                 
                 if (x)
                 {
+                    isLockedLevelPreview = loader.Value.useLockPrefab;
                     if (__targetUserStageID == 0 && 
                         maxMultiplayerStageID == 0 && 
                         ReplyMessageShared.isHost && 
@@ -1437,6 +1471,8 @@ public sealed class LoginManager : MonoBehaviour
                         
                         _onLevelEnable?.Invoke();
                     }
+
+                    __NotifyLevelPreviewState();
                 }
                 /*else if (__selectedUserLevelID == selectedLevel.id)
                 {
@@ -1456,7 +1492,8 @@ public sealed class LoginManager : MonoBehaviour
             __levelStyles[i] = style;
         }
 
-        __MoveTo(scrollRect, Mathf.Max(0, movedLevelIndex));
+        if (__lastUnlockedLevelIndex >= 0)
+            __MoveTo(scrollRect, Mathf.Clamp(movedLevelIndex, 0, __lastUnlockedLevelIndex));
 
         if (isHot)
         {
@@ -1472,7 +1509,74 @@ public sealed class LoginManager : MonoBehaviour
         if(_onStageRewardAll != null)
             _onStageRewardAll?.Invoke(numStageRewardsTotal.ToString());
 
+        __LoadLastLevelPreview(levelChapters);
+
         onChapterLoaded?.Invoke(levelChapters);
+    }
+
+    private void __LoadLastLevelPreview(IUserData.LevelChapters levelChapters)
+    {
+        if (levelChapters.levels == null || levelChapters.levels.Length == 0 ||
+            __levelStyles == null || __loaders == null)
+            return;
+
+        int levelIndex = levelChapters.levels.Length - 1;
+        var userLevel = levelChapters.levels[levelIndex];
+        if (levelIndex <= __lastUnlockedLevelIndex ||
+            userLevel.stages == null || userLevel.stages.Length == 0)
+            return;
+
+        if (string.IsNullOrEmpty(userLevel.name) ||
+            !__levelIndices.TryGetValue(userLevel.name, out int databaseIndex))
+            return;
+
+        if (levelIndex >= __levelStyles.Length || __levelStyles[levelIndex] == null)
+            return;
+
+        var style = __levelStyles[levelIndex];
+        var level = _levelDatabase.levels[databaseIndex];
+        int sceneCount = Mathf.Min(
+            style.scenes == null ? 0 : style.scenes.Length,
+            level.scenes == null ? 0 : level.scenes.Length);
+        if (sceneCount == 0)
+            return;
+
+        var loaderNode = __loaders.First;
+        for (int i = 0; i < levelIndex && loaderNode != null; ++i)
+            loaderNode = loaderNode.Next;
+
+        if (loaderNode == null)
+            return;
+
+        var loaders = loaderNode.Value;
+        loaders.useLockPrefab = true;
+        if (loaders.values == null || loaders.values.Length < sceneCount)
+            Array.Resize(ref loaders.values, sceneCount);
+
+        var assetManager = GameAssetManager.instance?.dataManager;
+        for (int i = 0; i < sceneCount; ++i)
+        {
+            if (level.scenes[i].lockPrefab == null ||
+                string.IsNullOrEmpty(level.scenes[i].lockPrefab.assetName))
+            {
+                Debug.LogWarning($"[LevelPreview] Missing lockPrefab for level '{userLevel.name}', scene '{level.scenes[i].name}'.");
+            }
+
+            loaders.Init(i, level, style, this, assetManager);
+
+            if (i == 0)
+            {
+                style.scenes[i].onTitle?.Invoke(level.scenes[i].title);
+                style.scenes[i].onDescription?.Invoke(level.scenes[i].description);
+            }
+        }
+
+        loaderNode.Value = loaders;
+        if (__selectedUserLevelID == userLevel.id)
+        {
+            isLockedLevelPreview = true;
+            __NotifyLevelPreviewState();
+        }
     }
 
     private void __ApplyLevel(IUserData.LevelStage levelStage)

@@ -519,7 +519,7 @@ public partial class UserDataMain
         bool isUnlock = true;
         int stageRewardCount = 0, 
             chapter = UserData.chapter, 
-            numChapters = Mathf.Clamp(chapter + 1, 1, _levelChapters.Length);
+            numChapters = Mathf.Clamp(chapter + 2, 1, _levelChapters.Length);
         LevelChapter levelChapter;
         UserLevel userLevel;
         var userLevels = new List<UserLevel>();
@@ -547,9 +547,6 @@ public partial class UserDataMain
                 userLevel.flag |= UserLevel.Flag.Multiplayer;
 
             userLevels.Add(userLevel);
-
-            if (!isUnlock)
-                break;
         }
 
         IUserData.LevelChapters result;
