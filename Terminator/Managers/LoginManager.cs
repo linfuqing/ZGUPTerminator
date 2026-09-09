@@ -144,7 +144,7 @@ public sealed class LoginManager : MonoBehaviour
 
     public static event Action onDestroyRewards;
 
-    public static event Action<Memory<UserRewardData>, Transform> onCreateRewards;
+    public static event Action<Memory<UserRewardData>, Transform, uint, int> onCreateRewards;
 
     public static event Action<IUserData.LevelStage> onAwake;
     
@@ -1004,7 +1004,7 @@ public sealed class LoginManager : MonoBehaviour
                                                 stageStyle.toggle.isOn = false;
                                             }
 
-                                            __CreateRewards(stageStyle.rewardParent, stage.rewards);
+                                            __CreateRewards(stageStyle.rewardParent, stage.rewards, selectedLevel.id, stageIndex);
                                         }
                                         else
                                         {
@@ -1032,7 +1032,7 @@ public sealed class LoginManager : MonoBehaviour
                                             }
 
                                             if (!isUnlocked)
-                                                __CreateRewards(stageStyle.rewardParent, stage.rewards);
+                                                __CreateRewards(stageStyle.rewardParent, stage.rewards, selectedLevel.id, stageIndex);
 
                                             if (sceneUnlocked == null)
                                                 sceneUnlocked = new Dictionary<int, bool>();
@@ -1712,13 +1712,13 @@ public sealed class LoginManager : MonoBehaviour
             style.button.interactable = true;*/
     }
     
-    private void __CreateRewards(Transform parent, UserRewardData[] values)
+    private void __CreateRewards(Transform parent, UserRewardData[] values, uint levelId, int stageId)
     {
         if (values == null || values.Length < 1)
             return;
         
         if(onCreateRewards != null)
-            onCreateRewards(values, parent);
+            onCreateRewards(values, parent, levelId, stageId);
         /*if (style != null && values != null &&
             values.Length > 0)
         {
