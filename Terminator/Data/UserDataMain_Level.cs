@@ -528,7 +528,10 @@ public partial class UserDataMain
             levelChapter = _levelChapters[i];
 
             stageRewardCount = levelChapter.stageRewardCount;
-            
+
+            if (i > chapter)
+                isUnlock = false;
+
             userLevel = __ToUserLevel(__GetLevelIndex(levelChapter.name), ref isUnlock);
             if (levelChapter.stageCountToMultiplayer > 0)
             {
