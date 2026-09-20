@@ -89,6 +89,7 @@ public partial struct BulletEntitySystem : ISystem
         using (var builder = new EntityQueryBuilder(Allocator.Temp))
             __group = builder
                 .WithAll<BulletEntity>()
+                .WithNone<BulletKeepAfterParentDestroyed>()
                 .Build(ref state);
     }
 

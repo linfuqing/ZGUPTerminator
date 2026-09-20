@@ -1382,3 +1382,7 @@ public struct BulletEntityManaged: IComponentData
 {
     
 }
+
+public struct BulletKeepAfterParentDestroyed : IComponentData
+{
+}
