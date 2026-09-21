@@ -15,7 +15,9 @@ public enum EffectAttributeID
     HP,
     Shield, 
     Damage, 
-    EntityID
+    EntityID,
+    FlightEnergyMax,
+    FlightEnergy
 }
 
 public enum EffectSpace
