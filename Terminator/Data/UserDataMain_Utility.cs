@@ -1125,7 +1125,7 @@ public partial class UserDataMain
 
         result.name = role.instanceName;
         result.hpMax = role.hpMax;
-        result.maskSkillNames = maskSkillNames?.ToArray();
+        result.maskSkillNames = Array.Empty<string>();
         result.skills = skills.ToArray();
         result.attributes = attributes?.ToArray();
 
@@ -1183,7 +1183,9 @@ public partial class UserDataMain
                         skillGroupName = __GetSkillGroupName(card.skillName);
                         cacheSkills[i] = string.IsNullOrEmpty(skillGroupName)
                             ? card.skillName
-                            : __GetSkillName(skillInfo.groupIndex, skillGroupName,
+                            : __GetSkillGroupName(cacheSkill) == skillGroupName
+                                ? cacheSkill
+                                : __GetSkillName(skillInfo.groupIndex, skillGroupName,
                                 card.maskSkillNames == null || card.maskSkillNames.Length <= maskSkillIndex
                                     ? Array.Empty<string>()
                                     : new [] { card.maskSkillNames[maskSkillIndex] });
@@ -1208,10 +1210,12 @@ public partial class UserDataMain
                         if (string.IsNullOrEmpty(skillGroupName))
                             continue;
 
-                        skillGroupName = __GetSkillName(skillInfo.groupIndex, skillGroupName,
-                            role.maskSkillNames == null || role.maskSkillNames.Length <= maskSkillIndex
-                                ? Array.Empty<string>()
-                                : new [] { role.maskSkillNames[maskSkillIndex] });
+                        skillGroupName = __GetSkillGroupName(cacheSkill) == skillGroupName
+                            ? cacheSkill
+                            : __GetSkillName(skillInfo.groupIndex, skillGroupName,
+                                role.maskSkillNames == null || role.maskSkillNames.Length <= maskSkillIndex
+                                    ? Array.Empty<string>()
+                                    : new [] { role.maskSkillNames[maskSkillIndex] });
                         if (string.IsNullOrEmpty(skillGroupName))
                             continue;
 
@@ -1842,7 +1846,7 @@ public partial class UserDataMain
 
             result.name = instanceName;
             result.hpMax = hpMax;
-            result.maskSkillNames = maskSkillNames?.ToArray();
+            result.maskSkillNames = Array.Empty<string>();
             result.attributes = attributes?.ToArray();
             result.skills = skills.ToArray();
         }
