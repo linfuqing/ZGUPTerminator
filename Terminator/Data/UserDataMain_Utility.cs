@@ -1152,19 +1152,10 @@ public partial class UserDataMain
             accessoryKeyPrefix = $"{roleKeyPrefix}{UserData.SEPARATOR}";
 
         bool isContains = true;
-        int i, j, maskSkillIndex, position, rolePosition = 0;
+        int i, j, maskSkillIndex, position, cardPosition = 0, rolePosition = 0;
         string skillGroupName, cacheSkill;
         SkillInfo skillInfo;
         Dictionary<string, int> accessoryStyleSlotIndices = null;
-        var assignedCardIndices = new HashSet<int>();
-        foreach (var savedSkill in cacheSkills)
-        {
-            if (__TryGetSkill(savedSkill, out var savedSkillInfo) &&
-                savedSkillInfo.belongTo == SkillInfo.BelongTo.Card &&
-                PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[savedSkillInfo.index].name}", -1) >= 0)
-                assignedCardIndices.Add(savedSkillInfo.index);
-        }
-
         for (i = 0; i < numCacheSkills; ++i)
         {
             cacheSkill = cacheSkills[i];
@@ -1175,40 +1166,34 @@ public partial class UserDataMain
             switch (skillInfo.belongTo)
             {
                 case SkillInfo.BelongTo.Card:
-                {
-                    if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) >= 0)
-                        break;
-
-                    int replacementCardIndex = -1, replacementPosition = int.MaxValue;
-                    for (j = 0; j < _cards.Length; ++j)
+                    /*if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) == -1)
+                        isContains = false;*/
+                    foreach (var card in _cards)
                     {
-                        if (assignedCardIndices.Contains(j))
+                        if (PlayerPrefs.GetInt(
+                                $"{cardKeyPrefix}{card.name}",
+                                -1) != cardPosition)
                             continue;
 
-                        position = PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[j].name}", -1);
-                        if (position < 0 || position >= replacementPosition)
-                            continue;
+                        ++cardPosition;
 
-                        replacementCardIndex = j;
-                        replacementPosition = position;
+                        maskSkillIndex =
+                            PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
+
+                        skillGroupName = __GetSkillGroupName(card.skillName);
+                        cacheSkills[i] = string.IsNullOrEmpty(skillGroupName)
+                            ? card.skillName
+                            : __GetSkillGroupName(cacheSkill) == skillGroupName
+                                ? cacheSkill
+                                : __GetSkillName(skillInfo.groupIndex, skillGroupName,
+                                card.maskSkillNames == null || card.maskSkillNames.Length <= maskSkillIndex
+                                    ? Array.Empty<string>()
+                                    : new [] { card.maskSkillNames[maskSkillIndex] });
+
+                        break;
                     }
 
-                    if (replacementCardIndex == -1)
-                        break;
-
-                    assignedCardIndices.Add(replacementCardIndex);
-                    ref var card = ref _cards[replacementCardIndex];
-                    maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
-                    skillGroupName = __GetSkillGroupName(card.skillName);
-                    cacheSkills[i] = string.IsNullOrEmpty(skillGroupName)
-                        ? card.skillName
-                        : __GetSkillName(skillInfo.groupIndex, skillGroupName,
-                            card.maskSkillNames == null || card.maskSkillNames.Length <= maskSkillIndex
-                                ? Array.Empty<string>()
-                                : new [] { card.maskSkillNames[maskSkillIndex] });
-
                     break;
-                }
                 case SkillInfo.BelongTo.Role:
                     /*if (PlayerPrefs.GetString(roleKeyPrefix) != _roles[skillInfo.index].name)
                         isContains = false;*/
