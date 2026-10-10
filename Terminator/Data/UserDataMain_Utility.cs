@@ -1152,7 +1152,7 @@ public partial class UserDataMain
             accessoryKeyPrefix = $"{roleKeyPrefix}{UserData.SEPARATOR}";
 
         bool isContains = true;
-        int i, j, maskSkillIndex, position, cardPosition = 0, rolePosition = 0;
+        int i, j, maskSkillIndex, position, rolePosition = 0;
         string skillGroupName, cacheSkill;
         SkillInfo skillInfo;
         Dictionary<string, int> accessoryStyleSlotIndices = null;
@@ -1166,32 +1166,8 @@ public partial class UserDataMain
             switch (skillInfo.belongTo)
             {
                 case SkillInfo.BelongTo.Card:
-                    /*if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) == -1)
-                        isContains = false;*/
-                    foreach (var card in _cards)
-                    {
-                        if (PlayerPrefs.GetInt(
-                                $"{cardKeyPrefix}{card.name}",
-                                -1) != cardPosition)
-                            continue;
-
-                        ++cardPosition;
-
-                        maskSkillIndex =
-                            PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
-
-                        skillGroupName = __GetSkillGroupName(card.skillName);
-                        cacheSkills[i] = string.IsNullOrEmpty(skillGroupName)
-                            ? card.skillName
-                            : __GetSkillGroupName(cacheSkill) == skillGroupName
-                                ? cacheSkill
-                                : __GetSkillName(skillInfo.groupIndex, skillGroupName,
-                                card.maskSkillNames == null || card.maskSkillNames.Length <= maskSkillIndex
-                                    ? Array.Empty<string>()
-                                    : new [] { card.maskSkillNames[maskSkillIndex] });
-
-                        break;
-                    }
+                    if (PlayerPrefs.GetInt($"{cardKeyPrefix}{_cards[skillInfo.index].name}", -1) < 0)
+                        isContains = false;
 
                     break;
                 case SkillInfo.BelongTo.Role:
