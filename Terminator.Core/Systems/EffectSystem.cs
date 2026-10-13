@@ -741,6 +741,9 @@ public partial struct EffectSystem : ISystem
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<KinematicCharacterBody> characterBodies;
 
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<MiniSpringboardLaunchState> springboardLaunchStates;
+
         [NativeDisableParallelForRestriction] 
         public ComponentLookup<LocalToWorld> localToWorlds;
 
@@ -1042,6 +1045,13 @@ public partial struct EffectSystem : ISystem
                                             forceResult,
                                             true,
                                             MathUtilities.ClampToMaxLength(forceResult, 1.0f));
+
+                                        if (damage.spring > math.FLT_MIN_NORMAL &&
+                                            springboardLaunchStates.HasComponent(simulationEvent.entity))
+                                        {
+                                            springboardLaunchStates[simulationEvent.entity] =
+                                                new MiniSpringboardLaunchState { isFromSpringboard = true, hasSetSpeed=false };
+                                        }
                                     }
 
                                     isResult = true;
@@ -1325,6 +1335,9 @@ public partial struct EffectSystem : ISystem
         public ComponentLookup<KinematicCharacterBody> characterBodies;
 
         [NativeDisableParallelForRestriction]
+        public ComponentLookup<MiniSpringboardLaunchState> springboardLaunchStates;
+
+        [NativeDisableParallelForRestriction]
         public ComponentLookup<LocalToWorld> localToWorlds;
 
         [NativeDisableParallelForRestriction] 
@@ -1373,6 +1386,7 @@ public partial struct EffectSystem : ISystem
             collect.delayDestroies = delayDestroies;
             collect.dropToDamages = dropToDamages;
             collect.characterBodies = characterBodies;
+            collect.springboardLaunchStates = springboardLaunchStates;
             collect.localToWorlds = localToWorlds;
             collect.instanceIDs = instanceIDs;
             collect.damageStatistics = damageStatistics;
@@ -2345,6 +2359,7 @@ public partial struct EffectSystem : ISystem
     private ComponentTypeHandle<ThirdPersionCharacterGravityFactor> __characterGravityFactorType;
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
+    private ComponentLookup<MiniSpringboardLaunchState> __springboardLaunchStates;
 
     private ComponentLookup<EffectStatus> __states;
     
@@ -2437,6 +2452,7 @@ public partial struct EffectSystem : ISystem
         __characterBodyType = state.GetComponentTypeHandle<KinematicCharacterBody>();
         __characterGravityFactorType = state.GetComponentTypeHandle<ThirdPersionCharacterGravityFactor>();
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>();
+        __springboardLaunchStates = state.GetComponentLookup<MiniSpringboardLaunchState>();
         __states = state.GetComponentLookup<EffectStatus>();
         __targetBuffs = state.GetComponentLookup<EffectTargetBuff>();
         __targetDamages = state.GetComponentLookup<EffectTargetDamage>();
@@ -2620,6 +2636,7 @@ public partial struct EffectSystem : ISystem
             __delayDestroies.Update(ref state);
             __dropToDamages.Update(ref state);
             __characterBodies.Update(ref state);
+            __springboardLaunchStates.Update(ref state);
             __localToWorlds.Update(ref state);
             __damageStatistics.Update(ref state);
 
@@ -2652,6 +2669,7 @@ public partial struct EffectSystem : ISystem
             collect.delayDestroies = __delayDestroies;
             collect.dropToDamages = __dropToDamages;
             collect.characterBodies = __characterBodies;
+            collect.springboardLaunchStates = __springboardLaunchStates;
             collect.localToWorlds = __localToWorlds;
             collect.instanceIDs = __instanceIDs;
             collect.damageStatistics = __damageStatistics;
