@@ -159,6 +159,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterBody> characterBodies;
 
+        [ReadOnly]
+        public ComponentLookup<Mini_FlightTakeoffComponent> flightTakeoff;
+
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
@@ -283,7 +286,9 @@ public partial struct BulletSystem : ISystem
                 
                 up = characterBody.GroundingUp;
 
-                if (characterBody.IsGrounded)
+                bool canTakeoff = flightTakeoff.TryGetComponent(character, out var takeoff) && takeoff.canTakeoff;
+                // Without takeoff permission, airborne characters use ground skill variants.
+                if (characterBody.IsGrounded || !canTakeoff)
                     location = BulletLocation.Ground;
                 else
                 {
@@ -445,6 +450,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly] 
         public ComponentLookup<KinematicCharacterBody> characterBodies;
 
+        [ReadOnly]
+        public ComponentLookup<Mini_FlightTakeoffComponent> flightTakeoff;
+
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
@@ -543,6 +551,7 @@ public partial struct BulletSystem : ISystem
             collect.physicsGraphicalInterpolationBuffers = physicsGraphicalInterpolationBuffers;
             collect.characterInterpolations = characterInterpolations;
             collect.characterBodies = characterBodies;
+            collect.flightTakeoff = flightTakeoff;
             collect.characterControls = characterControls;
             collect.cameraRotations = cameraRotations;
             collect.animationCurveDeltas = animationCurveDeltas;
@@ -663,6 +672,7 @@ public partial struct BulletSystem : ISystem
     private ComponentLookup<CharacterInterpolation> __characterInterpolations;
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
+    private ComponentLookup<Mini_FlightTakeoffComponent> __flightTakeoff;
 
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
 
@@ -741,6 +751,7 @@ public partial struct BulletSystem : ISystem
         __physicsGraphicalInterpolationBuffers = state.GetComponentLookup<PhysicsGraphicalInterpolationBuffer>(true);
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
+        __flightTakeoff = state.GetComponentLookup<Mini_FlightTakeoffComponent>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
         __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
@@ -812,6 +823,7 @@ public partial struct BulletSystem : ISystem
         __physicsGraphicalInterpolationBuffers.Update(ref state);
         __characterInterpolations.Update(ref state);
         __characterBodies.Update(ref state);
+        __flightTakeoff.Update(ref state);
         __characterControls.Update(ref state);
         __cameraRotations.Update(ref state);
         __animationCurveDeltas.Update(ref state);
@@ -856,6 +868,7 @@ public partial struct BulletSystem : ISystem
         collect.physicsGraphicalInterpolationBuffers = __physicsGraphicalInterpolationBuffers;
         collect.characterInterpolations = __characterInterpolations;
         collect.characterBodies = __characterBodies;
+        collect.flightTakeoff = __flightTakeoff;
         collect.characterControls = __characterControls;
         collect.cameraRotations = __cameraRotations;
         collect.animationCurveDeltas = __animationCurveDeltas;
