@@ -162,6 +162,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly]
         public ComponentLookup<MiniCheckPlayerStateInFlyType> playerFlyType;
 
+        [ReadOnly]
+        public ComponentLookup<MiniChangeTypeNoCheck> changeTypeNoChecks;
+
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
@@ -286,8 +289,9 @@ public partial struct BulletSystem : ISystem
                 
                 up = characterBody.GroundingUp;
 
-                bool inFlyType = playerFlyType.TryGetComponent(character, out var flyType) && flyType.InFlyType;
-                // Characters outside fly type use ground skill variants.
+                bool inFlyType = changeTypeNoChecks.HasComponent(entity) ||
+                    (playerFlyType.TryGetComponent(character, out var flyType) && flyType.InFlyType);
+                // Marked bullets bypass fly-type permission; ground and air-speed checks still apply.
                 if (characterBody.IsGrounded || !inFlyType)
                     location = BulletLocation.Ground;
                 else
@@ -453,6 +457,9 @@ public partial struct BulletSystem : ISystem
         [ReadOnly]
         public ComponentLookup<MiniCheckPlayerStateInFlyType> playerFlyType;
 
+        [ReadOnly]
+        public ComponentLookup<MiniChangeTypeNoCheck> changeTypeNoChecks;
+
         [ReadOnly] 
         public ComponentLookup<ThirdPersonCharacterControl> characterControls;
 
@@ -552,6 +559,7 @@ public partial struct BulletSystem : ISystem
             collect.characterInterpolations = characterInterpolations;
             collect.characterBodies = characterBodies;
             collect.playerFlyType = playerFlyType;
+            collect.changeTypeNoChecks = changeTypeNoChecks;
             collect.characterControls = characterControls;
             collect.cameraRotations = cameraRotations;
             collect.animationCurveDeltas = animationCurveDeltas;
@@ -673,6 +681,7 @@ public partial struct BulletSystem : ISystem
 
     private ComponentLookup<KinematicCharacterBody> __characterBodies;
     private ComponentLookup<MiniCheckPlayerStateInFlyType> __playerFlyType;
+    private ComponentLookup<MiniChangeTypeNoCheck> __changeTypeNoChecks;
 
     private ComponentLookup<ThirdPersonCharacterControl> __characterControls;
 
@@ -752,6 +761,7 @@ public partial struct BulletSystem : ISystem
         __characterInterpolations = state.GetComponentLookup<CharacterInterpolation>(true);
         __characterBodies = state.GetComponentLookup<KinematicCharacterBody>(true);
         __playerFlyType = state.GetComponentLookup<MiniCheckPlayerStateInFlyType>(true);
+        __changeTypeNoChecks = state.GetComponentLookup<MiniChangeTypeNoCheck>(true);
         __characterControls = state.GetComponentLookup<ThirdPersonCharacterControl>(true);
         __cameraRotations = state.GetComponentLookup<CameraRotation>(true);
         __animationCurveDeltas = state.GetComponentLookup<AnimationCurveDelta>(true);
@@ -824,6 +834,7 @@ public partial struct BulletSystem : ISystem
         __characterInterpolations.Update(ref state);
         __characterBodies.Update(ref state);
         __playerFlyType.Update(ref state);
+        __changeTypeNoChecks.Update(ref state);
         __characterControls.Update(ref state);
         __cameraRotations.Update(ref state);
         __animationCurveDeltas.Update(ref state);
@@ -869,6 +880,7 @@ public partial struct BulletSystem : ISystem
         collect.characterInterpolations = __characterInterpolations;
         collect.characterBodies = __characterBodies;
         collect.playerFlyType = __playerFlyType;
+        collect.changeTypeNoChecks = __changeTypeNoChecks;
         collect.characterControls = __characterControls;
         collect.cameraRotations = __cameraRotations;
         collect.animationCurveDeltas = __animationCurveDeltas;
