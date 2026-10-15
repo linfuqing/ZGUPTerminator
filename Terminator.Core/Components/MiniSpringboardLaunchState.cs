@@ -9,4 +9,7 @@ public struct MiniCheckPlayerStateInFlyType : IComponentData
 {
     public bool InFlyType;
 }
-
+public struct MiniChangeTypeNoCheck : IComponentData
+{
+    
+}
