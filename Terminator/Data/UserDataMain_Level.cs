@@ -401,6 +401,9 @@ public partial class UserDataMain
         }
 
         int startStage = UserData.EndStage(level.name, levelCache.stage);
+        // CollectLevel consumes the run cache, so an unfinished stage is counted only once.
+        if (startStage >= 0 && levelCache.stage >= 0 && levelCache.stage < stageCount)
+            UserData.AddStageFailure(level.name, levelCache.stage);
         UnityEngine.Assertions.Assert.AreNotEqual(-1, startStage);
         /*if (startStage == -1)
             startStage = __GetDontCacheStage(level, Mathf.Min(levelCache.stage, stageCount - 1));*/

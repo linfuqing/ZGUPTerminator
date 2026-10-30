@@ -40,6 +40,11 @@ public partial class UserDataMain
         //public Bounds playerBounds;
 
         public SpawnerAttribute.Scale spawnerAttribute;
+
+        [Min(0), Tooltip("失败达到此次数后，下次进入使用备用数值；0 表示关闭。")]
+        public int failureCountToUseAlternative;
+
+        public SpawnerAttribute.Scale alternativeSpawnerAttribute;
         
         public UserRewardData[] directRewards;
         
@@ -56,7 +61,15 @@ public partial class UserDataMain
             result.playerOffset = new Vector3(UnityEngine.Random.Range(min.x, max.x),
                 UnityEngine.Random.Range(min.y, max.y),
                 UnityEngine.Random.Range(min.z, max.z));*/
-            result.spawnerAttributeScale = spawnerAttribute;
+            int failureCount = UserData.GetStageFailureCount(levelName, stage);
+            bool useAlternative = failureCountToUseAlternative > 0 &&
+                (UserData.GetStageFlag(levelName, stage) & IUserData.StageFlag.Normal) == 0 &&
+                failureCount >= failureCountToUseAlternative;
+            result.spawnerAttributeScale = useAlternative ? alternativeSpawnerAttribute : spawnerAttribute;
+            var scale = result.spawnerAttributeScale;
+            Debug.Log($"[关卡数值配置] 大关={levelName}, 小关={stage + 1} ({name}), " +
+                $"数据来源={(useAlternative ? "备用数值" : "原始数值")}, 失败次数={failureCount}, 切换阈值={failureCountToUseAlternative}, " +
+                $"速度={scale.speedScale}, 伤害={scale.damageScale}, 血量={scale.hp}, 进度={scale.level}, 经验={scale.exp}, 金币={scale.gold}");
             int numQuests = indirectRewards == null ? 0 : indirectRewards.Length, i;
             if (!isForce)
             {
@@ -160,6 +173,47 @@ public partial class UserDataMain
         public float 小关金币比率
         {
             set => spawnerAttribute.gold = value;
+        }
+
+        [CSVField]
+        public int 小关失败切换次数
+        {
+            set => failureCountToUseAlternative = value;
+        }
+        [CSVField]
+        public float 小关备用速度比率
+        {
+            set => alternativeSpawnerAttribute.speedScale = value;
+        }
+
+        [CSVField]
+        public float 小关备用伤害比率
+        {
+            set => alternativeSpawnerAttribute.damageScale = value;
+        }
+
+        [CSVField]
+        public float 小关备用血量比率
+        {
+            set => alternativeSpawnerAttribute.hp = value;
+        }
+
+        [CSVField]
+        public float 小关备用进度比率
+        {
+            set => alternativeSpawnerAttribute.level = value;
+        }
+
+        [CSVField]
+        public float 小关备用经验比率
+        {
+            set => alternativeSpawnerAttribute.exp = value;
+        }
+
+        [CSVField]
+        public float 小关备用金币比率
+        {
+            set => alternativeSpawnerAttribute.gold = value;
         }
 
         [CSVField]

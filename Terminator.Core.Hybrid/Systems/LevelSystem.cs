@@ -300,6 +300,11 @@ public partial class LevelSystemManaged : SystemBase
                 ? LevelShared.stages[status.stage].spawnerAttributeScale
                 : default;
 
+            var stageScale = SpawnerShared.attributeScale;
+            UnityEngine.Debug.Log($"[关卡开始实际数值] 小关={status.stage + 1}, " +
+                $"速度={stageScale.speedScale}, 伤害={stageScale.damageScale}, 血量={stageScale.hp}, " +
+                $"进度={stageScale.level}, 经验={stageScale.exp}, 金币={stageScale.gold}");
+
             if(!manager.isRestart && activeIndices.IsCreated)
             {
                 ref var activeSkills = ref LevelPlayerShared<LocalPlayer>.property.activeSkills;

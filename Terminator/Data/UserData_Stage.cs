@@ -333,6 +333,23 @@ public partial class UserData
         }
     }
 
+    private const string NAME_SPACE_USER_STAGE_FAILURE_COUNT = "UserStageFailureCount";
+
+    public static int GetStageFailureCount(string levelName, int stage)
+    {
+        return PlayerPrefs.GetInt(GetStageNameSpace(NAME_SPACE_USER_STAGE_FAILURE_COUNT, levelName, stage));
+    }
+
+    public static void AddStageFailure(string levelName, int stage)
+    {
+        if ((GetStageFlag(levelName, stage) & IUserData.StageFlag.Normal) != 0)
+            return;
+
+        string key = GetStageNameSpace(NAME_SPACE_USER_STAGE_FAILURE_COUNT, levelName, stage);
+        int count = PlayerPrefs.GetInt(key);
+        if (count < int.MaxValue)
+            PlayerPrefs.SetInt(key, count + 1);
+    }
     private const string NAME_SPACE_USER_STAGE_FLAG = "UserStageFlag";
     private const string NAME_SPACE_USER_LEVEL_START_STAGE = "UserLevelStartStage";
     private const string NAME_SPACE_USER_LEVEL_STAGE_FLAG = "UserLevelStageFlag";
@@ -401,6 +418,7 @@ public partial class UserData
             key = GetStageNameSpace(NAME_SPACE_USER_STAGE_FLAG, levelName, i);
             result = (int)value | PlayerPrefs.GetInt(key);
             PlayerPrefs.SetInt(key, result);
+            PlayerPrefs.DeleteKey(GetStageNameSpace(NAME_SPACE_USER_STAGE_FAILURE_COUNT, levelName, i));
         }
 
         return result;
