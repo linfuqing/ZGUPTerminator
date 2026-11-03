@@ -304,6 +304,7 @@ public partial class UserDataMain
         levelCache.gold = 0;
         levelCache.killCount = 0;
         levelCache.killBossCount = 0;
+        levelCache.isStageFailed = false;
         UserData.levelCache = levelCache;
 
         result.value = __ApplyProperty(userID);
@@ -401,8 +402,8 @@ public partial class UserDataMain
         }
 
         int startStage = UserData.EndStage(level.name, levelCache.stage);
-        // CollectLevel consumes the run cache, so an unfinished stage is counted only once.
-        if (startStage >= 0 && levelCache.stage >= 0 && levelCache.stage < stageCount)
+        // Only a submitted death counts; leaving an unfinished stage alive is not a failure.
+        if (levelCache.isStageFailed && startStage >= 0 && levelCache.stage >= 0 && levelCache.stage < stageCount)
             UserData.AddStageFailure(level.name, levelCache.stage);
         UnityEngine.Assertions.Assert.AreNotEqual(-1, startStage);
         /*if (startStage == -1)
@@ -1032,6 +1033,7 @@ public partial class UserData
             levelCache.gold = 0;
             levelCache.killCount = 0;
             levelCache.killBossCount = 0;
+            levelCache.isStageFailed = false;
 
             UserData.levelCache = levelCache;
 

@@ -124,8 +124,9 @@ public class PlayerController : MonoBehaviour
                 {
                     (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHPMax(value);
 
-                    LevelManager.instance.hpPercentage =
-                        __attributeEventReceiver[(int)EffectAttributeID.HP] * 100 / value;
+                    int hp = __attributeEventReceiver[(int)EffectAttributeID.HP];
+                    LevelManager.instance.isPlayerDead = hp <= 0;
+                    LevelManager.instance.hpPercentage = value > 0 ? hp * 100 / value : 100;
                 }
 
                 break;
@@ -137,6 +138,7 @@ public class PlayerController : MonoBehaviour
                 {
                     (IAnalytics.instance as IAnalyticsEx)?.SetPlayerHP(value);
 
+                    LevelManager.instance.isPlayerDead = value <= 0;
                     int max = __attributeEventReceiver[(int)EffectAttributeID.HPMax];
                     LevelManager.instance.hpPercentage = max > 0 ? value * 100 / max : 100;
                 }
@@ -249,6 +251,9 @@ public class PlayerController : MonoBehaviour
         if (!__isLocal && __entityID == entityID)
         {
             __isLocal = true;
+
+            if (LevelManager.instance != null)
+                LevelManager.instance.isPlayerDead = __attributeEventReceiver[(int)EffectAttributeID.HP] <= 0;
 
             PlayerEvents.Restart();
 

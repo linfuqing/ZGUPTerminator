@@ -541,6 +541,7 @@ public partial class UserDataMain
         levelCache.gold = 0;
         levelCache.killCount = 0;
         levelCache.killBossCount = 0;
+        levelCache.isStageFailed = false;
         UserData.levelCache = levelCache;
         
         IUserData.StageProperty stageProperty;
@@ -976,6 +977,7 @@ public partial class UserData
             levelCache.gold = 0;
             levelCache.killCount = 0;
             levelCache.killBossCount = 0;
+            levelCache.isStageFailed = false;
             UserData.levelCache = levelCache;
         
             IUserData.StageProperty stageProperty;
@@ -1110,6 +1112,7 @@ public partial class UserData
         result.flag = (object)main == null ? (int)GetStageFlag(temp.name, oldStage) : main.GetStageFlag(temp.id, oldStage);
 
         temp.gold = Mathf.Max(temp.gold, gold);
+        temp.isStageFailed = temp.stage == stage && hpPercentage <= 0;
         temp.stage = stage;
         UserData.levelCache = temp;
         

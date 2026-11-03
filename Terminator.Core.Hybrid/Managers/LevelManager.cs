@@ -134,6 +134,11 @@ public partial class LevelManager : MonoBehaviour
     private int __stageKillCount;
     private int __stageGold;
     private int __hpPercentage = 100;
+
+    public bool isPlayerDead { get; set; }
+
+    // A living player below 1% HP must not be submitted as dead.
+    private int __submitHPPercentage => isPlayerDead ? 0 : Mathf.Max(1, __hpPercentage);
     private int __damagePercentage = 0;
 
     private float __startTime;
@@ -422,7 +427,7 @@ public partial class LevelManager : MonoBehaviour
                 __stage,
                 Mathf.RoundToInt(__GetStageTime(out _)), 
                 __damagePercentage, 
-                __hpPercentage, 
+                __submitHPPercentage, 
                 __killCount,
                 __killBossCount, 
                 __gold,
@@ -722,7 +727,7 @@ public partial class LevelManager : MonoBehaviour
                     __stage,
                     Mathf.RoundToInt(__GetStageTime(out _)),
                     __damagePercentage,
-                    __hpPercentage,
+                    __submitHPPercentage,
                     __killCount,
                     __killBossCount,
                     __gold,

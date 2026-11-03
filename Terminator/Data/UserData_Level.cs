@@ -307,6 +307,7 @@ public partial class UserData
         public int gold;
         public int killCount;
         public int killBossCount;
+        public bool isStageFailed;
 
         public LevelCache(string value)
         {
@@ -318,11 +319,12 @@ public partial class UserData
             gold = int.Parse(values[4]);
             killCount = int.Parse(values[5]);
             killBossCount = int.Parse(values[6]);
+            isStageFailed = values.Length > 7 && values[7] == "1";
         }
 
         public override string ToString()
         {
-            return $"{name}{SEPARATOR}{id}{SEPARATOR}{seconds}{SEPARATOR}{stage}{SEPARATOR}{gold}{SEPARATOR}{killCount}{SEPARATOR}{killBossCount}";
+            return $"{name}{SEPARATOR}{id}{SEPARATOR}{seconds}{SEPARATOR}{stage}{SEPARATOR}{gold}{SEPARATOR}{killCount}{SEPARATOR}{killBossCount}{SEPARATOR}{(isStageFailed ? 1 : 0)}";
         }
     }
 
@@ -391,6 +393,8 @@ public partial class UserData
         
         yield return null;
         
+        temp.isStageFailed = temp.stage == stage && hpPercentage <= 0;
+
         __SetStageKillCount(temp.name, temp.stage, killCount - temp.killCount);
         __SetStageKillBossCount(temp.name, temp.stage, killBossCount - temp.killBossCount);
         __SetStageGold(temp.name, temp.stage, gold);
