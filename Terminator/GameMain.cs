@@ -832,7 +832,7 @@ public class GameMain : GameUser
 
                 (IAnalytics.instance as IAnalyticsEx)?.Login(y);
 
-                if (x.levelID == 0 || x.chapter >= _chapters.Length)
+                if (x.levelID == 0 || x.chapter != 0 || x.stage != 0 || _chapters.Length == 0)
                     defaultSceneName = GameConstantManager.Get(DefaultSceneName);
                 else
                 {
