@@ -84,6 +84,9 @@ public partial class UserDataMain
 
         [Tooltip("每日免费次数")]
         public int freeTimes;
+
+        [Tooltip("通关第几章后解锁每日免费次数，0 表示直接解锁")]
+        public int atLeastLevelUnlockFreeTimes;
         
         [Tooltip("需要多少钻石")]
         public int diamond;
@@ -146,6 +149,15 @@ public partial class UserDataMain
             set
             {
                 freeTimes = value;
+            }
+        }
+
+        [CSVField]
+        public int 卡池每日免费解锁章节
+        {
+            set
+            {
+                atLeastLevelUnlockFreeTimes = value;
             }
         }
 
@@ -332,6 +344,15 @@ public partial class UserDataMain
     private const string NAME_SPACE_USER_PURCHASE_POOL_GUARANTEED_TIMES = "UserPurchaseGuaranteedTimes";
     private const string NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES = "UserPurchasePoolFreeTimes";
     private const string NAME_SPACE_USER_PURCHASE_POOL_SECOND = "UserPurchasePoolSecond";
+
+    private static int __GetAvailablePurchasePoolFreeTimes(in PurchasePool purchasePool, string freeTimesKey, int chapter)
+    {
+        var freeTimes = new Active<int>(PlayerPrefs.GetString(freeTimesKey), __Parse);
+        if (!DateTimeUtility.IsToday(freeTimes.seconds, DateTimeUtility.DataTimeType.UTC))
+            freeTimes.value = purchasePool.freeTimes;
+
+        return chapter >= purchasePool.atLeastLevelUnlockFreeTimes ? freeTimes.value : 0;
+    }
     
     public IEnumerator QueryPurchases(
         uint userID,
@@ -352,9 +373,8 @@ public partial class UserDataMain
 
         UserPurchasePool userPurchasePool;
         PurchasePool purchasePool;
-        Active<int> freeTimes;
         string key;
-        int seconds, numPurchasePools = _purchasePools.Length;
+        int seconds, numPurchasePools = _purchasePools.Length, chapter = UserData.chapter;
         var userPurchasePools = new List<UserPurchasePool>();
         for (int i = 0; i < numPurchasePools; ++i)
         {
@@ -387,13 +407,8 @@ public partial class UserDataMain
             userPurchasePool.guaranteedTimes = PlayerPrefs.GetInt(
                 $"{NAME_SPACE_USER_PURCHASE_POOL_GUARANTEED_TIMES}{purchasePool.name}", purchasePool.timesToGuarantee);
 
-            freeTimes = new Active<int>(
-                PlayerPrefs.GetString($"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}"), __Parse);
-
-            if (!DateTimeUtility.IsToday(freeTimes.seconds, DateTimeUtility.DataTimeType.UTC))
-                freeTimes.value = purchasePool.freeTimes;
-            
-            userPurchasePool.freeTimes = freeTimes.value;
+            userPurchasePool.freeTimes = __GetAvailablePurchasePoolFreeTimes(
+                purchasePool, $"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}", chapter);
             userPurchasePool.diamond = purchasePool.diamond;
             userPurchasePool.gold = purchasePool.gold;
             
@@ -466,20 +481,18 @@ public partial class UserDataMain
         purchasePool = _purchasePools[purchasePoolIndex];
         string guaranteedTimesKey = $"{NAME_SPACE_USER_PURCHASE_POOL_GUARANTEED_TIMES}{purchasePool.name}", 
             freeTimeKey = $"{NAME_SPACE_USER_PURCHASE_POOL_FREE_TIMES}{purchasePool.name}";
-        var freeTimes = new Active<int>(PlayerPrefs.GetString(freeTimeKey), __Parse);
+        int chapter = UserData.chapter;
+        int freeTimes = __GetAvailablePurchasePoolFreeTimes(purchasePool, freeTimeKey, chapter);
         
         guaranteedTimes = PlayerPrefs.GetInt(guaranteedTimesKey, purchasePool.timesToGuarantee);
         
-        if (!DateTimeUtility.IsToday(freeTimes.seconds, DateTimeUtility.DataTimeType.UTC))
-            freeTimes.value = purchasePool.freeTimes;
-
-        if (freeTimes.value < times)
+        if (freeTimes < times)
         {
-            if(freeTimes.value > 0)
+            if(freeTimes > 0)
                 PlayerPrefs.SetString(freeTimeKey,new Active<int>(0).ToString());
             
             string poolKey = $"{NAME_SPACE_USER_PURCHASE_POOL_KEY}{purchasePool.name}";
-            int keyCount = PlayerPrefs.GetInt(poolKey) + freeTimes.value;
+            int keyCount = PlayerPrefs.GetInt(poolKey) + freeTimes;
             if (keyCount < times)
             {
                 int destination = (times - keyCount) * purchasePool.diamond, source = diamond;
@@ -497,9 +510,9 @@ public partial class UserDataMain
                 PlayerPrefs.SetInt(poolKey, keyCount);
             }
         }
-        else
+        else if (freeTimes > 0)
             PlayerPrefs.SetString(freeTimeKey,
-                new Active<int>(freeTimes.value - times).ToString());
+                new Active<int>(freeTimes - times).ToString());
         
         gold += purchasePool.gold * times;
         
@@ -510,8 +523,7 @@ public partial class UserDataMain
         //UserItem userItem;
         string timesKey = $"{NAME_SPACE_USER_PURCHASE_POOL_TIMES}{purchasePool.name}",
             purchasePoolName;
-        int purchasePoolTimes = PlayerPrefs.GetInt(timesKey), 
-            chapter = UserData.chapter, i;
+        int purchasePoolTimes = PlayerPrefs.GetInt(timesKey), i;
         for (i = 0; i < times; ++i)
         {
             purchasePoolName = !string.IsNullOrEmpty(purchasePool.guaranteedPoolName) &&
