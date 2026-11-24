@@ -56,7 +56,7 @@ public partial class UserDataMain
 
         public UserLevelStageData ToLevel(string levelName, int stage, bool isForce)
         {
-            UserLevelStageData result;
+            UserLevelStageData result = default;
             /*Vector3 min = playerBounds.min, max = playerBounds.max;
             result.playerOffset = new Vector3(UnityEngine.Random.Range(min.x, max.x),
                 UnityEngine.Random.Range(min.y, max.y),
@@ -65,8 +65,12 @@ public partial class UserDataMain
             bool useAlternative = failureCountToUseAlternative > 0 &&
                 (UserData.GetStageFlag(levelName, stage) & IUserData.StageFlag.Normal) == 0 &&
                 failureCount >= failureCountToUseAlternative;
-            result.spawnerAttributeScale = useAlternative ? alternativeSpawnerAttribute : spawnerAttribute;
-            var scale = result.spawnerAttributeScale;
+            result.alternativeSpawnerAttributeScale = alternativeSpawnerAttribute;
+            bool isCleared = (UserData.GetStageFlag(levelName, stage) & IUserData.StageFlag.Normal) != 0;
+            result.failureCountToUseAlternative = isCleared ? 0 : failureCountToUseAlternative;
+            result.failureCount = isCleared ? 0 : failureCount;
+            result.spawnerAttributeScale = spawnerAttribute;
+            var scale = useAlternative ? alternativeSpawnerAttribute : spawnerAttribute;
             Debug.Log($"[关卡数值配置] 大关={levelName}, 小关={stage + 1} ({name}), " +
                 $"数据来源={(useAlternative ? "备用数值" : "原始数值")}, 失败次数={failureCount}, 切换阈值={failureCountToUseAlternative}, " +
                 $"速度={scale.speedScale}, 伤害={scale.damageScale}, 血量={scale.hp}, 进度={scale.level}, 经验={scale.exp}, 金币={scale.gold}");
@@ -556,6 +560,8 @@ public partial class UserDataMain
         for (int i = 0; i < numStages; ++i)
             stageProperty.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i, !IsLevelChapter(level.name));
         
+        UserLevelStageData.BeginRetry(userID, levelID, stageProperty.levelStages,
+            failedStage => UserData.AddStageFailure(level.name, failedStage));
         onComplete(stageProperty);
     }
 
@@ -987,6 +993,7 @@ public partial class UserData
             stageProperty.value = chapter.property;
 
             stageProperty.levelStages = null;
+            UserLevelStageData.BeginRetry(userID, levelID, null);
             
             onComplete(stageProperty);
         }

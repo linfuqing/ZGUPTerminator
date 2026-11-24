@@ -398,6 +398,26 @@ public partial class LevelManager : MonoBehaviour
     [UnityEngine.Scripting.Preserve]
     public void Restart()
     {
+        // One accepted button press per death; the system clears isRestart after rebuilding the stage.
+        if (isRestart)
+            return;
+        if (isPlayerDead && LevelRetryState.RecordRetry(__stage, out var retryConfiguration))
+        {
+            if (__stage >= 0 && __stage < LevelShared.stages.Length)
+            {
+                var retryStage = LevelShared.stages[__stage];
+                retryStage.spawnerAttributeScale = retryConfiguration.scale;
+                LevelShared.stages[__stage] = retryStage;
+            }
+            SpawnerShared.attributeScale = retryConfiguration.scale;
+            var retryScale = SpawnerShared.attributeScale;
+            Debug.Log($"[重试实际数值] 小关={__stage + 1}, 数据来源={(retryConfiguration.useAlternative ? "备用数值" : "原始数值")}, " +
+                $"失败次数={retryConfiguration.failureCount}, 阈值={retryConfiguration.failureCountToUseAlternative}, " +
+                $"速度={retryScale.speedScale}, 伤害={retryScale.damageScale}, 血量={retryScale.hp}, " +
+                $"进度={retryScale.level}, 经验={retryScale.exp}, 金币={retryScale.gold}");
+        }
+        // The death just consumed by Retry must not be submitted again by Quit/focus loss.
+        isPlayerDead = false;
         IAnalytics.instance?.Restart();
         
         isRestart = true;

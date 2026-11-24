@@ -34,7 +34,31 @@ public struct UserLevelStageData
 {
     //public Vector3 playerOffset;
     public SpawnerAttribute.Scale spawnerAttributeScale;
+    public SpawnerAttribute.Scale alternativeSpawnerAttributeScale;
+    public int failureCountToUseAlternative;
+    public int failureCount;
     public LevelQuest[] quests;
+
+    public static void BeginRetry(uint userID, uint levelID, UserLevelStageData[] stages, Action<int> onOfflineRetry = null)
+    {
+        var configurations = new StageRetryConfiguration[stages == null ? 0 : stages.Length];
+        for (int i = 0; i < configurations.Length; ++i)
+        {
+            var stage = stages[i];
+            configurations[i] = new StageRetryConfiguration
+            {
+                spawnerAttributeScale = stage.spawnerAttributeScale,
+                alternativeSpawnerAttributeScale = stage.alternativeSpawnerAttributeScale,
+                failureCountToUseAlternative = stage.failureCountToUseAlternative,
+                failureCount = stage.failureCount,
+            };
+        }
+        LevelRetryState.Begin(userID, levelID, configurations, onOfflineRetry);
+        for (int i = 0; i < configurations.Length; ++i)
+        {
+            stages[i].failureCount = configurations[i].failureCount;
+        }
+    }
 
     public LevelShared.Stage ToShared(in FixedString64Bytes name, in FixedString64Bytes bossTitle, in FixedString128Bytes bossDescription)
     {
@@ -43,7 +67,8 @@ public struct UserLevelStageData
         result.bossTitle = bossTitle;
         result.bossDescription = bossDescription;
         //result.playerOffset = playerOffset;
-        result.spawnerAttributeScale = spawnerAttributeScale;
+        result.spawnerAttributeScale = failureCountToUseAlternative > 0 &&
+            failureCount >= failureCountToUseAlternative ? alternativeSpawnerAttributeScale : spawnerAttributeScale;
         result.quests = default;
         if (quests != null)
         {

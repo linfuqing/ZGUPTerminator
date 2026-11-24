@@ -314,6 +314,8 @@ public partial class UserDataMain
         for (int i = 0; i < numStages; ++i)
             result.levelStages[i] = __GetStage(level, i).ToLevel(level.name, i, !IsLevelChapter(level.name));
 
+        UserLevelStageData.BeginRetry(userID, levelID, result.levelStages,
+            failedStage => UserData.AddStageFailure(level.name, failedStage));
         onComplete(result);
     }
 
@@ -1043,6 +1045,7 @@ public partial class UserData
             property.stage = closestStage;
             property.value = chapter.property;
             property.levelStages = null;
+            UserLevelStageData.BeginRetry(userID, levelID, null);
             
             if(onComplete != null)
                 onComplete(property);
