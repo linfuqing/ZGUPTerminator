@@ -486,10 +486,6 @@ public partial class LevelSystemManaged
                         
                         manager.SelectSkills(skillVersion.priority, results.ToArray());
                     } 
-#if DEBUG
-                    else
-                        UnityEngine.Debug.LogError("No Skills!");
-#endif
                     
                     if (skillVersion.index + 1 == skillVersion.count)
                     {

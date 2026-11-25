@@ -61,6 +61,126 @@ public struct LevelSkillDefinition
     public BlobArray<Skill> skills;
     public BlobArray<SkillGroup> skillGroups;
 
+    internal bool SelectUpgrade(
+        in NativeArray<SkillActiveIndex> activeIndices,
+        in NativeArray<LevelSkillGroup> allowedGroups,
+        in NativeArray<LevelSkillOpcode> opcodes,
+        in NativeArray<LevelSkillMask> masks,
+        bool autoUpgrade,
+        ref DynamicBuffer<LevelSkill> results,
+        ref Random random,
+        out int styleIndex)
+    {
+        using var normalCards = new NativeList<LevelSkill>(Allocator.Temp);
+        using var branchCards = new NativeList<LevelSkill>(Allocator.Temp);
+        using var branchRanges = new NativeList<int2>(Allocator.Temp);
+        using var occupiedGroups = new NativeHashSet<int>(math.max(1, groups.Length), Allocator.Temp);
+        using var normalSkillIndices = new NativeHashSet<int>(math.max(1, skills.Length), Allocator.Temp);
+        bool hasMasks = masks.IsCreated;
+
+        for (int slot = 0; slot < activeIndices.Length; ++slot)
+        {
+            int originIndex = activeIndices[slot].value;
+            if ((uint)originIndex >= (uint)skills.Length)
+                continue;
+
+            ref var skill = ref skills[originIndex];
+            int groupIndex = skill.groupIndex;
+            if ((uint)groupIndex >= (uint)groups.Length || !occupiedGroups.Add(groupIndex) ||
+                !__IsInGroup(groupIndex, allowedGroups, out float damageScale))
+                continue;
+
+            bool isBranch = skill.priority > 0;
+            int branchStart = branchCards.Length;
+            for (int i = 0; i < skill.nextSkillIndices.Length; ++i)
+            {
+                int index = skill.nextSkillIndices[i];
+                if (hasMasks && LevelSkillMask.Contains(index, masks))
+                    continue;
+
+                var card = new LevelSkill
+                {
+                    activeIndex = slot,
+                    originIndex = originIndex,
+                    index = index,
+                    damageScale = LevelSkillOpcode.Apply(opcodes, index, damageScale)
+                };
+
+                if (isBranch)
+                {
+                    if (branchCards.Length > branchStart && branchCards[branchStart].index == index)
+                        continue;
+
+                    branchCards.Add(card);
+                    if (branchCards.Length - branchStart == 2)
+                        break;
+                }
+                else if (normalSkillIndices.Add(index))
+                    normalCards.Add(card);
+            }
+
+            if (branchCards.Length > branchStart)
+                branchRanges.Add(new int2(branchStart, branchCards.Length));
+        }
+
+        if (occupiedGroups.Count < maxActiveCount)
+        {
+            for (int groupIndex = 0; groupIndex < groups.Length; ++groupIndex)
+            {
+                if (occupiedGroups.Contains(groupIndex) ||
+                    !__IsInGroup(groupIndex, allowedGroups, out float damageScale))
+                    continue;
+
+                ref var firstSkills = ref groups[groupIndex].firstSkillIndices;
+                for (int i = 0; i < firstSkills.Length; ++i)
+                {
+                    int index = firstSkills[i];
+                    if ((hasMasks && LevelSkillMask.Contains(index, masks)) || !normalSkillIndices.Add(index))
+                        continue;
+
+                    normalCards.Add(new LevelSkill
+                    {
+                        activeIndex = -1,
+                        originIndex = -1,
+                        index = index,
+                        damageScale = LevelSkillOpcode.Apply(opcodes, index, damageScale)
+                    });
+                }
+            }
+        }
+
+        int normalCount = normalCards.Length;
+        int branchCount = branchRanges.Length;
+        styleIndex = 0;
+        if (normalCount == 0 && branchCount == 0)
+            return false;
+
+        // A is weighted by the number of cards beyond the three-card minimum.
+        int normalWeight = math.max(0, normalCount - 2);
+        if (branchCount > 0 && (normalWeight == 0 || random.NextInt(normalWeight + branchCount) >= normalWeight))
+        {
+            styleIndex = 1;
+            int2 range = branchRanges[random.NextInt(branchCount)];
+            if (autoUpgrade)
+                results.Add(branchCards[random.NextInt(range.x, range.y)]);
+            else
+                for (int i = range.x; i < range.y; ++i)
+                    results.Add(branchCards[i]);
+        }
+        else
+        {
+            int count = autoUpgrade ? 1 : math.min(normalCount, 3);
+            for (int i = 0; i < count; ++i)
+            {
+                int index = random.NextInt(normalCards.Length);
+                results.Add(normalCards[index]);
+                normalCards.RemoveAtSwapBack(index);
+            }
+        }
+
+        return true;
+    }
+
     public void Select(
         in NativeArray<SkillActiveIndex> activeIndices, 
         in NativeArray<LevelSkillGroup> groups, 

@@ -10,10 +10,12 @@ using Random = Unity.Mathematics.Random;
 [BurstCompile, UpdateAfter(typeof(PickableSystem))]
 public partial struct LevelPickableSystem : ISystem
 {
+    private const int GoldEggAutoUpgradeStyleIndex = 2;
+
     private struct Result
     {
         public int selection;
-        public int priorityToStyleIndex;
+        public bool autoUpgrade;
         public int index;
         public int count;
         public float timeScale;
@@ -55,7 +57,7 @@ public partial struct LevelPickableSystem : ISystem
                 Result result;
                 result.version = entityArray[index];
                 result.selection = skill.selection;
-                result.priorityToStyleIndex = skill.priorityToStyleIndex;
+                result.autoUpgrade = skill.priorityToStyleIndex == GoldEggAutoUpgradeStyleIndex;
                 result.count = count;
                 result.timeScale = skill.timeScale;
                 for (int i = 0; i < count; ++i)
@@ -178,6 +180,8 @@ public partial struct LevelPickableSystem : ISystem
 
         public NativeQueue<Result> results;
 
+        public NativeReference<Random> selectionRandom;
+
         public void Execute()
         {
             if (!this.skills.TryGetBuffer(localPlayer, out var skills) || 
@@ -195,10 +199,6 @@ public partial struct LevelPickableSystem : ISystem
             
             skills.Clear();
 
-            int i, numSkills;
-            var hash = math.aslong(time);
-            var random = Random.CreateFromIndex((uint)hash ^ (uint)(hash >> 32));
-            LevelSkill skill;
             var skillOpcodes = this.skillOpcodes.TryGetBuffer(localPlayer, out var skillOpcodeList)
                 ? skillOpcodeList.AsNativeArray()
                 : default;
@@ -211,51 +211,31 @@ public partial struct LevelPickableSystem : ISystem
             var skillActiveIndices = this.skillActiveIndices[localPlayer];
             while (results.TryDequeue(out Result result))
             {
-                /*if(!this.skillActiveIndices.TryGetBuffer(localPlayer, out skillActiveIndices))
-                    continue;*/
+                var random = selectionRandom.Value;
+                if (random.state == 0)
+                {
+                    ulong hash = math.asulong(time);
+                    random.InitState(((uint)hash ^ (uint)(hash >> 32)) | 1u);
+                }
 
-                definition.definition.Value.Select(
-                    skillActiveIndices.AsNativeArray(), 
+                // The managed selection system applies the previous choice before disabling this buffer.
+                bool hasCards = definition.definition.Value.SelectUpgrade(
+                    skillActiveIndices.AsNativeArray(),
                     skillGroups,
                     skillOpcodes,
-                    ref skills, 
-                    ref random, 
-                    out version.priority, 
-                    result.priorityToStyleIndex > 0 ? 1 : 0);
+                    skillMasks,
+                    result.autoUpgrade,
+                    ref skills,
+                    ref random,
+                    out int styleIndex);
+                selectionRandom.Value = random;
 
-                numSkills = skills.Length;
-                if (numSkills < 1 && 
-                    (result.count == 1 || result.index == 0 || result.version != version.entity))
+                // Publish an empty final round only to close a pickup panel that has already opened.
+                if (!hasCards && (result.index == 0 || result.index + 1 != result.count ||
+                    result.version != version.entity))
                     continue;
 
-                if (skillMasks.IsCreated)
-                {
-                    for (i = 0; i < numSkills; ++i)
-                    {
-                        if (!LevelSkillMask.Contains(skills[i].index, skillMasks))
-                            continue;
-
-                        skills[i--] = skills[--numSkills];
-                    }
-
-                    skills.ResizeUninitialized(numSkills);
-                }
-
-                if (result.priorityToStyleIndex > 0)
-                {
-                    if (version.priority == 0 && !skills.IsEmpty)
-                    {
-                        skill = skills[random.NextInt(numSkills)];
-                            
-                        skills.ResizeUninitialized(1);
-                        skills[0] = skill;
-                    }
-                    
-                    version.priority += result.priorityToStyleIndex;
-                }
-                else if (result.priorityToStyleIndex < 0 && version.priority == 0 && numSkills == 1)
-                    version.priority -= result.priorityToStyleIndex;
-
+                version.priority = result.autoUpgrade ? GoldEggAutoUpgradeStyleIndex : styleIndex;
                 version.selection = result.selection;
                 version.count = result.count;
                 version.index = result.index;
@@ -297,6 +277,7 @@ public partial struct LevelPickableSystem : ISystem
     private EntityQuery __group;
 
     private NativeQueue<Result> __results;
+    private NativeReference<Random> __selectionRandom;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -325,12 +306,14 @@ public partial struct LevelPickableSystem : ISystem
         state.RequireForUpdate<ThirdPersonPlayer>();
 
         __results = new NativeQueue<Result>(Allocator.Persistent);
+        __selectionRandom = new NativeReference<Random>(Allocator.Persistent);
     }
 
     [BurstCompile]
     public void OnDestroy(ref SystemState state)
     {
         __results.Dispose();
+        __selectionRandom.Dispose();
     }
 
     [BurstCompile]
@@ -376,6 +359,7 @@ public partial struct LevelPickableSystem : ISystem
         select.skills = __skills;
         select.versions = __versions;
         select.results = __results;
+        select.selectionRandom = __selectionRandom;
         state.Dependency = select.ScheduleByRef(jobHandle);
     }
 }
