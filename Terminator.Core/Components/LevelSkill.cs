@@ -7,6 +7,12 @@ using Random = Unity.Mathematics.Random;
 
 public struct LevelSkillDefinition
 {
+    private struct NormalUpgradeCandidate
+    {
+        public LevelSkill card;
+        public int groupIndex;
+    }
+
     private struct SkillWeight
     {
         public int activeIndex;
@@ -66,12 +72,12 @@ public struct LevelSkillDefinition
         in NativeArray<LevelSkillGroup> allowedGroups,
         in NativeArray<LevelSkillOpcode> opcodes,
         in NativeArray<LevelSkillMask> masks,
-        bool autoUpgrade,
+        bool autoUpgradeNormalSkill,
         ref DynamicBuffer<LevelSkill> results,
         ref Random random,
         out int styleIndex)
     {
-        using var normalCards = new NativeList<LevelSkill>(Allocator.Temp);
+        using var normalCards = new NativeList<NormalUpgradeCandidate>(Allocator.Temp);
         using var branchCards = new NativeList<LevelSkill>(Allocator.Temp);
         using var branchRanges = new NativeList<int2>(Allocator.Temp);
         using var occupiedGroups = new NativeHashSet<int>(math.max(1, groups.Length), Allocator.Temp);
@@ -116,7 +122,7 @@ public struct LevelSkillDefinition
                         break;
                 }
                 else if (normalSkillIndices.Add(index))
-                    normalCards.Add(card);
+                    normalCards.Add(new NormalUpgradeCandidate { card = card, groupIndex = groupIndex });
             }
 
             if (branchCards.Length > branchStart)
@@ -138,12 +144,16 @@ public struct LevelSkillDefinition
                     if ((hasMasks && LevelSkillMask.Contains(index, masks)) || !normalSkillIndices.Add(index))
                         continue;
 
-                    normalCards.Add(new LevelSkill
+                    normalCards.Add(new NormalUpgradeCandidate
                     {
-                        activeIndex = -1,
-                        originIndex = -1,
-                        index = index,
-                        damageScale = LevelSkillOpcode.Apply(opcodes, index, damageScale)
+                        groupIndex = groupIndex,
+                        card = new LevelSkill
+                        {
+                            activeIndex = -1,
+                            originIndex = -1,
+                            index = index,
+                            damageScale = LevelSkillOpcode.Apply(opcodes, index, damageScale)
+                        }
                     });
                 }
             }
@@ -161,24 +171,95 @@ public struct LevelSkillDefinition
         {
             styleIndex = 1;
             int2 range = branchRanges[random.NextInt(branchCount)];
-            if (autoUpgrade)
-                results.Add(branchCards[random.NextInt(range.x, range.y)]);
-            else
-                for (int i = range.x; i < range.y; ++i)
-                    results.Add(branchCards[i]);
+            for (int i = range.x; i < range.y; ++i)
+                results.Add(branchCards[i]);
         }
         else
         {
-            int count = autoUpgrade ? 1 : math.min(normalCount, 3);
-            for (int i = 0; i < count; ++i)
-            {
-                int index = random.NextInt(normalCards.Length);
-                results.Add(normalCards[index]);
-                normalCards.RemoveAtSwapBack(index);
-            }
+            int count = autoUpgradeNormalSkill ? 1 : math.min(normalCount, 3);
+            __SelectWeightedNormalUpgrades(activeIndices, normalCards, count, ref results, ref random);
         }
 
         return true;
+    }
+
+    private void __SelectWeightedNormalUpgrades(
+        in NativeArray<SkillActiveIndex> activeIndices,
+        NativeList<NormalUpgradeCandidate> candidates,
+        int count,
+        ref DynamicBuffer<LevelSkill> results,
+        ref Random random)
+    {
+        using var weightStorage = new NativeArray<double>(groups.Length, Allocator.Temp);
+        using var countStorage = new NativeArray<int>(groups.Length, Allocator.Temp);
+        var groupWeights = weightStorage;
+        var groupCounts = countStorage;
+        foreach (var active in activeIndices)
+        {
+            if ((uint)active.value >= (uint)skills.Length)
+                continue;
+
+            ref var skill = ref skills[active.value];
+            if (skill.priority > 0)
+                continue;
+
+            for (int i = 0; i < skill.skillGroupIndices.Length; ++i)
+            {
+                ref var contribution = ref skillGroups[skill.skillGroupIndices[i]];
+                groupWeights[contribution.index] += contribution.weight;
+            }
+        }
+
+        foreach (var candidate in candidates)
+            ++groupCounts[candidate.groupIndex];
+
+        for (int groupIndex = 0; groupIndex < groups.Length; ++groupIndex)
+        {
+            // Use the configured base weight when active skills supply no positive weight.
+            double weight = groupWeights[groupIndex];
+            if (!(weight > math.FLT_MIN_NORMAL) || !math.isfinite(weight))
+                weight = groups[groupIndex].weight;
+
+            groupWeights[groupIndex] = weight > math.FLT_MIN_NORMAL && math.isfinite(weight) ? weight : 0.0;
+        }
+
+        for (int i = 0; i < count; ++i)
+        {
+            double totalWeight = 0.0;
+            for (int groupIndex = 0; groupIndex < groups.Length; ++groupIndex)
+            {
+                if (groupCounts[groupIndex] > 0)
+                    totalWeight += groupWeights[groupIndex];
+            }
+
+            int selectedIndex = -1;
+            if (totalWeight > 0.0)
+            {
+                double remaining = random.NextDouble() * totalWeight;
+                for (int j = 0; j < candidates.Length; ++j)
+                {
+                    int groupIndex = candidates[j].groupIndex;
+                    double weight = groupWeights[groupIndex];
+                    if (weight == 0.0)
+                        continue;
+
+                    // Share the group's weight across its remaining cards.
+                    remaining -= weight / groupCounts[groupIndex];
+                    selectedIndex = j;
+                    if (remaining < 0.0)
+                        break;
+                }
+            }
+
+            // Fill any remaining choices from eligible cards when all remaining weights are zero.
+            if (selectedIndex == -1)
+                selectedIndex = random.NextInt(candidates.Length);
+
+            var selected = candidates[selectedIndex];
+            results.Add(selected.card);
+            --groupCounts[selected.groupIndex];
+            candidates.RemoveAtSwapBack(selectedIndex);
+        }
     }
 
     public void Select(

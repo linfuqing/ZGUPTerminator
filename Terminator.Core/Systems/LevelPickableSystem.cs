@@ -11,11 +11,12 @@ using Random = Unity.Mathematics.Random;
 public partial struct LevelPickableSystem : ISystem
 {
     private const int GoldEggAutoUpgradeStyleIndex = 2;
+    private const int GoldEggBranchStyleIndex = 3;
 
     private struct Result
     {
         public int selection;
-        public bool autoUpgrade;
+        public bool isGoldEgg;
         public int index;
         public int count;
         public float timeScale;
@@ -57,7 +58,7 @@ public partial struct LevelPickableSystem : ISystem
                 Result result;
                 result.version = entityArray[index];
                 result.selection = skill.selection;
-                result.autoUpgrade = skill.priorityToStyleIndex == GoldEggAutoUpgradeStyleIndex;
+                result.isGoldEgg = skill.priorityToStyleIndex == GoldEggAutoUpgradeStyleIndex;
                 result.count = count;
                 result.timeScale = skill.timeScale;
                 for (int i = 0; i < count; ++i)
@@ -224,7 +225,7 @@ public partial struct LevelPickableSystem : ISystem
                     skillGroups,
                     skillOpcodes,
                     skillMasks,
-                    result.autoUpgrade,
+                    result.isGoldEgg,
                     ref skills,
                     ref random,
                     out int styleIndex);
@@ -235,7 +236,10 @@ public partial struct LevelPickableSystem : ISystem
                     result.version != version.entity))
                     continue;
 
-                version.priority = result.autoUpgrade ? GoldEggAutoUpgradeStyleIndex : styleIndex;
+                if (result.isGoldEgg)
+                    version.priority = styleIndex == 1 ? GoldEggBranchStyleIndex : GoldEggAutoUpgradeStyleIndex;
+                else
+                    version.priority = styleIndex;
                 version.selection = result.selection;
                 version.count = result.count;
                 version.index = result.index;
