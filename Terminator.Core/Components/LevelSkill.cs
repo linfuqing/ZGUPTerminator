@@ -177,7 +177,8 @@ public struct LevelSkillDefinition
         else
         {
             int count = autoUpgradeNormalSkill ? 1 : math.min(normalCount, 3);
-            __SelectWeightedNormalUpgrades(activeIndices, normalCards, count, ref results, ref random);
+            __SelectWeightedNormalUpgrades(
+                activeIndices, normalCards, count, !autoUpgradeNormalSkill, ref results, ref random);
         }
 
         return true;
@@ -187,6 +188,7 @@ public struct LevelSkillDefinition
         in NativeArray<SkillActiveIndex> activeIndices,
         NativeList<NormalUpgradeCandidate> candidates,
         int count,
+        bool prioritizeHighestWeight,
         ref DynamicBuffer<LevelSkill> results,
         ref Random random)
     {
@@ -226,11 +228,27 @@ public struct LevelSkillDefinition
         for (int i = 0; i < count; ++i)
         {
             double totalWeight = 0.0;
+            double highestWeight = 0.0;
+            int highestWeightGroupCount = 0;
             for (int groupIndex = 0; groupIndex < groups.Length; ++groupIndex)
             {
-                if (groupCounts[groupIndex] > 0)
-                    totalWeight += groupWeights[groupIndex];
+                if (groupCounts[groupIndex] == 0)
+                    continue;
+
+                double weight = groupWeights[groupIndex];
+                totalWeight += weight;
+                if (weight > highestWeight)
+                {
+                    highestWeight = weight;
+                    highestWeightGroupCount = 1;
+                }
+                else if (weight == highestWeight)
+                    ++highestWeightGroupCount;
             }
+
+            // Normal card offers fill slots by descending group weight. Gold eggs still roll among all weighted groups.
+            if (prioritizeHighestWeight)
+                totalWeight = highestWeight * highestWeightGroupCount;
 
             int selectedIndex = -1;
             if (totalWeight > 0.0)
@@ -240,7 +258,7 @@ public struct LevelSkillDefinition
                 {
                     int groupIndex = candidates[j].groupIndex;
                     double weight = groupWeights[groupIndex];
-                    if (weight == 0.0)
+                    if (weight == 0.0 || (prioritizeHighestWeight && weight < highestWeight))
                         continue;
 
                     // Share the group's weight across its remaining cards.
