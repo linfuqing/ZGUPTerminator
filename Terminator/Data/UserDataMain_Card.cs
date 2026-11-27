@@ -581,7 +581,7 @@ public partial class UserDataMain
             
             userCard.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
             
-            userCard.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
+            userCard.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}",-1);
 
             userCard.skillGroupDamage = card.skillGroupDamage;
 
@@ -669,7 +669,7 @@ public partial class UserDataMain
 
             result.count = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_COUNT}{card.name}");
 
-            result.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
+            result.maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}",-1);
 
             result.skillGroupDamage = card.skillGroupDamage;
             

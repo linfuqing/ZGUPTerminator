@@ -1328,7 +1328,7 @@ public partial class UserDataMain
                     case SkillInfo.BelongTo.Card:
                         ref var card = ref _cards[skillInfo.index];
 
-                        maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}");
+                        maskSkillIndex = PlayerPrefs.GetInt($"{NAME_SPACE_USER_CARD_MASK_SKILL_INDEX}{card.name}",-1);
                         if (maskSkillIndex < (card.maskSkillNames == null ? 0 : card.maskSkillNames.Length))
                         {
                             maskSkillNames ??= new List<string>();
